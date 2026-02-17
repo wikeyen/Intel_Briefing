@@ -64,3 +64,6 @@ htmlcov/
 
 # Cache and runtime data
 cache/
+
+# Local settings — contains API keys, never commit
+config/settings.json

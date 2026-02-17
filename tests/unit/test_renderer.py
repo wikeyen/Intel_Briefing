@@ -41,26 +41,6 @@ class TestRender:
         assert "My Article" in md
         assert "https://example.com/article" in md
 
-    def test_zh_lang_uses_title_zh(self):
-        item = make_item(title="English Title", title_zh="中文标题")
-        report = make_report(items={"tech_trends": [item]})
-        md = render(report, lang="zh")
-        assert "中文标题" in md
-        assert "English Title" not in md
-
-    def test_zh_lang_falls_back_to_english_when_no_zh(self):
-        item = make_item(title="English Title")
-        report = make_report(items={"tech_trends": [item]})
-        md = render(report, lang="zh")
-        assert "English Title" in md
-
-    def test_zh_abstract_used_when_lang_zh(self):
-        item = make_item(abstract="English abstract", abstract_zh="中文摘要")
-        report = make_report(items={"research": [item]})
-        md = render(report, lang="zh")
-        assert "中文摘要" in md
-        assert "English abstract" not in md
-
     def test_stale_report_shows_warning(self):
         report = make_report(stale=True)
         md = render(report)

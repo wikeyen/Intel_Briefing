@@ -1,34 +1,58 @@
-// ABOUTME: Sensor toggle page — enable/disable each data source individually.
-// ABOUTME: Shows OK/FAILED/DISABLED badge per sensor based on latest fetch results.
+// ABOUTME: Sources section — sensor toggles grouped by language/provider with inline sub-config.
+// ABOUTME: Politics Accounts and Topics keywords are configured inline under their Grok sensor rows.
 import { useState, useEffect } from 'react'
 import { api } from '../api/client'
+import { TagInput } from '../components/TagInput'
 import { SectionHeader } from '../components/SectionHeader'
 
 interface Props {
   showToast: (msg: string) => void
 }
 
-const ALL_SENSORS = [
-  { key: 'hacker_news',   label: 'Hacker News',          desc: 'Top stories from news.ycombinator.com' },
-  { key: 'arxiv',         label: 'ArXiv AI',             desc: 'Latest AI/ML research preprints' },
-  { key: 'github',        label: 'GitHub Trending',      desc: 'Daily trending repositories' },
-  { key: 'product_hunt',  label: 'Product Hunt',         desc: 'Top products of the day' },
-  { key: 'v2ex',          label: 'V2EX',                 desc: 'Chinese tech community hot posts' },
-  { key: 'hn_blogs',      label: 'HN Blogs',             desc: 'Curated blog posts from Hacker News' },
-  { key: 'grok',          label: 'Grok Tech Trends',     desc: 'Tech trends via xAI Grok search' },
-  { key: 'sources_36kr',  label: '36Kr',                 desc: 'Chinese startup and tech news' },
-  { key: 'wallstreetcn',  label: 'WallStreetCN',         desc: 'Chinese financial and macro news' },
-  { key: 'politics',      label: 'Politics Accounts',    desc: 'X/Twitter accounts via Grok' },
-  { key: 'topics',        label: 'Topics Keywords',      desc: 'Keyword searches via Grok' },
+interface SensorDef {
+  key: string
+  label: string
+  desc: string
+}
+
+const SENSOR_GROUPS: { label: string; sensors: SensorDef[] }[] = [
+  {
+    label: 'General',
+    sensors: [
+      { key: 'hacker_news',  label: 'Hacker News',     desc: 'Top stories from news.ycombinator.com' },
+      { key: 'arxiv',        label: 'ArXiv AI',         desc: 'Latest AI/ML research preprints' },
+      { key: 'github',       label: 'GitHub Trending',  desc: 'Daily trending repositories' },
+      { key: 'product_hunt', label: 'Product Hunt',     desc: 'Top products of the day' },
+      { key: 'hn_blogs',     label: 'HN Blogs',         desc: 'Curated blog posts from Hacker News' },
+    ],
+  },
+  {
+    label: 'Chinese / 中文',
+    sensors: [
+      { key: 'v2ex',         label: 'V2EX',          desc: 'Chinese tech community hot posts' },
+      { key: 'sources_36kr', label: '36Kr',           desc: 'Chinese startup and tech news' },
+      { key: 'wallstreetcn', label: 'WallStreetCN',   desc: 'Chinese financial and macro news' },
+    ],
+  },
+  {
+    label: 'Grok / xAI',
+    sensors: [
+      { key: 'grok',     label: 'Grok Tech Trends',  desc: 'Tech trends via xAI Grok search' },
+      { key: 'politics', label: 'Accounts',           desc: 'X/Twitter accounts monitored via Grok' },
+      { key: 'topics',   label: 'Topics Keywords',   desc: 'Keyword searches via Grok' },
+    ],
+  },
 ]
+
+const ALL_SENSORS = SENSOR_GROUPS.flatMap((g) => g.sensors)
 
 type SensorStatus = 'ok' | 'failed' | 'disabled'
 
 function Badge({ status }: { status: SensorStatus | undefined }) {
   if (!status) return null
   const map: Record<string, { bg: string; color: string; label: string }> = {
-    ok:       { bg: 'var(--ok-bg)',      color: 'var(--ok)',       label: 'OK' },
-    failed:   { bg: 'var(--err-bg)',     color: 'var(--err)',      label: 'Failed' },
+    ok:       { bg: 'var(--ok-bg)',       color: 'var(--ok)',        label: 'OK' },
+    failed:   { bg: 'var(--err-bg)',      color: 'var(--err)',       label: 'Failed' },
     disabled: { bg: 'var(--surface-alt)', color: 'var(--ink-faint)', label: 'Off' },
   }
   const s = map[status]
@@ -82,9 +106,21 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
   )
 }
 
+function validateHandle(value: string): string | null {
+  const clean = value.startsWith('@') ? value : `@${value}`
+  if (!/^@[A-Za-z0-9_]{1,50}$/.test(clean)) return 'Invalid handle format'
+  return null
+}
+
+function normalizeHandle(value: string): string {
+  return value.startsWith('@') ? value : `@${value}`
+}
+
 export function Sensors({ showToast }: Props) {
   const [enabled, setEnabled] = useState<Record<string, boolean>>({})
   const [statuses, setStatuses] = useState<Record<string, SensorStatus>>({})
+  const [politicsAccounts, setPoliticsAccounts] = useState<string[]>([])
+  const [topicsKeywords, setTopicsKeywords] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -92,6 +128,8 @@ export function Sensors({ showToast }: Props) {
       const defaults: Record<string, boolean> = {}
       for (const { key } of ALL_SENSORS) defaults[key] = true
       setEnabled({ ...defaults, ...cfg.sensors_enabled })
+      setPoliticsAccounts(cfg.politics_accounts)
+      setTopicsKeywords(cfg.topics_keywords)
     })
     api.getLatest().then((report) => {
       const map: Record<string, SensorStatus> = {}
@@ -106,8 +144,12 @@ export function Sensors({ showToast }: Props) {
   const save = async () => {
     setSaving(true)
     try {
-      await api.updateConfig({ sensors_enabled: enabled })
-      showToast('Sensor settings saved')
+      await api.updateConfig({
+        sensors_enabled: enabled,
+        politics_accounts: politicsAccounts,
+        topics_keywords: topicsKeywords,
+      })
+      showToast('Sources saved')
     } catch (e) {
       showToast('Save failed: ' + (e as Error).message)
     } finally {
@@ -128,53 +170,116 @@ export function Sensors({ showToast }: Props) {
     }}>
       <SectionHeader
         num="02"
-        title="Sensors"
-        description="Select which data sources are active in your daily intelligence pipeline."
+        title="Sources"
+        description="Active data sources for your pipeline, grouped by language and provider."
       />
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-        {/* Sensor list */}
-        <div style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: 6,
-          overflow: 'hidden',
-          marginBottom: '1.5rem',
-        }}>
-          {ALL_SENSORS.map(({ key, label, desc }, i) => (
-            <div
-              key={key}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '0.875rem 1.25rem',
-                borderBottom: i < ALL_SENSORS.length - 1 ? '1px solid var(--border-soft)' : 'none',
-                transition: 'background 120ms',
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--canvas)' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)' }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flex: 1 }}>
-                <Toggle on={enabled[key] ?? true} onClick={() => toggle(key)} />
-                <div>
-                  <div style={{
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                    color: enabled[key] ? 'var(--ink)' : 'var(--ink-faint)',
-                    marginBottom: '0.125rem',
-                  }}>
-                    {label}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
-                    {desc}
-                  </div>
-                </div>
-              </div>
-              <Badge status={getBadge(key)} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
+        {SENSOR_GROUPS.map((group) => (
+          <div key={group.label}>
+            {/* Group label */}
+            <div style={{
+              fontSize: '0.6875rem',
+              fontWeight: 600,
+              letterSpacing: '0.09em',
+              textTransform: 'uppercase',
+              color: 'var(--ink-faint)',
+              marginBottom: '0.5rem',
+            }}>
+              {group.label}
             </div>
-          ))}
-        </div>
+
+            {/* Sensor cards in this group */}
+            <div style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 6,
+              overflow: 'hidden',
+            }}>
+              {group.sensors.map(({ key, label, desc }, i) => {
+                const isLast = i === group.sensors.length - 1
+                const isPolitics = key === 'politics'
+                const isTopics = key === 'topics'
+                const isOn = enabled[key] ?? true
+                const showInline = (isPolitics || isTopics) && isOn
+
+                return (
+                  <div key={key}>
+                    {/* Sensor row */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.875rem 1.25rem',
+                        borderBottom: showInline || !isLast ? '1px solid var(--border-soft)' : 'none',
+                        transition: 'background 120ms',
+                      }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--canvas)' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)' }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flex: 1 }}>
+                        <Toggle on={isOn} onClick={() => toggle(key)} />
+                        <div>
+                          <div style={{
+                            fontSize: '0.875rem',
+                            fontWeight: 500,
+                            color: isOn ? 'var(--ink)' : 'var(--ink-faint)',
+                            marginBottom: '0.125rem',
+                          }}>
+                            {label}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
+                            {desc}
+                          </div>
+                        </div>
+                      </div>
+                      <Badge status={getBadge(key)} />
+                    </div>
+
+                    {/* Inline sub-config: Politics Accounts */}
+                    {isPolitics && isOn && (
+                      <div style={{
+                        padding: '1rem 1.25rem 1.25rem 3.5rem',
+                        background: 'var(--canvas)',
+                        borderBottom: isLast ? 'none' : '1px solid var(--border-soft)',
+                      }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem' }}>
+                          X/Twitter handles to monitor
+                        </div>
+                        <TagInput
+                          tags={politicsAccounts}
+                          onChange={(tags) => setPoliticsAccounts(tags.map(normalizeHandle))}
+                          placeholder="@handle — press Enter"
+                          validate={validateHandle}
+                        />
+                      </div>
+                    )}
+
+                    {/* Inline sub-config: Topics Keywords */}
+                    {isTopics && isOn && (
+                      <div style={{
+                        padding: '1rem 1.25rem 1.25rem 3.5rem',
+                        background: 'var(--canvas)',
+                        borderBottom: isLast ? 'none' : '1px solid var(--border-soft)',
+                      }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem' }}>
+                          Keywords and hashtags to search
+                        </div>
+                        <TagInput
+                          tags={topicsKeywords}
+                          onChange={setTopicsKeywords}
+                          placeholder="keyword or #hashtag — press Enter"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        ))}
 
         <div>
           <button

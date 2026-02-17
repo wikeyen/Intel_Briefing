@@ -16,7 +16,7 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 _MASKED = "***"
-_KEY_FIELDS = {"gemini_api_key", "xai_api_key", "github_token", "producthunt_token"}
+_KEY_FIELDS = {"xai_api_key", "github_token", "producthunt_token"}
 
 
 def _mask(data: dict[str, Any]) -> dict[str, Any]:

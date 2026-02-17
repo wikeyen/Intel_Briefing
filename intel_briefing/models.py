@@ -15,7 +15,6 @@ class IntelItem(BaseModel):
     url: str
 
     # Optional enrichment fields
-    title_zh: str | None = None
     heat: str | None = None
     published_at: str | None = None
 
@@ -23,7 +22,6 @@ class IntelItem(BaseModel):
     authors: list[str] | None = None
     categories: list[str] | None = None
     abstract: str | None = None
-    abstract_zh: str | None = None
 
     # Politics sensor
     account: str | None = None
@@ -34,7 +32,6 @@ class IntelItem(BaseModel):
 
     # Full content (blog articles)
     content: str | None = None
-    content_zh: str | None = None
 
 
 class IntelReport(BaseModel):
@@ -105,7 +102,6 @@ class ConfigSettings(BaseModel):
     """
 
     # API keys
-    gemini_api_key: str | None = None
     xai_api_key: str | None = None
     xai_base_url: str = "https://api.x.ai/v1/chat/completions"
     xai_model: str = "grok-3"
@@ -134,7 +130,6 @@ class ConfigSettings(BaseModel):
     fetch_timezone: str = "Asia/Shanghai"
 
     # Output preferences
-    default_language: str = "en"    # "en" | "zh"
     default_limit: int = 10
     section_limits: dict[str, int] = Field(default_factory=dict)
 

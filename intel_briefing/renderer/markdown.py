@@ -1,5 +1,5 @@
 # ABOUTME: Pure Markdown renderer for IntelReport — no I/O, no HTTP, no sleeps.
-# ABOUTME: Renders all 8 report sections, with optional Chinese field support via lang="zh".
+# ABOUTME: Renders all 8 report sections from the IntelReport model.
 from intel_briefing.models import IntelItem, IntelReport
 
 # Ordered section display config: (section_key, display_title, emoji)
@@ -17,22 +17,14 @@ _SECTIONS: list[tuple[str, str, str]] = [
 _NO_DATA_PLACEHOLDER = "_No data available for this section._"
 
 
-def _item_title(item: IntelItem, lang: str) -> str:
-    """Return the best available title for the given language."""
-    if lang == "zh" and item.title_zh:
-        return item.title_zh
-    return item.title
-
-
-def _render_item(item: IntelItem, lang: str) -> str:
+def _render_item(item: IntelItem) -> str:
     """Render a single IntelItem as a Markdown list entry."""
-    title = _item_title(item, lang)
     lines: list[str] = []
 
     if item.url:
-        lines.append(f"- **[{title}]({item.url})**")
+        lines.append(f"- **[{item.title}]({item.url})**")
     else:
-        lines.append(f"- **{title}**")
+        lines.append(f"- **{item.title}**")
 
     meta: list[str] = []
     if item.source:
@@ -51,10 +43,9 @@ def _render_item(item: IntelItem, lang: str) -> str:
     if item.authors:
         lines.append(f"  Authors: {', '.join(item.authors)}")
 
-    abstract = (item.abstract_zh if lang == "zh" and item.abstract_zh else item.abstract)
-    if abstract:
+    if item.abstract:
         # Trim long abstracts to keep the document readable
-        trimmed = abstract[:400] + "…" if len(abstract) > 400 else abstract
+        trimmed = item.abstract[:400] + "…" if len(item.abstract) > 400 else item.abstract
         lines.append(f"  > {trimmed}")
 
     return "\n".join(lines)
@@ -65,24 +56,21 @@ def _render_section(
     title: str,
     emoji: str,
     items: list[IntelItem],
-    lang: str,
 ) -> str:
     """Render one report section as a Markdown H2 block."""
     header = f"## {emoji} {title}"
     if not items:
         return f"{header}\n\n{_NO_DATA_PLACEHOLDER}"
 
-    body = "\n\n".join(_render_item(item, lang) for item in items)
+    body = "\n\n".join(_render_item(item) for item in items)
     return f"{header}\n\n{body}"
 
 
-def render(report: IntelReport, lang: str = "en") -> str:
+def render(report: IntelReport) -> str:
     """Render an IntelReport as a Markdown document.
 
     Args:
         report: The IntelReport to render.
-        lang: Output language. Use "zh" to prefer Chinese fields
-              (title_zh, abstract_zh) when present; falls back to English.
 
     Returns:
         A Markdown string suitable for display or LLM consumption.
@@ -98,7 +86,7 @@ def render(report: IntelReport, lang: str = "en") -> str:
     section_blocks: list[str] = []
     for key, title, emoji in _SECTIONS:
         items = report.items.get(key, [])
-        section_blocks.append(_render_section(key, title, emoji, items, lang))
+        section_blocks.append(_render_section(key, title, emoji, items))
 
     footer_sources = ", ".join(sorted(report.sources_ok)) or "none"
     footer_failed = ", ".join(sorted(report.sources_failed)) or "none"

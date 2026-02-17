@@ -20,18 +20,15 @@ class TestIntelItem:
 
     def test_optional_fields_default_none(self):
         item = IntelItem(id="x", source="hn", title="T", url="u")
-        assert item.title_zh is None
         assert item.heat is None
         assert item.published_at is None
         assert item.authors is None
         assert item.categories is None
         assert item.abstract is None
-        assert item.abstract_zh is None
         assert item.account is None
         assert item.handle is None
         assert item.topic is None
         assert item.content is None
-        assert item.content_zh is None
 
     def test_missing_required_field_raises(self):
         with pytest.raises(Exception):
@@ -95,27 +92,25 @@ class TestIntelReport:
 class TestConfigSettings:
     def test_safe_defaults_with_no_env(self, monkeypatch):
         # Ensure no env vars pollute the test
-        for key in ["GEMINI_API_KEY", "XAI_API_KEY", "GITHUB_TOKEN", "PRODUCTHUNT_TOKEN"]:
+        for key in ["XAI_API_KEY", "GITHUB_TOKEN", "PRODUCTHUNT_TOKEN"]:
             monkeypatch.delenv(key, raising=False)
-        cfg = ConfigSettings(_env_file=None)
-        assert cfg.gemini_api_key is None
+        cfg = ConfigSettings()
         assert cfg.xai_api_key is None
         assert cfg.xai_base_url == "https://api.x.ai/v1/chat/completions"
         assert cfg.xai_model == "grok-3"
-        assert cfg.default_language == "en"
         assert cfg.default_limit == 10
         assert cfg.cache_ttl_hours == 6
 
     def test_sensor_defaults_all_true(self, monkeypatch):
         monkeypatch.delenv("SENSORS_ENABLED", raising=False)
-        cfg = ConfigSettings(_env_file=None)
+        cfg = ConfigSettings()
         assert cfg.sensors_enabled["hacker_news"] is True
         assert cfg.sensors_enabled["arxiv"] is True
         assert cfg.sensors_enabled["politics"] is True
 
     def test_section_limit_falls_back_to_default(self, monkeypatch):
         monkeypatch.delenv("DEFAULT_LIMIT", raising=False)
-        cfg = ConfigSettings(_env_file=None)
+        cfg = ConfigSettings()
         assert cfg.section_limit("tech_trends") == 10
         assert cfg.section_limit("nonexistent") == 10
 

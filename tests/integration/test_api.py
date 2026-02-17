@@ -30,16 +30,15 @@ def make_report(
     return report
 
 
-def make_item(id: str, title: str, title_zh: str | None = None) -> IntelItem:
+def make_item(id: str, title: str) -> IntelItem:
     return IntelItem(
-        id=id, source="hn", title=title, url=f"https://example.com/{id}", title_zh=title_zh
+        id=id, source="hn", title=title, url=f"https://example.com/{id}"
     )
 
 
 @pytest.fixture
 def fresh_config(tmp_path) -> ConfigSettings:
     return ConfigSettings(
-        _env_file=None,
         cache_ttl_hours=6,
     )
 
@@ -132,18 +131,6 @@ class TestIntelLatestEndpoint:
         assert resp.status_code == 200
         assert len(resp.json()["items"]["tech_trends"]) == 3
 
-    def test_lang_zh_returns_title_zh(self, client):
-        item = make_item("1", "English Title", title_zh="中文标题")
-        report = make_report(items={"tech_trends": [item]})
-        with (
-            patch("intel_briefing.api.routes.intel.read_cache", return_value=report),
-            patch("intel_briefing.api.routes.intel.is_stale", return_value=False),
-        ):
-            resp = client.get("/intel/latest?lang=zh")
-        assert resp.status_code == 200
-        zh_items = resp.json()["items"]["tech_trends"]
-        assert zh_items[0]["title"] == "中文标题"
-
     def test_stale_flag_propagated(self, client):
         report = make_report()
         with (
@@ -210,14 +197,11 @@ class TestBriefingEndpoint:
 class TestConfigEndpoint:
     def test_get_config_masks_api_keys(self, client, fresh_config):
         app.state.config = ConfigSettings(
-            _env_file=None,
-            gemini_api_key="secret-key-123",
             xai_api_key="another-secret",
         )
         resp = client.get("/config")
         assert resp.status_code == 200
         data = resp.json()
-        assert data["gemini_api_key"] == "***"
         assert data["xai_api_key"] == "***"
 
     def test_get_config_null_key_not_masked(self, client, fresh_config):
@@ -226,7 +210,7 @@ class TestConfigEndpoint:
         assert resp.status_code == 200
         data = resp.json()
         # None keys should not be masked (they're not set)
-        assert data["gemini_api_key"] is None
+        assert data["xai_api_key"] is None
 
     def test_put_config_updates_settings(self, client, tmp_path, fresh_config):
         app.state.config = fresh_config
@@ -250,17 +234,17 @@ class TestConfigEndpoint:
         with patch("intel_briefing.api.routes.config.load_settings", return_value=fresh_config):
             resp = client.put(
                 "/config",
-                json={"gemini_api_key": "***"},
+                json={"xai_api_key": "***"},
             )
         assert resp.status_code == 200
         # *** should not be written to settings
         import json
         if (tmp_path / "settings.json").exists():
             data = json.loads((tmp_path / "settings.json").read_text())
-            assert data.get("gemini_api_key") != "***"
+            assert data.get("xai_api_key") != "***"
 
     def test_put_config_returns_masked_response(self, client, tmp_path):
-        config_with_key = ConfigSettings(_env_file=None, gemini_api_key="real-key")
+        config_with_key = ConfigSettings(xai_api_key="real-key")
         app.state.config = config_with_key
         app.state.settings_path = tmp_path / "settings.json"
 
@@ -268,4 +252,4 @@ class TestConfigEndpoint:
             resp = client.put("/config", json={"default_limit": 5})
         assert resp.status_code == 200
         data = resp.json()
-        assert data["gemini_api_key"] == "***"
+        assert data["xai_api_key"] == "***"

@@ -94,10 +94,11 @@ function StatCard({ label, children }: { label: string; children: React.ReactNod
 }
 
 export function Status({ showToast }: Props) {
-  const [health, setHealth]   = useState<HealthResponse | null>(null)
-  const [report, setReport]   = useState<IntelReport | null>(null)
-  const [config, setConfig]   = useState<ConfigSettings | null>(null)
+  const [health, setHealth]     = useState<HealthResponse | null>(null)
+  const [report, setReport]     = useState<IntelReport | null>(null)
+  const [config, setConfig]     = useState<ConfigSettings | null>(null)
   const [fetching, setFetching] = useState(false)
+  const [running, setRunning]   = useState(false)
 
   const loadAll = () => {
     api.health().then(setHealth).catch(() => setHealth({ status: 'error', last_fetch: null }))
@@ -107,9 +108,22 @@ export function Status({ showToast }: Props) {
 
   useEffect(() => {
     loadAll()
+
+    // Poll health every 10s; detect new data by comparing fetched_at
+    let lastFetchedAt: string | null = null
     const iv = setInterval(() => {
-      api.health().then(setHealth).catch(() => {})
-    }, 30_000)
+      api.health().then(h => {
+        setHealth(h)
+        // New data arrived — reload report
+        if (h.last_fetch && h.last_fetch !== lastFetchedAt) {
+          if (lastFetchedAt !== null) {
+            api.getLatest().then(r => { setReport(r); setRunning(false) }).catch(() => {})
+          }
+          lastFetchedAt = h.last_fetch
+        }
+      }).catch(() => {})
+    }, 10_000)
+
     return () => clearInterval(iv)
   }, [])
 
@@ -117,8 +131,8 @@ export function Status({ showToast }: Props) {
     setFetching(true)
     try {
       await api.triggerFetch()
+      setRunning(true)
       showToast('Pipeline triggered — results will appear shortly')
-      setTimeout(loadAll, 8000)
     } catch (e) {
       showToast('Trigger failed: ' + (e as Error).message)
     } finally {
@@ -156,17 +170,6 @@ export function Status({ showToast }: Props) {
         marginBottom: '2.5rem',
       }}>
         <div>
-          <div style={{
-            fontSize: '3rem',
-            fontWeight: 700,
-            color: 'var(--border)',
-            lineHeight: 1,
-            fontFamily: 'ui-monospace, monospace',
-            letterSpacing: '-0.02em',
-            marginBottom: '1.25rem',
-          }}>
-            00
-          </div>
           <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.375rem' }}>
             Status
           </h2>
@@ -175,25 +178,42 @@ export function Status({ showToast }: Props) {
           </p>
         </div>
 
-        <button
-          onClick={handleRunNow}
-          disabled={fetching}
-          style={{
-            fontSize: '0.875rem',
-            fontWeight: 500,
-            padding: '0.625rem 1.5rem',
-            borderRadius: 4,
-            border: 'none',
-            color: fetching ? 'var(--ink-faint)' : '#FFFFFF',
-            background: fetching ? 'var(--border)' : 'var(--ink)',
-            cursor: fetching ? 'not-allowed' : 'pointer',
-            transition: 'background 120ms',
-          }}
-          onMouseEnter={e => { if (!fetching) (e.currentTarget as HTMLElement).style.background = '#000000' }}
-          onMouseLeave={e => { if (!fetching) (e.currentTarget as HTMLElement).style.background = 'var(--ink)' }}
-        >
-          {fetching ? 'Running…' : 'Run Now'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {running && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span className="health-dot" style={{
+                display: 'inline-block',
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: 'var(--warn)',
+                flexShrink: 0,
+              }} />
+              <span style={{ fontSize: '0.8125rem', color: 'var(--ink-muted)' }}>
+                Pipeline running…
+              </span>
+            </div>
+          )}
+          <button
+            onClick={handleRunNow}
+            disabled={fetching || running}
+            style={{
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              padding: '0.625rem 1.5rem',
+              borderRadius: 4,
+              border: 'none',
+              color: (fetching || running) ? 'var(--ink-faint)' : '#FFFFFF',
+              background: (fetching || running) ? 'var(--border)' : 'var(--ink)',
+              cursor: (fetching || running) ? 'not-allowed' : 'pointer',
+              transition: 'background 120ms',
+            }}
+            onMouseEnter={e => { if (!fetching && !running) (e.currentTarget as HTMLElement).style.background = '#000000' }}
+            onMouseLeave={e => { if (!fetching && !running) (e.currentTarget as HTMLElement).style.background = 'var(--ink)' }}
+          >
+            {fetching ? 'Triggering…' : 'Run Now'}
+          </button>
+        </div>
       </div>
 
       {/* ── Stat cards ────────────────────────────────────── */}

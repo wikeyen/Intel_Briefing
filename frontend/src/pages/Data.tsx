@@ -1,6 +1,6 @@
 // ABOUTME: Intel data preview page — shows fetched items grouped by section with section tabs.
-// ABOUTME: Loads from GET /intel/latest; each item links out to its source URL.
-import { useState, useEffect } from 'react'
+// ABOUTME: Loads from GET /intel/latest; each item links out to its source URL. Source tags allow multi-select filtering.
+import { useState, useEffect, useMemo } from 'react'
 import { api } from '../api/client'
 import type { IntelReport, IntelItem } from '../api/client'
 
@@ -11,7 +11,7 @@ const SECTIONS: { key: string; label: string }[] = [
   { key: 'products',     label: 'Products' },
   { key: 'community',    label: 'Community' },
   { key: 'insights',     label: 'Insights' },
-  { key: 'politics',     label: 'Politics' },
+  { key: 'politics',     label: 'Accounts' },
   { key: 'topics',       label: 'Topics' },
 ]
 
@@ -50,6 +50,36 @@ function SourceChip({ source }: { source: string }) {
     }}>
       {SOURCE_LABELS[source] ?? source}
     </span>
+  )
+}
+
+function FilterTag({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        fontSize: '0.6875rem',
+        fontWeight: active ? 600 : 400,
+        letterSpacing: '0.04em',
+        padding: '0.25rem 0.625rem',
+        borderRadius: 3,
+        border: active ? '1px solid var(--ink)' : '1px solid var(--border)',
+        background: active ? 'var(--ink)' : 'transparent',
+        color: active ? 'var(--canvas)' : 'var(--ink-muted)',
+        cursor: 'pointer',
+        transition: 'all 100ms',
+        whiteSpace: 'nowrap',
+        flexShrink: 0,
+      }}
+      onMouseEnter={e => {
+        if (!active) (e.currentTarget as HTMLElement).style.borderColor = 'var(--ink-muted)'
+      }}
+      onMouseLeave={e => {
+        if (!active) (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'
+      }}
+    >
+      {label}
+    </button>
   )
 }
 
@@ -166,6 +196,7 @@ export function Data() {
   const [report, setReport] = useState<IntelReport | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeSection, setActiveSection] = useState(SECTIONS[0].key)
+  const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     api.getLatest(50).then(r => {
@@ -176,22 +207,48 @@ export function Data() {
     }).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
-  const items = report?.items[activeSection] ?? []
+  // Derive the unique sources present in the current section
+  const sectionItems = report?.items[activeSection] ?? []
+  const availableSources = useMemo(() => {
+    const seen = new Set<string>()
+    for (const item of sectionItems) seen.add(item.source)
+    return [...seen].sort()
+  }, [sectionItems])
+
+  // Reset selected sources when section changes (select all by default)
+  useEffect(() => {
+    setSelectedSources(new Set(availableSources))
+  }, [activeSection, availableSources.join(',')])
+
+  const toggleSource = (src: string) => {
+    setSelectedSources(prev => {
+      const next = new Set(prev)
+      if (next.has(src)) {
+        // Don't deselect the last one
+        if (next.size === 1) return prev
+        next.delete(src)
+      } else {
+        next.add(src)
+      }
+      return next
+    })
+  }
+
+  const filteredItems = sectionItems.filter(item => selectedSources.has(item.source))
   const totalItems = Object.values(report?.items ?? {}).reduce((s, a) => s + a.length, 0)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
 
-      {/* Sticky header — title row + tab bar */}
+      {/* Sticky header — full-width background, constrained inner content */}
       <div style={{
         position: 'sticky',
         top: 0,
         zIndex: 10,
         background: 'var(--canvas)',
         borderBottom: '1px solid var(--border)',
-        paddingLeft: '2rem',
-        paddingRight: '2rem',
       }}>
+      <div style={{ maxWidth: 1024, margin: '0 auto', paddingLeft: '3rem', paddingRight: '3rem' }}>
         {/* Title + meta */}
         <div style={{
           display: 'flex',
@@ -262,10 +319,52 @@ export function Data() {
             })}
           </div>
         )}
+
+        {/* Source filter tags — only shown when multiple sources exist in section */}
+        {report && availableSources.length > 1 && (
+          <div style={{
+            display: 'flex',
+            gap: '0.375rem',
+            alignItems: 'center',
+            paddingTop: '0.625rem',
+            paddingBottom: '0.75rem',
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
+          }}>
+            {availableSources.map(src => (
+              <FilterTag
+                key={src}
+                label={SOURCE_LABELS[src] ?? src}
+                active={selectedSources.has(src)}
+                onClick={() => toggleSource(src)}
+              />
+            ))}
+            {selectedSources.size < availableSources.length && (
+              <button
+                onClick={() => setSelectedSources(new Set(availableSources))}
+                style={{
+                  fontSize: '0.6875rem',
+                  color: 'var(--ink-faint)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.25rem 0.375rem',
+                  marginLeft: '0.125rem',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-faint)' }}
+              >
+                All
+              </button>
+            )}
+          </div>
+        )}
+      </div>
       </div>
 
       {/* Scrollable content */}
-      <div style={{ flex: 1, padding: '1.5rem 2rem 3rem' }}>
+      <div style={{ flex: 1 }}>
+      <div style={{ maxWidth: 1024, margin: '0 auto', padding: '1.5rem 3rem 3rem' }}>
         {!loading && !report ? (
           <div style={{ color: 'var(--ink-faint)', fontSize: '0.875rem' }}>
             No data available. Trigger a pipeline run from the Status page.
@@ -277,12 +376,13 @@ export function Data() {
             borderRadius: 6,
             overflow: 'hidden',
           }}>
-            {items.length === 0
+            {filteredItems.length === 0
               ? <EmptySection />
-              : items.map(item => <ItemCard key={item.id} item={item} />)
+              : filteredItems.map(item => <ItemCard key={item.id} item={item} />)
             }
           </div>
         ) : null}
+      </div>
       </div>
     </div>
   )

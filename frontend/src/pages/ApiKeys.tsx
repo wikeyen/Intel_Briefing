@@ -10,7 +10,6 @@ interface Props {
 }
 
 const KEY_FIELDS: { field: keyof ConfigSettings; label: string; hint: string }[] = [
-  { field: 'gemini_api_key',     label: 'Gemini API Key',      hint: 'Used for AI summarization via Google Gemini.' },
   { field: 'xai_api_key',        label: 'xAI API Key',         hint: 'Required for Grok-based politics and topics sensors.' },
   { field: 'github_token',       label: 'GitHub Token',        hint: 'Personal access token for GitHub Trending sensor.' },
   { field: 'producthunt_token',  label: 'Product Hunt Token',  hint: 'API token for Product Hunt daily launches.' },
@@ -249,7 +248,7 @@ export function ApiKeys({ showToast }: Props) {
     }}>
       <SectionHeader
         num="01"
-        title="API Keys"
+        title="Connections"
         description="Credentials for external data sources and AI providers. Saved keys can be revealed on demand."
       />
 

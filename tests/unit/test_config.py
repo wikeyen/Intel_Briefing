@@ -6,7 +6,6 @@ import logging
 import pytest
 
 from intel_briefing.config import (
-    GEMINI_API_URL,
     JINA_READER_URL,
     load_settings,
     load_settings_json,
@@ -38,9 +37,6 @@ class TestSetupLogging:
 
 
 class TestConstants:
-    def test_gemini_api_url_is_https(self):
-        assert GEMINI_API_URL.startswith("https://")
-
     def test_jina_reader_url_is_https(self):
         assert JINA_READER_URL.startswith("https://")
 
@@ -72,7 +68,7 @@ class TestLoadSettings:
 
     def test_uses_defaults_when_no_file(self, tmp_path, monkeypatch):
         # Remove any env vars that might influence test
-        for key in ["GEMINI_API_KEY", "XAI_API_KEY", "DEFAULT_LIMIT"]:
+        for key in ["XAI_API_KEY", "DEFAULT_LIMIT"]:
             monkeypatch.delenv(key, raising=False)
         path = tmp_path / "nonexistent.json"
         cfg = load_settings(path)
@@ -85,12 +81,13 @@ class TestLoadSettings:
         cfg = load_settings(path)
         assert cfg.default_limit == 42
 
-    def test_env_vars_override_json_file(self, tmp_path, monkeypatch):
+    def test_json_file_is_sole_source_of_truth(self, tmp_path, monkeypatch):
+        # Env vars are intentionally ignored — settings.json is the only source.
         path = tmp_path / "settings.json"
         path.write_text(json.dumps({"default_limit": 5}), encoding="utf-8")
         monkeypatch.setenv("DEFAULT_LIMIT", "99")
         cfg = load_settings(path)
-        assert cfg.default_limit == 99
+        assert cfg.default_limit == 5
 
 
 class TestSensorProtocol:

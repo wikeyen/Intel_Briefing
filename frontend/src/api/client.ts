@@ -7,7 +7,6 @@ export interface HealthResponse {
 }
 
 export interface ConfigSettings {
-  gemini_api_key: string | null
   xai_api_key: string | null
   xai_base_url: string
   xai_model: string
@@ -16,7 +15,6 @@ export interface ConfigSettings {
   sensors_enabled: Record<string, boolean>
   fetch_time: string
   fetch_timezone: string
-  default_language: string
   default_limit: number
   section_limits: Record<string, number>
   boost_keywords: string[]
@@ -31,7 +29,6 @@ export interface IntelItem {
   source: string
   title: string
   url: string
-  title_zh?: string | null
   heat?: string | null
   published_at?: string | null
   abstract?: string | null
@@ -76,8 +73,8 @@ export const api = {
       body: JSON.stringify(partial),
     }),
 
-  getLatest: (limit = 10, lang = 'en') =>
-    apiFetch<IntelReport>(`/intel/latest?limit=${limit}&lang=${lang}`),
+  getLatest: (limit = 10) =>
+    apiFetch<IntelReport>(`/intel/latest?limit=${limit}`),
 
   triggerFetch: () =>
     apiFetch<{ status: string }>('/fetch', { method: 'POST' }),

@@ -18,14 +18,11 @@ LOG_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 # API endpoint constants
-GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models"
-GEMINI_MODEL = "gemini-2.5-flash-lite"
 GITHUB_API_URL = "https://api.github.com/graphql"
 JINA_READER_URL = "https://r.jina.ai/"
 
 # Timeout constants (seconds)
 DEFAULT_TIMEOUT = 15
-GEMINI_TIMEOUT = 60
 JINA_TIMEOUT = 30
 GROK_TIMEOUT = 60
 
@@ -33,13 +30,6 @@ GROK_TIMEOUT = 60
 CONTENT_TRUNCATE_LIMIT = 3000
 JINA_MAX_CHARS = 15000
 PH_HYDRATION_TRUNCATE = 5000
-GEMINI_MAX_OUTPUT_TOKENS = 1024
-GEMINI_SUMMARY_MAX_TOKENS = 256
-GEMINI_DETAIL_MAX_TOKENS = 1024
-
-# Rate limiting constants
-GEMINI_RATE_LIMIT_DELAY = 1.5
-GEMINI_MAX_RETRIES = 3
 
 # Fetch limits
 MAX_BLOGS_TO_FETCH = 20

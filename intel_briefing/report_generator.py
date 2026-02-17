@@ -7,27 +7,10 @@ Report Generator - 报告生成模块
 负责将情报数据转换为 Markdown 报告
 """
 
-import time
 import logging
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
-
-# Import from centralized config
-try:
-    from config import GEMINI_RATE_LIMIT_DELAY
-except ImportError:
-    try:
-        from src.config import GEMINI_RATE_LIMIT_DELAY
-    except ImportError:
-        GEMINI_RATE_LIMIT_DELAY = 1.5
-
-# --- Gemini Translator ---
-try:
-    from utils.gemini_translator import translate_to_chinese, summarize_blog_article
-    GEMINI_AVAILABLE = True
-except ImportError:
-    GEMINI_AVAILABLE = False
 
 # --- Jina Reader (Full Content Fetcher) ---
 try:
@@ -36,14 +19,6 @@ try:
 except ImportError:
     JINA_AVAILABLE = False
     logger.info("Jina Reader not available, using RSS description only.")
-
-if not GEMINI_AVAILABLE:
-    logger.info("Gemini translator not available, using English summaries.")
-    def translate_to_chinese(text, max_chars=100):
-        return text[:max_chars] + "..." if len(text) > max_chars else text
-
-    def summarize_blog_article(content, mode="brief"):
-        return ""
 
 
 def generate_report(intel: dict, date_str: str) -> str:
@@ -105,20 +80,12 @@ def generate_report(intel: dict, date_str: str) -> str:
             time_str = item.get("time", "")
             summary = item.get("summary", "").replace("\n", " ")
 
-            brief_cn = translate_to_chinese(summary[:200], max_chars=80) if summary else ""
-            if GEMINI_AVAILABLE and summary:
-                time.sleep(GEMINI_RATE_LIMIT_DELAY)
-            detail_cn = translate_to_chinese(summary, max_chars=2000) if summary else ""
-
             lines.append(f"### {i}. [{title}]({url})")
-            if brief_cn:
-                lines.append(f"> ⚡ {brief_cn}")
-
             lines.append(f"👤 {authors} | 📅 {time_str}")
 
-            if detail_cn:
+            if summary:
                 lines.append("")
-                lines.append(f"**详情:** {detail_cn}")
+                lines.append(f"> {summary[:400]}{'…' if len(summary) > 400 else ''}")
 
             lines.append("")
     else:
@@ -227,22 +194,12 @@ def generate_report(intel: dict, date_str: str) -> str:
                 source_text = rss_content
                 logger.debug(f"[Insights {i}] Fallback to RSS content ({len(source_text)} chars)")
 
-            brief_cn = ""
-            detail_cn = ""
-            if source_text and GEMINI_AVAILABLE:
-                brief_cn = summarize_blog_article(source_text, mode="brief")
-                time.sleep(GEMINI_RATE_LIMIT_DELAY)
-                detail_cn = summarize_blog_article(source_text, mode="detail")
-
             lines.append(f"### {i}. [{title}]({url})")
-            if brief_cn:
-                lines.append(f"> ⚡ {brief_cn}")
-
             lines.append(f"📍 {author}{' | 📅 ' + time_str if time_str else ''}")
 
-            if detail_cn:
+            if source_text:
                 lines.append("")
-                lines.append(f"**详情:** {detail_cn}")
+                lines.append(f"> {source_text[:400]}{'…' if len(source_text) > 400 else ''}")
 
             lines.append("")
     else:

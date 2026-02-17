@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 from pydantic import BaseModel, Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class IntelItem(BaseModel):
@@ -98,15 +97,12 @@ class SectionConfig(BaseModel):
     limit: int = 10
 
 
-class ConfigSettings(BaseSettings):
+class ConfigSettings(BaseModel):
     """All user-configurable settings for Intel Briefing.
 
-    Loaded from environment variables (highest priority), .env file, and
-    settings.json (lowest priority). Use config.load_settings() to construct
-    an instance with the full source chain.
+    Loaded exclusively from config/settings.json — the single source of truth.
+    Use config.load_settings() to construct an instance from disk.
     """
-
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     # API keys
     gemini_api_key: str | None = None

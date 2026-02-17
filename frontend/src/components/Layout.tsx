@@ -15,12 +15,14 @@ const NAV = [
   { href: '#output',    label: 'Output',             num: '07' },
 ]
 
-interface Props { children: ReactNode }
+interface Props {
+  children: ReactNode
+  showToast: (msg: string) => void
+}
 
-export function Layout({ children }: Props) {
+export function Layout({ children, showToast }: Props) {
   const [health, setHealth] = useState<HealthResponse | null>(null)
   const [fetching, setFetching] = useState(false)
-  const [toast, setToast] = useState<string | null>(null)
   const [activeHash, setActiveHash] = useState(window.location.hash || '#api-keys')
 
   useEffect(() => {
@@ -34,11 +36,6 @@ export function Layout({ children }: Props) {
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
-
-  const showToast = (msg: string) => {
-    setToast(msg)
-    setTimeout(() => setToast(null), 3000)
-  }
 
   const handleFetchNow = async () => {
     setFetching(true)
@@ -207,26 +204,6 @@ export function Layout({ children }: Props) {
       }}>
         {children}
       </main>
-
-      {/* Toast */}
-      {toast && (
-        <div style={{
-          position: 'fixed',
-          top: '1.25rem',
-          right: '1.5rem',
-          background: 'var(--ink)',
-          color: 'var(--surface)',
-          fontSize: '0.8125rem',
-          fontWeight: 500,
-          padding: '0.875rem 1.25rem',
-          borderRadius: 4,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-          zIndex: 50,
-          letterSpacing: '0.01em',
-        }}>
-          {toast}
-        </div>
-      )}
     </div>
   )
 }

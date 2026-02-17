@@ -1,0 +1,2 @@
+# ABOUTME: sensors sub-package for intel_briefing.
+# ABOUTME: See individual modules for details.

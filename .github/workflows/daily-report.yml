@@ -26,7 +26,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
-          XAI_BASE_URL: https://api.gptsapi.net/v1/chat/completions
+          # Official xAI endpoint. Override with a relay URL via GitHub Secret if needed for geo-restricted access.
+          # WARNING: Using a relay routes your API key through a third-party operator. Only use a trusted relay.
+          XAI_BASE_URL: ${{ secrets.XAI_BASE_URL || 'https://api.x.ai/v1/chat/completions' }}
           XAI_MODEL: grok-3
           PRODUCTHUNT_TOKEN: ${{ secrets.PRODUCTHUNT_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

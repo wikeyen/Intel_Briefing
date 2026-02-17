@@ -20,24 +20,35 @@ function App() {
 
   return (
     <Layout>
-      <div className="flex flex-col gap-12">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
         <ApiKeys showToast={showToast} />
-        <hr className="border-gray-800" />
+        <div style={{ height: 1, background: 'var(--border-soft)' }} />
         <Sensors showToast={showToast} />
-        <hr className="border-gray-800" />
+        <div style={{ height: 1, background: 'var(--border-soft)' }} />
         <Schedule showToast={showToast} />
-        <hr className="border-gray-800" />
+        <div style={{ height: 1, background: 'var(--border-soft)' }} />
         <PoliticsAccounts showToast={showToast} />
-        <hr className="border-gray-800" />
+        <div style={{ height: 1, background: 'var(--border-soft)' }} />
         <Topics showToast={showToast} />
-        <hr className="border-gray-800" />
+        <div style={{ height: 1, background: 'var(--border-soft)' }} />
         <Filters showToast={showToast} />
-        <hr className="border-gray-800" />
+        <div style={{ height: 1, background: 'var(--border-soft)' }} />
         <Output showToast={showToast} />
       </div>
 
       {toast && (
-        <div className="fixed bottom-6 right-6 bg-gray-800 border border-gray-700 text-sm text-white px-4 py-3 rounded shadow-lg z-50">
+        <div style={{
+          position: 'fixed',
+          bottom: '2rem',
+          right: '2rem',
+          background: 'var(--ink)',
+          color: 'var(--canvas)',
+          fontSize: '0.8125rem',
+          padding: '0.75rem 1.25rem',
+          borderRadius: 2,
+          boxShadow: '0 4px 24px rgba(28,26,23,0.18)',
+          zIndex: 51,
+        }}>
           {toast}
         </div>
       )}

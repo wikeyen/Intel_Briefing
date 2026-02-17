@@ -2,6 +2,7 @@
 // ABOUTME: Shows OK/FAILED/DISABLED badge per sensor based on latest fetch results.
 import { useState, useEffect } from 'react'
 import { api } from '../api/client'
+import { SectionHeader } from '../components/SectionHeader'
 
 interface Props {
   showToast: (msg: string) => void
@@ -22,6 +23,30 @@ const ALL_SENSORS = [
 ]
 
 type StatusMap = Record<string, 'ok' | 'failed' | 'disabled'>
+
+function StatusBadge({ status }: { status: 'ok' | 'failed' | 'disabled' | undefined }) {
+  if (!status) return null
+  const styles: Record<string, { bg: string; color: string; label: string }> = {
+    ok: { bg: 'var(--ok-bg)', color: 'var(--ok)', label: 'OK' },
+    failed: { bg: 'var(--err-bg)', color: 'var(--err)', label: 'Failed' },
+    disabled: { bg: 'var(--surface-alt)', color: 'var(--ink-faint)', label: 'Disabled' },
+  }
+  const s = styles[status]
+  return (
+    <span style={{
+      fontSize: '0.625rem',
+      fontWeight: 600,
+      letterSpacing: '0.08em',
+      textTransform: 'uppercase',
+      background: s.bg,
+      color: s.color,
+      padding: '0.15rem 0.5rem',
+      borderRadius: 2,
+    }}>
+      {s.label}
+    </span>
+  )
+}
 
 export function Sensors({ showToast }: Props) {
   const [enabled, setEnabled] = useState<Record<string, boolean>>({})
@@ -57,53 +82,88 @@ export function Sensors({ showToast }: Props) {
     }
   }
 
-  const badge = (key: string) => {
-    if (!enabled[key]) return <span className="text-xs text-gray-500 font-medium">DISABLED</span>
-    const s = statuses[key]
-    if (!s) return null
-    return s === 'ok'
-      ? <span className="text-xs text-green-400 font-medium">OK</span>
-      : <span className="text-xs text-red-400 font-medium">FAILED</span>
+  const getBadgeStatus = (key: string): 'ok' | 'failed' | 'disabled' | undefined => {
+    if (!enabled[key]) return 'disabled'
+    return statuses[key]
   }
 
   return (
-    <section id="sensors" className="max-w-2xl flex flex-col gap-6">
-      <h2 className="text-xl font-semibold text-white">Sensors</h2>
-      <div className="flex flex-col gap-3">
-        {ALL_SENSORS.map(({ key, label }) => (
+    <section id="sensors" style={{ maxWidth: 640, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <SectionHeader title="Sensors" />
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {ALL_SENSORS.map(({ key, label }, i) => (
           <div
             key={key}
-            className="flex items-center justify-between bg-gray-800 rounded px-4 py-3"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0.75rem 0',
+              borderBottom: i < ALL_SENSORS.length - 1 ? '1px solid var(--border-soft)' : 'none',
+            }}
           >
-            <div className="flex items-center gap-3">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+              {/* Toggle switch */}
               <button
                 type="button"
                 role="switch"
                 aria-checked={enabled[key] ?? true}
                 onClick={() => toggle(key)}
-                className={`relative w-10 h-5 rounded-full transition-colors ${
-                  enabled[key] ? 'bg-indigo-600' : 'bg-gray-600'
-                }`}
+                style={{
+                  position: 'relative',
+                  width: 32,
+                  height: 18,
+                  borderRadius: 9,
+                  border: enabled[key] ? 'none' : '1.5px solid var(--border)',
+                  background: enabled[key] ? 'var(--accent)' : 'transparent',
+                  cursor: 'pointer',
+                  transition: 'background 150ms, border-color 150ms',
+                  flexShrink: 0,
+                }}
               >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                    enabled[key] ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
+                <span style={{
+                  position: 'absolute',
+                  top: enabled[key] ? 2 : 1.5,
+                  left: enabled[key] ? 16 : 1.5,
+                  width: 14,
+                  height: 14,
+                  borderRadius: '50%',
+                  background: enabled[key] ? 'var(--canvas)' : 'var(--ink-faint)',
+                  transition: 'left 150ms, background 150ms',
+                }} />
               </button>
-              <span className="text-sm text-gray-200">{label}</span>
+              <span style={{ fontSize: '0.9375rem', color: enabled[key] ? 'var(--ink)' : 'var(--ink-muted)' }}>
+                {label}
+              </span>
             </div>
-            {badge(key)}
+            <StatusBadge status={getBadgeStatus(key)} />
           </div>
         ))}
       </div>
-      <button
-        onClick={save}
-        disabled={saving}
-        className="self-start bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm px-5 py-2 rounded transition-colors"
-      >
-        {saving ? 'Saving…' : 'Save'}
-      </button>
+      <div>
+        <button
+          onClick={save}
+          disabled={saving}
+          style={{
+            fontSize: '0.75rem',
+            fontWeight: 500,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            color: saving ? 'var(--ink-faint)' : 'var(--accent)',
+            border: '1.5px solid',
+            borderColor: saving ? 'var(--border)' : 'var(--accent)',
+            borderRadius: 2,
+            padding: '0.4rem 1.25rem',
+            cursor: saving ? 'not-allowed' : 'pointer',
+            transition: 'all 150ms ease',
+            background: 'transparent',
+          }}
+          onMouseEnter={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = 'var(--accent-wash)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+        >
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+      </div>
     </section>
   )
 }

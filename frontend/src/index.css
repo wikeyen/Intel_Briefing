@@ -1,13 +1,43 @@
+/* ABOUTME: Global styles and design tokens for Intel Briefing — Swiss-spa aesthetic. */
+/* ABOUTME: All color, type, and spacing tokens are defined here as CSS custom properties. */
 @import "tailwindcss";
 
+/* ─── Design Tokens ──────────────────────────────────────────────────────── */
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  /* Canvas & surfaces */
+  --canvas:        #FAFAF7;
+  --surface:       #F5F4F0;
+  --surface-alt:   #EDECEA;
+
+  /* Borders */
+  --border:        #DDD9D4;
+  --border-soft:   #E8E5E0;
+
+  /* Text */
+  --ink:           #1C1A17;
+  --ink-muted:     #6B6560;
+  --ink-faint:     #9C9690;
+
+  /* Accent — sage green */
+  --accent:        #5C7A6B;
+  --accent-dim:    #4A6357;
+  --accent-wash:   #EBF0EE;
+
+  /* Semantic status */
+  --ok:            #4A7C59;
+  --ok-bg:         #EDF4EF;
+  --warn:          #9C7A3C;
+  --warn-bg:       #F7F1E6;
+  --err:           #8B3A3A;
+  --err-bg:        #F5ECEC;
+
+  /* Typography */
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 15px;
   line-height: 1.5;
   font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  color: var(--ink);
+  background-color: var(--canvas);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -15,19 +45,21 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+*, *::before, *::after {
+  box-sizing: border-box;
 }
-a:hover {
-  color: #535bf2;
+
+::selection {
+  background: var(--accent-wash);
+  color: var(--accent-dim);
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  background: var(--canvas);
+  color: var(--ink);
 }
 
 #root {
@@ -35,39 +67,64 @@ body {
   min-height: 100vh;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+/* ─── Links ──────────────────────────────────────────────────────────────── */
+a {
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: inherit;
+  transition: color 150ms ease;
+}
+a:hover {
+  color: var(--accent);
 }
 
+/* ─── Reset button defaults ──────────────────────────────────────────────── */
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  border: none;
+  background: none;
+  padding: 0;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+/* ─── Range inputs — custom track & thumb ───────────────────────────────── */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 1px;
+  background: var(--border);
+  outline: none;
+  cursor: pointer;
 }
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 2px solid var(--canvas);
+  box-shadow: 0 0 0 1.5px var(--border);
+  transition: background 150ms ease, box-shadow 150ms ease;
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  background: var(--accent);
+  box-shadow: 0 0 0 1.5px var(--accent);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 2px solid var(--canvas);
+  box-shadow: 0 0 0 1.5px var(--border);
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+/* ─── Scrollbar — subtle ────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-faint); }

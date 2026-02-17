@@ -2,6 +2,7 @@
 // ABOUTME: Saves default_language, default_limit, and section_limits to PUT /config.
 import { useState, useEffect } from 'react'
 import { api } from '../api/client'
+import { SectionHeader } from '../components/SectionHeader'
 
 interface Props {
   showToast: (msg: string) => void
@@ -52,22 +53,35 @@ export function Output({ showToast }: Props) {
   }
 
   return (
-    <section id="output" className="max-w-2xl flex flex-col gap-6">
-      <h2 className="text-xl font-semibold text-white">Output</h2>
+    <section id="output" style={{ maxWidth: 640, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <SectionHeader title="Output" />
 
-      <div className="flex flex-col gap-1">
-        <label className="text-sm text-gray-400">Language</label>
-        <div className="flex gap-3">
+      {/* Language segmented control */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+        <label style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', fontWeight: 500 }}>
+          Language
+        </label>
+        <div style={{
+          display: 'inline-flex',
+          border: '1px solid var(--border)',
+          borderRadius: 2,
+          overflow: 'hidden',
+        }}>
           {(['en', 'zh'] as const).map((l) => (
             <button
               key={l}
               type="button"
               onClick={() => setLang(l)}
-              className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                lang === l
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-              }`}
+              style={{
+                padding: '0.5rem 1.5rem',
+                fontSize: '0.8125rem',
+                fontWeight: lang === l ? 500 : 400,
+                color: lang === l ? 'var(--canvas)' : 'var(--ink-muted)',
+                background: lang === l ? 'var(--accent)' : 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'background 150ms, color 150ms',
+              }}
             >
               {l === 'en' ? 'English' : 'Chinese'}
             </button>
@@ -75,9 +89,11 @@ export function Output({ showToast }: Props) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-sm text-gray-400">
-          Default Items per Section — <span className="text-white">{defaultLimit}</span>
+      {/* Global limit */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+        <label style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', fontWeight: 500 }}>
+          Default Items per Section —{' '}
+          <span style={{ color: 'var(--ink)' }}>{defaultLimit}</span>
         </label>
         <input
           type="range"
@@ -85,38 +101,74 @@ export function Output({ showToast }: Props) {
           max={50}
           value={defaultLimit}
           onChange={(e) => setDefaultLimit(Number(e.target.value))}
-          className="accent-indigo-500"
         />
       </div>
 
-      <div className="flex flex-col gap-3">
-        <label className="text-sm text-gray-400">Per-Section Overrides</label>
+      {/* Per-section overrides */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <label style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', fontWeight: 500 }}>
+          Per-Section Overrides
+        </label>
         {SECTIONS.map((section) => {
           const val = sectionLimits[section] ?? defaultLimit
           return (
-            <div key={section} className="flex items-center gap-4">
-              <span className="text-sm text-gray-300 w-32 shrink-0">{section}</span>
+            <div key={section} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <span style={{
+                fontSize: '0.75rem',
+                color: 'var(--ink-muted)',
+                width: 128,
+                flexShrink: 0,
+                fontFamily: 'ui-monospace, monospace',
+              }}>
+                {section}
+              </span>
               <input
                 type="range"
                 min={1}
                 max={50}
                 value={val}
                 onChange={(e) => updateSection(section, Number(e.target.value))}
-                className="flex-1 accent-indigo-500"
+                style={{ flex: 1 }}
               />
-              <span className="text-sm text-white w-6 text-right">{val}</span>
+              <span style={{
+                fontSize: '0.8125rem',
+                color: 'var(--ink)',
+                width: 24,
+                textAlign: 'right',
+                fontFamily: 'ui-monospace, monospace',
+                flexShrink: 0,
+              }}>
+                {val}
+              </span>
             </div>
           )
         })}
       </div>
 
-      <button
-        onClick={save}
-        disabled={saving}
-        className="self-start bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm px-5 py-2 rounded transition-colors"
-      >
-        {saving ? 'Saving…' : 'Save'}
-      </button>
+      <div>
+        <button
+          onClick={save}
+          disabled={saving}
+          style={{
+            fontSize: '0.75rem',
+            fontWeight: 500,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            color: saving ? 'var(--ink-faint)' : 'var(--accent)',
+            border: '1.5px solid',
+            borderColor: saving ? 'var(--border)' : 'var(--accent)',
+            borderRadius: 2,
+            padding: '0.4rem 1.25rem',
+            cursor: saving ? 'not-allowed' : 'pointer',
+            transition: 'all 150ms ease',
+            background: 'transparent',
+          }}
+          onMouseEnter={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = 'var(--accent-wash)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+        >
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+      </div>
     </section>
   )
 }

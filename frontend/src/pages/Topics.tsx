@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { api } from '../api/client'
 import type { IntelItem } from '../api/client'
 import { TagInput } from '../components/TagInput'
+import { SectionHeader } from '../components/SectionHeader'
 
 interface Props {
   showToast: (msg: string) => void
@@ -34,14 +35,16 @@ export function Topics({ showToast }: Props) {
   }
 
   return (
-    <section id="topics" className="max-w-2xl flex flex-col gap-6">
-      <h2 className="text-xl font-semibold text-white">Topics</h2>
-      <p className="text-sm text-gray-400">
+    <section id="topics" style={{ maxWidth: 640, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <SectionHeader title="Topics" />
+      <p style={{ fontSize: '0.8125rem', color: 'var(--ink-muted)', margin: 0 }}>
         Keywords and hashtags to search via Grok. Requires xAI API key.
       </p>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-sm text-gray-400">Keywords / Hashtags</label>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+        <label style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', fontWeight: 500 }}>
+          Keywords / Hashtags
+        </label>
         <TagInput
           tags={keywords}
           onChange={setKeywords}
@@ -49,32 +52,71 @@ export function Topics({ showToast }: Props) {
         />
       </div>
 
-      <button
-        onClick={save}
-        disabled={saving}
-        className="self-start bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm px-5 py-2 rounded transition-colors"
-      >
-        {saving ? 'Saving…' : 'Save'}
-      </button>
+      <div>
+        <button
+          onClick={save}
+          disabled={saving}
+          style={{
+            fontSize: '0.75rem',
+            fontWeight: 500,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            color: saving ? 'var(--ink-faint)' : 'var(--accent)',
+            border: '1.5px solid',
+            borderColor: saving ? 'var(--border)' : 'var(--accent)',
+            borderRadius: 2,
+            padding: '0.4rem 1.25rem',
+            cursor: saving ? 'not-allowed' : 'pointer',
+            transition: 'all 150ms ease',
+            background: 'transparent',
+          }}
+          onMouseEnter={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = 'var(--accent-wash)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+        >
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+      </div>
 
       {preview.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <h3 className="text-sm font-medium text-gray-400">Latest Topics Items</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+          <div style={{
+            fontSize: '0.6875rem',
+            fontWeight: 600,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            color: 'var(--ink-faint)',
+            marginBottom: '0.75rem',
+          }}>
+            Latest Topics Items
+          </div>
           {preview.map((item) => (
-            <div key={item.id} className="bg-gray-800 rounded px-4 py-3 flex flex-col gap-1">
+            <div key={item.id} style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.25rem',
+              padding: '0.75rem 0 0.75rem 1rem',
+              borderLeft: '2px solid var(--border)',
+              marginBottom: '0.75rem',
+            }}>
               {item.topic && (
-                <div className="text-xs text-indigo-400">{item.topic}</div>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--accent-dim)', fontWeight: 500 }}>
+                  {item.topic}
+                </div>
               )}
               <a
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-gray-100 hover:text-white"
+                style={{ fontSize: '0.875rem', color: 'var(--ink)', transition: 'color 150ms' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--accent)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink)' }}
               >
                 {item.title}
               </a>
               {item.handle && (
-                <div className="text-xs text-gray-500">{item.handle}</div>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)', fontFamily: 'ui-monospace, monospace' }}>
+                  {item.handle}
+                </div>
               )}
             </div>
           ))}

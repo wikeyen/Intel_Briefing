@@ -2,6 +2,7 @@
 // ABOUTME: Saves to PUT /config; shows success/error toast via callback.
 import { useState, useEffect } from 'react'
 import { api } from '../api/client'
+import { SectionHeader } from '../components/SectionHeader'
 
 interface Props {
   showToast: (msg: string) => void
@@ -22,6 +23,18 @@ const TIMEZONES = [
   'Asia/Seoul',
   'Australia/Sydney',
 ]
+
+const inputStyle = {
+  background: 'var(--canvas)',
+  border: '1px solid var(--border)',
+  borderRadius: 2,
+  padding: '0.625rem 0.75rem',
+  fontSize: '0.9375rem',
+  color: 'var(--ink)',
+  outline: 'none',
+  transition: 'border-color 150ms',
+  fontFamily: 'inherit',
+}
 
 export function Schedule({ showToast }: Props) {
   const [fetchTime, setFetchTime] = useState('07:00')
@@ -54,37 +67,65 @@ export function Schedule({ showToast }: Props) {
   }
 
   return (
-    <section id="schedule" className="max-w-2xl flex flex-col gap-6">
-      <h2 className="text-xl font-semibold text-white">Schedule</h2>
+    <section id="schedule" style={{ maxWidth: 640, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <SectionHeader title="Schedule" />
 
-      <div className="flex flex-col gap-1">
-        <label className="text-sm text-gray-400">Daily Fetch Time</label>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+        <label style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', fontWeight: 500 }}>
+          Daily Fetch Time
+        </label>
         <input
           type="time"
           value={fetchTime}
           onChange={(e) => setFetchTime(e.target.value)}
-          className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-indigo-500 w-40"
+          style={{ ...inputStyle, width: 160 }}
+          onFocus={e => { e.currentTarget.style.borderColor = 'var(--accent)' }}
+          onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
         />
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-sm text-gray-400">Timezone</label>
-        <select
-          value={timezone}
-          onChange={(e) => setTimezone(e.target.value)}
-          className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-indigo-500"
-        >
-          {TIMEZONES.map((tz) => (
-            <option key={tz} value={tz}>
-              {tz}
-            </option>
-          ))}
-        </select>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+        <label style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', fontWeight: 500 }}>
+          Timezone
+        </label>
+        <div style={{ position: 'relative' }}>
+          <select
+            value={timezone}
+            onChange={(e) => setTimezone(e.target.value)}
+            style={{
+              ...inputStyle,
+              width: '100%',
+              appearance: 'none',
+              WebkitAppearance: 'none',
+              paddingRight: '2rem',
+              cursor: 'pointer',
+            }}
+            onFocus={e => { e.currentTarget.style.borderColor = 'var(--accent)' }}
+            onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
+          >
+            {TIMEZONES.map((tz) => (
+              <option key={tz} value={tz}>
+                {tz}
+              </option>
+            ))}
+          </select>
+          {/* Custom chevron */}
+          <span style={{
+            position: 'absolute',
+            right: '0.75rem',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            pointerEvents: 'none',
+            color: 'var(--ink-faint)',
+            fontSize: '0.625rem',
+          }}>▾</span>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-sm text-gray-400">
-          Cache TTL — <span className="text-white">{cacheTtl}h</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+        <label style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', fontWeight: 500 }}>
+          Cache TTL —{' '}
+          <span style={{ color: 'var(--ink)' }}>{cacheTtl}h</span>
         </label>
         <input
           type="range"
@@ -92,20 +133,36 @@ export function Schedule({ showToast }: Props) {
           max={72}
           value={cacheTtl}
           onChange={(e) => setCacheTtl(Number(e.target.value))}
-          className="accent-indigo-500"
         />
-        <p className="text-xs text-gray-500">
+        <p style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)', marginTop: '0.25rem' }}>
           Cached data older than this is flagged stale. Set longer than your fetch interval to avoid gaps.
         </p>
       </div>
 
-      <button
-        onClick={save}
-        disabled={saving}
-        className="self-start bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm px-5 py-2 rounded transition-colors"
-      >
-        {saving ? 'Saving…' : 'Save'}
-      </button>
+      <div>
+        <button
+          onClick={save}
+          disabled={saving}
+          style={{
+            fontSize: '0.75rem',
+            fontWeight: 500,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            color: saving ? 'var(--ink-faint)' : 'var(--accent)',
+            border: '1.5px solid',
+            borderColor: saving ? 'var(--border)' : 'var(--accent)',
+            borderRadius: 2,
+            padding: '0.4rem 1.25rem',
+            cursor: saving ? 'not-allowed' : 'pointer',
+            transition: 'all 150ms ease',
+            background: 'transparent',
+          }}
+          onMouseEnter={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = 'var(--accent-wash)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+        >
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+      </div>
     </section>
   )
 }

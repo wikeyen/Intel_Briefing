@@ -1,4 +1,4 @@
-// ABOUTME: Root application component — manages view state between Status dashboard and Config pages.
+// ABOUTME: Root application component — manages view state between Status, Config, and Data pages.
 // ABOUTME: Toaster wraps everything so toast notifications overlay sidebar and content alike.
 import { useState } from 'react'
 import { Layout } from './components/Layout'
@@ -11,8 +11,9 @@ import { PoliticsAccounts } from './pages/PoliticsAccounts'
 import { Topics } from './pages/Topics'
 import { Filters } from './pages/Filters'
 import { Output } from './pages/Output'
+import { Data } from './pages/Data'
 
-export type View = 'status' | 'config'
+export type View = 'status' | 'config' | 'data'
 
 function App() {
   const [view, setView] = useState<View>('status')
@@ -25,6 +26,8 @@ function App() {
             <div style={{ maxWidth: 1024, margin: '0 auto', padding: '0 3rem' }}>
               <Status showToast={showToast} />
             </div>
+          ) : view === 'data' ? (
+            <Data />
           ) : (
             <div style={{ maxWidth: 1024, margin: '0 auto', padding: '0 3rem' }}>
               <ApiKeys showToast={showToast} />

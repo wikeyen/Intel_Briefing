@@ -60,6 +60,8 @@ export function Layout({ children, showToast, view, onViewChange }: Props) {
       setTimeout(() => {
         document.querySelector(href)?.scrollIntoView({ behavior: 'smooth' })
       }, 50)
+    } else {
+      document.querySelector(href)?.scrollIntoView({ behavior: 'smooth' })
     }
   }
 
@@ -98,14 +100,6 @@ export function Layout({ children, showToast, view, onViewChange }: Props) {
           }}>
             Intel Briefing
           </div>
-          <div style={{
-            fontSize: '0.625rem',
-            color: 'var(--sb-muted)',
-            marginTop: '0.25rem',
-            letterSpacing: '0.04em',
-          }}>
-            Configuration
-          </div>
         </div>
 
         {/* Divider */}
@@ -113,6 +107,18 @@ export function Layout({ children, showToast, view, onViewChange }: Props) {
 
         {/* Nav */}
         <div style={{ flex: 1, padding: '1rem 0' }}>
+
+          {/* Overview label */}
+          <div style={{
+            padding: '0 1.75rem 0.375rem',
+            fontSize: '0.5625rem',
+            fontWeight: 700,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: 'var(--sb-faint)',
+          }}>
+            Overview
+          </div>
 
           {/* Status — top-level view */}
           <button
@@ -153,8 +159,18 @@ export function Layout({ children, showToast, view, onViewChange }: Props) {
             Status
           </button>
 
-          {/* Subtle divider before config sections */}
-          <div style={{ height: 1, background: 'var(--sb-border)', margin: '0.5rem 1.75rem' }} />
+          {/* Divider + Config label */}
+          <div style={{ height: 1, background: 'var(--sb-border)', margin: '0.5rem 1.75rem 0.875rem' }} />
+          <div style={{
+            padding: '0 1.75rem 0.375rem',
+            fontSize: '0.5625rem',
+            fontWeight: 700,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: 'var(--sb-faint)',
+          }}>
+            Config
+          </div>
 
           {/* Config sections */}
           {CONFIG_NAV.map(({ href, label, num }) => {
@@ -200,6 +216,58 @@ export function Layout({ children, showToast, view, onViewChange }: Props) {
               </a>
             )
           })}
+
+          {/* Divider + Data label */}
+          <div style={{ height: 1, background: 'var(--sb-border)', margin: '0.875rem 1.75rem 0.875rem' }} />
+          <div style={{
+            padding: '0 1.75rem 0.375rem',
+            fontSize: '0.5625rem',
+            fontWeight: 700,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: 'var(--sb-faint)',
+          }}>
+            Data
+          </div>
+
+          {/* Data view */}
+          <button
+            onClick={() => onViewChange('data')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              padding: '0.5rem 1.75rem',
+              width: '100%',
+              background: 'none',
+              border: 'none',
+              borderLeft: view === 'data' ? '2px solid var(--sb-accent)' : '2px solid transparent',
+              color: view === 'data' ? 'var(--sb-ink)' : 'var(--sb-muted)',
+              fontSize: '0.875rem',
+              fontWeight: view === 'data' ? 500 : 400,
+              cursor: 'pointer',
+              transition: 'color 120ms, border-color 120ms',
+              textAlign: 'left',
+            }}
+            onMouseEnter={e => {
+              if (view !== 'data') (e.currentTarget as HTMLElement).style.color = '#C0BDBA'
+            }}
+            onMouseLeave={e => {
+              if (view !== 'data') (e.currentTarget as HTMLElement).style.color = 'var(--sb-muted)'
+            }}
+          >
+            <span style={{
+              fontSize: '0.5625rem',
+              fontFamily: 'ui-monospace, monospace',
+              color: 'var(--sb-faint)',
+              letterSpacing: '0.05em',
+              flexShrink: 0,
+              userSelect: 'none',
+            }}>
+              08
+            </span>
+            Intel Data
+          </button>
         </div>
 
         {/* Divider */}

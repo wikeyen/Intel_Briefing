@@ -1,8 +1,8 @@
 // ABOUTME: Pipeline status dashboard — shows health, last run results, per-sensor outcomes, and section item counts.
-// ABOUTME: Polls health every 30s; refreshes full report after a manual trigger.
-import { useState, useEffect } from 'react'
+// ABOUTME: Polls health every 10s; when running, polls /fetch/status every 2s for live sensor progress.
+import { useState, useEffect, useRef } from 'react'
 import { api } from '../api/client'
-import type { HealthResponse, IntelReport, ConfigSettings } from '../api/client'
+import type { HealthResponse, IntelReport, ConfigSettings, PipelineStatus, SensorProgress } from '../api/client'
 
 interface Props {
   showToast: (msg: string) => void
@@ -48,7 +48,7 @@ const ALL_SENSORS = [
   { key: 'grok',         label: 'Grok' },
   { key: 'sources_36kr', label: '36Kr' },
   { key: 'wallstreetcn', label: 'WallStreetCN' },
-  { key: 'politics',     label: 'Politics' },
+  { key: 'politics',     label: 'Accounts' },
   { key: 'topics',       label: 'Topics' },
 ]
 
@@ -58,7 +58,7 @@ const SECTIONS: [string, string][] = [
   ['capital_flow','Capital Flow'],
   ['products',    'Products'],
   ['community',   'Community'],
-  ['politics',    'Politics'],
+  ['politics',    'Accounts'],
   ['topics',      'Topics'],
   ['insights',    'Insights'],
 ]
@@ -68,6 +68,126 @@ const STATUS_META: Record<string, { color: string; bg: string; label: string; de
   stale:   { color: 'var(--warn)',      bg: 'var(--warn-bg)',    label: 'Stale',    desc: 'Data is older than the cache TTL' },
   no_data: { color: 'var(--ink-faint)', bg: 'var(--surface-alt)',label: 'No Data',  desc: 'Pipeline has never run' },
   error:   { color: 'var(--err)',       bg: 'var(--err-bg)',     label: 'Error',    desc: 'Could not read pipeline status' },
+}
+
+const SENSOR_LABEL_MAP: Record<string, string> = Object.fromEntries(ALL_SENSORS.map(s => [s.key, s.label]))
+
+function PipelineRunPanel({ status }: { status: PipelineStatus }) {
+  const done  = status.sensors.filter(s => s.state === 'ok' || s.state === 'failed').length
+  const total = status.sensors.length
+
+  return (
+    <div style={{
+      background: 'var(--surface)',
+      border: '1px solid var(--border)',
+      borderRadius: 6,
+      overflow: 'hidden',
+      marginBottom: '2rem',
+    }}>
+      {/* Header */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0.875rem 1.125rem',
+        borderBottom: '1px solid var(--border-soft)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+          <span style={{
+            display: 'inline-block',
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            background: 'var(--warn)',
+            flexShrink: 0,
+            animation: 'pulseDot 1.6s ease-in-out infinite',
+          }} />
+          <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)' }}>
+            Pipeline Running
+          </span>
+        </div>
+        <span style={{
+          fontSize: '0.75rem',
+          color: 'var(--ink-faint)',
+          fontFamily: 'ui-monospace, monospace',
+        }}>
+          {done}/{total} sensors · {status.total_items} items
+        </span>
+      </div>
+
+      {/* Progress bar */}
+      <div style={{ height: 2, background: 'var(--surface-alt)' }}>
+        <div style={{
+          height: '100%',
+          width: total > 0 ? `${Math.round((done / total) * 100)}%` : '0%',
+          background: 'var(--accent-dim)',
+          transition: 'width 400ms ease',
+        }} />
+      </div>
+
+      {/* Sensor rows — 2 columns */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+        {status.sensors.map((sp: SensorProgress, i: number) => {
+          const dotColor =
+            sp.state === 'ok'      ? 'var(--ok)'   :
+            sp.state === 'failed'  ? 'var(--err)'  :
+            sp.state === 'running' ? 'var(--warn)'  :
+            'var(--border)'
+
+          const labelColor =
+            sp.state === 'failed'  ? 'var(--err)'      :
+            sp.state === 'pending' ? 'var(--ink-faint)' :
+            'var(--ink)'
+
+          const rightText =
+            sp.state === 'ok'      ? String(sp.item_count) :
+            sp.state === 'failed'  ? (sp.error ?? 'Failed') :
+            sp.state === 'running' ? '…' :
+            '—'
+
+          const rightColor =
+            sp.state === 'failed' ? 'var(--err)'      :
+            sp.state === 'ok'     ? 'var(--ink-muted)' :
+            'var(--ink-faint)'
+
+          const isRightCol = i % 2 === 1
+          const isLastRow  = i >= total - (total % 2 === 0 ? 2 : 1)
+
+          return (
+            <div key={sp.name} style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0.5625rem 1.125rem',
+              borderRight: !isRightCol ? '1px solid var(--border-soft)' : 'none',
+              borderBottom: !isLastRow ? '1px solid var(--border-soft)' : 'none',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: dotColor,
+                  flexShrink: 0,
+                  animation: sp.state === 'running' ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
+                }} />
+                <span style={{ fontSize: '0.8125rem', color: labelColor }}>
+                  {SENSOR_LABEL_MAP[sp.name] ?? sp.name}
+                </span>
+              </div>
+              <span style={{
+                fontSize: '0.75rem',
+                color: rightColor,
+                fontFamily: sp.state === 'ok' ? 'ui-monospace, monospace' : 'inherit',
+              }}>
+                {rightText}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 
 function StatCard({ label, children }: { label: string; children: React.ReactNode }) {
@@ -94,11 +214,13 @@ function StatCard({ label, children }: { label: string; children: React.ReactNod
 }
 
 export function Status({ showToast }: Props) {
-  const [health, setHealth]     = useState<HealthResponse | null>(null)
-  const [report, setReport]     = useState<IntelReport | null>(null)
-  const [config, setConfig]     = useState<ConfigSettings | null>(null)
-  const [fetching, setFetching] = useState(false)
-  const [running, setRunning]   = useState(false)
+  const [health, setHealth]           = useState<HealthResponse | null>(null)
+  const [report, setReport]           = useState<IntelReport | null>(null)
+  const [config, setConfig]           = useState<ConfigSettings | null>(null)
+  const [fetching, setFetching]       = useState(false)
+  const [running, setRunning]         = useState(false)
+  const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null)
+  const lastFetchedAtRef              = useRef<string | null>(null)
 
   const loadAll = () => {
     api.health().then(setHealth).catch(() => setHealth({ status: 'error', last_fetch: null }))
@@ -106,26 +228,46 @@ export function Status({ showToast }: Props) {
     api.getConfig().then(setConfig).catch(() => {})
   }
 
+  // Poll health every 10s; detect new data by comparing fetched_at
   useEffect(() => {
     loadAll()
 
-    // Poll health every 10s; detect new data by comparing fetched_at
-    let lastFetchedAt: string | null = null
     const iv = setInterval(() => {
       api.health().then(h => {
         setHealth(h)
-        // New data arrived — reload report
-        if (h.last_fetch && h.last_fetch !== lastFetchedAt) {
-          if (lastFetchedAt !== null) {
+        if (h.last_fetch && h.last_fetch !== lastFetchedAtRef.current) {
+          if (lastFetchedAtRef.current !== null) {
             api.getLatest().then(r => { setReport(r); setRunning(false) }).catch(() => {})
           }
-          lastFetchedAt = h.last_fetch
+          lastFetchedAtRef.current = h.last_fetch
         }
       }).catch(() => {})
     }, 10_000)
 
     return () => clearInterval(iv)
   }, [])
+
+  // Poll /fetch/status every 2s while running; stop and clear when done
+  useEffect(() => {
+    if (!running) {
+      setPipelineStatus(null)
+      return
+    }
+
+    const iv = setInterval(() => {
+      api.getPipelineStatus().then(s => {
+        setPipelineStatus(s)
+        if (!s.running) {
+          setRunning(false)
+        }
+      }).catch(() => {})
+    }, 2_000)
+
+    // Fetch immediately on first render
+    api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
+
+    return () => clearInterval(iv)
+  }, [running])
 
   const handleRunNow = async () => {
     setFetching(true)
@@ -153,14 +295,12 @@ export function Status({ showToast }: Props) {
     }
   }
 
-  const totalItems = Object.values(report?.items ?? {}).reduce((s, arr) => s + arr.length, 0)
+  const totalItems  = Object.values(report?.items ?? {}).reduce((s, arr) => s + arr.length, 0)
   const okCount     = report?.sources_ok.length ?? 0
   const failedCount = report?.sources_failed.length ?? 0
 
   return (
-    <section id="status" style={{
-      padding: '4.5rem 0',
-    }}>
+    <section id="status" style={{ padding: '4.5rem 0' }}>
 
       {/* ── Page header ───────────────────────────────────── */}
       <div style={{
@@ -181,13 +321,14 @@ export function Status({ showToast }: Props) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           {running && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span className="health-dot" style={{
+              <span style={{
                 display: 'inline-block',
                 width: 8,
                 height: 8,
                 borderRadius: '50%',
                 background: 'var(--warn)',
                 flexShrink: 0,
+                animation: 'pulseDot 1.6s ease-in-out infinite',
               }} />
               <span style={{ fontSize: '0.8125rem', color: 'var(--ink-muted)' }}>
                 Pipeline running…
@@ -215,6 +356,11 @@ export function Status({ showToast }: Props) {
           </button>
         </div>
       </div>
+
+      {/* ── Live pipeline run panel ────────────────────────── */}
+      {running && pipelineStatus && (
+        <PipelineRunPanel status={pipelineStatus} />
+      )}
 
       {/* ── Stat cards ────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '2rem' }}>

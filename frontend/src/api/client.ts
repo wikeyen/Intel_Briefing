@@ -37,6 +37,21 @@ export interface IntelItem {
   topic?: string | null
 }
 
+export interface SensorProgress {
+  name: string
+  state: 'pending' | 'running' | 'ok' | 'failed'
+  item_count: number
+  error: string | null
+}
+
+export interface PipelineStatus {
+  running: boolean
+  started_at: string | null
+  completed_at: string | null
+  sensors: SensorProgress[]
+  total_items: number
+}
+
 export interface IntelReport {
   date: string
   fetched_at: string
@@ -78,4 +93,7 @@ export const api = {
 
   triggerFetch: () =>
     apiFetch<{ status: string }>('/fetch', { method: 'POST' }),
+
+  getPipelineStatus: () =>
+    apiFetch<PipelineStatus>('/fetch/status'),
 }

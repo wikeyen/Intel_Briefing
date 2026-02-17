@@ -131,6 +131,12 @@ input[type="range"]::-moz-range-thumb {
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--ink-faint); }
 
+/* ─── Pipeline running dot animation ─────────────────────────────────────── */
+@keyframes pulseDot {
+  0%, 100% { opacity: 1;    transform: scale(1);    }
+  50%       { opacity: 0.4; transform: scale(0.85); }
+}
+
 /* ─── Selection ──────────────────────────────────────────────────────────── */
 ::selection {
   background: var(--accent-wash);

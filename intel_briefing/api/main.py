@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from intel_briefing.config import load_settings, DEFAULT_SETTINGS_PATH
+from intel_briefing.models import PipelineStatus
 from intel_briefing.pipeline.cache import DEFAULT_CACHE_PATH
 from intel_briefing.scheduler import start_scheduler, stop_scheduler
 from intel_briefing.api.routes import control, intel, briefing, config as config_routes
@@ -28,6 +29,7 @@ async def lifespan(app: FastAPI):
 
     config = load_settings(settings_path)
     app.state.config = config
+    app.state.pipeline_status = PipelineStatus()
 
     logger.info("Starting Intel Briefing API — pipeline scheduled at %s (%s)",
                 config.fetch_time, config.fetch_timezone)

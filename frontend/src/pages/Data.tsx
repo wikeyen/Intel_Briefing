@@ -320,45 +320,6 @@ export function Data() {
           </div>
         )}
 
-        {/* Source filter tags — only shown when multiple sources exist in section */}
-        {report && availableSources.length > 1 && (
-          <div style={{
-            display: 'flex',
-            gap: '0.375rem',
-            alignItems: 'center',
-            paddingTop: '0.625rem',
-            paddingBottom: '0.75rem',
-            overflowX: 'auto',
-            scrollbarWidth: 'none',
-          }}>
-            {availableSources.map(src => (
-              <FilterTag
-                key={src}
-                label={SOURCE_LABELS[src] ?? src}
-                active={selectedSources.has(src)}
-                onClick={() => toggleSource(src)}
-              />
-            ))}
-            {selectedSources.size < availableSources.length && (
-              <button
-                onClick={() => setSelectedSources(new Set(availableSources))}
-                style={{
-                  fontSize: '0.6875rem',
-                  color: 'var(--ink-faint)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '0.25rem 0.375rem',
-                  marginLeft: '0.125rem',
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-faint)' }}
-              >
-                All
-              </button>
-            )}
-          </div>
-        )}
       </div>
       </div>
 
@@ -370,17 +331,55 @@ export function Data() {
             No data available. Trigger a pipeline run from the Status page.
           </div>
         ) : report ? (
-          <div style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: 6,
-            overflow: 'hidden',
-          }}>
-            {filteredItems.length === 0
-              ? <EmptySection />
-              : filteredItems.map(item => <ItemCard key={item.id} item={item} />)
-            }
-          </div>
+          <>
+            {/* Source filter tags */}
+            {availableSources.length > 0 && (
+              <div style={{
+                display: 'flex',
+                gap: '0.375rem',
+                alignItems: 'center',
+                marginBottom: '1rem',
+                flexWrap: 'wrap',
+              }}>
+                {availableSources.map(src => (
+                  <FilterTag
+                    key={src}
+                    label={SOURCE_LABELS[src] ?? src}
+                    active={selectedSources.has(src)}
+                    onClick={() => toggleSource(src)}
+                  />
+                ))}
+                {selectedSources.size < availableSources.length && (
+                  <button
+                    onClick={() => setSelectedSources(new Set(availableSources))}
+                    style={{
+                      fontSize: '0.6875rem',
+                      color: 'var(--ink-faint)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '0.25rem 0.375rem',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-faint)' }}
+                  >
+                    All
+                  </button>
+                )}
+              </div>
+            )}
+            <div style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 6,
+              overflow: 'hidden',
+            }}>
+              {filteredItems.length === 0
+                ? <EmptySection />
+                : filteredItems.map(item => <ItemCard key={item.id} item={item} />)
+              }
+            </div>
+          </>
         ) : null}
       </div>
       </div>

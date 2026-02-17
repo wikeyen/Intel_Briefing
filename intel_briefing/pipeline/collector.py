@@ -76,7 +76,11 @@ _SENSOR_SECTION_MAP: dict[str, str] = {
 }
 
 
-def collect(config: ConfigSettings, cache_path=DEFAULT_CACHE_PATH) -> IntelReport:
+def collect(
+    config: ConfigSettings,
+    cache_path=DEFAULT_CACHE_PATH,
+    on_progress=None,
+) -> IntelReport:
     """Run the full collection pipeline and return a structured IntelReport.
 
     Steps:
@@ -89,6 +93,8 @@ def collect(config: ConfigSettings, cache_path=DEFAULT_CACHE_PATH) -> IntelRepor
     Args:
         config: Full application settings.
         cache_path: Where to write the cache file.
+        on_progress: Optional callable(sensor_name, state, item_count, error).
+            Called once per sensor state change: "running", "ok", or "failed".
 
     Returns:
         The assembled IntelReport.
@@ -105,6 +111,11 @@ def collect(config: ConfigSettings, cache_path=DEFAULT_CACHE_PATH) -> IntelRepor
             executor.submit(_run_sensor, sensor, config, limit): sensor
             for sensor in sensors
         }
+        # All sensors are submitted simultaneously — mark them all as running
+        if on_progress:
+            for sensor in sensors:
+                on_progress(sensor.sensor_name, "running", 0, None)
+
         for future in as_completed(future_to_sensor, timeout=_SENSOR_TIMEOUT * 2):
             sensor = future_to_sensor[future]
             try:
@@ -116,6 +127,11 @@ def collect(config: ConfigSettings, cache_path=DEFAULT_CACHE_PATH) -> IntelRepor
                 logger.warning("Sensor %s raised unexpected error: %s", sensor.sensor_name, exc)
                 result = SensorResult(sensor_name=sensor.sensor_name, error=str(exc))
             results.append(result)
+            if on_progress:
+                if result.succeeded:
+                    on_progress(result.sensor_name, "ok", len(result.items), None)
+                else:
+                    on_progress(result.sensor_name, "failed", 0, result.error)
 
     # Assemble sections
     sections: dict[str, list[IntelItem]] = {

@@ -88,6 +88,25 @@ class SensorResult(BaseModel):
         return self.error is None
 
 
+class SensorProgress(BaseModel):
+    """Per-sensor progress snapshot during a pipeline run."""
+
+    name: str
+    state: str = "pending"   # "pending" | "running" | "ok" | "failed"
+    item_count: int = 0
+    error: str | None = None
+
+
+class PipelineStatus(BaseModel):
+    """Live status of a pipeline collection run, updated as sensors complete."""
+
+    running: bool = False
+    started_at: str | None = None
+    completed_at: str | None = None
+    sensors: list[SensorProgress] = Field(default_factory=list)
+    total_items: int = 0
+
+
 class SectionConfig(BaseModel):
     """Per-section output configuration."""
 

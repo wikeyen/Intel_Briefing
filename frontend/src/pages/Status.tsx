@@ -146,7 +146,6 @@ export function Status({ showToast }: Props) {
   return (
     <section id="status" style={{
       padding: '4.5rem 0',
-      borderBottom: '1px solid var(--border-soft)',
     }}>
 
       {/* ── Page header ───────────────────────────────────── */}

@@ -1,13 +1,13 @@
 // ABOUTME: App shell — dark sidebar with nav, health status, and Fetch Now button.
-// ABOUTME: Sidebar and main area scroll independently; anchor links scroll only the content pane.
+// ABOUTME: Sidebar switches between Status view and Config view; config nav scrolls only the content pane.
 import { useState, useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { api } from '../api/client'
 import type { HealthResponse } from '../api/client'
+import type { View } from '../App'
 
-const NAV = [
-  { href: '#status',    label: 'Status',             num: '00' },
-  { href: '#api-keys',  label: 'API Keys',           num: '01' },
+const CONFIG_NAV = [
+  { href: '#api-keys',  label: 'API Keys',          num: '01' },
   { href: '#sensors',   label: 'Sensors',            num: '02' },
   { href: '#schedule',  label: 'Schedule',           num: '03' },
   { href: '#politics',  label: 'Politics Accounts',  num: '04' },
@@ -19,12 +19,14 @@ const NAV = [
 interface Props {
   children: ReactNode
   showToast: (msg: string) => void
+  view: View
+  onViewChange: (v: View) => void
 }
 
-export function Layout({ children, showToast }: Props) {
+export function Layout({ children, showToast, view, onViewChange }: Props) {
   const [health, setHealth] = useState<HealthResponse | null>(null)
   const [fetching, setFetching] = useState(false)
-  const [activeHash, setActiveHash] = useState(window.location.hash || '#status')
+  const [activeHash, setActiveHash] = useState(window.location.hash || '#api-keys')
 
   useEffect(() => {
     api.health().then(setHealth).catch(() => setHealth({ status: 'error', last_fetch: null }))
@@ -33,7 +35,7 @@ export function Layout({ children, showToast }: Props) {
   }, [])
 
   useEffect(() => {
-    const onHash = () => setActiveHash(window.location.hash || '#status')
+    const onHash = () => setActiveHash(window.location.hash || '#api-keys')
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
@@ -47,6 +49,17 @@ export function Layout({ children, showToast }: Props) {
       showToast('Fetch failed: ' + (e as Error).message)
     } finally {
       setFetching(false)
+    }
+  }
+
+  const handleConfigNav = (href: string) => {
+    setActiveHash(href)
+    if (view !== 'config') {
+      onViewChange('config')
+      // After config sections mount, scroll to the target section
+      setTimeout(() => {
+        document.querySelector(href)?.scrollIntoView({ behavior: 'smooth' })
+      }, 50)
     }
   }
 
@@ -100,13 +113,60 @@ export function Layout({ children, showToast }: Props) {
 
         {/* Nav */}
         <div style={{ flex: 1, padding: '1rem 0' }}>
-          {NAV.map(({ href, label, num }) => {
-            const active = activeHash === href
+
+          {/* Status — top-level view */}
+          <button
+            onClick={() => onViewChange('status')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              padding: '0.5rem 1.75rem',
+              width: '100%',
+              background: 'none',
+              border: 'none',
+              borderLeft: view === 'status' ? '2px solid var(--sb-accent)' : '2px solid transparent',
+              color: view === 'status' ? 'var(--sb-ink)' : 'var(--sb-muted)',
+              fontSize: '0.875rem',
+              fontWeight: view === 'status' ? 500 : 400,
+              cursor: 'pointer',
+              transition: 'color 120ms, border-color 120ms',
+              textAlign: 'left',
+            }}
+            onMouseEnter={e => {
+              if (view !== 'status') (e.currentTarget as HTMLElement).style.color = '#C0BDBA'
+            }}
+            onMouseLeave={e => {
+              if (view !== 'status') (e.currentTarget as HTMLElement).style.color = 'var(--sb-muted)'
+            }}
+          >
+            <span style={{
+              fontSize: '0.5625rem',
+              fontFamily: 'ui-monospace, monospace',
+              color: 'var(--sb-faint)',
+              letterSpacing: '0.05em',
+              flexShrink: 0,
+              userSelect: 'none',
+            }}>
+              00
+            </span>
+            Status
+          </button>
+
+          {/* Subtle divider before config sections */}
+          <div style={{ height: 1, background: 'var(--sb-border)', margin: '0.5rem 1.75rem' }} />
+
+          {/* Config sections */}
+          {CONFIG_NAV.map(({ href, label, num }) => {
+            const active = view === 'config' && activeHash === href
             return (
               <a
                 key={href}
                 href={href}
-                onClick={() => setActiveHash(href)}
+                onClick={(e) => {
+                  e.preventDefault()
+                  handleConfigNav(href)
+                }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',

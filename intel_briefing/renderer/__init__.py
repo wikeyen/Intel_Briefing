@@ -1,2 +1,2 @@
-# ABOUTME: renderer sub-package for intel_briefing.
-# ABOUTME: See individual modules for details.
+# ABOUTME: Renderer subpackage for Intel Briefing output formatting.
+# ABOUTME: Currently contains the Markdown renderer; extend with other formats here.

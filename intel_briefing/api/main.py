@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
 
     logger.info("Starting Intel Briefing API — pipeline scheduled at %s (%s)",
                 config.fetch_time, config.fetch_timezone)
-    start_scheduler(config)
+    start_scheduler(config, settings_path)
 
     yield
 

@@ -1,7 +1,8 @@
 # ABOUTME: APScheduler-based daily pipeline scheduler for Intel Briefing.
-# ABOUTME: Schedules collector.collect() at config.fetch_time in config.fetch_timezone.
+# ABOUTME: Reloads config from disk on each run so schedule changes take effect without restart.
 import logging
 import time
+from pathlib import Path
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -13,10 +14,12 @@ logger = logging.getLogger(__name__)
 _scheduler: AsyncIOScheduler | None = None
 
 
-def _run_pipeline(config: ConfigSettings) -> None:
-    """Execute the collection pipeline and log summary statistics."""
+def _run_pipeline(settings_path: Path) -> None:
+    """Execute the collection pipeline using the latest config from disk."""
+    from intel_briefing.config import load_settings
     from intel_briefing.pipeline.collector import collect
 
+    config = load_settings(settings_path)
     start = time.monotonic()
     logger.info("Scheduled pipeline run starting...")
     try:
@@ -35,11 +38,12 @@ def _run_pipeline(config: ConfigSettings) -> None:
         logger.error("Pipeline failed after %.1fs: %s", elapsed, exc)
 
 
-def start_scheduler(config: ConfigSettings) -> AsyncIOScheduler:
+def start_scheduler(config: ConfigSettings, settings_path: Path) -> AsyncIOScheduler:
     """Start the APScheduler and schedule the daily pipeline job.
 
     Args:
-        config: Application settings that define fetch_time and fetch_timezone.
+        config: Used only to read fetch_time and fetch_timezone for the trigger.
+        settings_path: Path passed to each job run so it always loads the latest config.
 
     Returns:
         The running AsyncIOScheduler instance.
@@ -57,7 +61,7 @@ def start_scheduler(config: ConfigSettings) -> AsyncIOScheduler:
     _scheduler.add_job(
         _run_pipeline,
         trigger=trigger,
-        args=[config],
+        args=[settings_path],
         id="daily_pipeline",
         name="Daily Intel Pipeline",
         replace_existing=True,

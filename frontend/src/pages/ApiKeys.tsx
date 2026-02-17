@@ -1,5 +1,5 @@
 // ABOUTME: API key management page — masked inputs with reveal toggles for each key.
-// ABOUTME: Saves to PUT /config; shows success/error toast via callback.
+// ABOUTME: Saves to PUT /config; keys that are set show *** (masked); clear and retype to replace.
 import { useState, useEffect } from 'react'
 import { api } from '../api/client'
 import type { ConfigSettings } from '../api/client'
@@ -26,7 +26,7 @@ const inputBase: React.CSSProperties = {
   color: 'var(--ink)',
   outline: 'none',
   transition: 'border-color 120ms, box-shadow 120ms',
-  fontFamily: 'inherit',
+  fontFamily: 'ui-monospace, monospace',
 }
 
 function focus(e: React.FocusEvent<HTMLInputElement>) {
@@ -38,14 +38,19 @@ function blur(e: React.FocusEvent<HTMLInputElement>) {
   e.currentTarget.style.boxShadow = 'none'
 }
 
-function MaskedInput({ label, hint, value, onChange, isSet }: {
-  label: string; hint: string; value: string; onChange: (v: string) => void; isSet: boolean
+function MaskedInput({ label, hint, value, onChange }: {
+  label: string
+  hint: string
+  value: string
+  onChange: (v: string) => void
 }) {
   const [revealed, setRevealed] = useState(false)
+  const isSet = value === '***'
+
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-        <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
+        <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', fontFamily: 'inherit' }}>
           {label}
         </label>
         {isSet && (
@@ -59,7 +64,7 @@ function MaskedInput({ label, hint, value, onChange, isSet }: {
             padding: '0.15rem 0.5rem',
             borderRadius: 999,
           }}>
-            Set
+            Saved
           </span>
         )}
       </div>
@@ -68,9 +73,13 @@ function MaskedInput({ label, hint, value, onChange, isSet }: {
           type={revealed ? 'text' : 'password'}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={isSet ? 'Enter new value to replace' : 'not set'}
+          placeholder="not set"
           style={inputBase}
-          onFocus={focus}
+          onFocus={(e) => {
+            focus(e)
+            // Select all so user can immediately type a replacement
+            if (isSet) e.currentTarget.select()
+          }}
           onBlur={blur}
         />
         <button
@@ -91,7 +100,7 @@ function MaskedInput({ label, hint, value, onChange, isSet }: {
           }}
           onMouseEnter={e => {
             (e.currentTarget as HTMLElement).style.color = 'var(--ink)'
-            ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong, var(--ink-faint))'
+            ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--ink-faint)'
           }}
           onMouseLeave={e => {
             (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)'
@@ -101,7 +110,7 @@ function MaskedInput({ label, hint, value, onChange, isSet }: {
           {revealed ? 'Hide' : 'Show'}
         </button>
       </div>
-      <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.375rem', lineHeight: 1.5 }}>
+      <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.375rem', lineHeight: 1.5, fontFamily: 'inherit' }}>
         {hint}
       </p>
     </div>
@@ -118,9 +127,8 @@ export function ApiKeys({ showToast }: Props) {
     api.getConfig().then((cfg) => {
       const v: Record<string, string> = {}
       for (const { field } of KEY_FIELDS) {
-        const raw = cfg[field] as string | null
-        // Keep '***' as-is so we can show the "Set" badge; empty string means not set
-        v[field] = raw ?? ''
+        // null → empty string (not set); '***' → '***' (set, masked)
+        v[field] = (cfg[field] as string | null) ?? ''
       }
       setValues(v)
       setXaiModel(cfg.xai_model)
@@ -134,15 +142,28 @@ export function ApiKeys({ showToast }: Props) {
       const partial: Partial<ConfigSettings> = { xai_model: xaiModel, xai_base_url: xaiBaseUrl }
       for (const { field } of KEY_FIELDS) {
         const v = values[field]
+        // Only send if non-empty; server ignores '***' so unchanged keys are preserved
         if (v) (partial as Record<string, string>)[field] = v
       }
       await api.updateConfig(partial)
+      // Reload so the form reflects the current saved state
+      const updated = await api.getConfig()
+      const v: Record<string, string> = {}
+      for (const { field } of KEY_FIELDS) {
+        v[field] = (updated[field] as string | null) ?? ''
+      }
+      setValues(v)
       showToast('API keys saved')
     } catch (e) {
       showToast('Save failed: ' + (e as Error).message)
     } finally {
       setSaving(false)
     }
+  }
+
+  const inputStyle: React.CSSProperties = {
+    ...inputBase,
+    fontFamily: 'inherit',
   }
 
   return (
@@ -156,7 +177,7 @@ export function ApiKeys({ showToast }: Props) {
       <SectionHeader
         num="01"
         title="API Keys"
-        description="Credentials for external data sources and AI providers. Keys are stored encrypted and never returned in plaintext."
+        description="Credentials for external data sources and AI providers. Keys are write-only — once saved, they show as *** and cannot be read back."
       />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -165,8 +186,7 @@ export function ApiKeys({ showToast }: Props) {
             key={field}
             label={label}
             hint={hint}
-            value={values[field] === '***' ? '' : (values[field] ?? '')}
-            isSet={values[field] === '***'}
+            value={values[field] ?? ''}
             onChange={(v) => setValues((prev) => ({ ...prev, [field]: v }))}
           />
         ))}
@@ -181,7 +201,7 @@ export function ApiKeys({ showToast }: Props) {
             type="text"
             value={xaiModel}
             onChange={(e) => setXaiModel(e.target.value)}
-            style={inputBase}
+            style={inputStyle}
             onFocus={focus}
             onBlur={blur}
           />
@@ -198,7 +218,7 @@ export function ApiKeys({ showToast }: Props) {
             type="text"
             value={xaiBaseUrl}
             onChange={(e) => setXaiBaseUrl(e.target.value)}
-            style={inputBase}
+            style={inputStyle}
             onFocus={focus}
             onBlur={blur}
           />

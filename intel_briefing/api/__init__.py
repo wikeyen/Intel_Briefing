@@ -1,2 +1,2 @@
-# ABOUTME: api sub-package for intel_briefing.
-# ABOUTME: See individual modules for details.
+# ABOUTME: FastAPI application subpackage for Intel Briefing.
+# ABOUTME: Exposes REST endpoints for intel data, config management, and health checks.

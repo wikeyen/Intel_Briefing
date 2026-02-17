@@ -62,7 +62,7 @@ export function Layout({ children }: Props) {
     : 'loading…'
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--canvas)' }}>
+    <div style={{ display: 'flex', flex: 1, height: '100vh', overflow: 'hidden', background: 'var(--canvas)' }}>
 
       {/* ── Sidebar ─────────────────────────────────────────────────────── */}
       <nav style={{

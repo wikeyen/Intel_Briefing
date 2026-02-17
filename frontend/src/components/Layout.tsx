@@ -6,7 +6,8 @@ import { api } from '../api/client'
 import type { HealthResponse } from '../api/client'
 
 const NAV = [
-  { href: '#api-keys',  label: 'API Keys',          num: '01' },
+  { href: '#status',    label: 'Status',             num: '00' },
+  { href: '#api-keys',  label: 'API Keys',           num: '01' },
   { href: '#sensors',   label: 'Sensors',            num: '02' },
   { href: '#schedule',  label: 'Schedule',           num: '03' },
   { href: '#politics',  label: 'Politics Accounts',  num: '04' },
@@ -23,7 +24,7 @@ interface Props {
 export function Layout({ children, showToast }: Props) {
   const [health, setHealth] = useState<HealthResponse | null>(null)
   const [fetching, setFetching] = useState(false)
-  const [activeHash, setActiveHash] = useState(window.location.hash || '#api-keys')
+  const [activeHash, setActiveHash] = useState(window.location.hash || '#status')
 
   useEffect(() => {
     api.health().then(setHealth).catch(() => setHealth({ status: 'error', last_fetch: null }))
@@ -32,7 +33,7 @@ export function Layout({ children, showToast }: Props) {
   }, [])
 
   useEffect(() => {
-    const onHash = () => setActiveHash(window.location.hash || '#api-keys')
+    const onHash = () => setActiveHash(window.location.hash || '#status')
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])

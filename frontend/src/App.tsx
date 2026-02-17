@@ -2,6 +2,7 @@
 // ABOUTME: Toaster wraps everything so toast notifications overlay sidebar and content alike.
 import { Layout } from './components/Layout'
 import { Toaster } from './components/Toaster'
+import { Status } from './pages/Status'
 import { ApiKeys } from './pages/ApiKeys'
 import { Sensors } from './pages/Sensors'
 import { Schedule } from './pages/Schedule'
@@ -16,6 +17,7 @@ function App() {
       {(showToast) => (
         <Layout showToast={showToast}>
           <div style={{ maxWidth: 1024, margin: '0 auto', padding: '0 3rem' }}>
+            <Status showToast={showToast} />
             <ApiKeys showToast={showToast} />
             <Sensors showToast={showToast} />
             <Schedule showToast={showToast} />

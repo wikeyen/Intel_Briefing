@@ -38,21 +38,37 @@ function blur(e: React.FocusEvent<HTMLInputElement>) {
   e.currentTarget.style.boxShadow = 'none'
 }
 
-function MaskedInput({ label, hint, value, onChange }: {
-  label: string; hint: string; value: string; onChange: (v: string) => void
+function MaskedInput({ label, hint, value, onChange, isSet }: {
+  label: string; hint: string; value: string; onChange: (v: string) => void; isSet: boolean
 }) {
   const [revealed, setRevealed] = useState(false)
   return (
     <div>
-      <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '0.5rem' }}>
-        {label}
-      </label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+        <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
+          {label}
+        </label>
+        {isSet && (
+          <span style={{
+            fontSize: '0.625rem',
+            fontWeight: 600,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            color: 'var(--ok)',
+            background: 'var(--ok-bg)',
+            padding: '0.15rem 0.5rem',
+            borderRadius: 999,
+          }}>
+            Set
+          </span>
+        )}
+      </div>
       <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center' }}>
         <input
           type={revealed ? 'text' : 'password'}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="not set"
+          placeholder={isSet ? 'Enter new value to replace' : 'not set'}
           style={inputBase}
           onFocus={focus}
           onBlur={blur}
@@ -103,7 +119,8 @@ export function ApiKeys({ showToast }: Props) {
       const v: Record<string, string> = {}
       for (const { field } of KEY_FIELDS) {
         const raw = cfg[field] as string | null
-        v[field] = raw === '***' || !raw ? '' : raw
+        // Keep '***' as-is so we can show the "Set" badge; empty string means not set
+        v[field] = raw ?? ''
       }
       setValues(v)
       setXaiModel(cfg.xai_model)
@@ -148,7 +165,8 @@ export function ApiKeys({ showToast }: Props) {
             key={field}
             label={label}
             hint={hint}
-            value={values[field] ?? ''}
+            value={values[field] === '***' ? '' : (values[field] ?? '')}
+            isSet={values[field] === '***'}
             onChange={(v) => setValues((prev) => ({ ...prev, [field]: v }))}
           />
         ))}

@@ -26,7 +26,7 @@ def _load_sensors(config: ConfigSettings) -> list:
         ("intel_briefing.sensors.github", "GitHubSensor", "github"),
         ("intel_briefing.sensors.product_hunt", "ProductHuntSensor", "product_hunt"),
         ("intel_briefing.sensors.v2ex", "V2EXSensor", "v2ex"),
-        ("intel_briefing.sensors.hn_blogs_sensor", "HNBlogsSensor", "hn_blogs"),
+        ("intel_briefing.sensors.hn_blogs", "HNBlogsSensor", "hn_blogs"),
         ("intel_briefing.sensors.grok", "GrokSensor", "grok"),
         ("intel_briefing.sensors.sources_36kr", "Sources36KrSensor", "sources_36kr"),
         ("intel_briefing.sensors.wallstreetcn", "WallStreetCNSensor", "wallstreetcn"),

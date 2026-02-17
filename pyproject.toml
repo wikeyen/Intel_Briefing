@@ -27,3 +27,31 @@ dev = [
     "pytest-cov>=7.0.0",
     "pytest-httpx>=0.36.0",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=intel_briefing --cov-report=term-missing --cov-fail-under=70 -m 'not e2e'"
+markers = [
+    "e2e: live network tests — skipped by default",
+]
+
+[tool.coverage.run]
+omit = [
+    # Legacy/unmigrated sensor files superseded by intel_briefing/sensors/
+    "intel_briefing/sensors/arxiv_ai.py",
+    "intel_briefing/sensors/chrome_radar.py",
+    "intel_briefing/sensors/github_trending.py",
+    "intel_briefing/sensors/v2ex_radar.py",
+    "intel_briefing/sensors/x_grok_sensor.py",
+    "intel_briefing/sensors/x_twitter.py",
+    "intel_briefing/sensors/xhs_radar.py",
+    # Legacy pipeline files superseded by intel_briefing/pipeline/
+    "intel_briefing/intel_collector.py",
+    "intel_briefing/report_generator.py",
+    # Legacy utils superseded by inline logic in sensors/api
+    "intel_briefing/utils/gemini_translator.py",
+    "intel_briefing/utils/jina_reader.py",
+    "intel_briefing/utils/verifier.py",
+    # Legacy external fetch module superseded by sensors
+    "intel_briefing/external/fetch_news.py",
+]

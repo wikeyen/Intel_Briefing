@@ -1,239 +1,190 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# ABOUTME: Hacker News top blogs sensor using RSS/Atom feeds via OPML.
-# ABOUTME: Fetches and parses articles from a curated list of high-quality tech blogs.
-"""
-HN Top Blogs Sensor
-从 OPML 列表抓取 HN 社区精选技术博客 RSS
-
-数据源: https://gist.github.com/emschwartz/e6d2bf860ccc367fe37ff953ba6de66b
-协议: RSS/Atom (公开、免费、合法)
-"""
-
-import re
+# ABOUTME: Hacker News top blogs sensor using OPML + RSS/Atom feed parsing.
+# ABOUTME: Fetches recent articles from a curated list of high-quality tech blogs via httpx and defusedxml.
+import hashlib
 import logging
-import urllib.request
-import urllib.error
+import re
+
 import defusedxml.ElementTree as ET
-from dataclasses import dataclass
-from typing import List, Optional
-from datetime import datetime
-import ssl
+import httpx
+
+from intel_briefing.models import ConfigSettings, IntelItem
 
 logger = logging.getLogger(__name__)
 
-# OPML Source
-OPML_URL = "https://gist.githubusercontent.com/emschwartz/e6d2bf860ccc367fe37ff953ba6de66b/raw/hn-popular-blogs-2025.opml"
+OPML_URL = (
+    "https://gist.githubusercontent.com/emschwartz/e6d2bf860ccc367fe37ff953ba6de66b"
+    "/raw/hn-popular-blogs-2025.opml"
+)
 
-# Fallback feeds if OPML fails
+# Used when the OPML source is unavailable
 FALLBACK_FEEDS = [
-    {"title": "Simon Willison", "rss": "https://simonwillison.net/atom/everything/", "html": "https://simonwillison.net"},
-    {"title": "Mitchell Hashimoto", "rss": "https://mitchellh.com/feed.xml", "html": "https://mitchellh.com"},
-    {"title": "antirez", "rss": "http://antirez.com/rss", "html": "http://antirez.com"},
-    {"title": "Paul Graham", "rss": "http://www.aaronsw.com/2002/feeds/pgessays.rss", "html": "http://paulgraham.com"},
-    {"title": "Pluralistic", "rss": "https://pluralistic.net/feed/", "html": "https://pluralistic.net"},
+    {"title": "Simon Willison", "rss": "https://simonwillison.net/atom/everything/"},
+    {"title": "Mitchell Hashimoto", "rss": "https://mitchellh.com/feed.xml"},
+    {"title": "antirez", "rss": "https://antirez.com/rss"},
+    {"title": "Paul Graham", "rss": "https://www.aaronsw.com/2002/feeds/pgessays.rss"},
+    {"title": "Pluralistic", "rss": "https://pluralistic.net/feed/"},
 ]
 
-# Config
-FETCH_TIMEOUT = 10
-MAX_BLOGS_TO_FETCH = 20  # Only fetch from top N blogs for speed
-MAX_ARTICLES_PER_BLOG = 2
+MAX_BLOGS = 20
+MAX_PER_BLOG = 2
 
 
-@dataclass
-class BlogArticle:
-    """Represents a blog article from HN Top Blogs."""
-    title: str
-    url: str
-    source: str
-    pub_date: str = ""
-    content: str = ""  # Article description/summary from RSS
+def _fetch_opml() -> list[dict]:
+    """Fetch and parse the OPML blog list.
 
-
-def _strip_html(text: str) -> str:
-    """Remove HTML tags and decode entities from text."""
-    if not text:
-        return ""
-    # Remove HTML tags
-    clean = re.sub(r'<[^>]+>', '', text)
-    # Decode common HTML entities
-    clean = clean.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>')
-    clean = clean.replace('&quot;', '"').replace('&#39;', "'")
-    clean = clean.replace('&nbsp;', ' ')
-    # Clean up whitespace
-    clean = re.sub(r'\s+', ' ', clean).strip()
-    return clean
-
-
-def _create_ssl_context():
-    """Create SSL context with proper certificate verification."""
+    Returns:
+        List of dicts with 'title' and 'rss' keys, or an empty list on failure.
+    """
     try:
-        ctx = ssl.create_default_context()
-        return ctx
-    except ssl.SSLError:
-        # Fallback: still verify but with reduced security rather than no security
-        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        ctx.check_hostname = True
-        ctx.verify_mode = ssl.CERT_REQUIRED
-        return ctx
+        resp = httpx.get(OPML_URL, timeout=15, follow_redirects=True)
+        resp.raise_for_status()
+        content = resp.text
+    except Exception as exc:
+        logger.warning("HNBlogs: failed to fetch OPML: %s", exc)
+        return []
 
-
-def _fetch_url(url: str, timeout: int = FETCH_TIMEOUT) -> Optional[str]:
-    """Fetch URL content with timeout and error handling."""
-    try:
-        req = urllib.request.Request(url, headers={
-            "User-Agent": "Intel-Briefing-RSS-Reader/1.0"
-        })
-        with urllib.request.urlopen(req, timeout=timeout, context=_create_ssl_context()) as response:
-            return response.read().decode('utf-8', errors='ignore')
-    except (urllib.error.URLError, urllib.error.HTTPError, OSError, ValueError) as e:
-        logger.warning(f"Failed to fetch {url[:50]}...: {e}")
-        return None
-
-
-def parse_opml(opml_content: str) -> List[dict]:
-    """Parse OPML content to extract blog feeds."""
-    blogs = []
-    # Match <outline type="rss" ... />
+    blogs: list[dict] = []
+    # OPML outline attributes are safely parsed with regex (no nested XML needed)
     pattern = r'<outline[^>]+type="rss"[^>]*>'
-    for match in re.finditer(pattern, opml_content):
+    for match in re.finditer(pattern, content):
         outline = match.group(0)
-        text_match = re.search(r'text="([^"]+)"', outline)
-        xml_url_match = re.search(r'xmlUrl="([^"]+)"', outline)
-        html_url_match = re.search(r'htmlUrl="([^"]+)"', outline)
-        
-        if text_match and xml_url_match:
-            blogs.append({
-                "title": text_match.group(1),
-                "rss": xml_url_match.group(1),
-                "html": html_url_match.group(1) if html_url_match else ""
-            })
+        text_m = re.search(r'text="([^"]+)"', outline)
+        xml_url_m = re.search(r'xmlUrl="([^"]+)"', outline)
+        if text_m and xml_url_m:
+            blogs.append({"title": text_m.group(1), "rss": xml_url_m.group(1)})
+
     return blogs
 
 
-def parse_rss_feed(feed_content: str, source_title: str) -> List[BlogArticle]:
-    """Parse RSS/Atom feed content to extract articles."""
-    articles = []
-    try:
-        root = ET.fromstring(feed_content)
-        
-        # Handle Atom feeds
-        if 'atom' in root.tag.lower() or root.tag == '{http://www.w3.org/2005/Atom}feed':
-            ns = {'atom': 'http://www.w3.org/2005/Atom'}
-            entries = root.findall('.//atom:entry', ns) or root.findall('.//entry')
-            for entry in entries[:MAX_ARTICLES_PER_BLOG]:
-                title = entry.find('atom:title', ns) or entry.find('title')
-                link = entry.find('atom:link[@rel="alternate"]', ns) or entry.find('atom:link', ns) or entry.find('link')
-                published = entry.find('atom:published', ns) or entry.find('atom:updated', ns) or entry.find('published') or entry.find('updated')
-                # Extract content/summary for Atom feeds
-                summary = entry.find('atom:summary', ns) or entry.find('atom:content', ns) or entry.find('summary') or entry.find('content')
-                
-                title_text = title.text if title is not None and title.text else "Untitled"
-                link_href = link.get('href', '') if link is not None else ""
-                pub_text = published.text[:10] if published is not None and published.text else ""
-                content_text = _strip_html(summary.text) if summary is not None and summary.text else ""
-                
-                if title_text and link_href:
-                    articles.append(BlogArticle(
-                        title=title_text,
-                        url=link_href,
-                        source=source_title,
-                        pub_date=pub_text,
-                        content=content_text
-                    ))
-        
-        # Handle RSS 2.0 feeds
-        else:
-            items = root.findall('.//item')
-            for item in items[:MAX_ARTICLES_PER_BLOG]:
-                title = item.find('title')
-                link = item.find('link')
-                pub_date = item.find('pubDate')
-                # Extract description for RSS 2.0 feeds
-                description = item.find('description')
-                
-                title_text = title.text if title is not None and title.text else "Untitled"
-                link_text = link.text if link is not None and link.text else ""
-                pub_text = pub_date.text[:16] if pub_date is not None and pub_date.text else ""
-                content_text = _strip_html(description.text) if description is not None and description.text else ""
-                
-                if title_text and link_text:
-                    articles.append(BlogArticle(
-                        title=title_text,
-                        url=link_text,
-                        source=source_title,
-                        pub_date=pub_text,
-                        content=content_text
-                    ))
-    except ET.ParseError as e:
-        logger.warning(f"XML parse error for {source_title}: {e}")
-    except (AttributeError, KeyError, TypeError) as e:
-        logger.warning(f"Error parsing feed from {source_title}: {e}")
-    
-    return articles
+def _fetch_rss(source_title: str, rss_url: str) -> list[IntelItem]:
+    """Fetch and parse a single RSS/Atom feed into IntelItem objects.
 
-
-def fetch_hn_blogs(limit: int = 5) -> List[BlogArticle]:
-    """
-    Fetch latest articles from HN Top Blogs OPML.
-    
     Args:
-        limit: Maximum number of articles to return
-        
+        source_title: Human-readable name of the blog (used in id and source fields).
+        rss_url: URL of the RSS or Atom feed to fetch.
+
     Returns:
-        List of BlogArticle objects, sorted by recency
+        List of IntelItem objects (up to MAX_PER_BLOG). Returns an empty list on any failure.
     """
-    logger.info("Fetching HN Top Blogs (OPML)...")
-
-    # 1. Fetch OPML
-    opml_content = _fetch_url(OPML_URL)
-    if opml_content:
-        blogs = parse_opml(opml_content)
-        logger.info(f"Found {len(blogs)} blogs in OPML")
-    else:
-        logger.warning("OPML fetch failed, using fallback feeds")
-        blogs = FALLBACK_FEEDS
-
-    if not blogs:
-        logger.error("No blogs available")
+    try:
+        resp = httpx.get(rss_url, timeout=10, follow_redirects=True)
+        resp.raise_for_status()
+        root = ET.fromstring(resp.content)
+    except Exception as exc:
+        logger.debug("HNBlogs: failed to fetch/parse feed %s: %s", rss_url, exc)
         return []
-    
-    # 2. Fetch RSS from top N blogs
-    all_articles = []
-    blogs_to_fetch = blogs[:MAX_BLOGS_TO_FETCH]
-    
-    for i, blog in enumerate(blogs_to_fetch):
-        feed_content = _fetch_url(blog["rss"])
-        if feed_content:
-            articles = parse_rss_feed(feed_content, blog["title"])
-            all_articles.extend(articles)
-            if articles:
-                logger.info(f"[{i+1}/{len(blogs_to_fetch)}] {blog['title']}: {len(articles)} articles")
+
+    items: list[IntelItem] = []
+    try:
+        is_atom = "atom" in root.tag.lower() or root.tag == "{http://www.w3.org/2005/Atom}feed"
+
+        if is_atom:
+            ns = {"atom": "http://www.w3.org/2005/Atom"}
+            entries = root.findall(".//atom:entry", ns) or root.findall(".//entry")
+            for entry in entries[:MAX_PER_BLOG]:
+                title_el = entry.find("atom:title", ns) or entry.find("title")
+                link_el = (
+                    entry.find('atom:link[@rel="alternate"]', ns)
+                    or entry.find("atom:link", ns)
+                    or entry.find("link")
+                )
+                pub_el = (
+                    entry.find("atom:published", ns)
+                    or entry.find("atom:updated", ns)
+                    or entry.find("published")
+                    or entry.find("updated")
+                )
+                summary_el = (
+                    entry.find("atom:summary", ns)
+                    or entry.find("atom:content", ns)
+                    or entry.find("summary")
+                    or entry.find("content")
+                )
+
+                title_text = (title_el.text or "Untitled") if title_el is not None else "Untitled"
+                url_text = (link_el.get("href", "") if link_el is not None else "")
+                pub_text = (pub_el.text[:10] if pub_el is not None and pub_el.text else None)
+                raw_summary = (summary_el.text if summary_el is not None and summary_el.text else "")
+                content_text = re.sub(r"<[^>]+>", "", raw_summary).strip() or None
+
+                if not url_text:
+                    continue
+
+                items.append(
+                    IntelItem(
+                        id=f"hnblog-{source_title}-{hashlib.md5(url_text.encode()).hexdigest()[:8]}",
+                        source="hn_blogs",
+                        title=title_text,
+                        url=url_text,
+                        published_at=pub_text,
+                        content=content_text,
+                    )
+                )
         else:
-            logger.debug(f"[{i+1}/{len(blogs_to_fetch)}] {blog['title']}: failed")
-    
-    # 3. Sort by date and return top N
-    # Note: Date parsing is best-effort
-    def parse_date(article):
+            # RSS 2.0
+            for item_el in root.findall(".//item")[:MAX_PER_BLOG]:
+                title_el = item_el.find("title")
+                link_el = item_el.find("link")
+                pub_el = item_el.find("pubDate")
+                desc_el = item_el.find("description")
+
+                title_text = (title_el.text or "Untitled") if title_el is not None else "Untitled"
+                url_text = (link_el.text or "") if link_el is not None else ""
+                pub_text = (pub_el.text[:10] if pub_el is not None and pub_el.text else None)
+                raw_desc = (desc_el.text if desc_el is not None and desc_el.text else "")
+                content_text = re.sub(r"<[^>]+>", "", raw_desc).strip() or None
+
+                if not url_text:
+                    continue
+
+                items.append(
+                    IntelItem(
+                        id=f"hnblog-{source_title}-{hashlib.md5(url_text.encode()).hexdigest()[:8]}",
+                        source="hn_blogs",
+                        title=title_text,
+                        url=url_text,
+                        published_at=pub_text,
+                        content=content_text,
+                    )
+                )
+    except Exception as exc:
+        logger.debug("HNBlogs: error parsing feed entries for %s: %s", source_title, exc)
+        return []
+
+    return items
+
+
+class HNBlogsSensor:
+    """Sensor that fetches recent articles from HN-popular tech blogs via OPML + RSS/Atom."""
+
+    sensor_name: str = "hn_blogs"
+
+    def fetch(self, config: ConfigSettings, limit: int) -> list[IntelItem]:
+        """Fetch recent blog articles from HN-popular tech blogs.
+
+        Attempts to retrieve the blog list from OPML; falls back to a curated
+        list of feeds if the OPML source is unavailable. Articles are sorted
+        by publication date descending (best-effort).
+
+        Args:
+            config: Full application settings (unused for this sensor — no auth required).
+            limit: Maximum number of IntelItem objects to return.
+
+        Returns:
+            List of IntelItem objects. Returns an empty list on any failure.
+        """
         try:
-            if article.pub_date:
-                return datetime.fromisoformat(article.pub_date.replace('Z', '+00:00'))
-        except (ValueError, TypeError, AttributeError):
-            pass
-        return datetime.min
-    
-    all_articles.sort(key=parse_date, reverse=True)
-    result = all_articles[:limit]
-    
-    logger.info(f"Collected {len(result)} articles total")
-    return result
+            blogs = _fetch_opml() or FALLBACK_FEEDS
 
+            articles: list[IntelItem] = []
+            for blog in blogs[:MAX_BLOGS]:
+                articles.extend(_fetch_rss(blog["title"], blog["rss"]))
+                if len(articles) >= limit * 3:
+                    break
 
-# CLI test
-if __name__ == "__main__":
-    articles = fetch_hn_blogs(limit=5)
-    print("\n--- Top 5 HN Blog Articles ---")
-    for i, a in enumerate(articles, 1):
-        print(f"{i}. [{a.source}] {a.title}")
-        print(f"   {a.url}")
-        print()
+            # Sort by published_at descending; items without a date sort last
+            articles.sort(key=lambda x: x.published_at or "", reverse=True)
+            return articles[:limit]
+        except Exception as exc:
+            logger.warning("HNBlogs: unexpected error during fetch: %s", exc)
+            return []

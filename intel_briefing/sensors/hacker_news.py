@@ -1,70 +1,74 @@
-# ABOUTME: Hacker News sensor using the official Firebase API.
-# ABOUTME: Fetches top stories with heat scores and timestamps.
-"""
-Hacker News Sensor - Fetches top stories from Hacker News.
-Uses the official Firebase API (no auth required).
-"""
-import sys
-import json
-from dataclasses import dataclass
-from typing import List, Optional
+# ABOUTME: Hacker News sensor using the official Firebase REST API.
+# ABOUTME: Fetches top stories without authentication and returns IntelItem objects.
+import logging
 
 import httpx
 
-@dataclass
-class HNStory:
-    """A Hacker News story."""
-    id: int
-    title: str
-    url: Optional[str]
-    score: int
-    by: str
-    descendants: int  # comment count
-    
-    @property
-    def hn_url(self) -> str:
-        return f"https://news.ycombinator.com/item?id={self.id}"
+from intel_briefing.models import ConfigSettings, IntelItem
 
-def fetch_top_stories(limit: int = 10) -> List[HNStory]:
-    """Fetch top stories from Hacker News."""
-    print(f"  → Fetching top {limit} stories from Hacker News...")
-    
-    # Get top story IDs
-    resp = httpx.get("https://hacker-news.firebaseio.com/v0/topstories.json", timeout=15)
-    story_ids = resp.json()[:limit]
-    
-    stories = []
-    for sid in story_ids:
-        item_resp = httpx.get(f"https://hacker-news.firebaseio.com/v0/item/{sid}.json", timeout=10)
-        item = item_resp.json()
-        if item and item.get("type") == "story":
-            stories.append(HNStory(
-                id=item["id"],
-                title=item.get("title", ""),
-                url=item.get("url"),
-                score=item.get("score", 0),
-                by=item.get("by", "unknown"),
-                descendants=item.get("descendants", 0)
-            ))
-    
-    return stories
+logger = logging.getLogger(__name__)
 
-def print_stories(stories: List[HNStory]):
-    """Print stories in a readable format."""
-    print(f"\n{'='*60}")
-    print(f"  📰 Hacker News Top Stories")
-    print(f"{'='*60}\n")
-    
-    for i, s in enumerate(stories, 1):
-        print(f"{i}. {s.title}")
-        print(f"   ⬆️ {s.score} points | 💬 {s.descendants} comments | by {s.by}")
-        print(f"   🔗 {s.url or s.hn_url}")
-        print()
 
-if __name__ == "__main__":
-    limit = int(sys.argv[1]) if len(sys.argv) > 1 else 10
-    stories = fetch_top_stories(limit)
-    if stories:
-        print_stories(stories)
-    else:
-        print("No stories found.")
+class HackerNewsSensor:
+    """Sensor that fetches top stories from Hacker News via the Firebase API."""
+
+    sensor_name: str = "hacker_news"
+
+    def fetch(self, config: ConfigSettings, limit: int) -> list[IntelItem]:
+        """Fetch top stories from Hacker News.
+
+        Args:
+            config: Full application settings (unused for this sensor — no auth required).
+            limit: Maximum number of IntelItem objects to return.
+
+        Returns:
+            List of IntelItem objects. Returns an empty list on any failure.
+        """
+        try:
+            resp = httpx.get(
+                "https://hacker-news.firebaseio.com/v0/topstories.json",
+                timeout=15,
+            )
+            resp.raise_for_status()
+            story_ids = resp.json()
+        except Exception as exc:
+            logger.warning("HackerNews: failed to fetch top story IDs: %s", exc)
+            return []
+
+        # Fetch enough story IDs to account for non-story items being skipped
+        candidate_ids = story_ids[: min(limit * 2, 30)]
+
+        items: list[IntelItem] = []
+        for story_id in candidate_ids:
+            if len(items) >= limit:
+                break
+            try:
+                item_resp = httpx.get(
+                    f"https://hacker-news.firebaseio.com/v0/item/{story_id}.json",
+                    timeout=10,
+                )
+                item_resp.raise_for_status()
+                item = item_resp.json()
+            except Exception as exc:
+                logger.warning("HackerNews: failed to fetch item %s: %s", story_id, exc)
+                continue
+
+            if not item or item.get("type") != "story":
+                continue
+
+            score = item.get("score", 0)
+            descendants = item.get("descendants", 0)
+            url = item.get("url") or f"https://news.ycombinator.com/item?id={story_id}"
+
+            items.append(
+                IntelItem(
+                    id=f"hn-{story_id}",
+                    source="hacker_news",
+                    title=item.get("title", ""),
+                    url=url,
+                    heat=f"{score} pts, {descendants} comments",
+                    published_at=None,
+                )
+            )
+
+        return items

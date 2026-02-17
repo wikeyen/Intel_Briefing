@@ -34,60 +34,91 @@ export function Filters({ showToast }: Props) {
   }
 
   return (
-    <section id="filters" style={{ maxWidth: 640, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      <SectionHeader title="Filters" />
+    <section id="filters" style={{
+      display: 'grid',
+      gridTemplateColumns: '240px 1fr',
+      gap: '4.5rem',
+      padding: '4.5rem 0',
+      borderBottom: '1px solid var(--border-soft)',
+    }}>
+      <SectionHeader
+        num="06"
+        title="Filters"
+        description="Keyword-based ranking rules applied across all sections of the generated briefing."
+      />
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-        <label style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', fontWeight: 500 }}>
-          Boost Keywords
-        </label>
-        <p style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)', margin: '0 0 0.375rem' }}>
-          Items matching these keywords rank higher in their section.
-        </p>
-        <TagInput
-          tags={boost}
-          onChange={setBoost}
-          placeholder="keyword — press Enter"
-        />
-      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-        <label style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', fontWeight: 500 }}>
-          Suppress Keywords
-        </label>
-        <p style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)', margin: '0 0 0.375rem' }}>
-          Items matching these keywords are filtered out entirely.
-        </p>
-        <TagInput
-          tags={suppress}
-          onChange={setSuppress}
-          placeholder="keyword — press Enter"
-        />
-      </div>
+        <div style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 6,
+          overflow: 'hidden',
+        }}>
+          {/* Boost */}
+          <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-soft)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.875rem' }}>
+              <span style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: 'var(--ok)',
+                flexShrink: 0,
+              }} />
+              <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
+                Boost Keywords
+              </label>
+            </div>
+            <TagInput tags={boost} onChange={setBoost} placeholder="keyword — press Enter" />
+            <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.5rem' }}>
+              Items matching these terms rank higher within their section.
+            </p>
+          </div>
 
-      <div>
-        <button
-          onClick={save}
-          disabled={saving}
-          style={{
-            fontSize: '0.75rem',
-            fontWeight: 500,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-            color: saving ? 'var(--ink-faint)' : 'var(--accent)',
-            border: '1.5px solid',
-            borderColor: saving ? 'var(--border)' : 'var(--accent)',
-            borderRadius: 2,
-            padding: '0.4rem 1.25rem',
-            cursor: saving ? 'not-allowed' : 'pointer',
-            transition: 'all 150ms ease',
-            background: 'transparent',
-          }}
-          onMouseEnter={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = 'var(--accent-wash)' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-        >
-          {saving ? 'Saving…' : 'Save'}
-        </button>
+          {/* Suppress */}
+          <div style={{ padding: '1.25rem 1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.875rem' }}>
+              <span style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: 'var(--err)',
+                flexShrink: 0,
+              }} />
+              <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
+                Suppress Keywords
+              </label>
+            </div>
+            <TagInput tags={suppress} onChange={setSuppress} placeholder="keyword — press Enter" />
+            <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.5rem' }}>
+              Items matching these terms are removed from the briefing entirely.
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <button
+            onClick={save}
+            disabled={saving}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              padding: '0.625rem 1.5rem',
+              borderRadius: 4,
+              border: 'none',
+              color: saving ? 'var(--ink-faint)' : '#FFFFFF',
+              background: saving ? 'var(--border)' : 'var(--ink)',
+              cursor: saving ? 'not-allowed' : 'pointer',
+              transition: 'background 120ms',
+            }}
+            onMouseEnter={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = '#000000' }}
+            onMouseLeave={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = 'var(--ink)' }}
+          >
+            {saving ? 'Saving…' : 'Save changes'}
+          </button>
+        </div>
       </div>
     </section>
   )

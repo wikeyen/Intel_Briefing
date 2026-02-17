@@ -1,5 +1,5 @@
-// ABOUTME: Reusable tag-input component — Swiss-spa style chips with warm accent tones.
-// ABOUTME: Supports add-on-enter/blur, remove-on-click, and optional validation.
+// ABOUTME: Reusable tag-input component — chip pills with add-on-enter and remove-on-click.
+// ABOUTME: Supports optional validation; uses design system tokens for consistent styling.
 import { useState } from 'react'
 import type { KeyboardEvent } from 'react'
 
@@ -36,31 +36,36 @@ export function TagInput({ tags, onChange, placeholder = 'Add…', validate }: P
       {tags.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', marginBottom: '0.625rem' }}>
           {tags.map((tag) => (
-            <span key={tag} style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.375rem',
-              background: 'var(--accent-wash)',
-              color: 'var(--accent-dim)',
-              border: '1px solid color-mix(in srgb, var(--accent) 25%, transparent)',
-              borderRadius: 2,
-              fontSize: '0.75rem',
-              fontWeight: 500,
-              padding: '0.2rem 0.5rem',
-            }}>
+            <span
+              key={tag}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.375rem',
+                background: 'var(--accent-wash)',
+                color: 'var(--accent)',
+                border: '1px solid rgba(29,107,79,0.2)',
+                borderRadius: 4,
+                fontSize: '0.8125rem',
+                fontWeight: 500,
+                padding: '0.25rem 0.625rem',
+              }}
+            >
               {tag}
               <button
                 type="button"
                 onClick={() => onChange(tags.filter((t) => t !== tag))}
                 style={{
-                  color: 'var(--ink-muted)',
-                  fontSize: '0.875rem',
+                  color: 'var(--accent-dim)',
+                  fontSize: '1rem',
                   lineHeight: 1,
                   cursor: 'pointer',
-                  transition: 'color 150ms',
+                  transition: 'color 120ms',
+                  display: 'flex',
+                  alignItems: 'center',
                 }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--err)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--accent-dim)' }}
               >
                 ×
               </button>
@@ -77,20 +82,27 @@ export function TagInput({ tags, onChange, placeholder = 'Add…', validate }: P
         placeholder={placeholder}
         style={{
           width: '100%',
-          background: 'var(--canvas)',
+          background: 'var(--surface)',
           border: '1px solid var(--border)',
-          borderRadius: 2,
-          padding: '0.625rem 0.75rem',
+          borderRadius: 4,
+          padding: '0.75rem 1rem',
           fontSize: '0.9375rem',
           color: 'var(--ink)',
           outline: 'none',
-          transition: 'border-color 150ms',
+          transition: 'border-color 120ms, box-shadow 120ms',
+          fontFamily: 'inherit',
         }}
-        onFocus={e => { e.currentTarget.style.borderColor = 'var(--accent)' }}
-        onBlurCapture={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
+        onFocus={e => {
+          e.currentTarget.style.borderColor = 'var(--accent)'
+          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(29,107,79,0.1)'
+        }}
+        onBlurCapture={e => {
+          e.currentTarget.style.borderColor = 'var(--border)'
+          e.currentTarget.style.boxShadow = 'none'
+        }}
       />
       {error && (
-        <p style={{ fontSize: '0.6875rem', color: 'var(--err)', marginTop: '0.375rem' }}>
+        <p style={{ fontSize: '0.75rem', color: 'var(--err)', marginTop: '0.375rem' }}>
           {error}
         </p>
       )}

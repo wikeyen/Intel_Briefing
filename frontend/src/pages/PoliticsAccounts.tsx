@@ -1,5 +1,5 @@
 // ABOUTME: Politics accounts page — manage X/Twitter handles monitored via Grok.
-// ABOUTME: Tag input for handle list; preview panel shows latest politics items.
+// ABOUTME: Tag input for handle list; preview cards show latest politics items.
 import { useState, useEffect } from 'react'
 import { api } from '../api/client'
 import type { IntelItem } from '../api/client'
@@ -20,6 +20,49 @@ function normalizeHandle(value: string): string {
   return value.startsWith('@') ? value : `@${value}`
 }
 
+function PreviewCard({ item }: { item: IntelItem }) {
+  return (
+    <div style={{
+      background: 'var(--surface)',
+      border: '1px solid var(--border)',
+      borderRadius: 4,
+      padding: '1rem 1.25rem',
+    }}>
+      <div style={{
+        fontSize: '0.6875rem',
+        fontWeight: 600,
+        color: 'var(--accent-dim)',
+        letterSpacing: '0.04em',
+        marginBottom: '0.375rem',
+      }}>
+        {item.account ?? item.handle}
+      </div>
+      <a
+        href={item.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: 'block',
+          fontSize: '0.875rem',
+          color: 'var(--ink)',
+          lineHeight: 1.5,
+          marginBottom: '0.375rem',
+          transition: 'color 120ms',
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--accent)' }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink)' }}
+      >
+        {item.title}
+      </a>
+      {item.published_at && (
+        <div style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)', fontFamily: 'ui-monospace, monospace' }}>
+          {item.published_at.slice(0, 16).replace('T', ' ')}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function PoliticsAccounts({ showToast }: Props) {
   const [accounts, setAccounts] = useState<string[]>([])
   const [preview, setPreview] = useState<IntelItem[]>([])
@@ -32,10 +75,7 @@ export function PoliticsAccounts({ showToast }: Props) {
     }).catch(() => {})
   }, [])
 
-  const handleAdd = (tags: string[]) => {
-    // normalize all handles to start with @
-    setAccounts(tags.map(normalizeHandle))
-  }
+  const handleAdd = (tags: string[]) => setAccounts(tags.map(normalizeHandle))
 
   const save = async () => {
     setSaving(true)
@@ -50,92 +90,77 @@ export function PoliticsAccounts({ showToast }: Props) {
   }
 
   return (
-    <section id="politics" style={{ maxWidth: 640, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      <SectionHeader title="Politics Accounts" />
-      <p style={{ fontSize: '0.8125rem', color: 'var(--ink-muted)', margin: 0 }}>
-        X/Twitter handles to monitor via Grok. Requires xAI API key.
-      </p>
+    <section id="politics" style={{
+      display: 'grid',
+      gridTemplateColumns: '240px 1fr',
+      gap: '4.5rem',
+      padding: '4.5rem 0',
+      borderBottom: '1px solid var(--border-soft)',
+    }}>
+      <SectionHeader
+        num="04"
+        title="Politics Accounts"
+        description="X/Twitter handles monitored via Grok for political intelligence. Requires an xAI API key."
+      />
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-        <label style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', fontWeight: 500 }}>
-          Handles
-        </label>
-        <TagInput
-          tags={accounts}
-          onChange={handleAdd}
-          placeholder="@handle — press Enter"
-          validate={validateHandle}
-        />
-      </div>
-
-      <div>
-        <button
-          onClick={save}
-          disabled={saving}
-          style={{
-            fontSize: '0.75rem',
-            fontWeight: 500,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-            color: saving ? 'var(--ink-faint)' : 'var(--accent)',
-            border: '1.5px solid',
-            borderColor: saving ? 'var(--border)' : 'var(--accent)',
-            borderRadius: 2,
-            padding: '0.4rem 1.25rem',
-            cursor: saving ? 'not-allowed' : 'pointer',
-            transition: 'all 150ms ease',
-            background: 'transparent',
-          }}
-          onMouseEnter={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = 'var(--accent-wash)' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-        >
-          {saving ? 'Saving…' : 'Save'}
-        </button>
-      </div>
-
-      {preview.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-          <div style={{
-            fontSize: '0.6875rem',
-            fontWeight: 600,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            color: 'var(--ink-faint)',
-            marginBottom: '0.75rem',
-          }}>
-            Latest Politics Items
-          </div>
-          {preview.map((item) => (
-            <div key={item.id} style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.25rem',
-              padding: '0.75rem 0 0.75rem 1rem',
-              borderLeft: '2px solid var(--border)',
-              marginBottom: '0.75rem',
-            }}>
-              <div style={{ fontSize: '0.6875rem', color: 'var(--accent-dim)', fontWeight: 500 }}>
-                {item.account ?? item.handle}
-              </div>
-              <a
-                href={item.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ fontSize: '0.875rem', color: 'var(--ink)', transition: 'color 150ms' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--accent)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink)' }}
-              >
-                {item.title}
-              </a>
-              {item.published_at && (
-                <div style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)', fontFamily: 'ui-monospace, monospace' }}>
-                  {item.published_at.slice(0, 16).replace('T', ' ')}
-                </div>
-              )}
-            </div>
-          ))}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '0.5rem' }}>
+            Handles
+          </label>
+          <TagInput
+            tags={accounts}
+            onChange={handleAdd}
+            placeholder="@handle — press Enter"
+            validate={validateHandle}
+          />
+          <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.375rem' }}>
+            Type a handle and press Enter or Tab to add.
+          </p>
         </div>
-      )}
+
+        <div>
+          <button
+            onClick={save}
+            disabled={saving}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              padding: '0.625rem 1.5rem',
+              borderRadius: 4,
+              border: 'none',
+              color: saving ? 'var(--ink-faint)' : '#FFFFFF',
+              background: saving ? 'var(--border)' : 'var(--ink)',
+              cursor: saving ? 'not-allowed' : 'pointer',
+              transition: 'background 120ms',
+            }}
+            onMouseEnter={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = '#000000' }}
+            onMouseLeave={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = 'var(--ink)' }}
+          >
+            {saving ? 'Saving…' : 'Save changes'}
+          </button>
+        </div>
+
+        {preview.length > 0 && (
+          <div>
+            <div style={{
+              fontSize: '0.6875rem',
+              fontWeight: 600,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: 'var(--ink-faint)',
+              marginBottom: '0.875rem',
+            }}>
+              Latest Items
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+              {preview.map((item) => <PreviewCard key={item.id} item={item} />)}
+            </div>
+          </div>
+        )}
+      </div>
     </section>
   )
 }

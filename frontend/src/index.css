@@ -1,35 +1,45 @@
-/* ABOUTME: Global styles and design tokens for Intel Briefing — Swiss-spa aesthetic. */
-/* ABOUTME: All color, type, and spacing tokens are defined here as CSS custom properties. */
+/* ABOUTME: Global styles and design tokens for Intel Briefing — premium editorial aesthetic. */
+/* ABOUTME: All color, type, and spacing tokens defined here as CSS custom properties. */
 @import "tailwindcss";
 
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
 :root {
-  /* Canvas & surfaces */
-  --canvas:        #FAFAF7;
-  --surface:       #F5F4F0;
-  --surface-alt:   #EDECEA;
+  /* Surfaces */
+  --canvas:        #F8F7F4;
+  --surface:       #FFFFFF;
+  --surface-alt:   #F2F0EC;
 
   /* Borders */
-  --border:        #DDD9D4;
-  --border-soft:   #E8E5E0;
+  --border:        #E0DDD7;
+  --border-soft:   #EAE7E1;
 
   /* Text */
-  --ink:           #1C1A17;
-  --ink-muted:     #6B6560;
-  --ink-faint:     #9C9690;
+  --ink:           #18181A;
+  --ink-muted:     #6B6968;
+  --ink-faint:     #AEABA6;
 
-  /* Accent — sage green */
-  --accent:        #5C7A6B;
-  --accent-dim:    #4A6357;
-  --accent-wash:   #EBF0EE;
+  /* Accent — deep forest green */
+  --accent:        #1D6B4F;
+  --accent-hover:  #165A41;
+  --accent-dim:    #4D9478;
+  --accent-wash:   #EAF3EE;
 
   /* Semantic status */
-  --ok:            #4A7C59;
-  --ok-bg:         #EDF4EF;
-  --warn:          #9C7A3C;
-  --warn-bg:       #F7F1E6;
-  --err:           #8B3A3A;
-  --err-bg:        #F5ECEC;
+  --ok:            #16A34A;
+  --ok-bg:         #F0FDF4;
+  --warn:          #A16207;
+  --warn-bg:       #FEFCE8;
+  --err:           #B91C1C;
+  --err-bg:        #FEF2F2;
+
+  /* Sidebar (dark) */
+  --sb:            #111110;
+  --sb-surface:    #1A1917;
+  --sb-border:     #242320;
+  --sb-ink:        #F0EEE8;
+  --sb-muted:      #6C6A65;
+  --sb-faint:      #3D3C39;
+  --sb-accent:     #3D8B6A;
 
   /* Typography */
   font-family: 'Inter', system-ui, sans-serif;
@@ -47,38 +57,28 @@
 
 *, *::before, *::after {
   box-sizing: border-box;
-}
-
-::selection {
-  background: var(--accent-wash);
-  color: var(--accent-dim);
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
   background: var(--canvas);
   color: var(--ink);
 }
 
 #root {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 /* ─── Links ──────────────────────────────────────────────────────────────── */
 a {
-  color: var(--ink);
+  color: inherit;
   text-decoration: none;
-  font-weight: inherit;
-  transition: color 150ms ease;
-}
-a:hover {
-  color: var(--accent);
 }
 
-/* ─── Reset button defaults ──────────────────────────────────────────────── */
+/* ─── Reset button ───────────────────────────────────────────────────────── */
 button {
   font-family: inherit;
   cursor: pointer;
@@ -87,44 +87,51 @@ button {
   padding: 0;
 }
 
-/* ─── Range inputs — custom track & thumb ───────────────────────────────── */
+/* ─── Range inputs ───────────────────────────────────────────────────────── */
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 1px;
+  height: 2px;
   background: var(--border);
   outline: none;
   cursor: pointer;
+  border-radius: 1px;
 }
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: var(--ink);
-  border: 2px solid var(--canvas);
+  border: 2px solid var(--surface);
   box-shadow: 0 0 0 1.5px var(--border);
-  transition: background 150ms ease, box-shadow 150ms ease;
+  transition: background 120ms ease, transform 120ms ease;
 }
 input[type="range"]::-webkit-slider-thumb:hover {
   background: var(--accent);
-  box-shadow: 0 0 0 1.5px var(--accent);
+  box-shadow: 0 0 0 1.5px var(--accent-dim);
+  transform: scale(1.1);
 }
 input[type="range"]::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: var(--ink);
-  border: 2px solid var(--canvas);
+  border: 2px solid var(--surface);
   box-shadow: 0 0 0 1.5px var(--border);
   cursor: pointer;
-  transition: background 150ms ease;
 }
 
-/* ─── Scrollbar — subtle ────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; }
+/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--ink-faint); }
+
+/* ─── Selection ──────────────────────────────────────────────────────────── */
+::selection {
+  background: var(--accent-wash);
+  color: var(--accent);
+}

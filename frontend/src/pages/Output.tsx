@@ -1,4 +1,4 @@
-// ABOUTME: Output settings page — language toggle, global limit, and per-section limit sliders.
+// ABOUTME: Output settings page — language toggle, global limit, and per-section item count sliders.
 // ABOUTME: Saves default_language, default_limit, and section_limits to PUT /config.
 import { useState, useEffect } from 'react'
 import { api } from '../api/client'
@@ -9,14 +9,14 @@ interface Props {
 }
 
 const SECTIONS = [
-  'tech_trends',
-  'research',
-  'insights',
-  'products',
-  'capital_flow',
-  'community',
-  'politics',
-  'topics',
+  { key: 'tech_trends',   label: 'Tech Trends' },
+  { key: 'research',      label: 'Research' },
+  { key: 'insights',      label: 'Insights' },
+  { key: 'products',      label: 'Products' },
+  { key: 'capital_flow',  label: 'Capital Flow' },
+  { key: 'community',     label: 'Community' },
+  { key: 'politics',      label: 'Politics' },
+  { key: 'topics',        label: 'Topics' },
 ]
 
 export function Output({ showToast }: Props) {
@@ -53,121 +53,159 @@ export function Output({ showToast }: Props) {
   }
 
   return (
-    <section id="output" style={{ maxWidth: 640, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      <SectionHeader title="Output" />
+    <section id="output" style={{
+      display: 'grid',
+      gridTemplateColumns: '240px 1fr',
+      gap: '4.5rem',
+      padding: '4.5rem 0 6rem',
+    }}>
+      <SectionHeader
+        num="07"
+        title="Output"
+        description="Language preference and item count limits for the generated daily briefing."
+      />
 
-      {/* Language segmented control */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-        <label style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', fontWeight: 500 }}>
-          Language
-        </label>
-        <div style={{
-          display: 'inline-flex',
-          border: '1px solid var(--border)',
-          borderRadius: 2,
-          overflow: 'hidden',
-        }}>
-          {(['en', 'zh'] as const).map((l) => (
-            <button
-              key={l}
-              type="button"
-              onClick={() => setLang(l)}
-              style={{
-                padding: '0.5rem 1.5rem',
-                fontSize: '0.8125rem',
-                fontWeight: lang === l ? 500 : 400,
-                color: lang === l ? 'var(--canvas)' : 'var(--ink-muted)',
-                background: lang === l ? 'var(--accent)' : 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                transition: 'background 150ms, color 150ms',
-              }}
-            >
-              {l === 'en' ? 'English' : 'Chinese'}
-            </button>
-          ))}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+
+        {/* Language */}
+        <div>
+          <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '0.625rem' }}>
+            Language
+          </label>
+          <div style={{
+            display: 'inline-flex',
+            border: '1px solid var(--border)',
+            borderRadius: 6,
+            overflow: 'hidden',
+            background: 'var(--surface)',
+          }}>
+            {(['en', 'zh'] as const).map((l) => (
+              <button
+                key={l}
+                type="button"
+                onClick={() => setLang(l)}
+                style={{
+                  padding: '0.5rem 1.75rem',
+                  fontSize: '0.875rem',
+                  fontWeight: lang === l ? 600 : 400,
+                  color: lang === l ? '#FFFFFF' : 'var(--ink-muted)',
+                  background: lang === l ? 'var(--ink)' : 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'background 120ms, color 120ms',
+                }}
+              >
+                {l === 'en' ? 'English' : '中文'}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Global limit */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-        <label style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', fontWeight: 500 }}>
-          Default Items per Section —{' '}
-          <span style={{ color: 'var(--ink)' }}>{defaultLimit}</span>
-        </label>
-        <input
-          type="range"
-          min={3}
-          max={50}
-          value={defaultLimit}
-          onChange={(e) => setDefaultLimit(Number(e.target.value))}
-        />
-      </div>
+        {/* Global limit */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
+            <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
+              Default Items per Section
+            </label>
+            <span style={{
+              fontSize: '1.125rem',
+              fontWeight: 700,
+              color: 'var(--ink)',
+              fontFamily: 'ui-monospace, monospace',
+              letterSpacing: '-0.02em',
+            }}>
+              {defaultLimit}
+            </span>
+          </div>
+          <input
+            type="range"
+            min={3}
+            max={50}
+            value={defaultLimit}
+            onChange={(e) => setDefaultLimit(Number(e.target.value))}
+          />
+        </div>
 
-      {/* Per-section overrides */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        <label style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', fontWeight: 500 }}>
-          Per-Section Overrides
-        </label>
-        {SECTIONS.map((section) => {
-          const val = sectionLimits[section] ?? defaultLimit
-          return (
-            <div key={section} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <span style={{
-                fontSize: '0.75rem',
-                color: 'var(--ink-muted)',
-                width: 128,
-                flexShrink: 0,
-                fontFamily: 'ui-monospace, monospace',
-              }}>
-                {section}
-              </span>
-              <input
-                type="range"
-                min={1}
-                max={50}
-                value={val}
-                onChange={(e) => updateSection(section, Number(e.target.value))}
-                style={{ flex: 1 }}
-              />
-              <span style={{
-                fontSize: '0.8125rem',
-                color: 'var(--ink)',
-                width: 24,
-                textAlign: 'right',
-                fontFamily: 'ui-monospace, monospace',
-                flexShrink: 0,
-              }}>
-                {val}
-              </span>
-            </div>
-          )
-        })}
-      </div>
+        {/* Per-section overrides */}
+        <div>
+          <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '1rem' }}>
+            Per-Section Overrides
+          </label>
+          <div style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 6,
+            overflow: 'hidden',
+          }}>
+            {SECTIONS.map(({ key, label }, i) => {
+              const val = sectionLimits[key] ?? defaultLimit
+              return (
+                <div
+                  key={key}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1.25rem',
+                    padding: '0.875rem 1.25rem',
+                    borderBottom: i < SECTIONS.length - 1 ? '1px solid var(--border-soft)' : 'none',
+                  }}
+                >
+                  <span style={{
+                    fontSize: '0.8125rem',
+                    color: 'var(--ink-muted)',
+                    width: 104,
+                    flexShrink: 0,
+                  }}>
+                    {label}
+                  </span>
+                  <input
+                    type="range"
+                    min={1}
+                    max={50}
+                    value={val}
+                    onChange={(e) => updateSection(key, Number(e.target.value))}
+                    style={{ flex: 1 }}
+                  />
+                  <span style={{
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    color: 'var(--ink)',
+                    width: 28,
+                    textAlign: 'right',
+                    fontFamily: 'ui-monospace, monospace',
+                    flexShrink: 0,
+                  }}>
+                    {val}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
 
-      <div>
-        <button
-          onClick={save}
-          disabled={saving}
-          style={{
-            fontSize: '0.75rem',
-            fontWeight: 500,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-            color: saving ? 'var(--ink-faint)' : 'var(--accent)',
-            border: '1.5px solid',
-            borderColor: saving ? 'var(--border)' : 'var(--accent)',
-            borderRadius: 2,
-            padding: '0.4rem 1.25rem',
-            cursor: saving ? 'not-allowed' : 'pointer',
-            transition: 'all 150ms ease',
-            background: 'transparent',
-          }}
-          onMouseEnter={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = 'var(--accent-wash)' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-        >
-          {saving ? 'Saving…' : 'Save'}
-        </button>
+        <div>
+          <button
+            onClick={save}
+            disabled={saving}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              padding: '0.625rem 1.5rem',
+              borderRadius: 4,
+              border: 'none',
+              color: saving ? 'var(--ink-faint)' : '#FFFFFF',
+              background: saving ? 'var(--border)' : 'var(--ink)',
+              cursor: saving ? 'not-allowed' : 'pointer',
+              transition: 'background 120ms',
+            }}
+            onMouseEnter={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = '#000000' }}
+            onMouseLeave={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = 'var(--ink)' }}
+          >
+            {saving ? 'Saving…' : 'Save changes'}
+          </button>
+        </div>
       </div>
     </section>
   )

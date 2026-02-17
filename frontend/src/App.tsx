@@ -1,5 +1,5 @@
-// ABOUTME: Root application component — composes Layout with all configuration pages.
-// ABOUTME: Each page section is rendered in a single scrollable column with anchor links.
+// ABOUTME: Root application component — composes Layout with all configuration page sections.
+// ABOUTME: Manages save toasts; sections scroll independently from the sidebar.
 import { useState } from 'react'
 import { Layout } from './components/Layout'
 import { ApiKeys } from './pages/ApiKeys'
@@ -20,19 +20,14 @@ function App() {
 
   return (
     <Layout>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
+      {/* Content wrapper — horizontal padding and max-width */}
+      <div style={{ padding: '0 4rem', maxWidth: 1080, minWidth: 0 }}>
         <ApiKeys showToast={showToast} />
-        <div style={{ height: 1, background: 'var(--border-soft)' }} />
         <Sensors showToast={showToast} />
-        <div style={{ height: 1, background: 'var(--border-soft)' }} />
         <Schedule showToast={showToast} />
-        <div style={{ height: 1, background: 'var(--border-soft)' }} />
         <PoliticsAccounts showToast={showToast} />
-        <div style={{ height: 1, background: 'var(--border-soft)' }} />
         <Topics showToast={showToast} />
-        <div style={{ height: 1, background: 'var(--border-soft)' }} />
         <Filters showToast={showToast} />
-        <div style={{ height: 1, background: 'var(--border-soft)' }} />
         <Output showToast={showToast} />
       </div>
 
@@ -42,12 +37,14 @@ function App() {
           bottom: '2rem',
           right: '2rem',
           background: 'var(--ink)',
-          color: 'var(--canvas)',
-          fontSize: '0.8125rem',
-          padding: '0.75rem 1.25rem',
-          borderRadius: 2,
-          boxShadow: '0 4px 24px rgba(28,26,23,0.18)',
+          color: '#FFFFFF',
+          fontSize: '0.875rem',
+          fontWeight: 500,
+          padding: '0.875rem 1.25rem',
+          borderRadius: 4,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
           zIndex: 51,
+          letterSpacing: '0.01em',
         }}>
           {toast}
         </div>

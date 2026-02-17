@@ -20,8 +20,8 @@ function App() {
 
   return (
     <Layout>
-      {/* Content wrapper — horizontal padding only; sections fill the full main area */}
-      <div style={{ padding: '0 4rem' }}>
+      {/* Content wrapper — centered column with breathing room on both sides */}
+      <div style={{ maxWidth: 1024, margin: '0 auto', padding: '0 3rem' }}>
         <ApiKeys showToast={showToast} />
         <Sensors showToast={showToast} />
         <Schedule showToast={showToast} />
@@ -34,8 +34,8 @@ function App() {
       {toast && (
         <div style={{
           position: 'fixed',
-          bottom: '2rem',
-          right: '2rem',
+          top: '1.25rem',
+          right: '1.5rem',
           background: 'var(--ink)',
           color: '#FFFFFF',
           fontSize: '0.875rem',

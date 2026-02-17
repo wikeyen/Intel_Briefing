@@ -212,8 +212,8 @@ export function Layout({ children }: Props) {
       {toast && (
         <div style={{
           position: 'fixed',
-          bottom: '2rem',
-          right: '2rem',
+          top: '1.25rem',
+          right: '1.5rem',
           background: 'var(--ink)',
           color: 'var(--surface)',
           fontSize: '0.8125rem',

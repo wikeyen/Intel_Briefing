@@ -20,8 +20,8 @@ function App() {
 
   return (
     <Layout>
-      {/* Content wrapper — horizontal padding and max-width */}
-      <div style={{ padding: '0 4rem', maxWidth: 1080, minWidth: 0 }}>
+      {/* Content wrapper — horizontal padding only; sections fill the full main area */}
+      <div style={{ padding: '0 4rem' }}>
         <ApiKeys showToast={showToast} />
         <Sensors showToast={showToast} />
         <Schedule showToast={showToast} />

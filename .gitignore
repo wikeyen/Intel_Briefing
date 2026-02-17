@@ -56,3 +56,11 @@ src/generators/curator.py
 temp_*.csv
 debug_*.py
 *.bak
+
+# Python build artifacts
+*.egg-info/
+.coverage
+htmlcov/
+
+# Cache and runtime data
+cache/

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from intel_briefing.config import load_settings, DEFAULT_SETTINGS_PATH
@@ -61,5 +62,13 @@ app.include_router(config_routes.router, tags=["Config"])
 
 # Serve built frontend at /ui (optional — only if dist exists)
 if _FRONTEND_DIR.exists():
-    app.mount("/ui", StaticFiles(directory=_FRONTEND_DIR, html=True), name="frontend")
+    _INDEX = _FRONTEND_DIR / "index.html"
+
+    @app.get("/ui", include_in_schema=False)
+    @app.get("/ui/", include_in_schema=False)
+    async def serve_ui_root() -> FileResponse:
+        """Serve index.html with no-cache so browsers always fetch the latest version."""
+        return FileResponse(_INDEX, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
+    app.mount("/ui", StaticFiles(directory=_FRONTEND_DIR), name="frontend")
     logger.info("Frontend mounted at /ui from %s", _FRONTEND_DIR)

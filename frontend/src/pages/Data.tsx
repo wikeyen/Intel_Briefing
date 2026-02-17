@@ -333,41 +333,48 @@ export function Data() {
         ) : report ? (
           <>
             {/* Source filter tags */}
-            {availableSources.length > 0 && (
-              <div style={{
-                display: 'flex',
-                gap: '0.375rem',
-                alignItems: 'center',
-                marginBottom: '1rem',
-                flexWrap: 'wrap',
-              }}>
-                {availableSources.map(src => (
-                  <FilterTag
-                    key={src}
-                    label={SOURCE_LABELS[src] ?? src}
-                    active={selectedSources.has(src)}
-                    onClick={() => toggleSource(src)}
-                  />
-                ))}
-                {selectedSources.size < availableSources.length && (
-                  <button
-                    onClick={() => setSelectedSources(new Set(availableSources))}
-                    style={{
-                      fontSize: '0.6875rem',
-                      color: 'var(--ink-faint)',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: '0.25rem 0.375rem',
-                    }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-faint)' }}
-                  >
-                    All
-                  </button>
-                )}
-              </div>
-            )}
+            <div style={{
+              display: 'flex',
+              gap: '0.5rem',
+              alignItems: 'center',
+              marginBottom: '1rem',
+              flexWrap: 'wrap',
+            }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--ink-faint)', marginRight: '0.25rem' }}>
+                Source:
+              </span>
+              {availableSources.length === 0 ? (
+                <span style={{ fontSize: '0.75rem', color: 'var(--ink-faint)' }}>—</span>
+              ) : (
+                <>
+                  {availableSources.map(src => (
+                    <FilterTag
+                      key={src}
+                      label={SOURCE_LABELS[src] ?? src}
+                      active={selectedSources.has(src)}
+                      onClick={() => toggleSource(src)}
+                    />
+                  ))}
+                  {selectedSources.size < availableSources.length && (
+                    <button
+                      onClick={() => setSelectedSources(new Set(availableSources))}
+                      style={{
+                        fontSize: '0.6875rem',
+                        color: 'var(--ink-faint)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '0.25rem 0.375rem',
+                      }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-faint)' }}
+                    >
+                      All
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
             <div style={{
               background: 'var(--surface)',
               border: '1px solid var(--border)',

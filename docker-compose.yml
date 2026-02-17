@@ -1,0 +1,30 @@
+# ABOUTME: Docker Compose for Intel Briefing — backend API + optional frontend nginx.
+# ABOUTME: Backend serves the API on port 8000; frontend serves the React config UI on port 3000.
+services:
+  intel:
+    build: .
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./cache:/app/cache
+      - ./config:/app/config
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  frontend:
+    image: nginx:alpine
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend/dist:/usr/share/nginx/html:ro
+    restart: unless-stopped
+    depends_on:
+      - intel
+    profiles:
+      - frontend

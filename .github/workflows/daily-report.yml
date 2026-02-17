@@ -2,16 +2,19 @@ name: Daily Intelligence Report
 
 on:
   schedule:
-    - cron: '51 23 * * *'  # UTC 23:51 = 北京 07:51（避开整点高峰）
+    - cron: '51 23 * * *'  # UTC 23:51 = Beijing 07:51 (off-peak hour)
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   generate:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
-      - name: Checkout engine
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Python
@@ -19,20 +22,42 @@ jobs:
         with:
           python-version: '3.13'
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
 
-      - name: Generate Morning Report
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Run tests
+        run: uv run pytest -m "not e2e" -q
+
+      - name: Run pipeline and export Markdown
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
-          # Official xAI endpoint. Override with a relay URL via GitHub Secret if needed for geo-restricted access.
-          # WARNING: Using a relay routes your API key through a third-party operator. Only use a trusted relay.
+          # Official xAI endpoint. Override via secret only for geo-restricted relay access.
+          # WARNING: A relay routes your API key through a third-party operator.
           XAI_BASE_URL: ${{ secrets.XAI_BASE_URL || 'https://api.x.ai/v1/chat/completions' }}
           XAI_MODEL: grok-3
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PRODUCTHUNT_TOKEN: ${{ secrets.PRODUCTHUNT_TOKEN }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: python run_mission.py
+        run: |
+          uv run python -c "
+          from intel_briefing.config import load_settings
+          from intel_briefing.pipeline.collector import collect
+          from intel_briefing.renderer.markdown import render
+          import pathlib, datetime
+
+          config = load_settings()
+          report = collect(config)
+          md = render(report)
+
+          date = datetime.date.today().isoformat()
+          out = pathlib.Path('reports/daily_briefings')
+          out.mkdir(parents=True, exist_ok=True)
+          (out / f'Morning_Report_{date}.md').write_text(md, encoding='utf-8')
+          print(f'Report written: {len(md)} chars')
+          "
 
       - name: Deliver report to PWA
         env:
@@ -42,26 +67,27 @@ jobs:
           REPORT="reports/daily_briefings/Morning_Report_${DATE}.md"
 
           if [ ! -f "$REPORT" ]; then
-            echo "❌ Report not found: $REPORT"
+            echo "Report not found: $REPORT"
             ls -la reports/daily_briefings/ 2>/dev/null || echo "Directory does not exist"
             exit 1
           fi
 
-          echo "📄 Report found: $(wc -c < "$REPORT") bytes"
+          echo "Report found: $(wc -c < "$REPORT") bytes"
 
-          git clone https://x-access-token:${PWA_DEPLOY_TOKEN}@github.com/77AutumN/intel-briefing-pwa.git /tmp/pwa
-          cp "$REPORT" /tmp/pwa/data/daily_briefings/
-
+          git clone https://github.com/77AutumN/intel-briefing-pwa.git /tmp/pwa
           cd /tmp/pwa
+          git remote set-url origin "https://x-access-token:${PWA_DEPLOY_TOKEN}@github.com/77AutumN/intel-briefing-pwa.git"
+          cp "../${REPORT}" data/daily_briefings/
+
           git config user.name "Intel Bot"
           git config user.email "bot@7brief.com"
           git add data/daily_briefings/
           git diff --cached --stat
 
           if git diff --cached --quiet; then
-            echo "✅ No changes to commit"
+            echo "No changes to commit"
           else
             git commit -m "data: add daily report ${DATE}"
             git push
-            echo "✅ Report delivered to intel-briefing-pwa"
+            echo "Report delivered to intel-briefing-pwa"
           fi

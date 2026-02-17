@@ -36,6 +36,13 @@ async def get_config(request: Request) -> JSONResponse:
     return JSONResponse(_mask(raw))
 
 
+@router.get("/config/raw")
+async def get_config_raw(request: Request) -> JSONResponse:
+    """Return the current configuration with actual API key values unmasked."""
+    config = request.app.state.config
+    return JSONResponse(config.model_dump())
+
+
 @router.put("/config")
 async def update_config(request: Request) -> JSONResponse:
     """Merge a partial settings dict into the current config and persist to settings.json.

@@ -68,6 +68,8 @@ export const api = {
 
   getConfig: () => apiFetch<ConfigSettings>('/config'),
 
+  getRawConfig: () => apiFetch<ConfigSettings>('/config/raw'),
+
   updateConfig: (partial: Partial<ConfigSettings>) =>
     apiFetch<ConfigSettings>('/config', {
       method: 'PUT',

@@ -1,5 +1,5 @@
-// ABOUTME: API key management page — masked inputs with reveal toggles for each key.
-// ABOUTME: Saves to PUT /config; keys that are set show *** (masked); clear and retype to replace.
+// ABOUTME: API key management page — saved keys show 20 asterisks; Show reveals the real value.
+// ABOUTME: Saves to PUT /config; uses GET /config/raw to reveal stored keys on demand.
 import { useState, useEffect } from 'react'
 import { api } from '../api/client'
 import type { ConfigSettings } from '../api/client'
@@ -38,77 +38,155 @@ function blur(e: React.FocusEvent<HTMLInputElement>) {
   e.currentTarget.style.boxShadow = 'none'
 }
 
-function MaskedInput({ label, hint, value, onChange }: {
+const PLACEHOLDER_STARS = '∙'.repeat(20)
+
+// mode: 'saved' = key exists, showing 20 dots | 'revealed' = showing real value | 'editing' = user typing new key
+type Mode = 'saved' | 'revealed' | 'editing'
+
+function MaskedInput({ label, hint, saved, newValue, onNewValue, onReveal }: {
   label: string
   hint: string
-  value: string
-  onChange: (v: string) => void
+  saved: boolean        // true if a key is stored on the server
+  newValue: string      // the value the user is typing (empty = no change pending)
+  onNewValue: (v: string) => void
+  onReveal: () => Promise<string>
 }) {
-  const [revealed, setRevealed] = useState(false)
-  const isSet = value === '***'
+  const [mode, setMode] = useState<Mode>(saved ? 'saved' : 'editing')
+  const [realValue, setRealValue] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
-  return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-        <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', fontFamily: 'inherit' }}>
-          {label}
-        </label>
-        {isSet && (
+  // When parent reloads after save, reset back to saved/editing based on new saved state
+  useEffect(() => {
+    setMode(saved ? 'saved' : 'editing')
+    setRealValue(null)
+  }, [saved])
+
+  const handleShowHide = async () => {
+    if (mode === 'revealed') {
+      setMode('saved')
+      return
+    }
+    if (mode === 'saved') {
+      setLoading(true)
+      try {
+        const real = await onReveal()
+        setRealValue(real)
+        setMode('revealed')
+      } finally {
+        setLoading(false)
+      }
+    }
+  }
+
+  const handleChange = () => {
+    setMode('editing')
+    setRealValue(null)
+    onNewValue('')
+  }
+
+  const handleCancelChange = () => {
+    setMode('saved')
+    onNewValue('')
+  }
+
+  if (mode === 'saved' || mode === 'revealed') {
+    const displayValue = mode === 'revealed' && realValue !== null ? realValue : PLACEHOLDER_STARS
+    return (
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+          <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', fontFamily: 'inherit' }}>
+            {label}
+          </label>
           <span style={{
-            fontSize: '0.625rem',
-            fontWeight: 600,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            color: 'var(--ok)',
-            background: 'var(--ok-bg)',
-            padding: '0.15rem 0.5rem',
-            borderRadius: 999,
+            fontSize: '0.625rem', fontWeight: 600, letterSpacing: '0.08em',
+            textTransform: 'uppercase', color: 'var(--ok)', background: 'var(--ok-bg)',
+            padding: '0.15rem 0.5rem', borderRadius: 999,
           }}>
             Saved
           </span>
-        )}
+        </div>
+        <div style={{ display: 'flex', gap: '0.625rem' }}>
+          <input
+            readOnly
+            type="text"
+            value={displayValue}
+            style={{
+              ...inputBase,
+              color: mode === 'revealed' ? 'var(--ink)' : 'var(--ink-faint)',
+              letterSpacing: mode === 'revealed' ? 'normal' : '0.15em',
+              cursor: 'default',
+            }}
+          />
+          <button
+            type="button"
+            onClick={handleShowHide}
+            disabled={loading}
+            style={{
+              fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)',
+              padding: '0.5rem 0.75rem', border: '1px solid var(--border)', borderRadius: 4,
+              background: 'var(--surface)', whiteSpace: 'nowrap', cursor: 'pointer',
+              transition: 'color 120ms', flexShrink: 0,
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)' }}
+          >
+            {loading ? '…' : mode === 'revealed' ? 'Hide' : 'Show'}
+          </button>
+          <button
+            type="button"
+            onClick={handleChange}
+            style={{
+              fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)',
+              padding: '0.5rem 0.75rem', border: '1px solid var(--border)', borderRadius: 4,
+              background: 'var(--surface)', whiteSpace: 'nowrap', cursor: 'pointer',
+              transition: 'color 120ms', flexShrink: 0,
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)' }}
+          >
+            Change
+          </button>
+        </div>
+        <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.375rem', lineHeight: 1.5, fontFamily: 'inherit' }}>
+          {hint}
+        </p>
       </div>
-      <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center' }}>
+    )
+  }
+
+  // editing mode
+  return (
+    <div>
+      <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '0.5rem', fontFamily: 'inherit' }}>
+        {label}
+      </label>
+      <div style={{ display: 'flex', gap: '0.625rem' }}>
         <input
-          type={revealed ? 'text' : 'password'}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="not set"
+          type="password"
+          value={newValue}
+          onChange={(e) => onNewValue(e.target.value)}
+          placeholder={saved ? 'Enter new value to replace' : 'not set'}
+          autoFocus={saved}
           style={inputBase}
-          onFocus={(e) => {
-            focus(e)
-            // Select all so user can immediately type a replacement
-            if (isSet) e.currentTarget.select()
-          }}
+          onFocus={focus}
           onBlur={blur}
         />
-        <button
-          type="button"
-          onClick={() => setRevealed((r) => !r)}
-          style={{
-            fontSize: '0.75rem',
-            fontWeight: 500,
-            color: 'var(--ink-muted)',
-            padding: '0.5rem 0.75rem',
-            border: '1px solid var(--border)',
-            borderRadius: 4,
-            background: 'var(--surface)',
-            whiteSpace: 'nowrap',
-            cursor: 'pointer',
-            transition: 'color 120ms, border-color 120ms',
-            flexShrink: 0,
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.color = 'var(--ink)'
-            ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--ink-faint)'
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)'
-            ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'
-          }}
-        >
-          {revealed ? 'Hide' : 'Show'}
-        </button>
+        {saved && (
+          <button
+            type="button"
+            onClick={handleCancelChange}
+            style={{
+              fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)',
+              padding: '0.5rem 0.75rem', border: '1px solid var(--border)', borderRadius: 4,
+              background: 'var(--surface)', whiteSpace: 'nowrap', cursor: 'pointer',
+              flexShrink: 0,
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)' }}
+          >
+            Cancel
+          </button>
+        )}
       </div>
       <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.375rem', lineHeight: 1.5, fontFamily: 'inherit' }}>
         {hint}
@@ -118,41 +196,39 @@ function MaskedInput({ label, hint, value, onChange }: {
 }
 
 export function ApiKeys({ showToast }: Props) {
-  const [values, setValues] = useState<Record<string, string>>({})
+  // savedFlags: which fields have a key stored server-side
+  const [savedFlags, setSavedFlags] = useState<Record<string, boolean>>({})
+  // pendingValues: new values the user is typing (only sent if non-empty)
+  const [pendingValues, setPendingValues] = useState<Record<string, string>>({})
   const [xaiModel, setXaiModel] = useState('')
   const [xaiBaseUrl, setXaiBaseUrl] = useState('')
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
+  const loadConfig = () => {
     api.getConfig().then((cfg) => {
-      const v: Record<string, string> = {}
+      const flags: Record<string, boolean> = {}
       for (const { field } of KEY_FIELDS) {
-        // null → empty string (not set); '***' → '***' (set, masked)
-        v[field] = (cfg[field] as string | null) ?? ''
+        flags[field] = cfg[field] === '***'
       }
-      setValues(v)
+      setSavedFlags(flags)
+      setPendingValues({})
       setXaiModel(cfg.xai_model)
       setXaiBaseUrl(cfg.xai_base_url)
     })
-  }, [])
+  }
+
+  useEffect(() => { loadConfig() }, [])
 
   const save = async () => {
     setSaving(true)
     try {
       const partial: Partial<ConfigSettings> = { xai_model: xaiModel, xai_base_url: xaiBaseUrl }
       for (const { field } of KEY_FIELDS) {
-        const v = values[field]
-        // Only send if non-empty; server ignores '***' so unchanged keys are preserved
+        const v = pendingValues[field]
         if (v) (partial as Record<string, string>)[field] = v
       }
       await api.updateConfig(partial)
-      // Reload so the form reflects the current saved state
-      const updated = await api.getConfig()
-      const v: Record<string, string> = {}
-      for (const { field } of KEY_FIELDS) {
-        v[field] = (updated[field] as string | null) ?? ''
-      }
-      setValues(v)
+      loadConfig()
       showToast('API keys saved')
     } catch (e) {
       showToast('Save failed: ' + (e as Error).message)
@@ -161,10 +237,7 @@ export function ApiKeys({ showToast }: Props) {
     }
   }
 
-  const inputStyle: React.CSSProperties = {
-    ...inputBase,
-    fontFamily: 'inherit',
-  }
+  const inputStyle: React.CSSProperties = { ...inputBase, fontFamily: 'inherit' }
 
   return (
     <section id="api-keys" style={{
@@ -177,7 +250,7 @@ export function ApiKeys({ showToast }: Props) {
       <SectionHeader
         num="01"
         title="API Keys"
-        description="Credentials for external data sources and AI providers. Keys are write-only — once saved, they show as *** and cannot be read back."
+        description="Credentials for external data sources and AI providers. Saved keys can be revealed on demand."
       />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -186,8 +259,13 @@ export function ApiKeys({ showToast }: Props) {
             key={field}
             label={label}
             hint={hint}
-            value={values[field] ?? ''}
-            onChange={(v) => setValues((prev) => ({ ...prev, [field]: v }))}
+            saved={savedFlags[field] ?? false}
+            newValue={pendingValues[field] ?? ''}
+            onNewValue={(v) => setPendingValues((prev) => ({ ...prev, [field]: v }))}
+            onReveal={async () => {
+              const raw = await api.getRawConfig()
+              return (raw[field] as string | null) ?? ''
+            }}
           />
         ))}
 

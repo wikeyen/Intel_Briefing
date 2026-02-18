@@ -4,7 +4,6 @@
 import { useState, useEffect } from 'react'
 import { api } from '@/api/client'
 import type { ConfigSettings } from '@/api/client'
-import { SectionHeader } from '@/components/SectionHeader'
 import { useToast } from '@/lib/toast-context'
 
 const KEY_FIELDS: { field: keyof ConfigSettings; label: string; hint: string }[] = [
@@ -238,18 +237,16 @@ export function ApiKeys() {
   const inputStyle: React.CSSProperties = { ...inputBase, fontFamily: 'inherit' }
 
   return (
-    <section id="api-keys" style={{
-      display: 'grid',
-      gridTemplateColumns: '240px 1fr',
-      gap: '4.5rem',
-      padding: '4.5rem 0',
-      borderBottom: '1px solid var(--border-soft)',
-    }}>
-      <SectionHeader
-        num="01"
-        title="Connections"
-        description="Credentials for external data sources and AI providers. Saved keys can be revealed on demand."
-      />
+    <section id="api-keys" style={{ padding: '2rem 0' }}>
+      <h2 style={{
+        fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink)',
+        marginBottom: '0.25rem',
+      }}>Connections</h2>
+      <p style={{
+        fontSize: '0.8125rem', color: 'var(--ink-muted)', marginBottom: '2rem',
+      }}>
+        Credentials for external data sources and AI providers. Saved keys can be revealed on demand.
+      </p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {KEY_FIELDS.map(({ field, label, hint }) => (

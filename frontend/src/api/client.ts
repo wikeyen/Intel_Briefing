@@ -16,7 +16,6 @@ export interface ConfigSettings {
   fetch_time: string
   fetch_timezone: string
   default_limit: number
-  section_limits: Record<string, number>
   sensor_limits: Record<string, number>
   sensor_lookback_hours: Record<string, number>
   boost_keywords: string[]
@@ -24,6 +23,7 @@ export interface ConfigSettings {
   politics_accounts: string[]
   topics_keywords: string[]
   cache_ttl_hours: number
+  post_expiry_days: number
 }
 
 export interface IntelItem {
@@ -93,8 +93,8 @@ export const api = {
       body: JSON.stringify(partial),
     }),
 
-  getLatest: (limit = 10) =>
-    apiFetch<IntelReport>(`/intel/latest?limit=${limit}`),
+  getLatest: () =>
+    apiFetch<IntelReport>('/intel/latest'),
 
   triggerFetch: () =>
     apiFetch<{ status: string }>('/fetch', { method: 'POST' }),

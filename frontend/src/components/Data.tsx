@@ -230,7 +230,7 @@ export function Data() {
 
   useEffect(() => {
     api.getConfig().then(setConfig).catch(() => {})
-    api.getLatest(50).then(r => {
+    api.getLatest().then(r => {
       setReport(r)
       // Default to first section that has items
       const first = SECTIONS.find(s => (r.items[s.key]?.length ?? 0) > 0)

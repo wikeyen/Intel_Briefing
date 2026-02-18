@@ -7,7 +7,7 @@ import type {
   SensorResult,
   SectionKey,
 } from '../models'
-import { createReport, sensorResultSucceeded, emptyItemsMap, sectionLimit } from '../models'
+import { createReport, sensorResultSucceeded, emptyItemsMap, sensorLimit } from '../models'
 import { dedupItems, dedupAcrossSections } from './dedup'
 import { writeReport } from './cache'
 import { SENSOR_REGISTRY } from '../sensors'
@@ -78,10 +78,9 @@ export async function collect(
     }
   }
 
-  // Run all sensors concurrently, using the section-specific limit for each sensor
+  // Run all sensors concurrently, using the per-sensor limit or global default
   const promises = enabledSensors.map(([name, fetchFn]) => {
-    const section = SENSOR_SECTION_MAP[name] ?? 'tech_trends'
-    const limit = sectionLimit(config, section)
+    const limit = sensorLimit(config, name)
     return runSensor(name, fetchFn, config, limit)
   })
   const settled = await Promise.allSettled(promises)

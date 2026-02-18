@@ -9,8 +9,7 @@ import type { HealthResponse } from '@/api/client'
 
 const CONFIG_NAV = [
   { href: '/api-keys',  label: 'Connections',  num: '01' },
-  { href: '/sensors',   label: 'Sources',      num: '02' },
-  { href: '/pipeline',  label: 'Pipeline',     num: '03' },
+  { href: '/settings',  label: 'Settings',     num: '02' },
 ]
 
 function NavLink({ href, active, children }: { href: string; active: boolean; children: ReactNode }) {
@@ -174,7 +173,7 @@ export function Sidebar({ showToast }: Props) {
 
         <SideLabel>Data</SideLabel>
         <NavLink href="/data" active={pathname === '/data'}>
-          <NumTag>08</NumTag>
+          <NumTag>03</NumTag>
           Intel Data
         </NavLink>
       </div>

@@ -136,9 +136,10 @@ export interface ConfigSettings {
   fetch_time: string
   fetch_timezone: string
 
-  // Output preferences
+  // Fetch limits — global default + optional per-sensor overrides
   default_limit: number
-  section_limits: Record<string, number>
+  sensor_limits: Record<string, number>
+  sensor_lookback_hours: Record<string, number>
 
   // Keyword filters
   boost_keywords: string[]
@@ -152,6 +153,9 @@ export interface ConfigSettings {
 
   // Cache
   cache_ttl_hours: number
+
+  // Post expiry — items older than this are pruned by the cleanup cron
+  post_expiry_days: number
 }
 
 export function defaultConfig(): ConfigSettings {
@@ -177,16 +181,18 @@ export function defaultConfig(): ConfigSettings {
     fetch_time: '07:51',
     fetch_timezone: 'Asia/Shanghai',
     default_limit: 10,
-    section_limits: {},
+    sensor_limits: {},
+    sensor_lookback_hours: {},
     boost_keywords: [],
     suppress_keywords: [],
     politics_accounts: [],
     topics_keywords: [],
     cache_ttl_hours: 6,
+    post_expiry_days: 30,
   }
 }
 
-/** Return the configured limit for a section, falling back to default_limit. */
-export function sectionLimit(config: ConfigSettings, section: string): number {
-  return config.section_limits[section] ?? config.default_limit
+/** Return the configured limit for a sensor, falling back to default_limit. */
+export function sensorLimit(config: ConfigSettings, sensorName: string): number {
+  return config.sensor_limits[sensorName] ?? config.default_limit
 }

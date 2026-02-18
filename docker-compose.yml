@@ -1,6 +1,30 @@
 # ABOUTME: Docker Compose for Intel Briefing — Next.js frontend + cron sidecar.
-# ABOUTME: Frontend serves the app on port 8000; cron triggers the pipeline on schedule.
+# ABOUTME: Local Redis + HTTP proxy for dev; set UPSTASH_REDIS_REST_URL externally for production.
 services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  redis-http:
+    image: hiett/serverless-redis-http:latest
+    ports:
+      - "8079:80"
+    environment:
+      - SRH_MODE=env
+      - SRH_TOKEN=local-dev-token
+      - SRH_CONNECTION_STRING=redis://redis:6379
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+
   frontend:
     build:
       context: ./frontend
@@ -10,9 +34,12 @@ services:
     environment:
       - API_KEY=${API_KEY:-}
       - CRON_SECRET=${CRON_SECRET:-}
-      - UPSTASH_REDIS_REST_URL=${UPSTASH_REDIS_REST_URL}
-      - UPSTASH_REDIS_REST_TOKEN=${UPSTASH_REDIS_REST_TOKEN}
+      - UPSTASH_REDIS_REST_URL=${UPSTASH_REDIS_REST_URL:-http://redis-http:80}
+      - UPSTASH_REDIS_REST_TOKEN=${UPSTASH_REDIS_REST_TOKEN:-local-dev-token}
     restart: unless-stopped
+    depends_on:
+      redis-http:
+        condition: service_started
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
       interval: 30s
@@ -33,3 +60,6 @@ services:
     depends_on:
       frontend:
         condition: service_healthy
+
+volumes:
+  redis_data:

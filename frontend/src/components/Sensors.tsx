@@ -1,5 +1,5 @@
-// ABOUTME: Sources section — sensor toggles grouped by language/provider with inline sub-config.
-// ABOUTME: Politics Accounts and Topics keywords are configured inline under their Grok sensor rows.
+// ABOUTME: Sources section — sensor toggles grouped by language/provider with inline pill controls.
+// ABOUTME: Per-sensor item limits, lookback hours, politics accounts, and topics keywords configured inline.
 'use client'
 import { useState, useEffect } from 'react'
 import { api } from '@/api/client'
@@ -43,6 +43,18 @@ const SENSOR_GROUPS: { label: string; sensors: SensorDef[] }[] = [
 ]
 
 const ALL_SENSORS = SENSOR_GROUPS.flatMap((g) => g.sensors)
+
+/** Maps sensor names to their default lookback hours. Sensors not listed have no lookback support. */
+const SENSOR_LOOKBACK_SUPPORT: Record<string, number> = {
+  hacker_news: 24,
+  github: 168,
+  grok: 24,
+  politics: 48,
+  topics: 48,
+  hn_blogs: 72,
+  arxiv: 72,
+  wallstreetcn: 24,
+}
 
 type SensorStatus = 'ok' | 'failed' | 'disabled'
 
@@ -104,6 +116,63 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
   )
 }
 
+interface PillInputProps {
+  label: string
+  value: number
+  min: number
+  max: number
+  suffix?: string
+  onChange: (v: number) => void
+}
+
+function PillInput({ label, value, min, max, suffix, onChange }: PillInputProps) {
+  return (
+    <label style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '0.25rem',
+      borderRadius: 999,
+      border: '1px solid var(--border)',
+      background: 'var(--canvas)',
+      padding: '0.2rem 0.5rem 0.2rem 0.5rem',
+      fontSize: '0.75rem',
+      lineHeight: 1,
+      cursor: 'text',
+      whiteSpace: 'nowrap',
+      flexShrink: 0,
+    }}>
+      <span style={{ color: 'var(--ink-muted)', fontWeight: 500 }}>{label}</span>
+      <input
+        type="number"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(e) => {
+          const n = Number(e.target.value)
+          if (!isNaN(n)) onChange(Math.max(min, Math.min(max, n)))
+        }}
+        style={{
+          width: suffix ? 28 : 32,
+          padding: 0,
+          border: 'none',
+          background: 'transparent',
+          color: 'var(--ink)',
+          fontSize: '0.75rem',
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+          fontWeight: 600,
+          textAlign: 'right',
+          outline: 'none',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          MozAppearance: 'textfield' as any,
+        }}
+      />
+      {suffix && (
+        <span style={{ color: 'var(--ink-muted)', fontWeight: 500 }}>{suffix}</span>
+      )}
+    </label>
+  )
+}
+
 function validateHandle(value: string): string | null {
   const clean = value.startsWith('@') ? value : `@${value}`
   if (!/^@[A-Za-z0-9_]{1,50}$/.test(clean)) return 'Invalid handle format'
@@ -114,12 +183,24 @@ function normalizeHandle(value: string): string {
   return value.startsWith('@') ? value : `@${value}`
 }
 
+/** CSS to hide number input spinners across browsers */
+const HIDE_SPINNERS_CSS = `
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+`
+
 export function Sensors() {
   const showToast = useToast()
   const [enabled, setEnabled] = useState<Record<string, boolean>>({})
   const [statuses, setStatuses] = useState<Record<string, SensorStatus>>({})
   const [politicsAccounts, setPoliticsAccounts] = useState<string[]>([])
   const [topicsKeywords, setTopicsKeywords] = useState<string[]>([])
+  const [sensorLimits, setSensorLimits] = useState<Record<string, number>>({})
+  const [sensorLookback, setSensorLookback] = useState<Record<string, number>>({})
+  const [defaultLimit, setDefaultLimit] = useState(10)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -129,6 +210,9 @@ export function Sensors() {
       setEnabled({ ...defaults, ...cfg.sensors_enabled })
       setPoliticsAccounts(cfg.politics_accounts)
       setTopicsKeywords(cfg.topics_keywords)
+      setSensorLimits(cfg.sensor_limits ?? {})
+      setSensorLookback(cfg.sensor_lookback_hours ?? {})
+      setDefaultLimit(cfg.default_limit)
     })
     api.getLatest().then((report) => {
       const map: Record<string, SensorStatus> = {}
@@ -140,6 +224,12 @@ export function Sensors() {
 
   const toggle = (key: string) => setEnabled((prev) => ({ ...prev, [key]: !prev[key] }))
 
+  const updateSensorLimit = (key: string, value: number) =>
+    setSensorLimits((prev) => ({ ...prev, [key]: value }))
+
+  const updateSensorLookback = (key: string, value: number) =>
+    setSensorLookback((prev) => ({ ...prev, [key]: value }))
+
   const save = async () => {
     setSaving(true)
     try {
@@ -147,6 +237,8 @@ export function Sensors() {
         sensors_enabled: enabled,
         politics_accounts: politicsAccounts,
         topics_keywords: topicsKeywords,
+        sensor_limits: sensorLimits,
+        sensor_lookback_hours: sensorLookback,
       })
       showToast('Sources saved')
     } catch (e) {
@@ -167,6 +259,8 @@ export function Sensors() {
       padding: '4.5rem 0',
       borderBottom: '1px solid var(--border-soft)',
     }}>
+      <style dangerouslySetInnerHTML={{ __html: HIDE_SPINNERS_CSS }} />
+
       <SectionHeader
         num="02"
         title="Sources"
@@ -201,26 +295,28 @@ export function Sensors() {
                 const isPolitics = key === 'politics'
                 const isTopics = key === 'topics'
                 const isOn = enabled[key] ?? true
-                const showInline = (isPolitics || isTopics) && isOn
+                const hasLookback = key in SENSOR_LOOKBACK_SUPPORT
+                const showSubConfig = (isPolitics || isTopics) && isOn
 
                 return (
                   <div key={key}>
-                    {/* Sensor row */}
+                    {/* Sensor row — toggle, label, inline pills, badge */}
                     <div
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'space-between',
                         padding: '0.875rem 1.25rem',
-                        borderBottom: showInline || !isLast ? '1px solid var(--border-soft)' : 'none',
+                        borderBottom: showSubConfig || !isLast ? '1px solid var(--border-soft)' : 'none',
                         transition: 'background 120ms',
+                        gap: '0.75rem',
                       }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--canvas)' }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)' }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flex: 1 }}>
+                      {/* Left: toggle + label */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flex: 1, minWidth: 0 }}>
                         <Toggle on={isOn} onClick={() => toggle(key)} />
-                        <div>
+                        <div style={{ minWidth: 0 }}>
                           <div style={{
                             fontSize: '0.875rem',
                             fontWeight: 500,
@@ -234,7 +330,30 @@ export function Sensors() {
                           </div>
                         </div>
                       </div>
-                      <Badge status={getBadge(key)} />
+
+                      {/* Right: inline pill controls + badge */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                        {isOn && (
+                          <PillInput
+                            label="Items"
+                            value={sensorLimits[key] ?? defaultLimit}
+                            min={1}
+                            max={50}
+                            onChange={(v) => updateSensorLimit(key, v)}
+                          />
+                        )}
+                        {isOn && hasLookback && (
+                          <PillInput
+                            label="Lookback"
+                            value={sensorLookback[key] ?? SENSOR_LOOKBACK_SUPPORT[key]}
+                            min={1}
+                            max={336}
+                            suffix="h"
+                            onChange={(v) => updateSensorLookback(key, v)}
+                          />
+                        )}
+                        <Badge status={getBadge(key)} />
+                      </div>
                     </div>
 
                     {/* Inline sub-config: Politics Accounts */}

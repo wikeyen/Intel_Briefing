@@ -17,6 +17,8 @@ export interface ConfigSettings {
   fetch_timezone: string
   default_limit: number
   section_limits: Record<string, number>
+  sensor_limits: Record<string, number>
+  sensor_lookback_hours: Record<string, number>
   boost_keywords: string[]
   suppress_keywords: string[]
   politics_accounts: string[]

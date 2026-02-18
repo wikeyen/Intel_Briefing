@@ -2,14 +2,16 @@
 // ABOUTME: Provides kvSet/kvGet with optional TTL, backed by a single 'kv' table.
 import { createClient, type Client } from '@libsql/client'
 
-let client: Client | null = null
+// Store client on globalThis so it survives Next.js module re-evaluation
+// across instrumentation and API route boundaries.
+const globalForDb = globalThis as unknown as { __dbClient?: Client }
 
 /** Return the active database client. Throws if initDb() has not been called. */
 export function getDb(): Client {
-  if (!client) {
+  if (!globalForDb.__dbClient) {
     throw new Error('Database not initialised — call initDb() first')
   }
-  return client
+  return globalForDb.__dbClient
 }
 
 /**
@@ -19,8 +21,8 @@ export function getDb(): Client {
  */
 export async function initDb(url?: string): Promise<void> {
   const dbUrl = url ?? process.env.DATABASE_URL ?? 'file:data/intel.db'
-  client = createClient({ url: dbUrl })
-  await client.execute(`
+  globalForDb.__dbClient = createClient({ url: dbUrl })
+  await globalForDb.__dbClient.execute(`
     CREATE TABLE IF NOT EXISTS kv (
       key        TEXT PRIMARY KEY,
       value      TEXT NOT NULL,

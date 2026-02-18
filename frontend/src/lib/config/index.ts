@@ -1,9 +1,9 @@
-// ABOUTME: Application configuration backed by Upstash Redis with env-var fallback for tokens.
-// ABOUTME: Redis key 'intel:config' is the primary source — env vars fill in missing token fields.
-import { Redis } from '@upstash/redis'
+// ABOUTME: Application configuration backed by SQLite with env-var fallback for tokens.
+// ABOUTME: DB key 'intel:config' is the primary source — env vars fill in missing token fields.
+import { kvSet, kvGet } from '../db'
 import { type ConfigSettings, defaultConfig } from '../models'
 
-const REDIS_KEY = 'intel:config'
+const DB_KEY = 'intel:config'
 
 // API endpoint constants
 export const GITHUB_API_URL = 'https://api.github.com/graphql'
@@ -20,13 +20,6 @@ export const MAX_ARTICLES_PER_BLOG = 2
 
 const KEY_FIELDS = new Set(['xai_api_key', 'github_token', 'producthunt_token'])
 
-function getRedis(): Redis {
-  return new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL!,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-  })
-}
-
 /** Overlay process env vars for token fields when the config value is null/empty. */
 function applyEnvFallback(config: ConfigSettings): ConfigSettings {
   return {
@@ -39,11 +32,10 @@ function applyEnvFallback(config: ConfigSettings): ConfigSettings {
   }
 }
 
-/** Load config from Redis, falling back to defaults if key does not exist. */
+/** Load config from the database, falling back to defaults if key does not exist. */
 export async function loadConfig(): Promise<ConfigSettings> {
   try {
-    const redis = getRedis()
-    const data = await redis.get<ConfigSettings>(REDIS_KEY)
+    const data = await kvGet<ConfigSettings>(DB_KEY)
     if (!data) {
       return applyEnvFallback(defaultConfig())
     }
@@ -54,14 +46,13 @@ export async function loadConfig(): Promise<ConfigSettings> {
   }
 }
 
-/** Merge a partial config update into Redis and return the full updated config. */
+/** Merge a partial config update into the database and return the full updated config. */
 export async function saveConfig(
   partial: Partial<ConfigSettings>,
 ): Promise<ConfigSettings> {
   const current = await loadConfig()
   const merged = { ...current, ...partial }
-  const redis = getRedis()
-  await redis.set(REDIS_KEY, merged)
+  await kvSet(DB_KEY, merged)
   return merged
 }
 

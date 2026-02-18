@@ -1,18 +1,16 @@
-// ABOUTME: Unit tests for the Redis-backed cache in pipeline/cache.ts.
+// ABOUTME: Unit tests for the SQLite-backed cache in pipeline/cache.ts.
 // ABOUTME: Covers write/read round-trip, staleness detection, and pipeline status.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { IntelReport, PipelineStatus } from '../models'
 import { createReport } from '../models'
 import { isStale } from './cache'
 
-// Mock @upstash/redis
-const mockSet = vi.fn()
-const mockGet = vi.fn()
-vi.mock('@upstash/redis', () => ({
-  Redis: vi.fn().mockImplementation(() => ({
-    set: mockSet,
-    get: mockGet,
-  })),
+// Mock the db adapter
+const mockKvSet = vi.fn()
+const mockKvGet = vi.fn()
+vi.mock('../db', () => ({
+  kvSet: (...args: unknown[]) => mockKvSet(...args),
+  kvGet: (...args: unknown[]) => mockKvGet(...args),
 }))
 
 // Import after mock setup
@@ -27,13 +25,13 @@ beforeEach(() => {
 })
 
 describe('writeReport', () => {
-  it('writes to Redis with TTL', async () => {
+  it('writes to db with TTL', async () => {
     const report = makeReport()
     await writeReport(report)
-    expect(mockSet).toHaveBeenCalledWith(
+    expect(mockKvSet).toHaveBeenCalledWith(
       'intel:latest',
       report,
-      { ex: 48 * 60 * 60 },
+      48 * 60 * 60,
     )
   })
 })
@@ -41,19 +39,19 @@ describe('writeReport', () => {
 describe('readReport', () => {
   it('returns report when data exists', async () => {
     const report = makeReport()
-    mockGet.mockResolvedValue(report)
+    mockKvGet.mockResolvedValue(report)
     const result = await readReport()
     expect(result).toEqual(report)
   })
 
   it('returns null when no data', async () => {
-    mockGet.mockResolvedValue(null)
+    mockKvGet.mockResolvedValue(null)
     const result = await readReport()
     expect(result).toBeNull()
   })
 
   it('returns null on error', async () => {
-    mockGet.mockRejectedValue(new Error('connection failed'))
+    mockKvGet.mockRejectedValue(new Error('db error'))
     const result = await readReport()
     expect(result).toBeNull()
   })
@@ -92,7 +90,7 @@ describe('isStale', () => {
 })
 
 describe('writePipelineStatus', () => {
-  it('writes status to Redis with 1h TTL', async () => {
+  it('writes status to db with 1h TTL', async () => {
     const status: PipelineStatus = {
       running: true,
       started_at: '2026-01-01T07:00:00Z',
@@ -101,10 +99,10 @@ describe('writePipelineStatus', () => {
       total_items: 0,
     }
     await writePipelineStatus(status)
-    expect(mockSet).toHaveBeenCalledWith(
+    expect(mockKvSet).toHaveBeenCalledWith(
       'intel:pipeline_status',
       status,
-      { ex: 60 * 60 },
+      60 * 60,
     )
   })
 })
@@ -118,13 +116,13 @@ describe('readPipelineStatus', () => {
       sensors: [],
       total_items: 5,
     }
-    mockGet.mockResolvedValue(status)
+    mockKvGet.mockResolvedValue(status)
     const result = await readPipelineStatus()
     expect(result).toEqual(status)
   })
 
   it('returns null when no data', async () => {
-    mockGet.mockResolvedValue(null)
+    mockKvGet.mockResolvedValue(null)
     const result = await readPipelineStatus()
     expect(result).toBeNull()
   })

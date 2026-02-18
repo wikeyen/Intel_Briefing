@@ -1,6 +1,6 @@
-// ABOUTME: Redis-backed cache for IntelReport and PipelineStatus.
-// ABOUTME: Uses Upstash Redis REST client — no connection pool issues in serverless environments.
-import { Redis } from '@upstash/redis'
+// ABOUTME: SQLite-backed cache for IntelReport and PipelineStatus.
+// ABOUTME: Uses the kv adapter from db.ts for persistence with TTL support.
+import { kvSet, kvGet } from '../db'
 import type { IntelReport, PipelineStatus } from '../models'
 
 const REPORT_KEY = 'intel:latest'
@@ -8,24 +8,15 @@ const STATUS_KEY = 'intel:pipeline_status'
 const REPORT_TTL_SECONDS = 48 * 60 * 60 // 48 hours
 const STATUS_TTL_SECONDS = 60 * 60 // 1 hour
 
-function getRedis(): Redis {
-  return new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL!,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-  })
-}
-
-/** Write an IntelReport to Redis with a 48-hour TTL. */
+/** Write an IntelReport to the database with a 48-hour TTL. */
 export async function writeReport(report: IntelReport): Promise<void> {
-  const redis = getRedis()
-  await redis.set(REPORT_KEY, report, { ex: REPORT_TTL_SECONDS })
+  await kvSet(REPORT_KEY, report, REPORT_TTL_SECONDS)
 }
 
-/** Read and deserialize an IntelReport from Redis. Returns null if missing. */
+/** Read and deserialize an IntelReport from the database. Returns null if missing or expired. */
 export async function readReport(): Promise<IntelReport | null> {
   try {
-    const redis = getRedis()
-    const data = await redis.get<IntelReport>(REPORT_KEY)
+    const data = await kvGet<IntelReport>(REPORT_KEY)
     return data ?? null
   } catch {
     return null
@@ -50,19 +41,17 @@ export function isStale(report: IntelReport, ttlHours: number = 6): boolean {
   }
 }
 
-/** Write PipelineStatus to Redis with a 1-hour TTL. */
+/** Write PipelineStatus to the database with a 1-hour TTL. */
 export async function writePipelineStatus(
   status: PipelineStatus,
 ): Promise<void> {
-  const redis = getRedis()
-  await redis.set(STATUS_KEY, status, { ex: STATUS_TTL_SECONDS })
+  await kvSet(STATUS_KEY, status, STATUS_TTL_SECONDS)
 }
 
-/** Read PipelineStatus from Redis. Returns null if missing. */
+/** Read PipelineStatus from the database. Returns null if missing or expired. */
 export async function readPipelineStatus(): Promise<PipelineStatus | null> {
   try {
-    const redis = getRedis()
-    const data = await redis.get<PipelineStatus>(STATUS_KEY)
+    const data = await kvGet<PipelineStatus>(STATUS_KEY)
     return data ?? null
   } catch {
     return null

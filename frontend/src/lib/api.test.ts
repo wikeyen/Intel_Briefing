@@ -5,7 +5,7 @@ import { NextRequest } from 'next/server'
 import type { IntelItem, IntelReport, ConfigSettings, PipelineStatus } from './models'
 import { createReport, defaultConfig, emptyItemsMap } from './models'
 
-// Mock Redis modules
+// Mock SQLite cache modules
 const mockReadReport = vi.fn()
 const mockWriteReport = vi.fn()
 const mockIsStale = vi.fn()

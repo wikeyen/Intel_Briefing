@@ -1,5 +1,5 @@
 // ABOUTME: Pipeline status route — GET /api/fetch/status.
-// ABOUTME: Returns the live status of the current or most recent pipeline run from Redis.
+// ABOUTME: Returns the live status of the current or most recent pipeline run from SQLite.
 import { NextResponse } from 'next/server'
 import { readPipelineStatus } from '@/lib/pipeline/cache'
 import type { PipelineStatus } from '@/lib/models'

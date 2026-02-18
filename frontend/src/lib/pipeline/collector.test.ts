@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { ConfigSettings, IntelItem } from '../models'
 import { defaultConfig } from '../models'
 
-// Mock Redis cache
+// Mock SQLite cache adapter
 const mockWriteReport = vi.fn()
 vi.mock('./cache', () => ({
   writeReport: (...args: unknown[]) => mockWriteReport(...args),

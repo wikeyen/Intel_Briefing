@@ -1,5 +1,5 @@
 // ABOUTME: Config routes — GET /api/config (masked) and PUT /api/config (partial update).
-// ABOUTME: API keys are masked in GET responses; PUT merges, writes to Redis, returns masked config.
+// ABOUTME: API keys are masked in GET responses; PUT merges, writes to SQLite, returns masked config.
 import { NextRequest, NextResponse } from 'next/server'
 import { loadConfig, saveConfig, maskConfig } from '@/lib/config'
 

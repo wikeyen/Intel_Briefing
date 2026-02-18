@@ -1,5 +1,5 @@
 // ABOUTME: Parallel sensor fetch coordinator for Intel Briefing.
-// ABOUTME: Runs all enabled sensors concurrently, collects results, and writes the Redis cache.
+// ABOUTME: Runs all enabled sensors concurrently, collects results, and writes the SQLite cache.
 import type {
   ConfigSettings,
   IntelItem,
@@ -60,7 +60,7 @@ async function runSensor(
  * 2. Fetch from all sensors concurrently with Promise.allSettled().
  * 3. Deduplicate items within each section.
  * 4. Deduplicate across politics / topics sections.
- * 5. Write the result to the Redis cache.
+ * 5. Write the result to the SQLite cache.
  */
 export async function collect(
   config: ConfigSettings,
@@ -143,7 +143,7 @@ export async function collect(
     items: dedupedSections as Record<SectionKey, IntelItem[]>,
   })
 
-  // Write to Redis cache
+  // Write to SQLite cache
   try {
     await writeReport(report)
   } catch (err) {

@@ -31,10 +31,13 @@ export interface IntelItem {
   url: string
   heat?: string | null
   published_at?: string | null
+  authors?: string[] | null
+  categories?: string[] | null
   abstract?: string | null
   account?: string | null
   handle?: string | null
   topic?: string | null
+  content?: string | null
 }
 
 export interface SensorProgress {

@@ -3,6 +3,11 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
 export function middleware(req: NextRequest) {
+  // Cron pipeline route handles its own auth via CRON_SECRET
+  if (req.nextUrl.pathname === '/api/cron/pipeline') {
+    return NextResponse.next()
+  }
+
   const requiredKey = process.env.API_KEY
   if (!requiredKey) {
     // Open mode — no key configured

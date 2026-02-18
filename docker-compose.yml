@@ -1,22 +1,6 @@
-# ABOUTME: Docker Compose for Intel Briefing — Next.js frontend gateway + Python backend.
-# ABOUTME: Frontend is the only public entry point on port 8000; backend is internal only.
+# ABOUTME: Docker Compose for Intel Briefing — Next.js frontend + cron sidecar.
+# ABOUTME: Frontend serves the app on port 8000; cron triggers the pipeline on schedule.
 services:
-  backend:
-    build: .
-    env_file: .env
-    environment:
-      - DEV_PROXY_SECRET=${DEV_PROXY_SECRET:-}
-    volumes:
-      - ./cache:/app/cache
-      - ./config:/app/config
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-
   frontend:
     build:
       context: ./frontend
@@ -24,9 +8,28 @@ services:
     ports:
       - "8000:3000"
     environment:
-      - BACKEND_URL=http://backend:8001
       - API_KEY=${API_KEY:-}
+      - CRON_SECRET=${CRON_SECRET:-}
+      - UPSTASH_REDIS_REST_URL=${UPSTASH_REDIS_REST_URL}
+      - UPSTASH_REDIS_REST_TOKEN=${UPSTASH_REDIS_REST_TOKEN}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  cron:
+    build:
+      context: ./cron
+      dockerfile: Dockerfile
+    environment:
+      - FRONTEND_URL=http://frontend:3000
+      - CRON_SECRET=${CRON_SECRET:-}
+      - FETCH_TIME=${FETCH_TIME:-07:51}
+      - FETCH_TIMEZONE=${FETCH_TIMEZONE:-Asia/Shanghai}
     restart: unless-stopped
     depends_on:
-      backend:
+      frontend:
         condition: service_healthy

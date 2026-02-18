@@ -7,7 +7,7 @@ import type {
   SensorResult,
   SectionKey,
 } from '../models'
-import { createReport, sensorResultSucceeded, emptyItemsMap } from '../models'
+import { createReport, sensorResultSucceeded, emptyItemsMap, sectionLimit } from '../models'
 import { dedupItems, dedupAcrossSections } from './dedup'
 import { writeReport } from './cache'
 import { SENSOR_REGISTRY } from '../sensors'
@@ -32,7 +32,7 @@ type ProgressCallback = (
   state: string,
   itemCount: number,
   error: string | null,
-) => void
+) => void | Promise<void>
 
 /**
  * Run a single sensor's fetch function and return a SensorResult.
@@ -71,19 +71,19 @@ export async function collect(
     ([name]) => config.sensors_enabled[name] !== false,
   )
 
-  const limit = config.default_limit
-
-  // Mark all as running
+  // Mark all as running (sequential awaits to prevent write-ordering races)
   if (onProgress) {
     for (const [name] of enabledSensors) {
-      onProgress(name, 'running', 0, null)
+      await onProgress(name, 'running', 0, null)
     }
   }
 
-  // Run all sensors concurrently
-  const promises = enabledSensors.map(([name, fetchFn]) =>
-    runSensor(name, fetchFn, config, limit),
-  )
+  // Run all sensors concurrently, using the section-specific limit for each sensor
+  const promises = enabledSensors.map(([name, fetchFn]) => {
+    const section = SENSOR_SECTION_MAP[name] ?? 'tech_trends'
+    const limit = sectionLimit(config, section)
+    return runSensor(name, fetchFn, config, limit)
+  })
   const settled = await Promise.allSettled(promises)
 
   const results: SensorResult[] = []
@@ -100,13 +100,13 @@ export async function collect(
     }
   }
 
-  // Notify progress for each result
+  // Notify progress for each result (sequential awaits to prevent write-ordering races)
   if (onProgress) {
     for (const result of results) {
       if (sensorResultSucceeded(result)) {
-        onProgress(result.sensor_name, 'ok', result.items.length, null)
+        await onProgress(result.sensor_name, 'ok', result.items.length, null)
       } else {
-        onProgress(result.sensor_name, 'failed', 0, result.error)
+        await onProgress(result.sensor_name, 'failed', 0, result.error)
       }
     }
   }

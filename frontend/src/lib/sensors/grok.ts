@@ -36,48 +36,47 @@ export async function fetchGrok(config: ConfigSettings, limit: number): Promise<
   if (!config.xai_api_key) return []
 
   const today = new Date().toISOString().slice(0, 10)
-  try {
-    const resp = await fetch(config.xai_base_url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.xai_api_key}`,
-      },
-      body: JSON.stringify({
-        model: config.xai_model,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: buildUserPrompt(today) },
-        ],
-        stream: false,
-        temperature: 0.4,
-      }),
-      signal: AbortSignal.timeout(60000),
-    })
-    if (!resp.ok) return []
-    const data = await resp.json() as Record<string, unknown>
-    const choices = data.choices as Array<Record<string, unknown>> | undefined
-    const content = String((choices?.[0]?.message as Record<string, unknown>)?.content ?? '')
-
-    const rawItems = parseGrokResponse(content)
-    const items: IntelItem[] = []
-    for (let idx = 0; idx < Math.min(rawItems.length, limit); idx++) {
-      const raw = rawItems[idx]
-      if (typeof raw !== 'object') continue
-      const title = String(raw.title ?? '').trim()
-      if (!title) continue
-      items.push({
-        id: `grok-${today}-${idx}`,
-        source: 'grok',
-        title,
-        url: String(raw.url ?? ''),
-        heat: String(raw.heat ?? '') || null,
-        abstract: String(raw.summary ?? '') || null,
-        published_at: today,
-      })
-    }
-    return items
-  } catch {
-    return []
+  const resp = await fetch(config.xai_base_url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${config.xai_api_key}`,
+    },
+    body: JSON.stringify({
+      model: config.xai_model,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: buildUserPrompt(today) },
+      ],
+      stream: false,
+      temperature: 0.4,
+    }),
+    signal: AbortSignal.timeout(60000),
+  })
+  if (!resp.ok) {
+    const body = await resp.text().catch(() => '')
+    throw new Error(`xAI API ${resp.status}: ${body.slice(0, 200)}`)
   }
+  const data = await resp.json() as Record<string, unknown>
+  const choices = data.choices as Array<Record<string, unknown>> | undefined
+  const content = String((choices?.[0]?.message as Record<string, unknown>)?.content ?? '')
+
+  const rawItems = parseGrokResponse(content)
+  const items: IntelItem[] = []
+  for (let idx = 0; idx < Math.min(rawItems.length, limit); idx++) {
+    const raw = rawItems[idx]
+    if (typeof raw !== 'object') continue
+    const title = String(raw.title ?? '').trim()
+    if (!title) continue
+    items.push({
+      id: `grok-${today}-${idx}`,
+      source: 'grok',
+      title,
+      url: String(raw.url ?? ''),
+      heat: String(raw.heat ?? '') || null,
+      abstract: String(raw.summary ?? '') || null,
+      published_at: today,
+    })
+  }
+  return items
 }

@@ -39,58 +39,57 @@ export async function fetchTopics(config: ConfigSettings, limit: number): Promis
   if (!config.topics_keywords || config.topics_keywords.length === 0) return []
 
   const today = new Date().toISOString().slice(0, 10)
-  try {
-    const resp = await fetch(config.xai_base_url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.xai_api_key}`,
-      },
-      body: JSON.stringify({
-        model: config.xai_model,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: buildUserPrompt(config.topics_keywords, today) },
-        ],
-        stream: false,
-        temperature: 0.3,
-      }),
-      signal: AbortSignal.timeout(60000),
-    })
-    if (!resp.ok) return []
-    const data = await resp.json() as Record<string, unknown>
-    const choices = data.choices as Array<Record<string, unknown>> | undefined
-    const content = String((choices?.[0]?.message as Record<string, unknown>)?.content ?? '')
-
-    const rawItems = parseResponse(content)
-    const items: IntelItem[] = []
-    const seenUrls = new Set<string>()
-
-    for (let idx = 0; idx < Math.min(rawItems.length, limit); idx++) {
-      const raw = rawItems[idx]
-      if (typeof raw !== 'object') continue
-      const title = String(raw.title ?? '').trim()
-      if (!title) continue
-
-      const url = String(raw.url ?? '')
-      if (url && seenUrls.has(url)) continue
-      if (url) seenUrls.add(url)
-
-      const handle = String(raw.handle ?? '').trim().replace(/^@/, '')
-      const topic = String(raw.topic ?? '').trim()
-
-      items.push({
-        id: `topics-${today}-${idx}`,
-        source: 'topics',
-        title,
-        url,
-        handle: handle || null,
-        topic: topic || null,
-        published_at: String(raw.published_at ?? today) || null,
-      })
-    }
-    return items
-  } catch {
-    return []
+  const resp = await fetch(config.xai_base_url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${config.xai_api_key}`,
+    },
+    body: JSON.stringify({
+      model: config.xai_model,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: buildUserPrompt(config.topics_keywords, today) },
+      ],
+      stream: false,
+      temperature: 0.3,
+    }),
+    signal: AbortSignal.timeout(60000),
+  })
+  if (!resp.ok) {
+    const body = await resp.text().catch(() => '')
+    throw new Error(`xAI API ${resp.status}: ${body.slice(0, 200)}`)
   }
+  const data = await resp.json() as Record<string, unknown>
+  const choices = data.choices as Array<Record<string, unknown>> | undefined
+  const content = String((choices?.[0]?.message as Record<string, unknown>)?.content ?? '')
+
+  const rawItems = parseResponse(content)
+  const items: IntelItem[] = []
+  const seenUrls = new Set<string>()
+
+  for (let idx = 0; idx < Math.min(rawItems.length, limit); idx++) {
+    const raw = rawItems[idx]
+    if (typeof raw !== 'object') continue
+    const title = String(raw.title ?? '').trim()
+    if (!title) continue
+
+    const url = String(raw.url ?? '')
+    if (url && seenUrls.has(url)) continue
+    if (url) seenUrls.add(url)
+
+    const handle = String(raw.handle ?? '').trim().replace(/^@/, '')
+    const topic = String(raw.topic ?? '').trim()
+
+    items.push({
+      id: `topics-${today}-${idx}`,
+      source: 'topics',
+      title,
+      url,
+      handle: handle || null,
+      topic: topic || null,
+      published_at: String(raw.published_at ?? today) || null,
+    })
+  }
+  return items
 }

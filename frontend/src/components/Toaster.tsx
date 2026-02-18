@@ -1,5 +1,6 @@
 // ABOUTME: Stacked toast notification system — toasts slide in from the right edge.
 // ABOUTME: On exit, content slides back out first, then height collapses so lower toasts slide up.
+'use client'
 import { useState, useRef, useCallback } from 'react'
 
 type Phase = 'entering' | 'visible' | 'exiting'
@@ -39,6 +40,7 @@ export function Toaster({ children }: Props) {
 
   return (
     <>
+      {/* eslint-disable-next-line react-hooks/refs */}
       {children(showToast)}
 
       <div style={{

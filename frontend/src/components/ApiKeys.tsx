@@ -1,13 +1,11 @@
 // ABOUTME: API key management page — saved keys show 20 asterisks; Show reveals the real value.
 // ABOUTME: Saves to PUT /config; uses GET /config/raw to reveal stored keys on demand.
+'use client'
 import { useState, useEffect } from 'react'
-import { api } from '../api/client'
-import type { ConfigSettings } from '../api/client'
-import { SectionHeader } from '../components/SectionHeader'
-
-interface Props {
-  showToast: (msg: string) => void
-}
+import { api } from '@/api/client'
+import type { ConfigSettings } from '@/api/client'
+import { SectionHeader } from '@/components/SectionHeader'
+import { useToast } from '@/lib/toast-context'
 
 const KEY_FIELDS: { field: keyof ConfigSettings; label: string; hint: string }[] = [
   { field: 'xai_api_key',        label: 'xAI API Key',         hint: 'Required for Grok-based politics and topics sensors.' },
@@ -194,7 +192,8 @@ function MaskedInput({ label, hint, saved, newValue, onNewValue, onReveal }: {
   )
 }
 
-export function ApiKeys({ showToast }: Props) {
+export function ApiKeys() {
+  const showToast = useToast()
   // savedFlags: which fields have a key stored server-side
   const [savedFlags, setSavedFlags] = useState<Record<string, boolean>>({})
   // pendingValues: new values the user is typing (only sent if non-empty)

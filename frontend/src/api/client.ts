@@ -1,5 +1,5 @@
-// Typed API client for Intel Briefing backend endpoints.
-// All functions return typed data or throw on HTTP errors.
+// ABOUTME: Typed API client for the Intel Briefing gateway — all requests go through /api.
+// ABOUTME: All functions return typed data or throw on HTTP errors.
 
 export interface HealthResponse {
   status: 'ok' | 'stale' | 'no_data' | 'error'
@@ -61,7 +61,7 @@ export interface IntelReport {
   items: Record<string, IntelItem[]>
 }
 
-const BASE = ''
+const BASE = '/api'
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(BASE + path, {

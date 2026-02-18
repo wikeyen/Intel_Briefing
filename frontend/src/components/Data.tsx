@@ -1,8 +1,9 @@
 // ABOUTME: Intel data preview page — shows fetched items grouped by section with section tabs.
 // ABOUTME: Loads from GET /intel/latest; each item links out to its source URL. Source tags allow multi-select filtering.
+'use client'
 import { useState, useEffect, useMemo } from 'react'
-import { api } from '../api/client'
-import type { IntelReport, IntelItem } from '../api/client'
+import { api } from '@/api/client'
+import type { IntelReport, IntelItem } from '@/api/client'
 
 const SECTIONS: { key: string; label: string }[] = [
   { key: 'tech_trends',  label: 'Tech Trends' },
@@ -217,6 +218,7 @@ export function Data() {
 
   // Reset selected sources when section changes (select all by default)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedSources(new Set(availableSources))
   }, [activeSection, availableSources.join(',')])
 

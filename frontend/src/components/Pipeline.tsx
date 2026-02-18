@@ -1,13 +1,11 @@
 // ABOUTME: Pipeline section — schedule, filters, and output settings in one place.
 // ABOUTME: Single save covers fetch timing, boost/suppress keywords, and item count limits.
+'use client'
 import { useState, useEffect } from 'react'
-import { api } from '../api/client'
-import { TagInput } from '../components/TagInput'
-import { SectionHeader } from '../components/SectionHeader'
-
-interface Props {
-  showToast: (msg: string) => void
-}
+import { api } from '@/api/client'
+import { TagInput } from '@/components/TagInput'
+import { SectionHeader } from '@/components/SectionHeader'
+import { useToast } from '@/lib/toast-context'
 
 const OUTPUT_SECTIONS = [
   { key: 'tech_trends',  label: 'Tech Trends' },
@@ -72,7 +70,8 @@ function SubLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function Pipeline({ showToast }: Props) {
+export function Pipeline() {
+  const showToast = useToast()
   const [fetchTime, setFetchTime] = useState('07:00')
   const [timezone, setTimezone] = useState('UTC')
   const [cacheTtl, setCacheTtl] = useState(25)

@@ -1,13 +1,11 @@
 // ABOUTME: Sources section — sensor toggles grouped by language/provider with inline sub-config.
 // ABOUTME: Politics Accounts and Topics keywords are configured inline under their Grok sensor rows.
+'use client'
 import { useState, useEffect } from 'react'
-import { api } from '../api/client'
-import { TagInput } from '../components/TagInput'
-import { SectionHeader } from '../components/SectionHeader'
-
-interface Props {
-  showToast: (msg: string) => void
-}
+import { api } from '@/api/client'
+import { TagInput } from '@/components/TagInput'
+import { SectionHeader } from '@/components/SectionHeader'
+import { useToast } from '@/lib/toast-context'
 
 interface SensorDef {
   key: string
@@ -116,7 +114,8 @@ function normalizeHandle(value: string): string {
   return value.startsWith('@') ? value : `@${value}`
 }
 
-export function Sensors({ showToast }: Props) {
+export function Sensors() {
+  const showToast = useToast()
   const [enabled, setEnabled] = useState<Record<string, boolean>>({})
   const [statuses, setStatuses] = useState<Record<string, SensorStatus>>({})
   const [politicsAccounts, setPoliticsAccounts] = useState<string[]>([])

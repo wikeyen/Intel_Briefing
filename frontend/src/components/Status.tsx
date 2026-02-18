@@ -1,12 +1,10 @@
 // ABOUTME: Pipeline status dashboard — shows health, last run results, per-sensor outcomes, and section item counts.
 // ABOUTME: Polls health every 10s; when running, polls /fetch/status every 2s for live sensor progress.
+'use client'
 import { useState, useEffect, useRef } from 'react'
-import { api } from '../api/client'
-import type { HealthResponse, IntelReport, ConfigSettings, PipelineStatus, SensorProgress } from '../api/client'
-
-interface Props {
-  showToast: (msg: string) => void
-}
+import { api } from '@/api/client'
+import type { HealthResponse, IntelReport, ConfigSettings, PipelineStatus, SensorProgress } from '@/api/client'
+import { useToast } from '@/lib/toast-context'
 
 function timeAgo(isoString: string): string {
   const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000)
@@ -213,13 +211,15 @@ function StatCard({ label, children }: { label: string; children: React.ReactNod
   )
 }
 
-export function Status({ showToast }: Props) {
+export function Status() {
+  const showToast = useToast()
   const [health, setHealth]           = useState<HealthResponse | null>(null)
   const [report, setReport]           = useState<IntelReport | null>(null)
   const [config, setConfig]           = useState<ConfigSettings | null>(null)
   const [fetching, setFetching]       = useState(false)
   const [running, setRunning]         = useState(false)
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null)
+  const [, setTick]                   = useState(0)
   const lastFetchedAtRef              = useRef<string | null>(null)
 
   const loadAll = () => {
@@ -227,6 +227,12 @@ export function Status({ showToast }: Props) {
     api.getLatest().then(setReport).catch(() => {})
     api.getConfig().then(setConfig).catch(() => {})
   }
+
+  // Tick every second so timeAgo() updates live
+  useEffect(() => {
+    const iv = setInterval(() => setTick(t => t + 1), 1_000)
+    return () => clearInterval(iv)
+  }, [])
 
   // Poll health every 10s; detect new data by comparing fetched_at
   useEffect(() => {
@@ -247,27 +253,19 @@ export function Status({ showToast }: Props) {
     return () => clearInterval(iv)
   }, [])
 
-  // Poll /fetch/status every 2s while running; stop and clear when done
+  // Always poll /fetch/status every 3s — panel visibility driven by pipelineStatus.running
+  // This survives page switches and refreshes without any bootstrap race conditions
   useEffect(() => {
-    if (!running) {
-      setPipelineStatus(null)
-      return
-    }
-
-    const iv = setInterval(() => {
+    const check = () => {
       api.getPipelineStatus().then(s => {
         setPipelineStatus(s)
-        if (!s.running) {
-          setRunning(false)
-        }
+        if (!s.running) setRunning(false)
       }).catch(() => {})
-    }, 2_000)
-
-    // Fetch immediately on first render
-    api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
-
+    }
+    check()
+    const iv = setInterval(check, 3_000)
     return () => clearInterval(iv)
-  }, [running])
+  }, [])
 
   const handleRunNow = async () => {
     setFetching(true)
@@ -358,7 +356,7 @@ export function Status({ showToast }: Props) {
       </div>
 
       {/* ── Live pipeline run panel ────────────────────────── */}
-      {running && pipelineStatus && (
+      {pipelineStatus?.running && (
         <PipelineRunPanel status={pipelineStatus} />
       )}
 

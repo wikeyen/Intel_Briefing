@@ -1,13 +1,14 @@
 # ABOUTME: FastAPI application entry point for Intel Briefing.
 # ABOUTME: Lifespan starts the scheduler; routes handle intel, briefing, config, and health.
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import Response
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from intel_briefing.config import load_settings, DEFAULT_SETTINGS_PATH
 from intel_briefing.models import PipelineStatus
@@ -16,8 +17,6 @@ from intel_briefing.scheduler import start_scheduler, stop_scheduler
 from intel_briefing.api.routes import control, intel, briefing, config as config_routes
 
 logger = logging.getLogger(__name__)
-
-_FRONTEND_DIR = Path(__file__).parent.parent.parent / "frontend" / "dist"
 
 
 @asynccontextmanager
@@ -56,21 +55,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Dev proxy guard — when DEV_PROXY_SECRET is set, reject any request that doesn't
+# carry the matching X-Dev-Proxy header (added by the Vite proxy in dev mode).
+# Not active in Docker/production where the env var is absent.
+_DEV_SECRET = os.environ.get("DEV_PROXY_SECRET")
+if _DEV_SECRET:
+    class _DevProxyGuard(BaseHTTPMiddleware):
+        async def dispatch(self, request: Request, call_next):
+            if request.headers.get("X-Dev-Proxy") != _DEV_SECRET:
+                return Response("Forbidden", status_code=403)
+            return await call_next(request)
+
+    app.add_middleware(_DevProxyGuard)
+    logger.info("Dev proxy guard active — only Next.js gateway traffic accepted")
+
 # Register routers
 app.include_router(control.router, tags=["Control"])
 app.include_router(intel.router, tags=["Intel"])
 app.include_router(briefing.router, tags=["Briefing"])
 app.include_router(config_routes.router, tags=["Config"])
-
-# Serve built frontend at /ui (optional — only if dist exists)
-if _FRONTEND_DIR.exists():
-    _INDEX = _FRONTEND_DIR / "index.html"
-
-    @app.get("/ui", include_in_schema=False)
-    @app.get("/ui/", include_in_schema=False)
-    async def serve_ui_root() -> FileResponse:
-        """Serve index.html with no-cache so browsers always fetch the latest version."""
-        return FileResponse(_INDEX, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
-
-    app.mount("/ui", StaticFiles(directory=_FRONTEND_DIR), name="frontend")
-    logger.info("Frontend mounted at /ui from %s", _FRONTEND_DIR)

@@ -1,5 +1,6 @@
 // ABOUTME: Editorial section header for two-column layout — large number, title, description.
 // ABOUTME: Used as the left column of each configuration section.
+'use client'
 interface Props {
   num: string
   title: string

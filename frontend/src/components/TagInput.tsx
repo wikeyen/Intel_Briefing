@@ -1,5 +1,6 @@
 // ABOUTME: Reusable tag-input component — chip pills with add-on-enter and remove-on-click.
 // ABOUTME: Supports optional validation; uses design system tokens for consistent styling.
+'use client'
 import { useState } from 'react'
 import type { KeyboardEvent } from 'react'
 

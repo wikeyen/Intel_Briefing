@@ -63,16 +63,16 @@ function FilterTag({ label, active, onClick }: { label: string; active: boolean;
         letterSpacing: '0.04em',
         padding: '0.25rem 0.625rem',
         borderRadius: 3,
-        border: active ? '1px solid var(--ink)' : '1px solid var(--border)',
-        background: active ? 'var(--ink)' : 'transparent',
-        color: active ? 'var(--canvas)' : 'var(--ink-muted)',
+        border: active ? '1px solid var(--accent-dim)' : '1px solid var(--border)',
+        background: active ? 'var(--accent-wash)' : 'transparent',
+        color: active ? 'var(--accent)' : 'var(--ink-muted)',
         cursor: 'pointer',
         transition: 'all 100ms',
         whiteSpace: 'nowrap',
         flexShrink: 0,
       }}
       onMouseEnter={e => {
-        if (!active) (e.currentTarget as HTMLElement).style.borderColor = 'var(--ink-muted)'
+        if (!active) (e.currentTarget as HTMLElement).style.borderColor = 'var(--ink-faint)'
       }}
       onMouseLeave={e => {
         if (!active) (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'

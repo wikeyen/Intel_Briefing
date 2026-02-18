@@ -433,7 +433,9 @@ export function Status() {
               </div>
             </>
           ) : (
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--ink-faint)', fontFamily: 'ui-monospace, monospace' }}>Loading…</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--ink-faint)', fontFamily: 'ui-monospace, monospace' }}>
+              {health && !health.last_fetch ? '—' : 'Loading…'}
+            </div>
           )}
         </div>
       </div>

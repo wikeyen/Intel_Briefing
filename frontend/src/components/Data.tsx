@@ -3,7 +3,8 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
 import { api } from '@/api/client'
-import type { IntelReport, IntelItem } from '@/api/client'
+import type { IntelReport, IntelItem, ConfigSettings } from '@/api/client'
+import { SENSOR_TOKEN_FIELD } from '@/lib/sensors'
 
 const SECTIONS: { key: string; label: string }[] = [
   { key: 'tech_trends',  label: 'Tech Trends' },
@@ -28,6 +29,31 @@ const SOURCE_LABELS: Record<string, string> = {
   wallstreetcn: 'WSCN',
   politics:     'Politics',
   topics:       'Topics',
+}
+
+/** Maps each section to the sensors that feed it. */
+const SECTION_SENSORS: Record<string, string[]> = {
+  tech_trends:  ['hacker_news', 'github', 'grok'],
+  research:     ['arxiv'],
+  insights:     ['hn_blogs'],
+  products:     ['product_hunt'],
+  community:    ['v2ex'],
+  capital_flow: ['sources_36kr', 'wallstreetcn'],
+  politics:     ['politics'],
+  topics:       ['topics'],
+}
+
+/** Check if a section is empty because every sensor feeding it lacks a required token. */
+function sectionNeedsKey(sectionKey: string, config: ConfigSettings | null): boolean {
+  if (!config) return false
+  const sensors = SECTION_SENSORS[sectionKey]
+  if (!sensors || sensors.length === 0) return false
+  return sensors.every(sensor => {
+    const isDisabled = config.sensors_enabled[sensor] === false
+    if (isDisabled) return true
+    const tokenField = SENSOR_TOKEN_FIELD[sensor]
+    return tokenField ? !config[tokenField] : false
+  })
 }
 
 function relativeDate(iso: string): string {
@@ -180,26 +206,30 @@ function ItemCard({ item }: { item: IntelItem }) {
   )
 }
 
-function EmptySection() {
+function EmptySection({ needsKey }: { needsKey?: boolean }) {
   return (
     <div style={{
       padding: '3rem 1.25rem',
       textAlign: 'center',
-      color: 'var(--ink-faint)',
+      color: needsKey ? 'var(--warn)' : 'var(--ink-faint)',
       fontSize: '0.875rem',
     }}>
-      No items in this section yet — run the pipeline to fetch data.
+      {needsKey
+        ? 'No items — the sensors for this section need an API key. Configure them on the Connections page.'
+        : 'No items in this section yet — run the pipeline to fetch data.'}
     </div>
   )
 }
 
 export function Data() {
   const [report, setReport] = useState<IntelReport | null>(null)
+  const [config, setConfig] = useState<ConfigSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeSection, setActiveSection] = useState(SECTIONS[0].key)
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set())
 
   useEffect(() => {
+    api.getConfig().then(setConfig).catch(() => {})
     api.getLatest(50).then(r => {
       setReport(r)
       // Default to first section that has items
@@ -384,7 +414,7 @@ export function Data() {
               overflow: 'hidden',
             }}>
               {filteredItems.length === 0
-                ? <EmptySection />
+                ? <EmptySection needsKey={sectionNeedsKey(activeSection, config)} />
                 : filteredItems.map(item => <ItemCard key={item.id} item={item} />)
               }
             </div>

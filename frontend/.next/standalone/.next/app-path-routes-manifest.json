@@ -1,0 +1,18 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/api/config/raw/route": "/api/config/raw",
+  "/api/config/route": "/api/config",
+  "/api/cron/pipeline/route": "/api/cron/pipeline",
+  "/api/briefing/markdown/route": "/api/briefing/markdown",
+  "/api/fetch/status/route": "/api/fetch/status",
+  "/api/fetch/route": "/api/fetch",
+  "/api/health/route": "/api/health",
+  "/api/intel/[section]/route": "/api/intel/[section]",
+  "/api/intel/latest/route": "/api/intel/latest",
+  "/page": "/",
+  "/(ui)/api-keys/page": "/api-keys",
+  "/(ui)/data/page": "/data",
+  "/(ui)/pipeline/page": "/pipeline",
+  "/(ui)/sensors/page": "/sensors",
+  "/(ui)/status/page": "/status"
+}

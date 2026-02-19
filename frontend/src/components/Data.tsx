@@ -124,6 +124,21 @@ function FilterTag({ label, active, onClick }: { label: string; active: boolean;
   )
 }
 
+/** Derive the source discussion/post URL for an item, if applicable. */
+function sourcePostUrl(item: IntelItem): string | null {
+  if (item.source === 'hacker_news') {
+    const storyId = item.id.replace('hn-', '')
+    return `https://news.ycombinator.com/item?id=${storyId}`
+  }
+  if (item.source === 'product_hunt' && item.url.includes('producthunt.com')) {
+    return item.url
+  }
+  if (item.source === 'v2ex' && item.url.includes('v2ex.com')) {
+    return item.url
+  }
+  return null
+}
+
 function ItemCard({ item }: { item: IntelItem }) {
   const isArxiv = item.source === 'arxiv'
   const [abstractExpanded, setAbstractExpanded] = useState(false)
@@ -206,6 +221,26 @@ function ItemCard({ item }: { item: IntelItem }) {
           <>
             <span style={{ color: 'var(--border)', fontSize: '0.75rem' }}>·</span>
             <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>{item.topic}</span>
+          </>
+        )}
+        {sourcePostUrl(item) && sourcePostUrl(item) !== item.url && (
+          <>
+            <span style={{ color: 'var(--border)', fontSize: '0.75rem' }}>·</span>
+            <a
+              href={sourcePostUrl(item)!}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                fontSize: '0.6875rem',
+                fontWeight: 500,
+                color: 'var(--accent)',
+                textDecoration: 'none',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'underline' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'none' }}
+            >
+              discuss
+            </a>
           </>
         )}
       </div>

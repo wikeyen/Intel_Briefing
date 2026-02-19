@@ -80,7 +80,7 @@ export function Toaster({ children }: Props) {
             >
               {/* Gap below each toast — collapses with the wrapper */}
               <div style={{ paddingBottom: '0.5rem' }}>
-                <div style={{
+                <div className="toast-msg" style={{
                   background: 'var(--ink)',
                   color: '#FFFFFF',
                   fontSize: '0.875rem',

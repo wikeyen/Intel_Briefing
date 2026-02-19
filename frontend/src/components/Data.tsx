@@ -428,7 +428,7 @@ export function Data() {
         }}>
           <div className="data-sticky-nav" style={{ maxWidth: 1024, margin: '0 auto', paddingLeft: '3rem', paddingRight: '3rem' }}>
             {/* Section tabs */}
-            <div style={{
+            <div className="section-tabs" style={{
               display: 'flex',
               gap: '0.25rem',
               overflowX: 'auto',
@@ -476,7 +476,7 @@ export function Data() {
             </div>
 
             {/* Source filters */}
-            <div style={{
+            <div className="source-filters" style={{
               display: 'flex',
               gap: '0.5rem',
               alignItems: 'center',

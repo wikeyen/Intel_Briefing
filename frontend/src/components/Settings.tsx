@@ -403,7 +403,7 @@ export function Settings() {
           />
 
           {/* Global defaults */}
-          <div style={{
+          <div className="settings-grid-2col" style={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
             gap: '1rem',
@@ -473,7 +473,7 @@ export function Settings() {
                 overflow: 'hidden',
               }}>
                 {/* Table header */}
-                <div style={{
+                <div className="sensor-table-header" style={{
                   display: 'grid',
                   gridTemplateColumns: '36px 1fr 64px 64px 56px',
                   gap: '0.5rem',
@@ -510,6 +510,7 @@ export function Settings() {
                     <div key={key}>
                       {/* Sensor row */}
                       <div
+                        className="sensor-table-row"
                         style={{
                           display: 'grid',
                           gridTemplateColumns: '36px 1fr 64px 64px 56px',
@@ -607,7 +608,7 @@ export function Settings() {
             description="When to fetch data and how long to keep it."
           />
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+          <div className="settings-grid-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '0.5rem' }}>
                 Daily Fetch Time

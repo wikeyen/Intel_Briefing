@@ -145,22 +145,28 @@ input[type="range"]::-moz-range-thumb {
 
 /* ─── Mobile Responsive ─────────────────────────────────────────────────── */
 
+/* Mobile top bar — fixed header with brand + hamburger */
+.mobile-top-bar {
+  display: none;
+}
+
 /* Hamburger toggle — hidden on desktop */
 .mobile-menu-btn {
   display: none;
-  position: fixed;
-  top: 0.75rem;
-  left: 0.75rem;
-  z-index: 60;
-  width: 44px;
-  height: 44px;
   align-items: center;
   justify-content: center;
-  background: var(--sb);
-  border-radius: 8px;
-  border: 1px solid var(--sb-border);
+  width: 40px;
+  height: 40px;
+  background: none;
+  border: none;
   color: var(--sb-ink);
   cursor: pointer;
+  border-radius: 8px;
+  transition: background 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.mobile-menu-btn:active {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 /* Sidebar overlay backdrop — hidden on desktop */
@@ -169,68 +175,92 @@ input[type="range"]::-moz-range-thumb {
 }
 
 @media (max-width: 768px) {
-  /* Show hamburger button */
+  /* ── Mobile top bar ── */
+  .mobile-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    height: 56px;
+    padding: 0 1rem 0 1.25rem;
+    background: var(--sb);
+    border-bottom: 1px solid var(--sb-border);
+    /* iOS safe area */
+    padding-top: env(safe-area-inset-top, 0);
+    height: calc(56px + env(safe-area-inset-top, 0));
+  }
+
   .mobile-menu-btn {
     display: flex;
   }
 
-  /* Sidebar: off-screen by default, slides in when .sidebar-open is on the parent */
+  /* ── Sidebar drawer ── */
   .sidebar-nav {
     position: fixed;
     top: 0;
     left: 0;
     z-index: 50;
     transform: translateX(-100%);
-    transition: transform 260ms cubic-bezier(0.4, 0, 0.2, 1);
-    width: 260px !important;
+    transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1);
+    width: 280px !important;
+    box-shadow: none;
   }
   .sidebar-open .sidebar-nav {
     transform: translateX(0);
+    box-shadow:
+      16px 0 48px rgba(0, 0, 0, 0.3),
+      4px 0 12px rgba(0, 0, 0, 0.15);
   }
 
-  /* Backdrop for sidebar overlay */
+  /* Backdrop — frosted glass effect */
   .sidebar-backdrop {
     display: block;
     position: fixed;
     inset: 0;
     z-index: 40;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.45);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
     opacity: 0;
     pointer-events: none;
-    transition: opacity 260ms ease;
+    transition: opacity 320ms ease;
   }
   .sidebar-open .sidebar-backdrop {
     opacity: 1;
     pointer-events: auto;
   }
 
-  /* Main content takes full width */
+  /* ── Main content ── */
   .main-content {
     width: 100%;
+    /* Push below the fixed top bar */
+    padding-top: calc(56px + env(safe-area-inset-top, 0)) !important;
+    height: 100vh;
   }
 
-  /* Page content wrapper — reduce padding on mobile */
+  /* ── Page padding ── */
   .page-padding {
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
+    padding-left: 1.25rem !important;
+    padding-right: 1.25rem !important;
+    padding-top: 1.5rem !important;
   }
 
-  /* Status page: top padding includes space for hamburger */
-  .page-padding {
-    padding-top: 3.5rem;
-  }
-
-  /* Stat cards: 3-col → 1-col */
+  /* ── Grids ── */
   .stat-grid {
     grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
   }
 
-  /* Source cards: 2-col → 1-col */
   .source-grid {
     grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
   }
 
-  /* Hero banner: stack vertically */
+  /* ── Hero banner ── */
   .hero-row {
     flex-direction: column;
     align-items: flex-start !important;
@@ -240,28 +270,145 @@ input[type="range"]::-moz-range-thumb {
     flex-direction: row;
     width: 100%;
     justify-content: space-between;
+    gap: 0.75rem !important;
   }
 
-  /* Data page content area */
+  /* ── Data page ── */
   .data-content {
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
+    padding-left: 1.25rem !important;
+    padding-right: 1.25rem !important;
+    padding-bottom: 6rem !important;
   }
 
-  /* Data page sticky nav */
   .data-sticky-nav {
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
   }
 
-  /* Toast: full width on mobile */
+  /* Section tabs — edge-to-edge scroll with fade masks */
+  .data-sticky-nav .section-tabs {
+    padding: 0 1.25rem;
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      black 1rem,
+      black calc(100% - 2rem),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      black 1rem,
+      black calc(100% - 2rem),
+      transparent 100%
+    );
+  }
+
+  /* Source filter row */
+  .data-sticky-nav .source-filters {
+    padding: 0.625rem 1.25rem;
+  }
+
+  /* ── Toast ── */
   .toast-container {
-    left: 1rem !important;
-    right: 1rem !important;
+    top: calc(64px + env(safe-area-inset-top, 0)) !important;
+    left: 1.25rem !important;
+    right: 1.25rem !important;
     align-items: stretch !important;
   }
-  .toast-container > div > div > div {
+  .toast-msg {
     white-space: normal !important;
+    border-radius: 10px !important;
+    font-size: 0.8125rem !important;
+    padding: 0.875rem 1.25rem !important;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.08) !important;
+  }
+
+  /* ── Cards — elevated on mobile ── */
+  .stat-grid > div,
+  .source-grid > div {
+    border-radius: 10px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+
+  /* ── Hero banner refinement ── */
+  .hero-banner {
+    border-radius: 12px !important;
+    padding: 1.25rem 1.25rem !important;
+    margin-bottom: 1.25rem !important;
+  }
+
+  /* ── Status section top padding ── */
+  #status {
+    padding-top: 1.5rem !important;
+  }
+
+  /* ── Settings/Config mobile grid ── */
+  .settings-grid-2col {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Settings table — horizontal scroll ── */
+  .sensor-table-row {
+    grid-template-columns: 36px 1fr 56px 56px 48px !important;
+    gap: 0.25rem !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+  .sensor-table-header {
+    grid-template-columns: 36px 1fr 56px 56px 48px !important;
+    gap: 0.25rem !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
+  /* ── Touch interactions ── */
+  button:active, a:active {
+    opacity: 0.85;
+    transition: opacity 0ms;
+  }
+
+  /* ── Bottom safe area padding ── */
+  .page-padding,
+  .data-content {
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0)) !important;
+  }
+
+  /* ── Scroll momentum ── */
+  .main-content {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  /* ── Range inputs — bigger touch target ── */
+  input[type="range"]::-webkit-slider-thumb {
+    width: 22px;
+    height: 22px;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+  }
+  input[type="range"] {
+    height: 4px;
+  }
+}
+
+/* ─── Animations ────────────────────────────────────────────────────────── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .page-padding > *:first-child {
+    animation: fadeInUp 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 }
 

@@ -194,7 +194,7 @@ export function Status() {
       </div>
 
       {/* ── Hero Status Banner ──────────────────────────────── */}
-      <div style={{
+      <div className="hero-banner" style={{
         background: heroBg,
         border: '1px solid var(--border)',
         borderRadius: 8,

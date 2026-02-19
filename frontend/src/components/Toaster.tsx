@@ -43,7 +43,7 @@ export function Toaster({ children }: Props) {
       {/* eslint-disable-next-line react-hooks/refs */}
       {children(showToast)}
 
-      <div style={{
+      <div className="toast-container" style={{
         position: 'fixed',
         top: '1.25rem',
         right: '1.5rem',

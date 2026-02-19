@@ -5,5 +5,5 @@ import { Settings } from '@/components/Settings'
 const CONFIG_PADDING = { maxWidth: 1024, margin: '0 auto', padding: '0 3rem' }
 
 export default function SettingsPage() {
-  return <div style={CONFIG_PADDING}><Settings /></div>
+  return <div className="page-padding" style={CONFIG_PADDING}><Settings /></div>
 }

@@ -5,5 +5,5 @@ import { Console } from '@/components/Console'
 const CONFIG_PADDING = { maxWidth: 1024, margin: '0 auto', padding: '0 3rem' }
 
 export default function ConsolePage() {
-  return <div style={CONFIG_PADDING}><Console /></div>
+  return <div className="page-padding" style={CONFIG_PADDING}><Console /></div>
 }

@@ -12,15 +12,17 @@ const CONFIG_NAV = [
   { href: '/settings',  label: 'Settings',     num: '02' },
 ]
 
-function NavLink({ href, active, children }: { href: string; active: boolean; children: ReactNode }) {
+function NavLink({ href, active, onClick, children }: { href: string; active: boolean; onClick?: () => void; children: ReactNode }) {
   return (
     <Link
       href={href}
+      onClick={onClick}
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: '0.75rem',
         padding: '0.5rem 1.75rem',
+        minHeight: 44,
         width: '100%',
         borderLeft: active ? '2px solid var(--sb-accent)' : '2px solid transparent',
         color: active ? 'var(--sb-ink)' : 'var(--sb-muted)',
@@ -71,9 +73,10 @@ function NumTag({ children }: { children: ReactNode }) {
 
 interface Props {
   showToast: (msg: string) => void
+  onNavigate?: () => void
 }
 
-export function Sidebar({ showToast }: Props) {
+export function Sidebar({ showToast, onNavigate }: Props) {
   const pathname = usePathname()
   const [health, setHealth] = useState<HealthResponse | null>(null)
   const [fetching, setFetching] = useState(false)
@@ -135,7 +138,7 @@ export function Sidebar({ showToast }: Props) {
     : 'loading…'
 
   return (
-    <nav style={{
+    <nav className="sidebar-nav" style={{
       width: 240,
       background: 'var(--sb)',
       display: 'flex',
@@ -182,11 +185,11 @@ export function Sidebar({ showToast }: Props) {
       {/* Nav */}
       <div style={{ flex: 1, padding: '1rem 0' }}>
         <SideLabel>Overview</SideLabel>
-        <NavLink href="/status" active={pathname === '/status'}>
+        <NavLink href="/status" active={pathname === '/status'} onClick={onNavigate}>
           <NumTag>00</NumTag>
           Status
         </NavLink>
-        <NavLink href="/console" active={pathname === '/console'}>
+        <NavLink href="/console" active={pathname === '/console'} onClick={onNavigate}>
           <NumTag>04</NumTag>
           Console
           {showBadge && (
@@ -207,7 +210,7 @@ export function Sidebar({ showToast }: Props) {
 
         <SideLabel>Config</SideLabel>
         {CONFIG_NAV.map(({ href, label, num }) => (
-          <NavLink key={href} href={href} active={pathname === href}>
+          <NavLink key={href} href={href} active={pathname === href} onClick={onNavigate}>
             <NumTag>{num}</NumTag>
             {label}
           </NavLink>
@@ -216,7 +219,7 @@ export function Sidebar({ showToast }: Props) {
         <SideDivider />
 
         <SideLabel>Data</SideLabel>
-        <NavLink href="/data" active={pathname === '/data'}>
+        <NavLink href="/data" active={pathname === '/data'} onClick={onNavigate}>
           <NumTag>03</NumTag>
           Intel Data
         </NavLink>

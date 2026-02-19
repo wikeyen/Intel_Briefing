@@ -398,7 +398,7 @@ export function Data() {
       <style dangerouslySetInnerHTML={{ __html: LINE_CLAMP_CSS }} />
 
       {/* Page header — not sticky */}
-      <div style={{ maxWidth: 1024, margin: '0 auto', width: '100%', paddingLeft: '3rem', paddingRight: '3rem' }}>
+      <div className="page-padding" style={{ maxWidth: 1024, margin: '0 auto', width: '100%', paddingLeft: '3rem', paddingRight: '3rem' }}>
         <div style={{ paddingTop: '2.5rem', paddingBottom: '1.5rem' }}>
           <h2 style={{
             fontSize: '1.25rem',
@@ -426,7 +426,7 @@ export function Data() {
           background: 'var(--canvas)',
           borderBottom: '1px solid var(--border)',
         }}>
-          <div style={{ maxWidth: 1024, margin: '0 auto', paddingLeft: '3rem', paddingRight: '3rem' }}>
+          <div className="data-sticky-nav" style={{ maxWidth: 1024, margin: '0 auto', paddingLeft: '3rem', paddingRight: '3rem' }}>
             {/* Section tabs */}
             <div style={{
               display: 'flex',
@@ -525,7 +525,7 @@ export function Data() {
 
       {/* Scrollable content — card-per-item feed */}
       <div style={{ flex: 1 }}>
-        <div style={{ maxWidth: 1024, margin: '0 auto', padding: '1.5rem 3rem 4rem' }}>
+        <div className="data-content" style={{ maxWidth: 1024, margin: '0 auto', padding: '1.5rem 3rem 4rem' }}>
           {!loading && !report ? (
             <div style={{
               padding: '4rem 1.5rem',

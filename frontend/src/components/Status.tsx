@@ -203,7 +203,7 @@ export function Status() {
         position: 'relative',
         overflow: 'hidden',
       }}>
-        <div style={{
+        <div className="hero-row" style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -241,7 +241,7 @@ export function Status() {
           </div>
 
           {/* Right side: last run timestamp + Run Now button */}
-          <div style={{
+          <div className="hero-actions" style={{
             display: 'flex',
             alignItems: 'center',
             gap: '1.25rem',
@@ -311,7 +311,7 @@ export function Status() {
       </div>
 
       {/* ── Stat Cards (3-column) ───────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+      <div className="stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
 
         {/* Last Run */}
         <div style={{
@@ -440,7 +440,7 @@ export function Status() {
       </div>
 
       {/* ── Sources — 2-column grid of section cards ─────────── */}
-      <div style={{
+      <div className="source-grid" style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(2, 1fr)',
         gap: '1rem',

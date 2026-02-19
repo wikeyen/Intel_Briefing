@@ -54,8 +54,8 @@ async function fetchBlueskyTrends(config: ConfigSettings, limit: number): Promis
   // Sort by engagement (likes + reposts) and take the top items
   const scored = data.feed.map(f => ({
     post: f.post,
-    score: Number((f.post as Record<string, unknown>).likeCount ?? 0) +
-           Number((f.post as Record<string, unknown>).repostCount ?? 0),
+    score: Number((f.post as unknown as Record<string, unknown>).likeCount ?? 0) +
+           Number((f.post as unknown as Record<string, unknown>).repostCount ?? 0),
   }))
   scored.sort((a, b) => b.score - a.score)
   const items: IntelItem[] = []

@@ -59,7 +59,7 @@ export async function loadConfig(): Promise<ConfigSettings> {
       return applyEnvFallback(defaultConfig())
     }
     // Migrate legacy keys, then merge on top of defaults so new fields get default values
-    const migrated = migrateConfig(data as Record<string, unknown>)
+    const migrated = migrateConfig(data as unknown as Record<string, unknown>)
     return applyEnvFallback({ ...defaultConfig(), ...migrated } as ConfigSettings)
   } catch {
     return applyEnvFallback(defaultConfig())

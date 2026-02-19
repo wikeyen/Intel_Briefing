@@ -6,12 +6,12 @@ import { createClient, type Client } from '@libsql/client'
 // across instrumentation and API route boundaries.
 const globalForDb = globalThis as unknown as { __dbClient?: Client }
 
-/** Return the active database client. Throws if initDb() has not been called. */
-export function getDb(): Client {
+/** Return the active database client, lazily initialising if needed. */
+export async function getDb(): Promise<Client> {
   if (!globalForDb.__dbClient) {
-    throw new Error('Database not initialised — call initDb() first')
+    await initDb()
   }
-  return globalForDb.__dbClient
+  return globalForDb.__dbClient!
 }
 
 /**
@@ -40,7 +40,7 @@ export async function kvSet<T>(
   value: T,
   ttlSeconds?: number,
 ): Promise<void> {
-  const db = getDb()
+  const db = await getDb()
   const expiresAt =
     ttlSeconds != null ? Math.floor(Date.now() / 1000) + ttlSeconds : null
   await db.execute({
@@ -54,7 +54,7 @@ export async function kvSet<T>(
  * Expired rows are not deleted — they get overwritten on the next kvSet.
  */
 export async function kvGet<T>(key: string): Promise<T | null> {
-  const db = getDb()
+  const db = await getDb()
   const now = Math.floor(Date.now() / 1000)
   const result = await db.execute({
     sql: `SELECT value FROM kv WHERE key = ? AND (expires_at IS NULL OR expires_at > ?)`,

@@ -1,5 +1,5 @@
 // ABOUTME: Intel data preview page — shows fetched items grouped by section with section tabs.
-// ABOUTME: Loads from GET /intel/latest; each item links out to its source URL. Source tags allow multi-select filtering.
+// ABOUTME: Card-per-item news reader layout with source filtering and 2-line abstract previews.
 'use client'
 import { useState, useEffect, useMemo } from 'react'
 import { api } from '@/api/client'
@@ -63,6 +63,16 @@ function relativeDate(iso: string): string {
   return `${Math.floor(diff / 86400)}d ago`
 }
 
+/** CSS to clamp text to N lines with ellipsis */
+const LINE_CLAMP_CSS = `
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+`
+
 function SourceChip({ source }: { source: string }) {
   return (
     <span style={{
@@ -111,17 +121,22 @@ function FilterTag({ label, active, onClick }: { label: string; active: boolean;
 }
 
 function ItemCard({ item }: { item: IntelItem }) {
-  const [expanded, setExpanded] = useState(false)
-  const hasAbstract = !!item.abstract
-
   return (
-    <div style={{
-      padding: '1rem 1.25rem',
-      borderBottom: '1px solid var(--border-soft)',
-      transition: 'background 100ms',
+    <article style={{
+      background: 'var(--surface)',
+      border: '1px solid var(--border)',
+      borderRadius: 8,
+      padding: '1.25rem',
+      transition: 'box-shadow 150ms, border-color 150ms',
     }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--canvas)' }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)' }}
+      onMouseEnter={e => {
+        (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent-dim)'
+        ;(e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)'
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'
+        ;(e.currentTarget as HTMLElement).style.boxShadow = 'none'
+      }}
     >
       {/* Title */}
       <a
@@ -133,7 +148,7 @@ function ItemCard({ item }: { item: IntelItem }) {
           fontSize: '0.9375rem',
           fontWeight: 500,
           color: 'var(--ink)',
-          lineHeight: 1.45,
+          lineHeight: 1.5,
           marginBottom: '0.5rem',
           textDecoration: 'none',
         }}
@@ -169,50 +184,36 @@ function ItemCard({ item }: { item: IntelItem }) {
             <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>{item.topic}</span>
           </>
         )}
-        {hasAbstract && (
-          <button
-            onClick={() => setExpanded(e => !e)}
-            style={{
-              marginLeft: 'auto',
-              fontSize: '0.6875rem',
-              color: 'var(--ink-faint)',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 0,
-            }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--accent)' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-faint)' }}
-          >
-            {expanded ? 'Less ↑' : 'Abstract ↓'}
-          </button>
-        )}
       </div>
 
-      {/* Abstract */}
-      {expanded && item.abstract && (
-        <p style={{
-          marginTop: '0.75rem',
-          fontSize: '0.8125rem',
-          color: 'var(--ink-muted)',
-          lineHeight: 1.7,
-          borderLeft: '2px solid var(--border)',
-          paddingLeft: '0.875rem',
-        }}>
+      {/* Abstract preview — 2-line clamp */}
+      {item.abstract && (
+        <p
+          className="line-clamp-2"
+          style={{
+            marginTop: '0.625rem',
+            fontSize: '0.8125rem',
+            color: 'var(--ink-muted)',
+            lineHeight: 1.65,
+          }}
+        >
           {item.abstract}
         </p>
       )}
-    </div>
+    </article>
   )
 }
 
 function EmptySection({ needsKey }: { needsKey?: boolean }) {
   return (
     <div style={{
-      padding: '3rem 1.25rem',
+      padding: '4rem 1.5rem',
       textAlign: 'center',
       color: needsKey ? 'var(--warn)' : 'var(--ink-faint)',
       fontSize: '0.875rem',
+      background: 'var(--surface)',
+      border: '1px solid var(--border)',
+      borderRadius: 8,
     }}>
       {needsKey
         ? 'No items — the sensors for this section need an API key. Configure them on the Connections page.'
@@ -271,109 +272,97 @@ export function Data() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
+      <style dangerouslySetInnerHTML={{ __html: LINE_CLAMP_CSS }} />
 
-      {/* Sticky header — full-width background, constrained inner content */}
-      <div style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 10,
-        background: 'var(--canvas)',
-        borderBottom: '1px solid var(--border)',
-      }}>
-      <div style={{ maxWidth: 1024, margin: '0 auto', paddingLeft: '3rem', paddingRight: '3rem' }}>
-        {/* Title + meta */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'baseline',
-          gap: '0.875rem',
-          paddingTop: '1rem',
-          paddingBottom: '0.625rem',
-        }}>
-          <h2 style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>
+      {/* Page header — not sticky */}
+      <div style={{ maxWidth: 1024, margin: '0 auto', width: '100%', paddingLeft: '3rem', paddingRight: '3rem' }}>
+        <div style={{ paddingTop: '2.5rem', paddingBottom: '1.5rem' }}>
+          <h2 style={{
+            fontSize: '1.25rem',
+            fontWeight: 600,
+            color: 'var(--ink)',
+            letterSpacing: '-0.01em',
+            marginBottom: '0.25rem',
+          }}>
             Intel Data
           </h2>
-          {report && (
-            <span style={{ fontSize: '0.75rem', color: 'var(--ink-faint)', fontFamily: 'ui-monospace, monospace' }}>
-              {totalItems} items · {report.date}
-            </span>
-          )}
-          {loading && (
-            <span style={{ fontSize: '0.75rem', color: 'var(--ink-faint)' }}>Loading…</span>
-          )}
+          <p style={{ fontSize: '0.8125rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
+            {loading ? 'Loading…' : report
+              ? `${totalItems} items from ${report.sources_ok.length} sources · ${report.date}`
+              : 'Fetched items from all configured sources.'}
+          </p>
         </div>
-
-        {/* Section tabs — horizontal scroll only */}
-        {report && (
-          <div style={{
-            display: 'flex',
-            gap: '0.125rem',
-            overflowX: 'auto',
-            overflowY: 'hidden',
-            scrollbarWidth: 'none',
-          }}>
-            {SECTIONS.map(({ key, label }) => {
-              const count = report.items[key]?.length ?? 0
-              const active = activeSection === key
-              return (
-                <button
-                  key={key}
-                  onClick={() => setActiveSection(key)}
-                  style={{
-                    padding: '0.5rem 0.875rem',
-                    fontSize: '0.8125rem',
-                    fontWeight: active ? 600 : 400,
-                    color: active ? 'var(--ink)' : 'var(--ink-muted)',
-                    background: 'none',
-                    border: 'none',
-                    borderBottom: active ? '2px solid var(--ink)' : '2px solid transparent',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    transition: 'color 100ms',
-                    marginBottom: -1,
-                    flexShrink: 0,
-                  }}
-                  onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.color = 'var(--ink)' }}
-                  onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)' }}
-                >
-                  {label}
-                  {count > 0 && (
-                    <span style={{
-                      marginLeft: '0.375rem',
-                      fontSize: '0.625rem',
-                      color: active ? 'var(--ink-muted)' : 'var(--ink-faint)',
-                      fontFamily: 'ui-monospace, monospace',
-                    }}>
-                      {count}
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-        )}
-
-      </div>
       </div>
 
-      {/* Scrollable content */}
-      <div style={{ flex: 1 }}>
-      <div style={{ maxWidth: 1024, margin: '0 auto', padding: '1.5rem 3rem 3rem' }}>
-        {!loading && !report ? (
-          <div style={{ color: 'var(--ink-faint)', fontSize: '0.875rem' }}>
-            No data available. Trigger a pipeline run from the Status page.
-          </div>
-        ) : report ? (
-          <>
-            {/* Source filter tags */}
+      {/* Sticky navigation — tabs + source filters */}
+      {report && (
+        <div style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+          background: 'var(--canvas)',
+          borderBottom: '1px solid var(--border)',
+        }}>
+          <div style={{ maxWidth: 1024, margin: '0 auto', paddingLeft: '3rem', paddingRight: '3rem' }}>
+            {/* Section tabs */}
+            <div style={{
+              display: 'flex',
+              gap: '0.25rem',
+              overflowX: 'auto',
+              overflowY: 'hidden',
+              scrollbarWidth: 'none',
+            }}>
+              {SECTIONS.map(({ key, label }) => {
+                const count = report.items[key]?.length ?? 0
+                const active = activeSection === key
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setActiveSection(key)}
+                    style={{
+                      padding: '0.625rem 1rem',
+                      fontSize: '0.8125rem',
+                      fontWeight: active ? 600 : 400,
+                      color: active ? 'var(--accent)' : 'var(--ink-muted)',
+                      background: 'none',
+                      border: 'none',
+                      borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      transition: 'color 100ms',
+                      marginBottom: -1,
+                      flexShrink: 0,
+                    }}
+                    onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.color = 'var(--ink)' }}
+                    onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.color = active ? 'var(--accent)' : 'var(--ink-muted)' }}
+                  >
+                    {label}
+                    {count > 0 && (
+                      <span style={{
+                        marginLeft: '0.375rem',
+                        fontSize: '0.625rem',
+                        color: active ? 'var(--accent-dim)' : 'var(--ink-faint)',
+                        fontFamily: 'ui-monospace, monospace',
+                      }}>
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Source filters */}
             <div style={{
               display: 'flex',
               gap: '0.5rem',
               alignItems: 'center',
-              marginBottom: '1rem',
+              padding: '0.625rem 0',
+              borderTop: '1px solid var(--border-soft)',
               flexWrap: 'wrap',
             }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--ink-faint)', marginRight: '0.25rem' }}>
-                Source:
+              <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--ink-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '0.25rem' }}>
+                Source
               </span>
               {availableSources.length === 0 ? (
                 <span style={{ fontSize: '0.75rem', color: 'var(--ink-faint)' }}>—</span>
@@ -407,20 +396,34 @@ export function Data() {
                 </>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Scrollable content — card-per-item feed */}
+      <div style={{ flex: 1 }}>
+        <div style={{ maxWidth: 1024, margin: '0 auto', padding: '1.5rem 3rem 4rem' }}>
+          {!loading && !report ? (
             <div style={{
+              padding: '4rem 1.5rem',
+              textAlign: 'center',
+              color: 'var(--ink-faint)',
+              fontSize: '0.875rem',
               background: 'var(--surface)',
               border: '1px solid var(--border)',
-              borderRadius: 6,
-              overflow: 'hidden',
+              borderRadius: 8,
             }}>
+              No data available. Trigger a pipeline run from the Status page.
+            </div>
+          ) : report ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {filteredItems.length === 0
                 ? <EmptySection needsKey={sectionNeedsKey(activeSection, config)} />
                 : filteredItems.map(item => <ItemCard key={item.id} item={item} />)
               }
             </div>
-          </>
-        ) : null}
-      </div>
+          ) : null}
+        </div>
       </div>
     </div>
   )

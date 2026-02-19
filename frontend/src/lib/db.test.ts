@@ -10,7 +10,7 @@ beforeEach(async () => {
 
 describe('initDb', () => {
   it('creates the kv table', async () => {
-    const db = getDb()
+    const db = await getDb()
     const result = await db.execute(
       "SELECT name FROM sqlite_master WHERE type='table' AND name='kv'",
     )

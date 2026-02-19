@@ -12,6 +12,8 @@ import { dedupItems, dedupAcrossSections } from './dedup'
 import { writeReport } from './cache'
 import { SENSOR_REGISTRY } from '../sensors'
 import { SensorConfigError } from '../sensors/errors'
+import { verifyLink } from '../utils/verifier'
+import { fetchContent } from '../utils/jina-reader'
 
 // Section routing: maps sensor_name to report section key
 const SENSOR_SECTION_MAP: Record<string, SectionKey> = {
@@ -26,7 +28,10 @@ const SENSOR_SECTION_MAP: Record<string, SectionKey> = {
   wallstreetcn: 'capital_flow',
   politics: 'politics',
   topics: 'topics',
+  chrome_radar: 'products',
 }
+
+const GROK_SOURCES = new Set(['grok', 'politics', 'topics'])
 
 type ProgressCallback = (
   sensorName: string,
@@ -135,6 +140,28 @@ export async function collect(
 
   // Deduplicate across politics / topics
   const dedupedSections = dedupAcrossSections(sections)
+
+  // Post-processing: verify links (Grok items) + enrich content (hn_blogs) — concurrent
+  const postProcessTasks: Promise<void>[] = []
+
+  for (const key of Object.keys(dedupedSections) as SectionKey[]) {
+    for (const item of dedupedSections[key]) {
+      if (GROK_SOURCES.has(item.source) && item.url) {
+        postProcessTasks.push(
+          verifyLink(item.url).then(ok => { item.verified = ok }),
+        )
+      }
+      if (item.source === 'hn_blogs' && item.url) {
+        postProcessTasks.push(
+          fetchContent(item.url).then(text => {
+            if (text) item.content = text
+          }),
+        )
+      }
+    }
+  }
+
+  await Promise.allSettled(postProcessTasks)
 
   const now = new Date()
   const report = createReport({

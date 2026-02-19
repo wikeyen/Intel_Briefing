@@ -5,6 +5,15 @@ import type { ConfigSettings, IntelItem } from '../models'
 import { defaultConfig } from '../models'
 import { SensorConfigError } from '../sensors/errors'
 
+const mockVerifyLink = vi.fn()
+const mockFetchContent = vi.fn()
+vi.mock('../utils/verifier', () => ({
+  verifyLink: (...args: unknown[]) => mockVerifyLink(...args),
+}))
+vi.mock('../utils/jina-reader', () => ({
+  fetchContent: (...args: unknown[]) => mockFetchContent(...args),
+}))
+
 // Mock SQLite cache adapter
 const mockWriteReport = vi.fn()
 vi.mock('./cache', () => ({
@@ -42,6 +51,8 @@ function makeItem(id: string, source = 'hn'): IntelItem {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockVerifyLink.mockReset()
+  mockFetchContent.mockReset()
   // Clear all sensor mocks
   for (const key of Object.keys(mockSensorFns)) {
     delete mockSensorFns[key]
@@ -179,5 +190,63 @@ describe('collect', () => {
     const okCall = progressCalls.find(c => c.name === 'good_sensor' && c.state === 'ok')
     expect(okCall).toBeDefined()
     expect(okCall!.errorKind).toBeNull()
+  })
+
+  it('verifies links for grok-sourced items after dedup', async () => {
+    mockVerifyLink.mockResolvedValue(true)
+    mockSensorFns['grok'] = vi.fn().mockResolvedValue([
+      { id: 'grok-1', source: 'grok', title: 'Grok Item', url: 'https://example.com/grok' },
+    ])
+
+    const config = makeConfig({ sensors_enabled: { grok: true }, xai_api_key: 'key' })
+    const report = await collect(config)
+    expect(mockVerifyLink).toHaveBeenCalledWith('https://example.com/grok')
+    expect(report.items.tech_trends[0].verified).toBe(true)
+  })
+
+  it('sets verified=false for bad grok links', async () => {
+    mockVerifyLink.mockResolvedValue(false)
+    mockSensorFns['grok'] = vi.fn().mockResolvedValue([
+      { id: 'grok-1', source: 'grok', title: 'Bad Link', url: 'https://example.com/dead' },
+    ])
+
+    const config = makeConfig({ sensors_enabled: { grok: true }, xai_api_key: 'key' })
+    const report = await collect(config)
+    expect(report.items.tech_trends[0].verified).toBe(false)
+  })
+
+  it('does not verify links for non-grok items', async () => {
+    mockVerifyLink.mockResolvedValue(true)
+    mockSensorFns['hacker_news'] = vi.fn().mockResolvedValue([
+      { id: 'hn-1', source: 'hacker_news', title: 'HN', url: 'https://example.com' },
+    ])
+
+    const config = makeConfig({ sensors_enabled: { hacker_news: true } })
+    const report = await collect(config)
+    expect(mockVerifyLink).not.toHaveBeenCalled()
+    expect(report.items.tech_trends[0].verified).toBeUndefined()
+  })
+
+  it('enriches hn_blogs items with Jina content', async () => {
+    mockFetchContent.mockResolvedValue('Full article text here')
+    mockSensorFns['hn_blogs'] = vi.fn().mockResolvedValue([
+      { id: 'blog-1', source: 'hn_blogs', title: 'Blog Post', url: 'https://blog.example.com/post', content: 'RSS summary' },
+    ])
+
+    const config = makeConfig({ sensors_enabled: { hn_blogs: true } })
+    const report = await collect(config)
+    expect(mockFetchContent).toHaveBeenCalledWith('https://blog.example.com/post')
+    expect(report.items.insights[0].content).toBe('Full article text here')
+  })
+
+  it('keeps original content when Jina returns null', async () => {
+    mockFetchContent.mockResolvedValue(null)
+    mockSensorFns['hn_blogs'] = vi.fn().mockResolvedValue([
+      { id: 'blog-1', source: 'hn_blogs', title: 'Blog Post', url: 'https://blog.example.com/post', content: 'RSS summary' },
+    ])
+
+    const config = makeConfig({ sensors_enabled: { hn_blogs: true } })
+    const report = await collect(config)
+    expect(report.items.insights[0].content).toBe('RSS summary')
   })
 })

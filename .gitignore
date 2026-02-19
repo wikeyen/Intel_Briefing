@@ -66,4 +66,4 @@ htmlcov/
 cache/
 
 # Local settings — contains API keys, never commit
-config/settings.json
+config/settings.local.json

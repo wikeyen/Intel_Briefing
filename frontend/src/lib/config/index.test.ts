@@ -70,11 +70,15 @@ describe('maskConfig', () => {
       xai_api_key: 'secret-key',
       github_token: 'gh-token',
       producthunt_token: 'ph-token',
+      bluesky_app_password: 'bsky-pass',
+      mastodon_token: 'masto-token',
     }
     const masked = maskConfig(config)
     expect(masked.xai_api_key).toBe('***')
     expect(masked.github_token).toBe('***')
     expect(masked.producthunt_token).toBe('***')
+    expect(masked.bluesky_app_password).toBe('***')
+    expect(masked.mastodon_token).toBe('***')
   })
 
   it('does not mask null key values', () => {
@@ -82,12 +86,41 @@ describe('maskConfig', () => {
     const masked = maskConfig(config)
     expect(masked.xai_api_key).toBeNull()
     expect(masked.github_token).toBeNull()
+    expect(masked.bluesky_app_password).toBeNull()
+    expect(masked.mastodon_token).toBeNull()
   })
 
   it('preserves non-key fields', () => {
     const config = { ...defaultConfig(), default_limit: 42 }
     const masked = maskConfig(config)
     expect(masked.default_limit).toBe(42)
+  })
+})
+
+describe('config migration', () => {
+  it('migrates politics_accounts to social_accounts_x', async () => {
+    mockKvGet.mockResolvedValue({
+      politics_accounts: ['@potus', '@elonmusk'],
+    })
+    const config = await loadConfig()
+    expect(config.social_accounts_x).toEqual(['@potus', '@elonmusk'])
+  })
+
+  it('migrates topics_keywords to social_topics_keywords', async () => {
+    mockKvGet.mockResolvedValue({
+      topics_keywords: ['AI', 'crypto'],
+    })
+    const config = await loadConfig()
+    expect(config.social_topics_keywords).toEqual(['AI', 'crypto'])
+  })
+
+  it('does not overwrite existing social fields with legacy keys', async () => {
+    mockKvGet.mockResolvedValue({
+      politics_accounts: ['@old_user'],
+      social_accounts_x: ['@new_user'],
+    })
+    const config = await loadConfig()
+    expect(config.social_accounts_x).toEqual(['@new_user'])
   })
 })
 

@@ -29,6 +29,7 @@ export interface ConfigSettings {
   social_topics_keywords: string[]
   social_following_bluesky: boolean
   social_following_mastodon: boolean
+  rss_feed_urls: string[]
   cache_ttl_hours: number
   post_expiry_days: number
 }

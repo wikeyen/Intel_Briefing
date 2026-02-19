@@ -12,6 +12,7 @@ import { fetchHnBlogs } from './hn_blogs'
 import { fetchGrok } from './grok'
 import { fetchPolitics } from './politics'
 import { fetchTopics } from './topics'
+import { fetchChromeRadar } from './chrome_radar'
 
 export type SensorFetchFn = (config: ConfigSettings, limit: number) => Promise<IntelItem[]>
 
@@ -36,4 +37,5 @@ export const SENSOR_REGISTRY: Record<string, SensorFetchFn> = {
   wallstreetcn: fetchWallStreetCN,
   politics: fetchPolitics,
   topics: fetchTopics,
+  chrome_radar: fetchChromeRadar,
 }

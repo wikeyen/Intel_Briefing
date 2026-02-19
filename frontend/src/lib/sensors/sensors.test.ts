@@ -168,6 +168,84 @@ describe('V2EXSensor', () => {
   })
 })
 
+describe('ChromeRadarSensor', () => {
+  it('returns items with source chrome_radar', async () => {
+    const categoryHtml = `
+      <div class="webstore-test-wall-tile">
+        <a href="https://chromewebstore.google.com/detail/test-ext/abc123">
+          <span>Bad Extension</span>
+        </a>
+        <span class="Y30PE">3.2</span>
+      </div>
+      <div class="webstore-test-wall-tile">
+        <a href="https://chromewebstore.google.com/detail/good-ext/def456">
+          <span>Good Extension</span>
+        </a>
+        <span class="Y30PE">4.5</span>
+      </div>
+    `
+    const detailHtml = `<span class="F9iKBc">10,000+ users</span>`
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('/category/')) {
+        return Promise.resolve({ ok: true, text: () => Promise.resolve(categoryHtml) })
+      }
+      if (url.includes('/detail/')) {
+        return Promise.resolve({ ok: true, text: () => Promise.resolve(detailHtml) })
+      }
+      return Promise.resolve({ ok: false, status: 404 })
+    })
+
+    const { fetchChromeRadar } = await import('./chrome_radar')
+    const items = await fetchChromeRadar(makeConfig(), 10)
+    for (const item of items) {
+      expect(item.source).toBe('chrome_radar')
+      expect(item.id).toMatch(/^chrome-/)
+    }
+  })
+
+  it('filters out extensions with rating >= 3.8', async () => {
+    const categoryHtml = `
+      <div class="webstore-test-wall-tile">
+        <a href="https://chromewebstore.google.com/detail/good-ext/abc123">
+          <span>High Rated</span>
+        </a>
+        <span class="Y30PE">4.2</span>
+      </div>
+    `
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true, text: () => Promise.resolve(categoryHtml),
+    })
+
+    const { fetchChromeRadar } = await import('./chrome_radar')
+    const items = await fetchChromeRadar(makeConfig(), 10)
+    expect(items).toHaveLength(0)
+  })
+
+  it('filters out extensions with fewer than 5000 users', async () => {
+    const categoryHtml = `
+      <div class="webstore-test-wall-tile">
+        <a href="https://chromewebstore.google.com/detail/small-ext/abc123">
+          <span>Small Extension</span>
+        </a>
+        <span class="Y30PE">2.0</span>
+      </div>
+    `
+    const detailHtml = `<span class="F9iKBc">100 users</span>`
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('/category/')) {
+        return Promise.resolve({ ok: true, text: () => Promise.resolve(categoryHtml) })
+      }
+      return Promise.resolve({ ok: true, text: () => Promise.resolve(detailHtml) })
+    })
+
+    const { fetchChromeRadar } = await import('./chrome_radar')
+    const items = await fetchChromeRadar(makeConfig(), 10)
+    expect(items).toHaveLength(0)
+  })
+})
+
 describe('SensorProtocolCompliance', () => {
   it('grok sensor throws SensorConfigError without API key', async () => {
     globalThis.fetch = vi.fn()
@@ -212,12 +290,13 @@ describe('SensorProtocolCompliance', () => {
     await expect(fetchProductHunt(makeConfig({ producthunt_token: null }), 5)).rejects.toThrow(SensorConfigError)
   })
 
-  it('sensor registry has all 11 sensors', async () => {
+  it('sensor registry has all 12 sensors', async () => {
     const { SENSOR_REGISTRY } = await import('./index')
-    expect(Object.keys(SENSOR_REGISTRY)).toHaveLength(11)
+    expect(Object.keys(SENSOR_REGISTRY)).toHaveLength(12)
     const expected = [
       'hacker_news', 'arxiv', 'github', 'product_hunt', 'v2ex',
       'hn_blogs', 'grok', 'sources_36kr', 'wallstreetcn', 'politics', 'topics',
+      'chrome_radar',
     ]
     for (const name of expected) {
       expect(SENSOR_REGISTRY[name]).toBeDefined()

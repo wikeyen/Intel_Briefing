@@ -77,7 +77,7 @@ describe('end-to-end: report creation and rendering', () => {
   it('defaultConfig has all required fields', () => {
     const cfg = defaultConfig()
     expect(cfg.sensors_enabled).toBeDefined()
-    expect(Object.keys(cfg.sensors_enabled)).toHaveLength(11)
+    expect(Object.keys(cfg.sensors_enabled)).toHaveLength(12)
     expect(cfg.fetch_time).toBe('07:51')
     expect(cfg.fetch_timezone).toBe('Asia/Shanghai')
     expect(cfg.politics_accounts).toEqual([])

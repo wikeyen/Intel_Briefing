@@ -182,6 +182,7 @@ export function defaultConfig(): ConfigSettings {
       wallstreetcn: true,
       politics: true,
       topics: true,
+      chrome_radar: false,
     },
     fetch_time: '07:51',
     fetch_timezone: 'Asia/Shanghai',

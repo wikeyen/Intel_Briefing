@@ -1,5 +1,17 @@
 # Intel Briefing — Project Guide
 
+## IMPORTANT: Feature Development Workflow
+
+**All feature work MUST use git worktrees.** Do NOT commit feature changes directly on `main`. Follow this process:
+
+1. Create a worktree: `git worktree add .worktrees/<feature-name> -b feat/<feature-name>`
+2. Install deps: `cd .worktrees/<feature-name>/frontend && npm install`
+3. Symlink the database: `ln -s $(pwd)/data .worktrees/<feature-name>/frontend/data`
+4. Do all implementation work inside the worktree
+5. Run tests, verify with dev server (use a non-8000 port, e.g. `--port 8002`)
+6. Commit on the feature branch, rebase onto main, merge
+7. `cd` back to main repo root, then `rm -rf .worktrees/<feature-name>`, `git worktree prune`, `git branch -d feat/<feature-name>`
+
 ## Architecture
 
 - **Frontend**: Next.js 15 App Router in `frontend/` — serves on port 8000

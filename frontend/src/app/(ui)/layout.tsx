@@ -17,6 +17,16 @@ const PAGE_TITLES: Record<string, string> = {
   '/data': 'Intel Data',
 }
 
+const PAGE_DESCS: Record<string, string> = {
+  '/status': 'Pipeline health and scheduled activity',
+  '/console': 'Errors and warnings from the last run',
+  '/api-keys': 'Credentials for data sources and AI',
+  '/settings': 'Sources, limits, scheduling, and filters',
+  '/pipeline': 'Scheduling, filters, and output limits',
+  '/sensors': 'Active data sources for your pipeline',
+  '/data': 'Items from all configured sources',
+}
+
 export default function UiLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const pathname = usePathname()
@@ -27,6 +37,7 @@ export default function UiLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => { setSidebarOpen(false) }, [pathname])
 
   const pageTitle = PAGE_TITLES[pathname] ?? 'Intel Briefing'
+  const pageDesc = PAGE_DESCS[pathname] ?? ''
 
   return (
     <Toaster>
@@ -38,30 +49,29 @@ export default function UiLayout({ children }: { children: React.ReactNode }) {
           >
             {/* Mobile top bar — brand + page title + hamburger */}
             <div className="mobile-top-bar">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0 }}>
                 <span style={{
-                  fontSize: '0.5625rem',
-                  fontWeight: 700,
-                  letterSpacing: '0.16em',
-                  textTransform: 'uppercase',
-                  color: 'var(--sb-muted)',
-                  fontFamily: 'ui-monospace, monospace',
-                }}>
-                  IB
-                </span>
-                <span style={{
-                  width: 1,
-                  height: 16,
-                  background: 'var(--sb-border)',
-                }} />
-                <span style={{
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
+                  fontSize: sidebarOpen ? '0.625rem' : '0.875rem',
+                  fontWeight: sidebarOpen ? 700 : 600,
+                  letterSpacing: sidebarOpen ? '0.16em' : '-0.01em',
+                  textTransform: sidebarOpen ? 'uppercase' : 'none' as const,
                   color: 'var(--sb-ink)',
-                  letterSpacing: '-0.01em',
+                  fontFamily: sidebarOpen ? 'ui-monospace, monospace' : 'inherit',
+                  transition: 'font-size 200ms ease, letter-spacing 200ms ease',
+                  lineHeight: 1.2,
                 }}>
-                  {pageTitle}
+                  {sidebarOpen ? 'Intel Briefing' : pageTitle}
                 </span>
+                {!sidebarOpen && pageDesc && (
+                  <span style={{
+                    fontSize: '0.6875rem',
+                    color: 'var(--sb-muted)',
+                    lineHeight: 1.3,
+                    marginTop: '0.125rem',
+                  }}>
+                    {pageDesc}
+                  </span>
+                )}
               </div>
               <button
                 className="mobile-menu-btn"

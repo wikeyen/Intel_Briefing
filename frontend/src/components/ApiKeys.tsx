@@ -238,15 +238,17 @@ export function ApiKeys() {
 
   return (
     <section id="api-keys" style={{ padding: '2rem 0' }}>
-      <h2 style={{
-        fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink)',
-        marginBottom: '0.25rem',
-      }}>Connections</h2>
-      <p style={{
-        fontSize: '0.8125rem', color: 'var(--ink-muted)', marginBottom: '2rem',
-      }}>
-        Credentials for external data sources and AI providers. Saved keys can be revealed on demand.
-      </p>
+      <div className="page-header" style={{ marginBottom: '2rem' }}>
+        <h2 style={{
+          fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink)',
+          marginBottom: '0.25rem',
+        }}>Connections</h2>
+        <p style={{
+          fontSize: '0.8125rem', color: 'var(--ink-muted)',
+        }}>
+          Credentials for external data sources and AI providers. Saved keys can be revealed on demand.
+        </p>
+      </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {KEY_FIELDS.map(({ field, label, hint }) => (

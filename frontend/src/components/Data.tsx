@@ -397,8 +397,8 @@ export function Data() {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
       <style dangerouslySetInnerHTML={{ __html: LINE_CLAMP_CSS }} />
 
-      {/* Page header — not sticky */}
-      <div className="page-padding" style={{ maxWidth: 1024, margin: '0 auto', width: '100%', paddingLeft: '3rem', paddingRight: '3rem' }}>
+      {/* Page header — not sticky (hidden on mobile — shown in top bar) */}
+      <div className="page-padding page-header" style={{ maxWidth: 1024, margin: '0 auto', width: '100%', paddingLeft: '3rem', paddingRight: '3rem' }}>
         <div style={{ paddingTop: '2.5rem', paddingBottom: '1.5rem' }}>
           <h2 style={{
             fontSize: '1.25rem',

@@ -149,7 +149,7 @@ export function Sidebar({ showToast, onNavigate }: Props) {
       borderRight: '1px solid var(--sb-border)',
     }}>
       {/* Brand */}
-      <div style={{ padding: '2rem 1.75rem 1.5rem' }}>
+      <div className="sidebar-brand" style={{ padding: '2rem 1.75rem 1.5rem' }}>
         <div style={{
           fontSize: '0.625rem',
           fontWeight: 700,
@@ -180,7 +180,7 @@ export function Sidebar({ showToast, onNavigate }: Props) {
         </div>
       </div>
 
-      <div style={{ height: 1, background: 'var(--sb-border)', margin: '0 1.75rem' }} />
+      <div className="sidebar-brand-divider" style={{ height: 1, background: 'var(--sb-border)', margin: '0 1.75rem' }} />
 
       {/* Nav */}
       <div style={{ flex: 1, padding: '1rem 0' }}>
@@ -228,7 +228,7 @@ export function Sidebar({ showToast, onNavigate }: Props) {
       <div style={{ height: 1, background: 'var(--sb-border)', margin: '0 1.75rem' }} />
 
       {/* Fetch Now */}
-      <div style={{ padding: '1.25rem 1.75rem', paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0))' }}>
+      <div className="sidebar-fetch" style={{ padding: '1.25rem 1.75rem', paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0))' }}>
         <button
           onClick={handleFetchNow}
           disabled={fetching}

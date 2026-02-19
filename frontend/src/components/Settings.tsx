@@ -342,8 +342,8 @@ export function Settings() {
     <section id="settings" style={{ padding: '2.5rem 0 6rem' }}>
       <style dangerouslySetInnerHTML={{ __html: HIDE_SPINNERS_CSS }} />
 
-      {/* Page title */}
-      <div style={{ marginBottom: '2rem' }}>
+      {/* Page title (hidden on mobile — shown in top bar) */}
+      <div className="page-header" style={{ marginBottom: '2rem' }}>
         <h2 style={{
           fontSize: '1.25rem',
           fontWeight: 600,

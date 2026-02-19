@@ -183,8 +183,8 @@ export function Status() {
   return (
     <section id="status" style={{ padding: '4.5rem 0' }}>
 
-      {/* ── Page header (simplified — no action button) ─────── */}
-      <div style={{ marginBottom: '2rem' }}>
+      {/* ── Page header (hidden on mobile — shown in top bar) ─────── */}
+      <div className="page-header" style={{ marginBottom: '2rem' }}>
         <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.375rem' }}>
           Status
         </h2>

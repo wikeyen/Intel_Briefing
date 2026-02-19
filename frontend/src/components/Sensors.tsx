@@ -41,6 +41,12 @@ const SENSOR_GROUPS: { label: string; sensors: SensorDef[] }[] = [
       { key: 'social_trends',   label: 'Social Trends',   desc: 'Trending content across X, Bluesky, Mastodon' },
     ],
   },
+  {
+    label: 'RSS',
+    sensors: [
+      { key: 'rss_feeds', label: 'RSS Feeds', desc: 'Custom RSS/Atom feed subscriptions' },
+    ],
+  },
 ]
 
 const ALL_SENSORS = SENSOR_GROUPS.flatMap((g) => g.sensors)
@@ -55,6 +61,7 @@ const SENSOR_LOOKBACK_SUPPORT: Record<string, number> = {
   hn_blogs: 72,
   arxiv: 72,
   wallstreetcn: 24,
+  rss_feeds: 72,
 }
 
 type SensorStatus = 'ok' | 'failed' | 'disabled'
@@ -220,6 +227,7 @@ export function Sensors() {
   const [followingMastodon, setFollowingMastodon] = useState(false)
   const [hasBlueskyCredentials, setHasBlueskyCredentials] = useState(false)
   const [hasMastodonCredentials, setHasMastodonCredentials] = useState(false)
+  const [rssFeedUrls, setRssFeedUrls] = useState<string[]>([])
   const [sensorLimits, setSensorLimits] = useState<Record<string, number>>({})
   const [sensorLookback, setSensorLookback] = useState<Record<string, number>>({})
   const [defaultLimit, setDefaultLimit] = useState(10)
@@ -238,6 +246,7 @@ export function Sensors() {
       setFollowingMastodon(cfg.social_following_mastodon ?? false)
       setHasBlueskyCredentials(!!cfg.bluesky_handle && !!cfg.bluesky_app_password)
       setHasMastodonCredentials(!!cfg.mastodon_token)
+      setRssFeedUrls(cfg.rss_feed_urls ?? [])
       setSensorLimits(cfg.sensor_limits ?? {})
       setSensorLookback(cfg.sensor_lookback_hours ?? {})
       setDefaultLimit(cfg.default_limit)
@@ -269,6 +278,7 @@ export function Sensors() {
         social_topics_keywords: socialTopicsKeywords,
         social_following_bluesky: followingBluesky,
         social_following_mastodon: followingMastodon,
+        rss_feed_urls: rssFeedUrls,
         sensor_limits: sensorLimits,
         sensor_lookback_hours: sensorLookback,
       })
@@ -326,9 +336,10 @@ export function Sensors() {
                 const isLast = i === group.sensors.length - 1
                 const isSocialAccounts = key === 'social_accounts'
                 const isSocialTopics = key === 'social_topics'
+                const isRssFeeds = key === 'rss_feeds'
                 const isOn = enabled[key] ?? true
                 const hasLookback = key in SENSOR_LOOKBACK_SUPPORT
-                const showSubConfig = (isSocialAccounts || isSocialTopics) && isOn
+                const showSubConfig = (isSocialAccounts || isSocialTopics || isRssFeeds) && isOn
 
                 return (
                   <div key={key}>
@@ -489,6 +500,24 @@ export function Sensors() {
                           tags={socialTopicsKeywords}
                           onChange={setSocialTopicsKeywords}
                           placeholder="keyword or #hashtag — press Enter"
+                        />
+                      </div>
+                    )}
+
+                    {/* Inline sub-config: RSS Feeds */}
+                    {isRssFeeds && isOn && (
+                      <div style={{
+                        padding: '1rem 1.25rem 1.25rem 3.5rem',
+                        background: 'var(--canvas)',
+                        borderBottom: isLast ? 'none' : '1px solid var(--border-soft)',
+                      }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem' }}>
+                          Feed URLs
+                        </div>
+                        <TagInput
+                          tags={rssFeedUrls}
+                          onChange={setRssFeedUrls}
+                          placeholder="https://example.com/feed.xml — press Enter"
                         />
                       </div>
                     )}

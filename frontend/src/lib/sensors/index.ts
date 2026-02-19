@@ -9,9 +9,9 @@ import { fetchGitHub } from './github'
 import { fetchArxiv } from './arxiv'
 import { fetch36kr } from './sources_36kr'
 import { fetchHnBlogs } from './hn_blogs'
-import { fetchGrok } from './grok'
-import { fetchPolitics } from './politics'
-import { fetchTopics } from './topics'
+import { fetchSocialAccounts } from './social_accounts'
+import { fetchSocialTopics } from './social_topics'
+import { fetchSocialTrends } from './social_trends'
 import { fetchChromeRadar } from './chrome_radar'
 
 export type SensorFetchFn = (config: ConfigSettings, limit: number) => Promise<IntelItem[]>
@@ -20,9 +20,6 @@ export type SensorFetchFn = (config: ConfigSettings, limit: number) => Promise<I
 export const SENSOR_TOKEN_FIELD: Partial<Record<string, keyof ConfigSettings>> = {
   github: 'github_token',
   product_hunt: 'producthunt_token',
-  grok: 'xai_api_key',
-  politics: 'xai_api_key',
-  topics: 'xai_api_key',
 }
 
 export const SENSOR_REGISTRY: Record<string, SensorFetchFn> = {
@@ -32,10 +29,10 @@ export const SENSOR_REGISTRY: Record<string, SensorFetchFn> = {
   product_hunt: fetchProductHunt,
   v2ex: fetchV2ex,
   hn_blogs: fetchHnBlogs,
-  grok: fetchGrok,
+  social_accounts: fetchSocialAccounts,
+  social_topics: fetchSocialTopics,
+  social_trends: fetchSocialTrends,
   sources_36kr: fetch36kr,
   wallstreetcn: fetchWallStreetCN,
-  politics: fetchPolitics,
-  topics: fetchTopics,
   chrome_radar: fetchChromeRadar,
 }

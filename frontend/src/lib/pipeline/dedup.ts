@@ -1,5 +1,5 @@
 // ABOUTME: Deduplication logic for Intel Briefing pipeline.
-// ABOUTME: Removes duplicate items by title (case-insensitive) and deduplicates politics/topics overlap.
+// ABOUTME: Removes duplicate items by title (case-insensitive) and deduplicates social section overlap.
 import type { IntelItem } from '../models'
 
 /**
@@ -29,29 +29,29 @@ export function dedupItems(items: IntelItem[]): IntelItem[] {
 }
 
 /**
- * Deduplicate items across the politics and topics sections.
+ * Deduplicate items within the social section.
  *
- * If the same post (matched by id) appears in both politics and topics,
- * keep it in politics and remove it from topics. This avoids double-counting
- * posts from tracked political accounts that also match tracked keywords.
+ * If the same URL appears from both accounts and topics/trends sub-sensors,
+ * keep the accounts version (more specific source wins). This avoids
+ * double-counting posts from tracked accounts that also match tracked keywords.
  */
 export function dedupAcrossSections(
   sections: Record<string, IntelItem[]>,
 ): Record<string, IntelItem[]> {
-  const politics = sections['politics'] ?? []
-  const politicsIds = new Set(politics.map((item) => item.id))
+  const social = sections['social'] ?? []
+  if (social.length === 0) return sections
 
-  if (politicsIds.size === 0) {
-    return sections
-  }
-
-  const topics = sections['topics'] ?? []
-  if (topics.length === 0) {
-    return sections
-  }
+  // Within social: if the same URL appears from both accounts and topics/trends,
+  // keep the accounts version (more specific source wins).
+  const accountUrls = new Set(
+    social.filter(item => item.id.includes('-accounts-')).map(item => item.url).filter(Boolean),
+  )
+  if (accountUrls.size === 0) return sections
 
   return {
     ...sections,
-    topics: topics.filter((item) => !politicsIds.has(item.id)),
+    social: social.filter(item =>
+      item.id.includes('-accounts-') || !accountUrls.has(item.url),
+    ),
   }
 }

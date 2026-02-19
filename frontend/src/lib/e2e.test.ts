@@ -47,17 +47,18 @@ describe('end-to-end: report creation and rendering', () => {
     expect(md).toContain('Different')
   })
 
-  it('cross-section dedup removes overlap between politics and topics', () => {
+  it('social section dedup removes overlap between accounts and topics', () => {
     const sections = {
-      politics: [{ id: 'shared', source: 'politics', title: 'Post', url: 'u1' }] as IntelItem[],
-      topics: [
-        { id: 'shared', source: 'topics', title: 'Same Post', url: 'u1' } as IntelItem,
-        { id: 'unique', source: 'topics', title: 'Unique Post', url: 'u2' } as IntelItem,
+      social: [
+        { id: 'x-accounts-2026-02-19-0', source: 'x', title: 'Post', url: 'https://x.com/post/1' } as IntelItem,
+        { id: 'x-topics-2026-02-19-0', source: 'x', title: 'Same Post', url: 'https://x.com/post/1' } as IntelItem,
+        { id: 'x-topics-2026-02-19-1', source: 'x', title: 'Unique Post', url: 'https://x.com/post/2' } as IntelItem,
       ],
     }
     const result = dedupAcrossSections(sections)
-    expect(result.topics).toHaveLength(1)
-    expect(result.topics[0].id).toBe('unique')
+    expect(result.social).toHaveLength(2)
+    expect(result.social[0].id).toBe('x-accounts-2026-02-19-0')
+    expect(result.social[1].id).toBe('x-topics-2026-02-19-1')
   })
 
   it('isStale correctly detects fresh vs old reports', () => {
@@ -80,7 +81,7 @@ describe('end-to-end: report creation and rendering', () => {
     expect(Object.keys(cfg.sensors_enabled)).toHaveLength(12)
     expect(cfg.fetch_time).toBe('07:51')
     expect(cfg.fetch_timezone).toBe('Asia/Shanghai')
-    expect(cfg.politics_accounts).toEqual([])
-    expect(cfg.topics_keywords).toEqual([])
+    expect(cfg.social_accounts_x).toEqual([])
+    expect(cfg.social_topics_keywords).toEqual([])
   })
 })

@@ -192,30 +192,30 @@ describe('collect', () => {
     expect(okCall!.errorKind).toBeNull()
   })
 
-  it('verifies links for grok-sourced items after dedup', async () => {
+  it('verifies links for X-sourced items after dedup', async () => {
     mockVerifyLink.mockResolvedValue(true)
-    mockSensorFns['grok'] = vi.fn().mockResolvedValue([
-      { id: 'grok-1', source: 'grok', title: 'Grok Item', url: 'https://example.com/grok' },
+    mockSensorFns['social_accounts'] = vi.fn().mockResolvedValue([
+      { id: 'x-accounts-2026-02-19-0', source: 'x', title: 'X Post', url: 'https://x.com/post/1' },
     ])
 
-    const config = makeConfig({ sensors_enabled: { grok: true }, xai_api_key: 'key' })
+    const config = makeConfig({ sensors_enabled: { social_accounts: true }, xai_api_key: 'key' })
     const report = await collect(config)
-    expect(mockVerifyLink).toHaveBeenCalledWith('https://example.com/grok')
-    expect(report.items.tech_trends[0].verified).toBe(true)
+    expect(mockVerifyLink).toHaveBeenCalledWith('https://x.com/post/1')
+    expect(report.items.social[0].verified).toBe(true)
   })
 
-  it('sets verified=false for bad grok links', async () => {
+  it('sets verified=false for bad X links', async () => {
     mockVerifyLink.mockResolvedValue(false)
-    mockSensorFns['grok'] = vi.fn().mockResolvedValue([
-      { id: 'grok-1', source: 'grok', title: 'Bad Link', url: 'https://example.com/dead' },
+    mockSensorFns['social_accounts'] = vi.fn().mockResolvedValue([
+      { id: 'x-accounts-2026-02-19-0', source: 'x', title: 'Bad Link', url: 'https://x.com/dead' },
     ])
 
-    const config = makeConfig({ sensors_enabled: { grok: true }, xai_api_key: 'key' })
+    const config = makeConfig({ sensors_enabled: { social_accounts: true }, xai_api_key: 'key' })
     const report = await collect(config)
-    expect(report.items.tech_trends[0].verified).toBe(false)
+    expect(report.items.social[0].verified).toBe(false)
   })
 
-  it('does not verify links for non-grok items', async () => {
+  it('does not verify links for non-X items', async () => {
     mockVerifyLink.mockResolvedValue(true)
     mockSensorFns['hacker_news'] = vi.fn().mockResolvedValue([
       { id: 'hn-1', source: 'hacker_news', title: 'HN', url: 'https://example.com' },

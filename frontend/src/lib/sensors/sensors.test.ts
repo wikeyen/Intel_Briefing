@@ -247,37 +247,6 @@ describe('ChromeRadarSensor', () => {
 })
 
 describe('SensorProtocolCompliance', () => {
-  it('grok sensor throws SensorConfigError without API key', async () => {
-    globalThis.fetch = vi.fn()
-    const { fetchGrok } = await import('./grok')
-    await expect(fetchGrok(makeConfig({ xai_api_key: null }), 5)).rejects.toThrow(SensorConfigError)
-    expect(globalThis.fetch).not.toHaveBeenCalled()
-  })
-
-  it('politics sensor throws SensorConfigError without API key', async () => {
-    globalThis.fetch = vi.fn()
-    const { fetchPolitics } = await import('./politics')
-    await expect(fetchPolitics(makeConfig({ xai_api_key: null, politics_accounts: ['@user1'] }), 5)).rejects.toThrow(SensorConfigError)
-  })
-
-  it('politics sensor throws SensorConfigError without accounts', async () => {
-    globalThis.fetch = vi.fn()
-    const { fetchPolitics } = await import('./politics')
-    await expect(fetchPolitics(makeConfig({ xai_api_key: 'key123', politics_accounts: [] }), 5)).rejects.toThrow(SensorConfigError)
-  })
-
-  it('topics sensor throws SensorConfigError without API key', async () => {
-    globalThis.fetch = vi.fn()
-    const { fetchTopics } = await import('./topics')
-    await expect(fetchTopics(makeConfig({ xai_api_key: null, topics_keywords: ['AI'] }), 5)).rejects.toThrow(SensorConfigError)
-  })
-
-  it('topics sensor throws SensorConfigError without keywords', async () => {
-    globalThis.fetch = vi.fn()
-    const { fetchTopics } = await import('./topics')
-    await expect(fetchTopics(makeConfig({ xai_api_key: 'key', topics_keywords: [] }), 5)).rejects.toThrow(SensorConfigError)
-  })
-
   it('github sensor throws SensorConfigError without token', async () => {
     globalThis.fetch = vi.fn()
     const { fetchGitHub } = await import('./github')
@@ -295,8 +264,8 @@ describe('SensorProtocolCompliance', () => {
     expect(Object.keys(SENSOR_REGISTRY)).toHaveLength(12)
     const expected = [
       'hacker_news', 'arxiv', 'github', 'product_hunt', 'v2ex',
-      'hn_blogs', 'grok', 'sources_36kr', 'wallstreetcn', 'politics', 'topics',
-      'chrome_radar',
+      'hn_blogs', 'social_accounts', 'social_topics', 'social_trends',
+      'sources_36kr', 'wallstreetcn', 'chrome_radar',
     ]
     for (const name of expected) {
       expect(SENSOR_REGISTRY[name]).toBeDefined()

@@ -19,19 +19,17 @@ import { fetchContent } from '../utils/jina-reader'
 const SENSOR_SECTION_MAP: Record<string, SectionKey> = {
   hacker_news: 'tech_trends',
   github: 'tech_trends',
-  grok: 'tech_trends',
   arxiv: 'research',
   hn_blogs: 'insights',
   product_hunt: 'products',
   v2ex: 'community',
   sources_36kr: 'capital_flow',
   wallstreetcn: 'capital_flow',
-  politics: 'politics',
-  topics: 'topics',
+  social_accounts: 'social',
+  social_topics: 'social',
+  social_trends: 'social',
   chrome_radar: 'products',
 }
-
-const GROK_SOURCES = new Set(['grok', 'politics', 'topics'])
 
 type ProgressCallback = (
   sensorName: string,
@@ -67,7 +65,7 @@ async function runSensor(
  * 1. Identify all enabled sensors.
  * 2. Fetch from all sensors concurrently with Promise.allSettled().
  * 3. Deduplicate items within each section.
- * 4. Deduplicate across politics / topics sections.
+ * 4. Deduplicate within the social section (accounts over topics/trends).
  * 5. Write the result to the SQLite cache.
  */
 export async function collect(
@@ -138,7 +136,7 @@ export async function collect(
     sections[key] = dedupItems(sections[key])
   }
 
-  // Deduplicate across politics / topics
+  // Deduplicate within the social section (accounts take priority over topics/trends)
   const dedupedSections = dedupAcrossSections(sections)
 
   // Post-processing: verify links (Grok items) + enrich content (hn_blogs) — concurrent
@@ -146,7 +144,7 @@ export async function collect(
 
   for (const key of Object.keys(dedupedSections) as SectionKey[]) {
     for (const item of dedupedSections[key]) {
-      if (GROK_SOURCES.has(item.source) && item.url) {
+      if (item.source === 'x' && item.url) {
         postProcessTasks.push(
           verifyLink(item.url).then(ok => { item.verified = ok }),
         )

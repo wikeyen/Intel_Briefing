@@ -1,5 +1,5 @@
 // ABOUTME: Unit tests for deduplication logic in pipeline/dedup.ts.
-// ABOUTME: Covers within-list title dedup and cross-section politics/topics overlap removal.
+// ABOUTME: Covers within-list title dedup and social section overlap removal.
 import { describe, it, expect } from 'vitest'
 import type { IntelItem } from '../models'
 import { dedupItems, dedupAcrossSections } from './dedup'
@@ -64,34 +64,32 @@ describe('dedupItems', () => {
 })
 
 describe('dedupAcrossSections', () => {
-  it('removes politics ids from topics', () => {
-    const polItem = makeItem('shared-1', 'Political post', 'politics')
-    const topItem = makeItem('shared-1', 'Same post', 'topics')
-    const other = makeItem('unique-2', 'Unrelated', 'topics')
-    const sections = { politics: [polItem], topics: [topItem, other] }
+  it('removes topics items whose URL matches an accounts item in social', () => {
+    const accItem: IntelItem = { id: 'x-accounts-2026-02-19-0', source: 'x', title: 'Post by user', url: 'https://x.com/post/1' }
+    const topItem: IntelItem = { id: 'x-topics-2026-02-19-0', source: 'x', title: 'Same post', url: 'https://x.com/post/1' }
+    const other: IntelItem = { id: 'x-topics-2026-02-19-1', source: 'x', title: 'Unique', url: 'https://x.com/post/2' }
+    const sections = { social: [accItem, topItem, other] }
     const result = dedupAcrossSections(sections)
-    expect(result.politics).toHaveLength(1)
-    expect(result.topics).toHaveLength(1)
-    expect(result.topics[0].id).toBe('unique-2')
+    expect(result.social).toHaveLength(2)
+    expect(result.social[0].id).toBe('x-accounts-2026-02-19-0')
+    expect(result.social[1].id).toBe('x-topics-2026-02-19-1')
   })
 
   it('returns unchanged when no overlap', () => {
     const sections = {
-      politics: [makeItem('p1', 'Politics post')],
-      topics: [makeItem('t1', 'Topics post')],
+      social: [
+        { id: 'x-accounts-2026-02-19-0', source: 'x', title: 'Account post', url: 'https://x.com/1' } as IntelItem,
+        { id: 'x-topics-2026-02-19-0', source: 'x', title: 'Topic post', url: 'https://x.com/2' } as IntelItem,
+      ],
     }
     const result = dedupAcrossSections(sections)
-    expect(result.politics).toHaveLength(1)
-    expect(result.topics).toHaveLength(1)
+    expect(result.social).toHaveLength(2)
   })
 
-  it('returns unchanged when politics is empty', () => {
-    const sections = {
-      politics: [] as IntelItem[],
-      topics: [makeItem('t1', 'Topics post')],
-    }
+  it('returns unchanged when social is empty', () => {
+    const sections = { social: [] as IntelItem[] }
     const result = dedupAcrossSections(sections)
-    expect(result.topics).toHaveLength(1)
+    expect(result.social).toEqual([])
   })
 
   it('handles missing sections', () => {
@@ -100,9 +98,11 @@ describe('dedupAcrossSections', () => {
     expect(result).toEqual({})
   })
 
-  it('handles only politics, no topics', () => {
-    const sections = { politics: [makeItem('p1', 'Post')] }
+  it('handles only accounts, no topics', () => {
+    const sections = {
+      social: [{ id: 'x-accounts-2026-02-19-0', source: 'x', title: 'Post', url: 'https://x.com/1' } as IntelItem],
+    }
     const result = dedupAcrossSections(sections)
-    expect(result.politics).toHaveLength(1)
+    expect(result.social).toHaveLength(1)
   })
 })

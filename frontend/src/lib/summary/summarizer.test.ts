@@ -1,0 +1,147 @@
+// ABOUTME: Tests for the summarizer orchestrator.
+// ABOUTME: Validates prompt construction, sequential LLM calls, and BriefingSummary output shape.
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { summarizeReport } from './summarizer'
+import * as llm from './llm'
+import type { IntelReport } from '../models'
+import { createReport } from '../models'
+
+function makeReport(overrides?: Partial<IntelReport>): IntelReport {
+  return createReport({
+    date: '2026-02-19',
+    fetched_at: '2026-02-19T09:00:00Z',
+    sources_ok: ['hacker_news', 'arxiv'],
+    items: {
+      tech_trends: [
+        { id: 'hn-1', source: 'hacker_news', title: 'AI breakthrough', url: 'https://example.com/1' },
+        { id: 'hn-2', source: 'hacker_news', title: 'Rust 2.0 released', url: 'https://example.com/2' },
+      ],
+      research: [
+        { id: 'ax-1', source: 'arxiv', title: 'Attention is still all you need', url: 'https://arxiv.org/1', abstract: 'We prove...' },
+      ],
+      capital_flow: [],
+      products: [],
+      community: [],
+      social: [],
+      insights: [],
+    },
+    ...overrides,
+  })
+}
+
+describe('summarizeReport', () => {
+  afterEach(() => { vi.restoreAllMocks() })
+
+  it('produces per-sensor summaries and overall briefing', async () => {
+    const calls: string[] = []
+    vi.spyOn(llm, 'chatCompletion').mockImplementation(async (messages) => {
+      const userMsg = messages.find(m => m.role === 'user')!.content
+      // Check for overall prompt first — it also contains sensor labels
+      if (userMsg.includes('executive briefing')) {
+        calls.push('overall')
+        return 'Overall briefing'
+      }
+      if (userMsg.includes('Hacker News')) {
+        calls.push('hacker_news')
+        return 'HN summary here'
+      }
+      if (userMsg.includes('ArXiv')) {
+        calls.push('arxiv')
+        return 'ArXiv summary here'
+      }
+      calls.push('unknown')
+      return 'Unknown'
+    })
+
+    const config = { base_url: 'https://openrouter.ai/api/v1', api_key: 'k', model: 'm' }
+    const result = await summarizeReport(makeReport(), config)
+
+    expect(result.sections).toHaveLength(2)
+    expect(result.sections[0].sensor_name).toBe('hacker_news')
+    expect(result.sections[0].summary).toBe('HN summary here')
+    expect(result.sections[0].item_count).toBe(2)
+    expect(result.sections[1].sensor_name).toBe('arxiv')
+    expect(result.sections[1].summary).toBe('ArXiv summary here')
+    expect(result.overall).toBe('Overall briefing')
+    expect(result.report_fetched_at).toBe('2026-02-19T09:00:00Z')
+    // Verify sequential order
+    expect(calls).toEqual(['hacker_news', 'arxiv', 'overall'])
+  })
+
+  it('skips sensors with no items', async () => {
+    vi.spyOn(llm, 'chatCompletion').mockResolvedValue('Summary')
+
+    const report = makeReport({
+      sources_ok: ['hacker_news'],
+      items: {
+        tech_trends: [
+          { id: 'hn-1', source: 'hacker_news', title: 'Story', url: 'https://example.com/1' },
+        ],
+        research: [],
+        capital_flow: [],
+        products: [],
+        community: [],
+        social: [],
+        insights: [],
+      },
+    })
+
+    const config = { base_url: 'http://localhost:11434/v1', api_key: null, model: 'llama3' }
+    const result = await summarizeReport(report, config)
+
+    // Only hacker_news + overall = 2 calls
+    expect(llm.chatCompletion).toHaveBeenCalledTimes(2)
+    expect(result.sections).toHaveLength(1)
+    expect(result.sections[0].sensor_name).toBe('hacker_news')
+  })
+
+  it('returns empty sections for report with no items', async () => {
+    vi.spyOn(llm, 'chatCompletion').mockResolvedValue('Nothing to report')
+
+    const report = makeReport({
+      sources_ok: [],
+      items: {
+        tech_trends: [],
+        research: [],
+        capital_flow: [],
+        products: [],
+        community: [],
+        social: [],
+        insights: [],
+      },
+    })
+
+    const config = { base_url: 'https://openrouter.ai/api/v1', api_key: 'k', model: 'm' }
+    const result = await summarizeReport(report, config)
+
+    expect(result.sections).toHaveLength(0)
+    // Still gets one overall call
+    expect(llm.chatCompletion).toHaveBeenCalledTimes(1)
+    expect(result.overall).toBe('Nothing to report')
+  })
+
+  it('includes item details in the per-sensor prompt', async () => {
+    const promptCapture: string[] = []
+    vi.spyOn(llm, 'chatCompletion').mockImplementation(async (messages) => {
+      promptCapture.push(messages.find(m => m.role === 'user')!.content)
+      return 'Summary'
+    })
+
+    const config = { base_url: 'https://openrouter.ai/api/v1', api_key: 'k', model: 'm' }
+    await summarizeReport(makeReport(), config)
+
+    // First prompt should contain the HN item titles
+    expect(promptCapture[0]).toContain('AI breakthrough')
+    expect(promptCapture[0]).toContain('Rust 2.0 released')
+    // Second prompt should contain the ArXiv abstract
+    expect(promptCapture[1]).toContain('Attention is still all you need')
+    expect(promptCapture[1]).toContain('We prove...')
+  })
+
+  it('propagates LLM errors', async () => {
+    vi.spyOn(llm, 'chatCompletion').mockRejectedValue(new Error('LLM timeout'))
+
+    const config = { base_url: 'https://openrouter.ai/api/v1', api_key: 'k', model: 'm' }
+    await expect(summarizeReport(makeReport(), config)).rejects.toThrow('LLM timeout')
+  })
+})

@@ -102,4 +102,13 @@ export const api = {
 
   getPipelineStatus: () =>
     apiFetch<PipelineStatus>('/fetch/status'),
+
+  getConsoleSeen: () =>
+    apiFetch<{ runId: string | null }>('/console/seen'),
+
+  setConsoleSeen: (runId: string) =>
+    apiFetch<{ ok: boolean }>('/console/seen', {
+      method: 'PUT',
+      body: JSON.stringify({ runId }),
+    }),
 }

@@ -94,19 +94,22 @@ export function Sidebar({ showToast }: Props) {
   const hasErrors = (pipelineStatus?.sensors.some(s => s.error !== null)) ?? false
   const runId = pipelineStatus?.completed_at ?? pipelineStatus?.started_at ?? ''
 
-  // Persist which pipeline run the user last viewed on /console.
+  // Track which pipeline run the user last viewed on /console via server-side KV store.
   // Badge shows when errors exist for a run the user hasn't seen yet.
-  const SEEN_KEY = 'console-errors-seen-run'
+  const [seenRun, setSeenRun] = useState<string | null>(null)
   const onConsolePage = pathname === '/console'
 
   useEffect(() => {
+    api.getConsoleSeen().then(r => setSeenRun(r.runId)).catch(() => {})
+  }, [])
+
+  useEffect(() => {
     if (onConsolePage && hasErrors && runId) {
-      localStorage.setItem(SEEN_KEY, runId)
+      api.setConsoleSeen(runId).then(() => setSeenRun(runId)).catch(() => {})
     }
   }, [onConsolePage, hasErrors, runId])
 
-  const seenRun = typeof window !== 'undefined' ? localStorage.getItem(SEEN_KEY) : null
-  const showBadge = hasErrors && runId !== seenRun
+  const showBadge = hasErrors && !!runId && runId !== seenRun
 
   const handleFetchNow = async () => {
     setFetching(true)

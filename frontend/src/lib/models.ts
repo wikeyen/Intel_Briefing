@@ -36,6 +36,7 @@ export const ALL_SECTIONS = [
   'community',
   'social',
   'insights',
+  'feeds',
 ] as const
 
 export type SectionKey = (typeof ALL_SECTIONS)[number]
@@ -49,6 +50,7 @@ export function emptyItemsMap(): Record<SectionKey, IntelItem[]> {
     community: [],
     social: [],
     insights: [],
+    feeds: [],
   }
 }
 

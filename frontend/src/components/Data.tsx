@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { api } from '@/api/client'
 import type { IntelReport, IntelItem, ConfigSettings } from '@/api/client'
-import { SENSOR_TOKEN_FIELD } from '@/lib/sensors'
+import { SENSOR_TOKEN_FIELD } from '@/lib/sensors/constants'
 import { Pagination } from './Pagination'
 
 const PAGE_SIZE = 20
@@ -17,6 +17,7 @@ const SECTIONS: { key: string; label: string }[] = [
   { key: 'community',    label: 'Community' },
   { key: 'social',       label: 'Social' },
   { key: 'insights',     label: 'Insights' },
+  { key: 'feeds',        label: 'Feeds' },
 ]
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -32,6 +33,7 @@ const SOURCE_LABELS: Record<string, string> = {
   x:            'X',
   bluesky:      'Bluesky',
   mastodon:     'Mastodon',
+  rss_feeds:    'RSS',
 }
 
 /** Maps each section to the sensors that feed it. */
@@ -43,6 +45,7 @@ const SECTION_SENSORS: Record<string, string[]> = {
   community:    ['v2ex'],
   capital_flow: ['sources_36kr', 'wallstreetcn'],
   social:       ['social_accounts', 'social_topics', 'social_trends'],
+  feeds:        ['rss_feeds'],
 }
 
 /** Check if a section is empty because every sensor feeding it lacks a required token. */

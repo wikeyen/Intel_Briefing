@@ -82,11 +82,11 @@ describe('IntelReport', () => {
     expect(report.items.social).toBeDefined()
   })
 
-  it('should have all 7 sections present by default', () => {
+  it('should have all 8 sections present by default', () => {
     const report = createReport({ date: '2026-01-01', fetched_at: '2026-01-01T07:00:00Z' })
     const expected = new Set([
       'tech_trends', 'research', 'capital_flow', 'products',
-      'community', 'social', 'insights',
+      'community', 'social', 'insights', 'feeds',
     ])
     expect(new Set(Object.keys(report.items))).toEqual(expected)
   })

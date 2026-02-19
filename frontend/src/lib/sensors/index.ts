@@ -17,11 +17,7 @@ import { fetchRssFeeds } from './rss_feeds'
 
 export type SensorFetchFn = (config: ConfigSettings, limit: number) => Promise<IntelItem[]>
 
-/** Maps sensor names to the config token field they require. Sensors not listed need no key. */
-export const SENSOR_TOKEN_FIELD: Partial<Record<string, keyof ConfigSettings>> = {
-  github: 'github_token',
-  product_hunt: 'producthunt_token',
-}
+export { SENSOR_TOKEN_FIELD } from './constants'
 
 export const SENSOR_REGISTRY: Record<string, SensorFetchFn> = {
   hacker_news: fetchHackerNews,

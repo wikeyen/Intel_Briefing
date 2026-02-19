@@ -30,6 +30,7 @@ const SENSOR_SECTION_MAP: Record<string, SectionKey> = {
   social_topics: 'social',
   social_trends: 'social',
   chrome_radar: 'products',
+  rss_feeds: 'feeds',
 }
 
 type ProgressCallback = (

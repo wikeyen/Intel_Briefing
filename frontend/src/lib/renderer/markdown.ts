@@ -1,5 +1,5 @@
 // ABOUTME: Pure Markdown renderer for IntelReport — no I/O, no HTTP, no sleeps.
-// ABOUTME: Renders all 7 report sections from the IntelReport model.
+// ABOUTME: Renders all 8 report sections from the IntelReport model.
 import type { IntelItem, IntelReport, SectionKey } from '../models'
 
 // Ordered section display config: [section_key, display_title, emoji]
@@ -11,6 +11,7 @@ const SECTIONS: [SectionKey, string, string][] = [
   ['capital_flow', 'Capital Flow', '💰'],
   ['community', 'Community', '🗣️'],
   ['social', 'Social', '📱'],
+  ['feeds', 'Feeds', '📰'],
 ]
 
 const NO_DATA_PLACEHOLDER = '_No data available for this section._'

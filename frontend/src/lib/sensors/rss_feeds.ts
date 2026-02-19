@@ -3,7 +3,6 @@
 import { createHash } from 'crypto'
 import { XMLParser } from 'fast-xml-parser'
 import type { ConfigSettings, IntelItem } from '../models'
-import { extractArticle } from '../readability'
 import { SensorConfigError } from './errors'
 
 const FEED_FETCH_TIMEOUT = 10_000
@@ -88,6 +87,11 @@ async function fetchFeed(feedUrl: string): Promise<RawItem[]> {
 }
 
 async function scrapeArticles(items: RawItem[]): Promise<RawItem[]> {
+  // Dynamic import to avoid pulling jsdom (Node.js-only) into the client bundle.
+  // The static import chain Data.tsx → sensors/index.ts → rss_feeds.ts must not
+  // reach readability.ts, which transitively depends on jsdom → child_process.
+  const { extractArticle } = await import('../readability')
+
   const results: RawItem[] = []
   for (let i = 0; i < items.length; i += SCRAPE_CONCURRENCY) {
     const batch = items.slice(i, i + SCRAPE_CONCURRENCY)

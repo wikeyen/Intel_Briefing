@@ -1,13 +1,13 @@
 // ABOUTME: Article content extraction using Mozilla Readability algorithm.
 // ABOUTME: Fetches a webpage, parses HTML with jsdom, and extracts the main article text.
-import { Readability } from '@mozilla/readability'
-import { JSDOM } from 'jsdom'
 
 const FETCH_TIMEOUT = 15_000
 
 /**
  * Fetch a URL and extract the main article content using Readability.
  * Returns the text content or null if extraction fails.
+ * Uses dynamic imports for jsdom and @mozilla/readability to avoid bundling
+ * Node.js-only modules in the Next.js client bundle.
  */
 export async function extractArticle(url: string): Promise<string | null> {
   try {
@@ -24,6 +24,12 @@ export async function extractArticle(url: string): Promise<string | null> {
     }
 
     const html = await resp.text()
+
+    // Dynamic imports — jsdom uses child_process and other Node.js APIs
+    // that cannot be bundled for the browser
+    const { JSDOM } = await import('jsdom')
+    const { Readability } = await import('@mozilla/readability')
+
     const dom = new JSDOM(html, { url })
     const reader = new Readability(dom.window.document)
     const article = reader.parse()

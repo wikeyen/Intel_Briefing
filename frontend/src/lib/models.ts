@@ -138,6 +138,20 @@ export interface BriefingSummary {
   overall: string
 }
 
+export interface SummarySensorProgress {
+  sensor_name: string
+  label: string
+  state: 'pending' | 'running' | 'ok' | 'failed'
+  error: string | null
+}
+
+export interface SummaryProgress {
+  running: boolean
+  started_at: string | null
+  completed_at: string | null
+  sensors: SummarySensorProgress[]
+}
+
 export interface ConfigSettings {
   // API keys
   xai_api_key: string | null

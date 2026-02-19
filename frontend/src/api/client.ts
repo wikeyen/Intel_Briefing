@@ -80,6 +80,20 @@ export interface IntelReport {
   items: Record<string, IntelItem[]>
 }
 
+export interface SummarySensorProgress {
+  sensor_name: string
+  label: string
+  state: 'pending' | 'running' | 'ok' | 'failed'
+  error: string | null
+}
+
+export interface SummaryProgress {
+  running: boolean
+  started_at: string | null
+  completed_at: string | null
+  sensors: SummarySensorProgress[]
+}
+
 export interface BriefingSummary {
   generated_at: string
   report_fetched_at: string
@@ -149,4 +163,7 @@ export const api = {
 
   discoverRssFeed: (url: string) =>
     apiFetch<RssDiscoveryResult>(`/rss-discover?url=${encodeURIComponent(url)}`),
+
+  getSummaryStatus: () =>
+    apiFetch<SummaryProgress>('/summary/status'),
 }

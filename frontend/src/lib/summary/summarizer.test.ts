@@ -138,10 +138,63 @@ describe('summarizeReport', () => {
     expect(promptCapture[1]).toContain('We prove...')
   })
 
-  it('propagates LLM errors', async () => {
+  it('propagates LLM errors when no onProgress callback', async () => {
     vi.spyOn(llm, 'chatCompletion').mockRejectedValue(new Error('LLM timeout'))
 
     const config = { base_url: 'https://openrouter.ai/api/v1', api_key: 'k', model: 'm' }
     await expect(summarizeReport(makeReport(), config)).rejects.toThrow('LLM timeout')
+  })
+
+  it('calls onProgress with running/ok for each sensor', async () => {
+    vi.spyOn(llm, 'chatCompletion').mockResolvedValue('Summary text')
+
+    const progressCalls: { sensor: string; label: string; state: string; error: string | null }[] = []
+    const onProgress = (sensor: string, label: string, state: string, error: string | null) => {
+      progressCalls.push({ sensor, label, state, error })
+    }
+
+    const config = { base_url: 'https://openrouter.ai/api/v1', api_key: 'k', model: 'm' }
+    await summarizeReport(makeReport(), config, onProgress)
+
+    // hacker_news: running, ok; arxiv: running, ok; __overall__: running, ok
+    expect(progressCalls).toEqual([
+      { sensor: 'hacker_news', label: 'Hacker News', state: 'running', error: null },
+      { sensor: 'hacker_news', label: 'Hacker News', state: 'ok', error: null },
+      { sensor: 'arxiv', label: 'ArXiv AI', state: 'running', error: null },
+      { sensor: 'arxiv', label: 'ArXiv AI', state: 'ok', error: null },
+      { sensor: '__overall__', label: 'Overall', state: 'running', error: null },
+      { sensor: '__overall__', label: 'Overall', state: 'ok', error: null },
+    ])
+  })
+
+  it('reports failed state via onProgress and continues to next sensor', async () => {
+    let callCount = 0
+    vi.spyOn(llm, 'chatCompletion').mockImplementation(async () => {
+      callCount++
+      if (callCount === 1) throw new Error('Rate limited')
+      return 'Summary text'
+    })
+
+    const progressCalls: { sensor: string; state: string; error: string | null }[] = []
+    const onProgress = (sensor: string, _label: string, state: string, error: string | null) => {
+      progressCalls.push({ sensor, state, error })
+    }
+
+    const config = { base_url: 'https://openrouter.ai/api/v1', api_key: 'k', model: 'm' }
+    const result = await summarizeReport(makeReport(), config, onProgress)
+
+    // hacker_news fails, arxiv succeeds, overall succeeds
+    expect(progressCalls).toEqual([
+      { sensor: 'hacker_news', state: 'running', error: null },
+      { sensor: 'hacker_news', state: 'failed', error: 'Rate limited' },
+      { sensor: 'arxiv', state: 'running', error: null },
+      { sensor: 'arxiv', state: 'ok', error: null },
+      { sensor: '__overall__', state: 'running', error: null },
+      { sensor: '__overall__', state: 'ok', error: null },
+    ])
+
+    // Only arxiv in sections since hacker_news failed
+    expect(result.sections).toHaveLength(1)
+    expect(result.sections[0].sensor_name).toBe('arxiv')
   })
 })

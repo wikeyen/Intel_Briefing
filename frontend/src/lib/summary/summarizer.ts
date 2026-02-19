@@ -48,13 +48,22 @@ function groupBySensor(report: IntelReport): Map<string, IntelItem[]> {
   return groups
 }
 
+export type SummaryProgressCallback = (
+  sensorName: string,
+  label: string,
+  state: 'pending' | 'running' | 'ok' | 'failed',
+  error: string | null,
+) => void | Promise<void>
+
 /**
  * Summarize an IntelReport by calling the LLM for each sensor, then once for the overall briefing.
- * Calls are sequential to respect rate limits.
+ * Calls are sequential to respect rate limits. When onProgress is provided, per-sensor errors are
+ * reported and skipped rather than thrown, allowing the pipeline to continue.
  */
 export async function summarizeReport(
   report: IntelReport,
   llmConfig: LlmConfig,
+  onProgress?: SummaryProgressCallback,
 ): Promise<BriefingSummary> {
   const sensorGroups = groupBySensor(report)
   const sections: SensorSummary[] = []
@@ -71,8 +80,19 @@ export async function summarizeReport(
       { role: 'user', content: `Summarize these ${items.length} items from ${label}:\n\n${itemsText}` },
     ]
 
-    const summary = await chatCompletion(messages, llmConfig)
-    sections.push({ sensor_name: sensorName, label, summary, item_count: items.length })
+    await onProgress?.(sensorName, label, 'running', null)
+
+    try {
+      const summary = await chatCompletion(messages, llmConfig)
+      sections.push({ sensor_name: sensorName, label, summary, item_count: items.length })
+      await onProgress?.(sensorName, label, 'ok', null)
+    } catch (err) {
+      if (onProgress) {
+        await onProgress(sensorName, label, 'failed', (err as Error).message)
+      } else {
+        throw err
+      }
+    }
   }
 
   // Overall briefing
@@ -85,7 +105,11 @@ export async function summarizeReport(
     { role: 'user', content: `Write an executive briefing based on these source summaries:\n\n${overallContext}` },
   ]
 
+  await onProgress?.('__overall__', 'Overall', 'running', null)
+
   const overall = await chatCompletion(overallMessages, llmConfig)
+
+  await onProgress?.('__overall__', 'Overall', 'ok', null)
 
   return {
     generated_at: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),

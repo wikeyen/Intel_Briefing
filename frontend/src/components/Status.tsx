@@ -3,7 +3,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { api } from '@/api/client'
-import type { HealthResponse, IntelReport, ConfigSettings, PipelineStatus, SensorProgress, BriefingSummary } from '@/api/client'
+import type { HealthResponse, IntelReport, ConfigSettings, PipelineStatus, SensorProgress, BriefingSummary, SummaryProgress } from '@/api/client'
 import { useToast } from '@/lib/toast-context'
 
 function timeAgo(isoString: string): string {
@@ -83,6 +83,7 @@ export function Status() {
   const [, setTick]                   = useState(0)
   const [summary, setSummary]         = useState<BriefingSummary | null>(null)
   const [summaryExpanded, setSummaryExpanded] = useState(false)
+  const [summaryProgress, setSummaryProgress] = useState<SummaryProgress | null>(null)
   const lastFetchedAtRef              = useRef<string | null>(null)
 
   const loadAll = () => {
@@ -136,6 +137,22 @@ export function Status() {
     return () => clearInterval(iv)
   }, [])
 
+  // Poll /summary/status every 3s for live summarization progress
+  useEffect(() => {
+    const check = () => {
+      api.getSummaryStatus().then(s => {
+        setSummaryProgress(s)
+        // Refresh the summary when summarization completes
+        if (!s.running && s.completed_at) {
+          api.getSummary().then(r => setSummary(r.summary)).catch(() => {})
+        }
+      }).catch(() => {})
+    }
+    check()
+    const iv = setInterval(check, 3_000)
+    return () => clearInterval(iv)
+  }, [])
+
   const handleRunNow = async () => {
     setFetching(true)
     try {
@@ -182,6 +199,14 @@ export function Status() {
     ? pipelineStatus.sensors.filter(s => s.state === 'ok' || s.state === 'failed').length
     : 0
   const totalSensors = pipelineStatus?.sensors.length ?? 0
+
+  // Summarization progress — stale threshold mirrors pipeline (5 min)
+  const isSummarizing = !!(summaryProgress?.running && summaryProgress.started_at
+    && (Date.now() - new Date(summaryProgress.started_at).getTime()) < 5 * 60 * 1000)
+  const summaryDoneSensors = summaryProgress
+    ? summaryProgress.sensors.filter(s => s.state === 'ok' || s.state === 'failed').length
+    : 0
+  const summaryTotalSensors = summaryProgress?.sensors.length ?? 0
 
   // Hero banner background: running overrides to amber, otherwise reflects health
   const heroBg = isRunning ? 'var(--warn-bg)' : meta.bg
@@ -535,6 +560,160 @@ export function Status() {
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* ── Summarization Progress ───────────────────────────── */}
+      {isSummarizing && summaryProgress && (
+        <div style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 8,
+          padding: '1.25rem 1.5rem',
+          marginBottom: '2rem',
+          position: 'relative',
+          overflow: 'hidden',
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '0.75rem',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+              <span style={{
+                width: 10,
+                height: 10,
+                borderRadius: '50%',
+                background: 'var(--accent)',
+                flexShrink: 0,
+                animation: 'pulseDot 1.6s ease-in-out infinite',
+              }} />
+              <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>
+                Summarizing
+              </h3>
+            </div>
+            <span style={{
+              fontSize: '0.75rem',
+              color: 'var(--ink-muted)',
+              fontFamily: 'ui-monospace, monospace',
+            }}>
+              {summaryDoneSensors}/{summaryTotalSensors}
+            </span>
+          </div>
+
+          {summaryProgress.sensors.filter(s => s.sensor_name !== '__overall__').map(sp => {
+            const dotColor =
+              sp.state === 'ok'      ? 'var(--ok)'     :
+              sp.state === 'failed'  ? 'var(--err)'    :
+              sp.state === 'running' ? 'var(--accent)' :
+              'var(--border)'
+
+            const rightText =
+              sp.state === 'ok'      ? 'Done'                        :
+              sp.state === 'failed'  ? (sp.error ?? 'Failed')        :
+              sp.state === 'running' ? 'Summarizing…'                :
+              '—'
+
+            const rightColor =
+              sp.state === 'ok'      ? 'var(--ok)'        :
+              sp.state === 'failed'  ? 'var(--err)'       :
+              sp.state === 'running' ? 'var(--ink-muted)' :
+              'var(--ink-faint)'
+
+            return (
+              <div key={sp.sensor_name} style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0.375rem 0.5rem 0.375rem 1rem',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    background: dotColor,
+                    flexShrink: 0,
+                    animation: sp.state === 'running' ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
+                  }} />
+                  <span style={{
+                    fontSize: '0.8125rem',
+                    color: sp.state === 'pending' ? 'var(--ink-faint)' : 'var(--ink)',
+                  }}>
+                    {sp.label}
+                  </span>
+                </div>
+                <span style={{
+                  fontSize: '0.75rem',
+                  color: rightColor,
+                  fontWeight: sp.state === 'ok' ? 600 : 400,
+                }}>
+                  {rightText}
+                </span>
+              </div>
+            )
+          })}
+
+          {/* Overall progress row */}
+          {(() => {
+            const overall = summaryProgress.sensors.find(s => s.sensor_name === '__overall__')
+            if (!overall || overall.state === 'pending') return null
+            return (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0.375rem 0.5rem 0.375rem 1rem',
+                borderTop: '1px solid var(--border)',
+                marginTop: '0.375rem',
+                paddingTop: '0.625rem',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    background: overall.state === 'ok' ? 'var(--ok)' : overall.state === 'running' ? 'var(--accent)' : 'var(--border)',
+                    flexShrink: 0,
+                    animation: overall.state === 'running' ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
+                  }} />
+                  <span style={{
+                    fontSize: '0.8125rem',
+                    fontWeight: 600,
+                    color: 'var(--ink)',
+                  }}>
+                    Executive Briefing
+                  </span>
+                </div>
+                <span style={{
+                  fontSize: '0.75rem',
+                  color: overall.state === 'ok' ? 'var(--ok)' : overall.state === 'running' ? 'var(--ink-muted)' : 'var(--ink-faint)',
+                  fontWeight: overall.state === 'ok' ? 600 : 400,
+                }}>
+                  {overall.state === 'ok' ? 'Done' : overall.state === 'running' ? 'Synthesizing…' : '—'}
+                </span>
+              </div>
+            )
+          })()}
+
+          {/* Progress bar */}
+          <div style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 3,
+            background: 'var(--border)',
+          }}>
+            <div style={{
+              height: '100%',
+              width: summaryTotalSensors > 0 ? `${Math.round((summaryDoneSensors / summaryTotalSensors) * 100)}%` : '0%',
+              background: 'var(--accent)',
+              borderRadius: '0 2px 2px 0',
+              transition: 'width 400ms ease',
+            }} />
+          </div>
         </div>
       )}
 

@@ -314,7 +314,7 @@ input[type="range"]::-moz-range-thumb {
 
   /* Section tabs — edge-to-edge scroll with fade masks */
   .data-sticky-nav .section-tabs {
-    padding: 0 1.25rem;
+    padding: 0 1.25rem !important;
     -webkit-mask-image: linear-gradient(
       to right,
       transparent 0,
@@ -330,10 +330,13 @@ input[type="range"]::-moz-range-thumb {
       transparent 100%
     );
   }
+  .data-sticky-nav .section-tabs button:first-child {
+    padding-left: 0 !important;
+  }
 
   /* Source filter row */
   .data-sticky-nav .source-filters {
-    padding: 0.625rem 1.25rem;
+    padding: 0.625rem 1.25rem !important;
   }
 
   /* ── Toast ── */

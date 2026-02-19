@@ -40,6 +40,7 @@ export interface IntelItem {
   handle?: string | null
   topic?: string | null
   content?: string | null
+  verified?: boolean | null
 }
 
 export interface SensorProgress {

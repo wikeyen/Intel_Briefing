@@ -338,7 +338,7 @@ export function Sensors() {
                             label="Items"
                             value={sensorLimits[key] ?? defaultLimit}
                             min={1}
-                            max={50}
+                            max={200}
                             onChange={(v) => updateSensorLimit(key, v)}
                           />
                         )}

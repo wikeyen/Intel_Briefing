@@ -270,7 +270,7 @@ export function Pipeline() {
               <input
                 type="range"
                 min={3}
-                max={50}
+                max={200}
                 value={defaultLimit}
                 onChange={(e) => setDefaultLimit(Number(e.target.value))}
               />
@@ -305,7 +305,7 @@ export function Pipeline() {
                       <input
                         type="range"
                         min={1}
-                        max={50}
+                        max={200}
                         value={val}
                         onChange={(e) => updateSection(key, Number(e.target.value))}
                         style={{ flex: 1 }}

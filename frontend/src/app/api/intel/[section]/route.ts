@@ -6,7 +6,7 @@ import { loadConfig } from '@/lib/config'
 import { ALL_SECTIONS, type SectionKey } from '@/lib/models'
 
 const KNOWN_SECTIONS = new Set<string>(ALL_SECTIONS)
-const MAX_LIMIT = 50
+const MAX_LIMIT = 200
 
 export async function GET(
   request: NextRequest,

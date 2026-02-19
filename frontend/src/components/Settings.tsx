@@ -233,9 +233,11 @@ export function Settings() {
   const [politicsAccounts, setPoliticsAccounts] = useState<string[]>([])
   const [topicsKeywords, setTopicsKeywords] = useState<string[]>([])
 
-  // Limits state
+  // Limits state — raw strings for controlled inputs, parsed on save
   const [defaultLimit, setDefaultLimit] = useState(10)
+  const [defaultLimitStr, setDefaultLimitStr] = useState('10')
   const [defaultLookback, setDefaultLookback] = useState(24)
+  const [defaultLookbackStr, setDefaultLookbackStr] = useState('24')
   const [sensorLimits, setSensorLimits] = useState<Record<string, number>>({})
   const [sensorLookback, setSensorLookback] = useState<Record<string, number>>({})
 
@@ -261,6 +263,7 @@ export function Settings() {
       setSensorLimits(cfg.sensor_limits ?? {})
       setSensorLookback(cfg.sensor_lookback_hours ?? {})
       setDefaultLimit(cfg.default_limit)
+      setDefaultLimitStr(String(cfg.default_limit))
       setFetchTime(cfg.fetch_time)
       setTimezone(cfg.fetch_timezone)
       setCacheTtl(cfg.cache_ttl_hours)
@@ -287,7 +290,7 @@ export function Settings() {
       })
     } else {
       const n = Number(value)
-      if (!isNaN(n) && n >= 1 && n <= 50) {
+      if (!isNaN(n) && n >= 1 && n <= 200) {
         setSensorLimits((prev) => ({ ...prev, [key]: n }))
       }
     }
@@ -417,15 +420,21 @@ export function Settings() {
               <input
                 type="number"
                 min={1}
-                max={50}
-                value={defaultLimit}
+                max={200}
+                value={defaultLimitStr}
                 onChange={(e) => {
+                  setDefaultLimitStr(e.target.value)
                   const n = Number(e.target.value)
-                  if (!isNaN(n) && n >= 1 && n <= 50) setDefaultLimit(n)
+                  if (!isNaN(n) && n >= 1 && n <= 200) setDefaultLimit(n)
+                }}
+                onBlur={(e) => {
+                  blurInput(e)
+                  // Snap back to last valid value if field is empty or invalid
+                  const n = Number(defaultLimitStr)
+                  if (isNaN(n) || n < 1 || n > 200) setDefaultLimitStr(String(defaultLimit))
                 }}
                 style={{ ...inputBase, width: '100%', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontWeight: 600 }}
                 onFocus={focusInput}
-                onBlur={blurInput}
               />
             </div>
             <div>
@@ -436,14 +445,19 @@ export function Settings() {
                 type="number"
                 min={1}
                 max={336}
-                value={defaultLookback}
+                value={defaultLookbackStr}
                 onChange={(e) => {
+                  setDefaultLookbackStr(e.target.value)
                   const n = Number(e.target.value)
                   if (!isNaN(n) && n >= 1 && n <= 336) setDefaultLookback(n)
                 }}
+                onBlur={(e) => {
+                  blurInput(e)
+                  const n = Number(defaultLookbackStr)
+                  if (isNaN(n) || n < 1 || n > 336) setDefaultLookbackStr(String(defaultLookback))
+                }}
                 style={{ ...inputBase, width: '100%', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontWeight: 600 }}
                 onFocus={focusInput}
-                onBlur={blurInput}
               />
             </div>
           </div>

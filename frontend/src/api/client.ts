@@ -136,4 +136,7 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ runId }),
     }),
+
+  getSummary: () =>
+    apiFetch<{ summary: BriefingSummary | null }>('/summary'),
 }

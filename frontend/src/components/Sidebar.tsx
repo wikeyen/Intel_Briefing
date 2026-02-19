@@ -124,9 +124,10 @@ export function Sidebar({ showToast }: Props) {
   }
 
   const statusColor =
-    health?.status === 'ok'      ? 'var(--ok)'        :
-    health?.status === 'stale'   ? 'var(--warn)'      :
-    health?.status === 'no_data' ? 'var(--ink-faint)' :
+    !health                      ? 'var(--ink-faint)' :
+    health.status === 'ok'       ? 'var(--ok)'        :
+    health.status === 'stale'    ? 'var(--warn)'      :
+    health.status === 'no_data'  ? 'var(--ink-faint)' :
     'var(--err)'
 
   const statusLabel = health

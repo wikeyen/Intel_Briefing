@@ -25,6 +25,9 @@ export interface IntelItem {
 
   // Full content (blog articles)
   content?: string | null
+
+  // Link verification status (Grok-sourced items only)
+  verified?: boolean | null
 }
 
 export const ALL_SECTIONS = [

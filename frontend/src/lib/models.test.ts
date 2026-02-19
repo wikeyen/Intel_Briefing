@@ -49,6 +49,26 @@ describe('IntelItem', () => {
     const restored: IntelItem = JSON.parse(json)
     expect(restored).toEqual(item)
   })
+
+  it('IntelItem accepts verified field', () => {
+    const item: IntelItem = {
+      id: 'test-1',
+      source: 'grok',
+      title: 'Test',
+      url: 'https://example.com',
+      verified: false,
+    }
+    expect(item.verified).toBe(false)
+
+    const unverified: IntelItem = {
+      id: 'test-2',
+      source: 'grok',
+      title: 'Test 2',
+      url: 'https://example.com',
+      verified: null,
+    }
+    expect(unverified.verified).toBeNull()
+  })
 })
 
 describe('IntelReport', () => {

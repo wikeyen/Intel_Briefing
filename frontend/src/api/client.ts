@@ -27,6 +27,8 @@ export interface ConfigSettings {
   social_accounts_bluesky: string[]
   social_accounts_mastodon: string[]
   social_topics_keywords: string[]
+  social_following_bluesky: boolean
+  social_following_mastodon: boolean
   cache_ttl_hours: number
   post_expiry_days: number
 }

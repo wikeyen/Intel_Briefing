@@ -44,6 +44,33 @@ export async function mastodonPublicGet<T>(path: string): Promise<T> {
   return resp.json() as Promise<T>
 }
 
+/** Parse next-page URL from a Mastodon Link header. */
+function parseNextLink(linkHeader: string | null): string | null {
+  if (!linkHeader) return null
+  const match = linkHeader.match(/<([^>]+)>;\s*rel="next"/)
+  return match ? match[1] : null
+}
+
+/** Fetch all acct strings the authenticated user follows, paginating via Link header. */
+export async function getMastodonFollowing(token: string): Promise<string[]> {
+  if (!token) throw new SensorConfigError('Mastodon token not configured')
+  const me = await mastodonGet<{ id: string }>('/api/v1/accounts/verify_credentials', token)
+  const accts: string[] = []
+  let url: string | null = `${MASTODON_BASE}/api/v1/accounts/${me.id}/following?limit=80`
+  while (url) {
+    const resp = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${token}` },
+      signal: AbortSignal.timeout(15000),
+    })
+    if (!resp.ok) break
+    const page = await resp.json() as Array<{ acct: string }>
+    if (page.length === 0) break
+    for (const a of page) accts.push(a.acct)
+    url = parseNextLink(resp.headers.get('link'))
+  }
+  return accts
+}
+
 /** Convert a Mastodon status JSON object into an IntelItem. */
 export function mastodonStatusToItem(
   status: Record<string, unknown>,

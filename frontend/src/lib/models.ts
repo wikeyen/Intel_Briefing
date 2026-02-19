@@ -161,6 +161,10 @@ export interface ConfigSettings {
   // Social sensor topic keywords
   social_topics_keywords: string[]
 
+  // Include-following toggles (auto-include posts from followed accounts)
+  social_following_bluesky: boolean
+  social_following_mastodon: boolean
+
   // Cache
   cache_ttl_hours: number
 
@@ -203,6 +207,8 @@ export function defaultConfig(): ConfigSettings {
     social_accounts_bluesky: [],
     social_accounts_mastodon: [],
     social_topics_keywords: [],
+    social_following_bluesky: false,
+    social_following_mastodon: false,
     cache_ttl_hours: 6,
     post_expiry_days: 30,
   }

@@ -144,6 +144,12 @@ describe('ConfigSettings', () => {
     expect(cfg.social_topics_keywords).toEqual([])
   })
 
+  it('should default social following toggles to false', () => {
+    const cfg = defaultConfig()
+    expect(cfg.social_following_bluesky).toBe(false)
+    expect(cfg.social_following_mastodon).toBe(false)
+  })
+
   it('should fall back to default_limit for sensorLimit', () => {
     const cfg = defaultConfig()
     expect(sensorLimit(cfg, 'hacker_news')).toBe(10)

@@ -32,6 +32,8 @@ function applyEnvFallback(config: ConfigSettings): ConfigSettings {
     bluesky_handle:       config.bluesky_handle        ?? process.env.BLUESKY_HANDLE       ?? null,
     bluesky_app_password: config.bluesky_app_password  ?? process.env.BLUESKY_APP_PASSWORD ?? null,
     mastodon_token:       config.mastodon_token        ?? process.env.MASTODON_TOKEN       ?? null,
+    social_following_bluesky:  config.social_following_bluesky  || process.env.SOCIAL_FOLLOWING_BLUESKY === 'true',
+    social_following_mastodon: config.social_following_mastodon || process.env.SOCIAL_FOLLOWING_MASTODON === 'true',
   }
 }
 

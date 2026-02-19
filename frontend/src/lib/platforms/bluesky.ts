@@ -30,6 +30,20 @@ export function formatBlueskyHeat(likeCount: number, repostCount: number): strin
   return parts.length > 0 ? parts.join(' · ') : null
 }
 
+/** Fetch all handles the authenticated user follows, paginating through results. */
+export async function getBlueskyFollowing(agent: BskyAgent): Promise<string[]> {
+  const handles: string[] = []
+  let cursor: string | undefined
+  do {
+    const { data } = await agent.getFollows({ actor: agent.session!.did, cursor, limit: 100 })
+    for (const follow of data.follows) {
+      handles.push(follow.handle)
+    }
+    cursor = data.cursor
+  } while (cursor)
+  return handles
+}
+
 /** Convert a Bluesky post view object into an IntelItem. */
 export function blueskyPostToItem(
   post: Record<string, unknown>,

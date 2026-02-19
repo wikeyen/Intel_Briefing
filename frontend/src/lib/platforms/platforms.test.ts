@@ -114,6 +114,44 @@ describe('Bluesky platform adapter', () => {
     const { createBlueskyAgent } = await import('./bluesky')
     await expect(createBlueskyAgent('', '')).rejects.toThrow(SensorConfigError)
   })
+
+  it('getBlueskyFollowing returns handles from paginated getFollows', async () => {
+    const { getBlueskyFollowing } = await import('./bluesky')
+    const mockAgent = {
+      session: { did: 'did:plc:testuser' },
+      getFollows: vi.fn()
+        .mockResolvedValueOnce({
+          data: {
+            follows: [
+              { handle: 'alice.bsky.social' },
+              { handle: 'bob.bsky.social' },
+            ],
+            cursor: 'page2',
+          },
+        })
+        .mockResolvedValueOnce({
+          data: {
+            follows: [{ handle: 'carol.bsky.social' }],
+            cursor: undefined,
+          },
+        }),
+    }
+    const handles = await getBlueskyFollowing(mockAgent as never)
+    expect(handles).toEqual(['alice.bsky.social', 'bob.bsky.social', 'carol.bsky.social'])
+    expect(mockAgent.getFollows).toHaveBeenCalledTimes(2)
+  })
+
+  it('getBlueskyFollowing returns empty array when not following anyone', async () => {
+    const { getBlueskyFollowing } = await import('./bluesky')
+    const mockAgent = {
+      session: { did: 'did:plc:testuser' },
+      getFollows: vi.fn().mockResolvedValue({
+        data: { follows: [], cursor: undefined },
+      }),
+    }
+    const handles = await getBlueskyFollowing(mockAgent as never)
+    expect(handles).toEqual([])
+  })
 })
 
 describe('Mastodon platform adapter', () => {
@@ -158,5 +196,61 @@ describe('Mastodon platform adapter', () => {
   it('mastodonGet throws SensorConfigError without token', async () => {
     const { mastodonGet } = await import('./mastodon')
     await expect(mastodonGet('/test', '')).rejects.toThrow(SensorConfigError)
+  })
+
+  it('getMastodonFollowing returns acct strings from paginated following', async () => {
+    const { getMastodonFollowing } = await import('./mastodon')
+    let callCount = 0
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      // First call: verify_credentials
+      if (url.includes('verify_credentials')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ id: '42' }),
+        })
+      }
+      // Following pages
+      callCount++
+      if (callCount === 1) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([
+            { acct: 'alice@mastodon.social' },
+            { acct: 'bob@mastodon.social' },
+          ]),
+          headers: new Headers({
+            link: '<https://mastodon.social/api/v1/accounts/42/following?max_id=100>; rel="next"',
+          }),
+        })
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve([
+          { acct: 'carol@mastodon.social' },
+        ]),
+        headers: new Headers({}),
+      })
+    })
+    const accts = await getMastodonFollowing('test-token')
+    expect(accts).toEqual(['alice@mastodon.social', 'bob@mastodon.social', 'carol@mastodon.social'])
+  })
+
+  it('getMastodonFollowing returns empty array when not following anyone', async () => {
+    const { getMastodonFollowing } = await import('./mastodon')
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('verify_credentials')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ id: '42' }),
+        })
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve([]),
+        headers: new Headers({}),
+      })
+    })
+    const accts = await getMastodonFollowing('test-token')
+    expect(accts).toEqual([])
   })
 })

@@ -216,6 +216,10 @@ export function Sensors() {
   const [socialAccountsBluesky, setSocialAccountsBluesky] = useState<string[]>([])
   const [socialAccountsMastodon, setSocialAccountsMastodon] = useState<string[]>([])
   const [socialTopicsKeywords, setSocialTopicsKeywords] = useState<string[]>([])
+  const [followingBluesky, setFollowingBluesky] = useState(false)
+  const [followingMastodon, setFollowingMastodon] = useState(false)
+  const [hasBlueskyCredentials, setHasBlueskyCredentials] = useState(false)
+  const [hasMastodonCredentials, setHasMastodonCredentials] = useState(false)
   const [sensorLimits, setSensorLimits] = useState<Record<string, number>>({})
   const [sensorLookback, setSensorLookback] = useState<Record<string, number>>({})
   const [defaultLimit, setDefaultLimit] = useState(10)
@@ -230,6 +234,10 @@ export function Sensors() {
       setSocialAccountsBluesky(cfg.social_accounts_bluesky)
       setSocialAccountsMastodon(cfg.social_accounts_mastodon)
       setSocialTopicsKeywords(cfg.social_topics_keywords)
+      setFollowingBluesky(cfg.social_following_bluesky ?? false)
+      setFollowingMastodon(cfg.social_following_mastodon ?? false)
+      setHasBlueskyCredentials(!!cfg.bluesky_handle && !!cfg.bluesky_app_password)
+      setHasMastodonCredentials(!!cfg.mastodon_token)
       setSensorLimits(cfg.sensor_limits ?? {})
       setSensorLookback(cfg.sensor_lookback_hours ?? {})
       setDefaultLimit(cfg.default_limit)
@@ -259,6 +267,8 @@ export function Sensors() {
         social_accounts_bluesky: socialAccountsBluesky,
         social_accounts_mastodon: socialAccountsMastodon,
         social_topics_keywords: socialTopicsKeywords,
+        social_following_bluesky: followingBluesky,
+        social_following_mastodon: followingMastodon,
         sensor_limits: sensorLimits,
         sensor_lookback_hours: sensorLookback,
       })
@@ -411,6 +421,25 @@ export function Sensors() {
                             placeholder="name.bsky.social — press Enter"
                             validate={validateBlueskyHandle}
                           />
+                          <label style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            marginTop: '0.5rem',
+                            cursor: hasBlueskyCredentials ? 'pointer' : 'not-allowed',
+                            opacity: hasBlueskyCredentials ? 1 : 0.4,
+                          }}>
+                            <input
+                              type="checkbox"
+                              checked={followingBluesky}
+                              disabled={!hasBlueskyCredentials}
+                              onChange={(e) => setFollowingBluesky(e.target.checked)}
+                              style={{ accentColor: '#0085FF', cursor: 'inherit' }}
+                            />
+                            <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
+                              Include accounts I follow
+                            </span>
+                          </label>
                         </div>
                         <div>
                           <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
@@ -423,6 +452,25 @@ export function Sensors() {
                             placeholder="@user@mastodon.social — press Enter"
                             validate={validateMastodonHandle}
                           />
+                          <label style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            marginTop: '0.5rem',
+                            cursor: hasMastodonCredentials ? 'pointer' : 'not-allowed',
+                            opacity: hasMastodonCredentials ? 1 : 0.4,
+                          }}>
+                            <input
+                              type="checkbox"
+                              checked={followingMastodon}
+                              disabled={!hasMastodonCredentials}
+                              onChange={(e) => setFollowingMastodon(e.target.checked)}
+                              style={{ accentColor: '#6364FF', cursor: 'inherit' }}
+                            />
+                            <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
+                              Include accounts I follow
+                            </span>
+                          </label>
                         </div>
                       </div>
                     )}

@@ -3,8 +3,8 @@
 import type { ConfigSettings, IntelItem } from '../models'
 import { SensorConfigError } from './errors'
 import { queryGrok } from '../platforms/x'
-import { createBlueskyAgent, blueskyPostToItem } from '../platforms/bluesky'
-import { mastodonGet, mastodonStatusToItem } from '../platforms/mastodon'
+import { createBlueskyAgent, blueskyPostToItem, getBlueskyFollowing } from '../platforms/bluesky'
+import { mastodonGet, mastodonStatusToItem, getMastodonFollowing } from '../platforms/mastodon'
 
 const X_SYSTEM_PROMPT =
   'You are a social media intelligence analyst monitoring specific accounts. ' +
@@ -48,10 +48,25 @@ async function fetchXAccounts(config: ConfigSettings, limit: number): Promise<In
 }
 
 async function fetchBlueskyAccounts(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
-  if (!config.bluesky_handle || !config.bluesky_app_password || config.social_accounts_bluesky.length === 0) return []
+  if (!config.bluesky_handle || !config.bluesky_app_password) return []
   const agent = await createBlueskyAgent(config.bluesky_handle, config.bluesky_app_password)
+
+  // Merge manual accounts with following list when toggle is on (dedup by handle)
+  let actors = [...config.social_accounts_bluesky]
+  if (config.social_following_bluesky) {
+    const following = await getBlueskyFollowing(agent)
+    const seen = new Set(actors.map(h => h.toLowerCase()))
+    for (const handle of following) {
+      if (!seen.has(handle.toLowerCase())) {
+        actors.push(handle)
+        seen.add(handle.toLowerCase())
+      }
+    }
+  }
+  if (actors.length === 0) return []
+
   const items: IntelItem[] = []
-  for (const actor of config.social_accounts_bluesky) {
+  for (const actor of actors) {
     if (items.length >= limit) break
     const { data } = await agent.getAuthorFeed({ actor, limit: Math.min(5, limit) })
     for (const feedItem of data.feed) {
@@ -64,9 +79,24 @@ async function fetchBlueskyAccounts(config: ConfigSettings, limit: number): Prom
 }
 
 async function fetchMastodonAccounts(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
-  if (!config.mastodon_token || config.social_accounts_mastodon.length === 0) return []
+  if (!config.mastodon_token) return []
+
+  // Merge manual accounts with following list when toggle is on (dedup by acct)
+  let accts = [...config.social_accounts_mastodon]
+  if (config.social_following_mastodon) {
+    const following = await getMastodonFollowing(config.mastodon_token)
+    const seen = new Set(accts.map(a => a.toLowerCase()))
+    for (const acct of following) {
+      if (!seen.has(acct.toLowerCase())) {
+        accts.push(acct)
+        seen.add(acct.toLowerCase())
+      }
+    }
+  }
+  if (accts.length === 0) return []
+
   const items: IntelItem[] = []
-  for (const acct of config.social_accounts_mastodon) {
+  for (const acct of accts) {
     if (items.length >= limit) break
     const lookup = await mastodonGet<Record<string, unknown>>(
       `/api/v1/accounts/lookup?acct=${encodeURIComponent(acct)}`, config.mastodon_token,
@@ -88,8 +118,10 @@ async function fetchMastodonAccounts(config: ConfigSettings, limit: number): Pro
 
 export async function fetchSocialAccounts(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
   const hasX = config.xai_api_key && config.social_accounts_x.length > 0
-  const hasBsky = config.bluesky_handle && config.bluesky_app_password && config.social_accounts_bluesky.length > 0
-  const hasMasto = config.mastodon_token && config.social_accounts_mastodon.length > 0
+  const hasBsky = config.bluesky_handle && config.bluesky_app_password &&
+    (config.social_accounts_bluesky.length > 0 || config.social_following_bluesky)
+  const hasMasto = config.mastodon_token &&
+    (config.social_accounts_mastodon.length > 0 || config.social_following_mastodon)
 
   if (!hasX && !hasBsky && !hasMasto) {
     throw new SensorConfigError('No social accounts configured on any platform')

@@ -92,6 +92,13 @@ export interface BriefingSummary {
   overall: string
 }
 
+export interface RssDiscoveryResult {
+  type: 'feed' | 'discovered' | 'not_found' | 'error'
+  feedUrl?: string
+  feedTitle?: string
+  message?: string
+}
+
 const BASE = '/api'
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
@@ -139,4 +146,7 @@ export const api = {
 
   getSummary: () =>
     apiFetch<{ summary: BriefingSummary | null }>('/summary'),
+
+  discoverRssFeed: (url: string) =>
+    apiFetch<RssDiscoveryResult>(`/rss-discover?url=${encodeURIComponent(url)}`),
 }

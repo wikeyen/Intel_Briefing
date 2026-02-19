@@ -131,7 +131,7 @@ export async function fetchRssFeeds(config: ConfigSettings, limit: number): Prom
     const cutoff = new Date(Date.now() - lookbackHours * 60 * 60 * 1000)
     allItems = allItems.filter((item) => {
       const pub = parseDate(item.published)
-      return !pub || pub >= cutoff
+      return pub !== null && pub >= cutoff
     })
   }
 

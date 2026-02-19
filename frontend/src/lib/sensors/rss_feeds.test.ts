@@ -177,6 +177,84 @@ describe('RSS Feeds Sensor', () => {
     expect(items[1].content).toBe('Summary of post two.')
   })
 
+  it('excludes items without published dates when lookback is active', async () => {
+    const RSS_NO_DATE = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Mixed Blog</title>
+    <item>
+      <title>Dated Post</title>
+      <link>https://example.com/dated</link>
+      <pubDate>${new Date().toUTCString()}</pubDate>
+      <description>Has a date.</description>
+    </item>
+    <item>
+      <title>Undated Post</title>
+      <link>https://example.com/undated</link>
+      <description>No pubDate element at all.</description>
+    </item>
+  </channel>
+</rss>`
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === 'https://example.com/feed.xml') {
+        return Promise.resolve({
+          ok: true,
+          text: () => Promise.resolve(RSS_NO_DATE),
+        })
+      }
+      return Promise.resolve({ ok: false, status: 403 })
+    })
+
+    const config = makeConfig({
+      rss_feed_urls: ['https://example.com/feed.xml'],
+      sensor_lookback_hours: { rss_feeds: 72 },
+    })
+    const { fetchRssFeeds } = await import('./rss_feeds')
+    const items = await fetchRssFeeds(config, 10)
+
+    expect(items.length).toBe(1)
+    expect(items[0].title).toBe('Dated Post')
+  })
+
+  it('includes items without published dates when no lookback is set', async () => {
+    const RSS_NO_DATE = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Mixed Blog</title>
+    <item>
+      <title>Dated Post</title>
+      <link>https://example.com/dated</link>
+      <pubDate>${new Date().toUTCString()}</pubDate>
+      <description>Has a date.</description>
+    </item>
+    <item>
+      <title>Undated Post</title>
+      <link>https://example.com/undated</link>
+      <description>No pubDate element at all.</description>
+    </item>
+  </channel>
+</rss>`
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === 'https://example.com/feed.xml') {
+        return Promise.resolve({
+          ok: true,
+          text: () => Promise.resolve(RSS_NO_DATE),
+        })
+      }
+      return Promise.resolve({ ok: false, status: 403 })
+    })
+
+    const config = makeConfig({
+      rss_feed_urls: ['https://example.com/feed.xml'],
+    })
+    const { fetchRssFeeds } = await import('./rss_feeds')
+    const items = await fetchRssFeeds(config, 10)
+
+    expect(items.length).toBe(2)
+  })
+
   it('respects the limit parameter', async () => {
     globalThis.fetch = vi.fn().mockImplementation((url: string) => {
       if (url === 'https://example.com/feed.xml') {

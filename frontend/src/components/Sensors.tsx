@@ -202,6 +202,16 @@ function validateMastodonHandle(value: string): string | null {
   return null
 }
 
+function validateUrl(value: string): string | null {
+  try {
+    const u = new URL(value)
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return 'Must be an HTTP(S) URL'
+    return null
+  } catch {
+    return 'Invalid URL'
+  }
+}
+
 function normalizeMastodonHandle(value: string): string {
   return value.startsWith('@') ? value : `@${value}`
 }
@@ -516,8 +526,31 @@ export function Sensors() {
                         </div>
                         <TagInput
                           tags={rssFeedUrls}
-                          onChange={setRssFeedUrls}
+                          onChange={(tags) => {
+                            const added = tags.find((t) => !rssFeedUrls.includes(t))
+                            if (!added) {
+                              setRssFeedUrls(tags)
+                              return
+                            }
+                            setRssFeedUrls(tags)
+                            api.discoverRssFeed(added).then((result) => {
+                              if (result.type === 'discovered' && result.feedUrl) {
+                                setRssFeedUrls((prev) => prev.map((u) => u === added ? result.feedUrl! : u))
+                                showToast(`Feed discovered: ${result.feedTitle ?? result.feedUrl}`)
+                              } else if (result.type === 'not_found') {
+                                setRssFeedUrls((prev) => prev.filter((u) => u !== added))
+                                showToast('No RSS feed found at that URL')
+                              } else if (result.type === 'error') {
+                                setRssFeedUrls((prev) => prev.filter((u) => u !== added))
+                                showToast(`Feed discovery failed: ${result.message}`)
+                              }
+                              // type === 'feed' — URL is already a valid feed, keep silently
+                            }).catch(() => {
+                              // Discovery API unavailable — keep the URL as-is
+                            })
+                          }}
                           placeholder="https://example.com/feed.xml — press Enter"
+                          validate={validateUrl}
                         />
                       </div>
                     )}

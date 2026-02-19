@@ -83,9 +83,10 @@ const PLATFORM_COLORS: Record<string, { color: string; bg: string }> = {
   x:        { color: '#000000', bg: 'rgba(0,0,0,0.08)' },
   bluesky:  { color: '#0085FF', bg: 'rgba(0,133,255,0.08)' },
   mastodon: { color: '#6364FF', bg: 'rgba(99,100,255,0.08)' },
+  rss_feeds: { color: '#E97B20', bg: 'rgba(233,123,32,0.08)' },
 }
 
-function SourceChip({ source }: { source: string }) {
+function SourceChip({ source, label }: { source: string; label?: string }) {
   const platform = PLATFORM_COLORS[source]
   return (
     <span style={{
@@ -98,7 +99,7 @@ function SourceChip({ source }: { source: string }) {
       padding: '0.2rem 0.5rem',
       borderRadius: 3,
     }}>
-      {SOURCE_LABELS[source] ?? source}
+      {label ?? SOURCE_LABELS[source] ?? source}
     </span>
   )
 }
@@ -192,7 +193,7 @@ function ItemCard({ item }: { item: IntelItem }) {
 
       {/* Meta row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-        <SourceChip source={item.source} />
+        <SourceChip source={item.source} label={item.source === 'rss_feeds' ? (item.account ?? undefined) : undefined} />
         {item.verified === false && (
           <span
             title="Link could not be verified"

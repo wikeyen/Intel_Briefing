@@ -33,9 +33,11 @@ export async function extractArticle(url: string): Promise<string | null> {
     const dom = new JSDOM(html, { url })
     const reader = new Readability(dom.window.document)
     const article = reader.parse()
-    if (!article?.textContent) return null
+    if (!article?.content) return null
 
-    return article.textContent.trim()
+    const TurndownService = (await import('turndown')).default
+    const turndown = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' })
+    return turndown.turndown(article.content).trim()
   } catch {
     return null
   }

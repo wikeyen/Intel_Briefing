@@ -256,6 +256,12 @@ export function Settings() {
   const [boost, setBoost] = useState<string[]>([])
   const [suppress, setSuppress] = useState<string[]>([])
 
+  // AI Summary state
+  const [summaryProvider, setSummaryProvider] = useState<'openrouter' | 'custom' | null>(null)
+  const [summaryApiKey, setSummaryApiKey] = useState('')
+  const [summaryBaseUrl, setSummaryBaseUrl] = useState('https://openrouter.ai/api/v1')
+  const [summaryModel, setSummaryModel] = useState('anthropic/claude-sonnet-4')
+
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -282,6 +288,10 @@ export function Settings() {
       setBoost(cfg.boost_keywords)
       setSuppress(cfg.suppress_keywords)
       setPostExpiryDays(cfg.post_expiry_days ?? 30)
+      setSummaryProvider(cfg.summary_provider ?? null)
+      setSummaryApiKey(cfg.summary_api_key && cfg.summary_api_key !== '***' ? cfg.summary_api_key : '')
+      setSummaryBaseUrl(cfg.summary_base_url || 'https://openrouter.ai/api/v1')
+      setSummaryModel(cfg.summary_model || 'anthropic/claude-sonnet-4')
     })
   }, [])
 
@@ -338,6 +348,10 @@ export function Settings() {
         post_expiry_days: postExpiryDays,
         boost_keywords: boost,
         suppress_keywords: suppress,
+        summary_provider: summaryProvider,
+        summary_api_key: summaryApiKey || null,
+        summary_base_url: summaryBaseUrl,
+        summary_model: summaryModel,
       })
       showToast('Settings saved')
     } catch (e) {
@@ -827,6 +841,114 @@ export function Settings() {
               Items matching these terms are removed from the briefing entirely.
             </p>
           </div>
+        </div>
+
+        {/* ═══ Card 4: AI Summary ═══ */}
+        <div style={cardStyle}>
+          <CardHeader
+            title="AI Summary"
+            description="Generate per-source summaries and an executive briefing after each fetch using an LLM."
+          />
+
+          {/* Provider + Model row */}
+          <div className="settings-grid-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
+                Provider
+              </label>
+              <div style={{ position: 'relative' }}>
+                <select
+                  value={summaryProvider ?? ''}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setSummaryProvider(v === '' ? null : v as 'openrouter' | 'custom')
+                  }}
+                  style={{
+                    ...inputBase,
+                    width: '100%',
+                    appearance: 'none',
+                    WebkitAppearance: 'none',
+                    paddingRight: '2.25rem',
+                    cursor: 'pointer',
+                  }}
+                  onFocus={focusInput}
+                  onBlur={blurInput}
+                >
+                  <option value="">Disabled</option>
+                  <option value="openrouter">OpenRouter</option>
+                  <option value="custom">Custom</option>
+                </select>
+                <span style={{
+                  position: 'absolute',
+                  right: '0.875rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  pointerEvents: 'none',
+                  color: 'var(--ink-faint)',
+                  fontSize: '0.625rem',
+                  userSelect: 'none',
+                }}>
+                  ▾
+                </span>
+              </div>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
+                Model
+              </label>
+              <input
+                type="text"
+                value={summaryModel}
+                disabled={summaryProvider === null}
+                onChange={(e) => setSummaryModel(e.target.value)}
+                placeholder="anthropic/claude-sonnet-4"
+                style={{
+                  ...inputBase,
+                  width: '100%',
+                  opacity: summaryProvider === null ? 0.5 : 1,
+                  cursor: summaryProvider === null ? 'not-allowed' : 'text',
+                }}
+                onFocus={focusInput}
+                onBlur={blurInput}
+              />
+            </div>
+          </div>
+
+          {/* API Key — shown when provider is set */}
+          {summaryProvider !== null && (
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
+                API Key
+              </label>
+              <input
+                type="password"
+                value={summaryApiKey}
+                onChange={(e) => setSummaryApiKey(e.target.value)}
+                placeholder="sk-..."
+                style={{ ...inputBase, width: '100%' }}
+                onFocus={focusInput}
+                onBlur={blurInput}
+              />
+            </div>
+          )}
+
+          {/* Base URL — shown only for custom provider */}
+          {summaryProvider === 'custom' && (
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
+                Base URL
+              </label>
+              <input
+                type="text"
+                value={summaryBaseUrl}
+                onChange={(e) => setSummaryBaseUrl(e.target.value)}
+                placeholder="https://api.example.com/v1"
+                style={{ ...inputBase, width: '100%' }}
+                onFocus={focusInput}
+                onBlur={blurInput}
+              />
+            </div>
+          )}
         </div>
 
         {/* ═══ Save ═══ */}

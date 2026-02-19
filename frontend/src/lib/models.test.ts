@@ -150,6 +150,11 @@ describe('ConfigSettings', () => {
     expect(cfg.social_following_mastodon).toBe(false)
   })
 
+  it('should default rss_feed_urls to empty array', () => {
+    const cfg = defaultConfig()
+    expect(cfg.rss_feed_urls).toEqual([])
+  })
+
   it('should fall back to default_limit for sensorLimit', () => {
     const cfg = defaultConfig()
     expect(sensorLimit(cfg, 'hacker_news')).toBe(10)

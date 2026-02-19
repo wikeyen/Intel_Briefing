@@ -165,6 +165,9 @@ export interface ConfigSettings {
   social_following_bluesky: boolean
   social_following_mastodon: boolean
 
+  // RSS feed URLs
+  rss_feed_urls: string[]
+
   // Cache
   cache_ttl_hours: number
 
@@ -192,6 +195,7 @@ export function defaultConfig(): ConfigSettings {
       social_topics: true,
       social_trends: true,
       chrome_radar: false,
+      rss_feeds: false,
     },
     fetch_time: '07:51',
     fetch_timezone: 'Asia/Shanghai',
@@ -209,6 +213,7 @@ export function defaultConfig(): ConfigSettings {
     social_topics_keywords: [],
     social_following_bluesky: false,
     social_following_mastodon: false,
+    rss_feed_urls: [],
     cache_ttl_hours: 6,
     post_expiry_days: 30,
   }

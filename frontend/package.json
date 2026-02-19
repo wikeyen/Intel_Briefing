@@ -15,6 +15,7 @@
     "@atproto/api": "^0.18.21",
     "@eslint/eslintrc": "^3.3.3",
     "@libsql/client": "^0.17.0",
+    "@mozilla/readability": "^0.6.0",
     "@tailwindcss/postcss": "^4.1.18",
     "eslint-plugin-react-hooks": "^7.0.1",
     "fast-xml-parser": "^5.3.6",
@@ -27,6 +28,7 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
+    "@types/jsdom": "^27.0.0",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",

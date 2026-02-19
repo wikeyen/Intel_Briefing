@@ -42,6 +42,12 @@ const SENSOR_GROUPS: { label: string; sensors: SensorDef[] }[] = [
       { key: 'social_trends',   label: 'Social Trends',   desc: 'Trending content across X, Bluesky, Mastodon' },
     ],
   },
+  {
+    label: 'RSS',
+    sensors: [
+      { key: 'rss_feeds', label: 'RSS Feeds', desc: 'Custom RSS/Atom feed subscriptions' },
+    ],
+  },
 ]
 
 const ALL_SENSORS = SENSOR_GROUPS.flatMap((g) => g.sensors)
@@ -56,6 +62,7 @@ const SENSOR_LOOKBACK_SUPPORT: Record<string, number> = {
   hn_blogs: 72,
   arxiv: 72,
   wallstreetcn: 24,
+  rss_feeds: 72,
 }
 
 const TIMEZONES = [
@@ -229,6 +236,7 @@ export function Settings() {
   const [followingMastodon, setFollowingMastodon] = useState(false)
   const [hasBlueskyCredentials, setHasBlueskyCredentials] = useState(false)
   const [hasMastodonCredentials, setHasMastodonCredentials] = useState(false)
+  const [rssFeedUrls, setRssFeedUrls] = useState<string[]>([])
 
   // Limits state — raw strings for controlled inputs, parsed on save
   const [defaultLimit, setDefaultLimit] = useState(10)
@@ -263,6 +271,7 @@ export function Settings() {
       setFollowingMastodon(cfg.social_following_mastodon ?? false)
       setHasBlueskyCredentials(!!cfg.bluesky_handle && !!cfg.bluesky_app_password)
       setHasMastodonCredentials(!!cfg.mastodon_token)
+      setRssFeedUrls(cfg.rss_feed_urls ?? [])
       setSensorLimits(cfg.sensor_limits ?? {})
       setSensorLookback(cfg.sensor_lookback_hours ?? {})
       setDefaultLimit(cfg.default_limit)
@@ -322,6 +331,7 @@ export function Settings() {
         social_topics_keywords: socialTopicsKeywords,
         social_following_bluesky: followingBluesky,
         social_following_mastodon: followingMastodon,
+        rss_feed_urls: rssFeedUrls,
         fetch_time: fetchTime,
         fetch_timezone: timezone,
         cache_ttl_hours: cacheTtl,
@@ -496,10 +506,11 @@ export function Settings() {
                   const isLast = i === group.sensors.length - 1
                   const isSocialAccounts = key === 'social_accounts'
                   const isSocialTopics = key === 'social_topics'
+                  const isRssFeeds = key === 'rss_feeds'
                   const isOn = enabled[key] ?? true
                   const hasLookback = key in SENSOR_LOOKBACK_SUPPORT
                   const lookbackDefault = SENSOR_LOOKBACK_SUPPORT[key] ?? defaultLookback
-                  const showSubConfig = (isSocialAccounts || isSocialTopics) && isOn
+                  const showSubConfig = (isSocialAccounts || isSocialTopics || isRssFeeds) && isOn
 
                   return (
                     <div key={key}>
@@ -648,6 +659,24 @@ export function Settings() {
                             tags={socialTopicsKeywords}
                             onChange={setSocialTopicsKeywords}
                             placeholder="keyword or #hashtag — press Enter"
+                          />
+                        </div>
+                      )}
+
+                      {/* Inline sub-config: RSS Feeds */}
+                      {isRssFeeds && isOn && (
+                        <div style={{
+                          padding: '1rem 1rem 1.25rem 3.5rem',
+                          background: 'var(--canvas)',
+                          borderBottom: isLast ? 'none' : '1px solid var(--border-soft)',
+                        }}>
+                          <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem' }}>
+                            Feed URLs
+                          </div>
+                          <TagInput
+                            tags={rssFeedUrls}
+                            onChange={setRssFeedUrls}
+                            placeholder="https://example.com/feed.xml — press Enter"
                           />
                         </div>
                       )}

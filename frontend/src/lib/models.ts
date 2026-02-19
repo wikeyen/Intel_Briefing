@@ -124,6 +124,20 @@ export interface PipelineStatus {
   total_items: number
 }
 
+export interface SensorSummary {
+  sensor_name: string
+  label: string
+  summary: string
+  item_count: number
+}
+
+export interface BriefingSummary {
+  generated_at: string
+  report_fetched_at: string
+  sections: SensorSummary[]
+  overall: string
+}
+
 export interface ConfigSettings {
   // API keys
   xai_api_key: string | null
@@ -175,6 +189,12 @@ export interface ConfigSettings {
 
   // Post expiry — items older than this are pruned by the cleanup cron
   post_expiry_days: number
+
+  // AI summary — LLM provider config
+  summary_provider: 'openrouter' | 'custom' | null
+  summary_api_key: string | null
+  summary_base_url: string
+  summary_model: string
 }
 
 export function defaultConfig(): ConfigSettings {
@@ -218,6 +238,10 @@ export function defaultConfig(): ConfigSettings {
     rss_feed_urls: [],
     cache_ttl_hours: 6,
     post_expiry_days: 30,
+    summary_provider: null,
+    summary_api_key: null,
+    summary_base_url: 'https://openrouter.ai/api/v1',
+    summary_model: 'anthropic/claude-sonnet-4',
   }
 }
 

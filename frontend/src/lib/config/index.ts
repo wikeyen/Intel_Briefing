@@ -18,7 +18,7 @@ export const CONTENT_TRUNCATE_LIMIT = 3000
 export const MAX_BLOGS_TO_FETCH = 20
 export const MAX_ARTICLES_PER_BLOG = 2
 
-const KEY_FIELDS = new Set(['xai_api_key', 'github_token', 'producthunt_token', 'bluesky_app_password', 'mastodon_token'])
+const KEY_FIELDS = new Set(['xai_api_key', 'github_token', 'producthunt_token', 'bluesky_app_password', 'mastodon_token', 'summary_api_key'])
 
 /** Overlay process env vars for token fields when the config value is null/empty. */
 function applyEnvFallback(config: ConfigSettings): ConfigSettings {
@@ -37,6 +37,9 @@ function applyEnvFallback(config: ConfigSettings): ConfigSettings {
     rss_feed_urls:            config.rss_feed_urls?.length
                                 ? config.rss_feed_urls
                                 : (process.env.RSS_FEED_URLS ? process.env.RSS_FEED_URLS.split(',').map(u => u.trim()).filter(Boolean) : []),
+    summary_api_key: config.summary_api_key ?? process.env.SUMMARY_API_KEY ?? null,
+    summary_base_url: config.summary_base_url || process.env.SUMMARY_BASE_URL || 'https://openrouter.ai/api/v1',
+    summary_model: config.summary_model || process.env.SUMMARY_MODEL || 'anthropic/claude-sonnet-4',
   }
 }
 

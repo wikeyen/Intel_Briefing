@@ -32,6 +32,10 @@ export interface ConfigSettings {
   rss_feed_urls: string[]
   cache_ttl_hours: number
   post_expiry_days: number
+  summary_provider: 'openrouter' | 'custom' | null
+  summary_api_key: string | null
+  summary_base_url: string
+  summary_model: string
 }
 
 export interface IntelItem {
@@ -74,6 +78,18 @@ export interface IntelReport {
   sources_ok: string[]
   sources_failed: string[]
   items: Record<string, IntelItem[]>
+}
+
+export interface BriefingSummary {
+  generated_at: string
+  report_fetched_at: string
+  sections: {
+    sensor_name: string
+    label: string
+    summary: string
+    item_count: number
+  }[]
+  overall: string
 }
 
 const BASE = '/api'

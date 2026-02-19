@@ -155,6 +155,14 @@ describe('ConfigSettings', () => {
     expect(cfg.rss_feed_urls).toEqual([])
   })
 
+  it('defaultConfig includes summary fields', () => {
+    const cfg = defaultConfig()
+    expect(cfg.summary_provider).toBeNull()
+    expect(cfg.summary_api_key).toBeNull()
+    expect(cfg.summary_base_url).toBe('https://openrouter.ai/api/v1')
+    expect(cfg.summary_model).toBe('anthropic/claude-sonnet-4')
+  })
+
   it('should fall back to default_limit for sensorLimit', () => {
     const cfg = defaultConfig()
     expect(sensorLimit(cfg, 'hacker_news')).toBe(10)

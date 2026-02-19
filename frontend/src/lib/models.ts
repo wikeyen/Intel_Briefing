@@ -195,6 +195,7 @@ export function defaultConfig(): ConfigSettings {
       social_topics: true,
       social_trends: true,
       chrome_radar: false,
+      rss_feeds: false,
     },
     fetch_time: '07:51',
     fetch_timezone: 'Asia/Shanghai',

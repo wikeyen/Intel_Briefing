@@ -13,6 +13,7 @@ import { fetchSocialAccounts } from './social_accounts'
 import { fetchSocialTopics } from './social_topics'
 import { fetchSocialTrends } from './social_trends'
 import { fetchChromeRadar } from './chrome_radar'
+import { fetchRssFeeds } from './rss_feeds'
 
 export type SensorFetchFn = (config: ConfigSettings, limit: number) => Promise<IntelItem[]>
 
@@ -35,4 +36,5 @@ export const SENSOR_REGISTRY: Record<string, SensorFetchFn> = {
   sources_36kr: fetch36kr,
   wallstreetcn: fetchWallStreetCN,
   chrome_radar: fetchChromeRadar,
+  rss_feeds: fetchRssFeeds,
 }

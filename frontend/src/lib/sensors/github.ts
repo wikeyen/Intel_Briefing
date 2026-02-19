@@ -49,7 +49,7 @@ export async function fetchGitHub(config: ConfigSettings, limit: number): Promis
     const data = await resp.json() as Record<string, unknown>
 
     if ('errors' in data) {
-      const errMsg = JSON.stringify((data as Record<string, unknown>).errors).slice(0, 200)
+      const errMsg = JSON.stringify((data as Record<string, unknown>).errors)
       throw new Error(`GitHub GraphQL error: ${errMsg}`)
     }
 

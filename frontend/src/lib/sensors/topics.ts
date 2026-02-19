@@ -59,7 +59,7 @@ export async function fetchTopics(config: ConfigSettings, limit: number): Promis
   })
   if (!resp.ok) {
     const body = await resp.text().catch(() => '')
-    throw new Error(`xAI API ${resp.status}: ${body.slice(0, 200)}`)
+    throw new Error(`xAI API ${resp.status}: ${body}`)
   }
   const data = await resp.json() as Record<string, unknown>
   const choices = data.choices as Array<Record<string, unknown>> | undefined

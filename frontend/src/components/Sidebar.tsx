@@ -8,8 +8,8 @@ import { api } from '@/api/client'
 import type { HealthResponse, PipelineStatus } from '@/api/client'
 
 const CONFIG_NAV = [
-  { href: '/api-keys',  label: 'Connections',  num: '01' },
-  { href: '/settings',  label: 'Settings',     num: '02' },
+  { href: '/api-keys',  label: 'Connections' },
+  { href: '/settings',  label: 'Settings' },
 ]
 
 function NavLink({ href, active, onClick, children }: { href: string; active: boolean; onClick?: () => void; children: ReactNode }) {
@@ -56,20 +56,6 @@ function SideDivider() {
   return <div style={{ height: 1, background: 'var(--sb-border)', margin: '0.625rem 1.75rem 0.875rem' }} />
 }
 
-function NumTag({ children }: { children: ReactNode }) {
-  return (
-    <span style={{
-      fontSize: '0.5625rem',
-      fontFamily: 'ui-monospace, monospace',
-      color: 'var(--sb-faint)',
-      letterSpacing: '0.05em',
-      flexShrink: 0,
-      userSelect: 'none',
-    }}>
-      {children}
-    </span>
-  )
-}
 
 interface Props {
   showToast: (msg: string) => void
@@ -186,11 +172,9 @@ export function Sidebar({ showToast, onNavigate }: Props) {
       <div style={{ flex: 1, padding: '1rem 0' }}>
         <SideLabel>Overview</SideLabel>
         <NavLink href="/status" active={pathname === '/status'} onClick={onNavigate}>
-          <NumTag>00</NumTag>
           Status
         </NavLink>
         <NavLink href="/console" active={pathname === '/console'} onClick={onNavigate}>
-          <NumTag>04</NumTag>
           Console
           {showBadge && (
             <span style={{
@@ -209,9 +193,8 @@ export function Sidebar({ showToast, onNavigate }: Props) {
         <SideDivider />
 
         <SideLabel>Config</SideLabel>
-        {CONFIG_NAV.map(({ href, label, num }) => (
+        {CONFIG_NAV.map(({ href, label }) => (
           <NavLink key={href} href={href} active={pathname === href} onClick={onNavigate}>
-            <NumTag>{num}</NumTag>
             {label}
           </NavLink>
         ))}
@@ -220,7 +203,6 @@ export function Sidebar({ showToast, onNavigate }: Props) {
 
         <SideLabel>Data</SideLabel>
         <NavLink href="/data" active={pathname === '/data'} onClick={onNavigate}>
-          <NumTag>03</NumTag>
           Intel Data
         </NavLink>
       </div>

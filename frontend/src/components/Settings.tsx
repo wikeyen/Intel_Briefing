@@ -86,18 +86,29 @@ function Badge({ status }: { status: SensorStatus | undefined }) {
   }
   const s = map[status]
   return (
-    <span style={{
-      fontSize: '0.6875rem',
-      fontWeight: 600,
-      letterSpacing: '0.06em',
-      textTransform: 'uppercase',
-      background: s.bg,
-      color: s.color,
-      padding: '0.2rem 0.625rem',
-      borderRadius: 999,
-    }}>
-      {s.label}
-    </span>
+    <>
+      {/* Full badge on desktop */}
+      <span className="badge-full" style={{
+        fontSize: '0.6875rem',
+        fontWeight: 600,
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        background: s.bg,
+        color: s.color,
+        padding: '0.2rem 0.625rem',
+        borderRadius: 999,
+      }}>
+        {s.label}
+      </span>
+      {/* Dot only on mobile */}
+      <span className="badge-dot" style={{
+        width: 8,
+        height: 8,
+        borderRadius: '50%',
+        background: s.color,
+        flexShrink: 0,
+      }} />
+    </>
   )
 }
 

@@ -362,6 +362,10 @@ input[type="range"]::-moz-range-thumb {
     padding-right: 0.75rem !important;
   }
 
+  /* ── Status badge: dot on mobile ── */
+  .badge-full { display: none !important; }
+  .badge-dot  { display: inline-block !important; }
+
   /* ── Touch interactions ── */
   button:active, a:active {
     opacity: 0.85;
@@ -393,6 +397,9 @@ input[type="range"]::-moz-range-thumb {
     height: 4px;
   }
 }
+
+/* Status badge — dot hidden on desktop, text hidden on mobile */
+.badge-dot { display: none; }
 
 /* ─── Animations ────────────────────────────────────────────────────────── */
 @keyframes fadeInUp {

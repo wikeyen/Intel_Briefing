@@ -143,7 +143,7 @@ export function Sidebar({ showToast, onNavigate }: Props) {
       background: 'var(--sb)',
       display: 'flex',
       flexDirection: 'column',
-      height: '100vh',
+      height: '100dvh',
       overflowY: 'auto',
       flexShrink: 0,
       borderRight: '1px solid var(--sb-border)',
@@ -228,7 +228,7 @@ export function Sidebar({ showToast, onNavigate }: Props) {
       <div style={{ height: 1, background: 'var(--sb-border)', margin: '0 1.75rem' }} />
 
       {/* Fetch Now */}
-      <div style={{ padding: '1.25rem 1.75rem' }}>
+      <div style={{ padding: '1.25rem 1.75rem', paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0))' }}>
         <button
           onClick={handleFetchNow}
           disabled={fetching}

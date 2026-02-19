@@ -3,7 +3,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { api } from '@/api/client'
-import type { HealthResponse, IntelReport, ConfigSettings, PipelineStatus, SensorProgress } from '@/api/client'
+import type { HealthResponse, IntelReport, ConfigSettings, PipelineStatus, SensorProgress, BriefingSummary } from '@/api/client'
 import { useToast } from '@/lib/toast-context'
 
 function timeAgo(isoString: string): string {
@@ -81,12 +81,15 @@ export function Status() {
   const [running, setRunning]         = useState(false)
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null)
   const [, setTick]                   = useState(0)
+  const [summary, setSummary]         = useState<BriefingSummary | null>(null)
+  const [summaryExpanded, setSummaryExpanded] = useState(false)
   const lastFetchedAtRef              = useRef<string | null>(null)
 
   const loadAll = () => {
     api.health().then(setHealth).catch(() => setHealth({ status: 'error', last_fetch: null }))
     api.getLatest().then(setReport).catch(() => {})
     api.getConfig().then(setConfig).catch(() => {})
+    api.getSummary().then(r => setSummary(r.summary)).catch(() => {})
   }
 
   // Tick every second so timeAgo() updates live
@@ -105,6 +108,7 @@ export function Status() {
         if (h.last_fetch && h.last_fetch !== lastFetchedAtRef.current) {
           if (lastFetchedAtRef.current !== null) {
             api.getLatest().then(r => { setReport(r); setRunning(false) }).catch(() => {})
+            api.getSummary().then(r => setSummary(r.summary)).catch(() => {})
           }
           lastFetchedAtRef.current = h.last_fetch
         }
@@ -440,6 +444,99 @@ export function Status() {
           )}
         </div>
       </div>
+
+      {/* ── AI Briefing Card ──────────────────────────────── */}
+      {summary && (
+        <div style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 8,
+          padding: '1.5rem 2rem',
+          marginBottom: '2rem',
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '1rem',
+          }}>
+            <div>
+              <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--ink)', marginBottom: '0.125rem' }}>
+                AI Briefing
+              </h3>
+              <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>
+                {timeAgo(summary.generated_at)}
+              </span>
+            </div>
+          </div>
+
+          <p style={{
+            fontSize: '0.875rem',
+            color: 'var(--ink)',
+            lineHeight: 1.7,
+            marginBottom: summary.sections.length > 0 ? '1rem' : 0,
+          }}>
+            {summary.overall}
+          </p>
+
+          {summary.sections.length > 0 && (
+            <>
+              <button
+                onClick={() => setSummaryExpanded(prev => !prev)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--accent)',
+                  fontSize: '0.75rem',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
+              >
+                {summaryExpanded ? 'Hide details' : `Show ${summary.sections.length} source summaries`}
+              </button>
+
+              {summaryExpanded && (
+                <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {summary.sections.map(s => (
+                    <div key={s.sensor_name} style={{
+                      padding: '0.75rem 1rem',
+                      background: 'var(--surface-alt)',
+                      borderRadius: 6,
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: '0.375rem',
+                      }}>
+                        <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)' }}>
+                          {s.label}
+                        </span>
+                        <span style={{
+                          fontSize: '0.6875rem',
+                          color: 'var(--ink-faint)',
+                          fontFamily: 'ui-monospace, monospace',
+                        }}>
+                          {s.item_count} items
+                        </span>
+                      </div>
+                      <p style={{
+                        fontSize: '0.8125rem',
+                        color: 'var(--ink-muted)',
+                        lineHeight: 1.6,
+                        margin: 0,
+                      }}>
+                        {s.summary}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {/* ── Sources — 2-column grid of section cards ─────────── */}
       <div className="source-grid" style={{

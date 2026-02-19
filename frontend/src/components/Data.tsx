@@ -142,6 +142,7 @@ function sourcePostUrl(item: IntelItem): string | null {
 function ItemCard({ item }: { item: IntelItem }) {
   const isArxiv = item.source === 'arxiv'
   const [abstractExpanded, setAbstractExpanded] = useState(false)
+  const [contentExpanded, setContentExpanded] = useState(false)
 
   return (
     <article style={{
@@ -285,7 +286,7 @@ function ItemCard({ item }: { item: IntelItem }) {
       {item.content && !item.abstract && (
         <div style={{ marginTop: '0.625rem' }}>
           <p
-            className="line-clamp-2"
+            className={contentExpanded ? undefined : 'line-clamp-2'}
             style={{
               fontSize: '0.8125rem',
               color: 'var(--ink-muted)',
@@ -296,6 +297,23 @@ function ItemCard({ item }: { item: IntelItem }) {
           >
             {item.content}
           </p>
+          <button
+            onClick={() => setContentExpanded(!contentExpanded)}
+            style={{
+              marginTop: '0.375rem',
+              fontSize: '0.6875rem',
+              fontWeight: 500,
+              color: 'var(--accent)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              textDecoration: 'underline',
+              textUnderlineOffset: '2px',
+            }}
+          >
+            {contentExpanded ? 'collapse' : 'show comments'}
+          </button>
         </div>
       )}
     </article>

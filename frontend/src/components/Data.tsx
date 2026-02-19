@@ -25,6 +25,7 @@ const SOURCE_LABELS: Record<string, string> = {
   github:       'GitHub',
   arxiv:        'ArXiv',
   product_hunt: 'PH',
+  chrome_radar: 'Chrome',
   v2ex:         'V2EX',
   hn_blogs:     'HN Blogs',
   grok:         'Grok',
@@ -39,7 +40,7 @@ const SECTION_SENSORS: Record<string, string[]> = {
   tech_trends:  ['hacker_news', 'github', 'grok'],
   research:     ['arxiv'],
   insights:     ['hn_blogs'],
-  products:     ['product_hunt'],
+  products:     ['product_hunt', 'chrome_radar'],
   community:    ['v2ex'],
   capital_flow: ['sources_36kr', 'wallstreetcn'],
   politics:     ['politics'],
@@ -167,6 +168,23 @@ function ItemCard({ item }: { item: IntelItem }) {
       {/* Meta row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
         <SourceChip source={item.source} />
+        {item.verified === false && (
+          <span
+            title="Link could not be verified"
+            style={{
+              fontSize: '0.625rem',
+              fontWeight: 600,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              color: 'var(--warn)',
+              background: 'var(--warn-wash, rgba(234,179,8,0.1))',
+              padding: '0.2rem 0.5rem',
+              borderRadius: 3,
+            }}
+          >
+            unverified
+          </span>
+        )}
         {item.heat && (
           <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>{item.heat}</span>
         )}
@@ -225,6 +243,24 @@ function ItemCard({ item }: { item: IntelItem }) {
               {abstractExpanded ? 'collapse' : 'expand abstract'}
             </button>
           )}
+        </div>
+      )}
+
+      {/* Content preview (HN comments, blog content) */}
+      {item.content && !item.abstract && (
+        <div style={{ marginTop: '0.625rem' }}>
+          <p
+            className="line-clamp-2"
+            style={{
+              fontSize: '0.8125rem',
+              color: 'var(--ink-muted)',
+              lineHeight: 1.65,
+              margin: 0,
+              whiteSpace: 'pre-line',
+            }}
+          >
+            {item.content}
+          </p>
         </div>
       )}
     </article>

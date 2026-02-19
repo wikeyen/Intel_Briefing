@@ -20,8 +20,13 @@ export interface ConfigSettings {
   sensor_lookback_hours: Record<string, number>
   boost_keywords: string[]
   suppress_keywords: string[]
-  politics_accounts: string[]
-  topics_keywords: string[]
+  bluesky_handle: string | null
+  bluesky_app_password: string | null
+  mastodon_token: string | null
+  social_accounts_x: string[]
+  social_accounts_bluesky: string[]
+  social_accounts_mastodon: string[]
+  social_topics_keywords: string[]
   cache_ttl_hours: number
   post_expiry_days: number
 }

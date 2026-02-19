@@ -16,11 +16,9 @@ export interface IntelItem {
   categories?: string[] | null
   abstract?: string | null
 
-  // Politics sensor
+  // Social sensors
   account?: string | null
   handle?: string | null
-
-  // Topics sensor
   topic?: string | null
 
   // Full content (blog articles)
@@ -36,8 +34,7 @@ export const ALL_SECTIONS = [
   'capital_flow',
   'products',
   'community',
-  'politics',
-  'topics',
+  'social',
   'insights',
 ] as const
 
@@ -50,8 +47,7 @@ export function emptyItemsMap(): Record<SectionKey, IntelItem[]> {
     capital_flow: [],
     products: [],
     community: [],
-    politics: [],
-    topics: [],
+    social: [],
     insights: [],
   }
 }
@@ -150,11 +146,20 @@ export interface ConfigSettings {
   boost_keywords: string[]
   suppress_keywords: string[]
 
-  // Politics sensor accounts
-  politics_accounts: string[]
+  // Bluesky credentials
+  bluesky_handle: string | null
+  bluesky_app_password: string | null
 
-  // Topics sensor keywords/hashtags
-  topics_keywords: string[]
+  // Mastodon credentials
+  mastodon_token: string | null
+
+  // Social sensor account lists (per platform)
+  social_accounts_x: string[]
+  social_accounts_bluesky: string[]
+  social_accounts_mastodon: string[]
+
+  // Social sensor topic keywords
+  social_topics_keywords: string[]
 
   // Cache
   cache_ttl_hours: number
@@ -176,12 +181,12 @@ export function defaultConfig(): ConfigSettings {
       arxiv: true,
       v2ex: true,
       hn_blogs: true,
-      grok: true,
       product_hunt: true,
       sources_36kr: true,
       wallstreetcn: true,
-      politics: true,
-      topics: true,
+      social_accounts: true,
+      social_topics: true,
+      social_trends: true,
       chrome_radar: false,
     },
     fetch_time: '07:51',
@@ -191,8 +196,13 @@ export function defaultConfig(): ConfigSettings {
     sensor_lookback_hours: {},
     boost_keywords: [],
     suppress_keywords: [],
-    politics_accounts: [],
-    topics_keywords: [],
+    bluesky_handle: null,
+    bluesky_app_password: null,
+    mastodon_token: null,
+    social_accounts_x: [],
+    social_accounts_bluesky: [],
+    social_accounts_mastodon: [],
+    social_topics_keywords: [],
     cache_ttl_hours: 6,
     post_expiry_days: 30,
   }

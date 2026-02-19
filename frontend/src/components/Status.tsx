@@ -49,6 +49,7 @@ const ALL_SENSORS = [
   { key: 'social_topics',   label: 'Social Topics' },
   { key: 'social_trends',   label: 'Social Trends' },
   { key: 'chrome_radar',    label: 'Chrome Radar' },
+  { key: 'rss_feeds',       label: 'RSS Feeds' },
 ]
 
 const SECTION_SENSORS = [
@@ -59,6 +60,7 @@ const SECTION_SENSORS = [
   { key: 'community',    label: 'Community',     sensors: ['v2ex'] },
   { key: 'social',       label: 'Social',        sensors: ['social_accounts', 'social_topics', 'social_trends'] },
   { key: 'insights',     label: 'Insights',      sensors: ['hn_blogs'] },
+  { key: 'feeds',        label: 'Feeds',          sensors: ['rss_feeds'] },
 ]
 
 const STATUS_META: Record<string, { color: string; bg: string; label: string; desc: string }> = {

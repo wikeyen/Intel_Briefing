@@ -77,7 +77,7 @@ export async function fetchHackerNews(_config: ConfigSettings, limit: number): P
     if (!resp.ok) throw new Error(`HTTP ${resp.status} from Hacker News`)
     const storyIds = (await resp.json()) as number[]
 
-    const candidateIds = storyIds.slice(0, Math.min(limit * 2, 30))
+    const candidateIds = storyIds.slice(0, limit * 2)
 
     const settled = await Promise.allSettled(
       candidateIds.map((id) => fetchStory(id)),

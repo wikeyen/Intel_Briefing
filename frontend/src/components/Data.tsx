@@ -441,7 +441,7 @@ export function Data() {
               overflowY: 'hidden',
               scrollbarWidth: 'none',
             }}>
-              {SECTIONS.map(({ key, label }) => {
+              {SECTIONS.map(({ key, label }, idx) => {
                 const count = report.items[key]?.length ?? 0
                 const active = activeSection === key
                 return (
@@ -450,6 +450,7 @@ export function Data() {
                     onClick={() => setActiveSection(key)}
                     style={{
                       padding: '0.625rem 1rem',
+                      paddingLeft: idx === 0 ? 0 : '1rem',
                       fontSize: '0.8125rem',
                       fontWeight: active ? 600 : 400,
                       color: active ? 'var(--accent)' : 'var(--ink-muted)',

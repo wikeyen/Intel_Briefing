@@ -203,7 +203,7 @@ export function Sidebar({ showToast, onNavigate }: Props) {
 
         <SideLabel>Data</SideLabel>
         <NavLink href="/data" active={pathname === '/data'} onClick={onNavigate}>
-          Intel Data
+          Raw Feed
         </NavLink>
       </div>
 

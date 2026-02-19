@@ -413,7 +413,7 @@ export function Data() {
             letterSpacing: '-0.01em',
             marginBottom: '0.25rem',
           }}>
-            Intel Data
+            Raw Feed
           </h2>
           <p style={{ fontSize: '0.8125rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
             {loading ? 'Loading…' : report

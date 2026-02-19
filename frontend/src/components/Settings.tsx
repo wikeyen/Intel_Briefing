@@ -179,13 +179,28 @@ function blurInput(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) {
   e.currentTarget.style.boxShadow = 'none'
 }
 
-function validateHandle(value: string): string | null {
+function validateXHandle(value: string): string | null {
   const clean = value.startsWith('@') ? value : `@${value}`
   if (!/^@[A-Za-z0-9_]{1,50}$/.test(clean)) return 'Invalid handle format'
   return null
 }
 
-function normalizeHandle(value: string): string {
+function normalizeXHandle(value: string): string {
+  return value.startsWith('@') ? value : `@${value}`
+}
+
+function validateBlueskyHandle(value: string): string | null {
+  if (!/^[A-Za-z0-9][A-Za-z0-9.-]*\.[A-Za-z]{2,}$/.test(value)) return 'Use format: name.bsky.social'
+  return null
+}
+
+function validateMastodonHandle(value: string): string | null {
+  const clean = value.startsWith('@') ? value : `@${value}`
+  if (!/^@[A-Za-z0-9_]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(clean)) return 'Use format: @user@instance'
+  return null
+}
+
+function normalizeMastodonHandle(value: string): string {
   return value.startsWith('@') ? value : `@${value}`
 }
 
@@ -237,6 +252,8 @@ export function Settings() {
       for (const { key } of ALL_SENSORS) defaults[key] = true
       setEnabled({ ...defaults, ...cfg.sensors_enabled })
       setSocialAccountsX(cfg.social_accounts_x)
+      setSocialAccountsBluesky(cfg.social_accounts_bluesky)
+      setSocialAccountsMastodon(cfg.social_accounts_mastodon)
       setSocialTopicsKeywords(cfg.social_topics_keywords)
       setSensorLimits(cfg.sensor_limits ?? {})
       setSensorLookback(cfg.sensor_lookback_hours ?? {})
@@ -292,6 +309,8 @@ export function Settings() {
         sensor_lookback_hours: sensorLookback,
         default_limit: defaultLimit,
         social_accounts_x: socialAccountsX,
+        social_accounts_bluesky: socialAccountsBluesky,
+        social_accounts_mastodon: socialAccountsMastodon,
         social_topics_keywords: socialTopicsKeywords,
         fetch_time: fetchTime,
         fetch_timezone: timezone,
@@ -518,22 +537,52 @@ export function Settings() {
                         )}
                       </div>
 
-                      {/* Inline sub-config: Social Accounts */}
+                      {/* Inline sub-config: Social Accounts — per-platform fields */}
                       {isSocialAccounts && isOn && (
                         <div style={{
                           padding: '1rem 1rem 1.25rem 3.5rem',
                           background: 'var(--canvas)',
                           borderBottom: isLast ? 'none' : '1px solid var(--border-soft)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '1rem',
                         }}>
-                          <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem' }}>
-                            X/Twitter handles to monitor
+                          <div>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                              <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#000' }} />
+                              X / Twitter handles
+                            </div>
+                            <TagInput
+                              tags={socialAccountsX}
+                              onChange={(tags) => setSocialAccountsX(tags.map(normalizeXHandle))}
+                              placeholder="@handle — press Enter"
+                              validate={validateXHandle}
+                            />
                           </div>
-                          <TagInput
-                            tags={socialAccountsX}
-                            onChange={(tags) => setSocialAccountsX(tags.map(normalizeHandle))}
-                            placeholder="@handle — press Enter"
-                            validate={validateHandle}
-                          />
+                          <div>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                              <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#0085FF' }} />
+                              Bluesky handles
+                            </div>
+                            <TagInput
+                              tags={socialAccountsBluesky}
+                              onChange={setSocialAccountsBluesky}
+                              placeholder="name.bsky.social — press Enter"
+                              validate={validateBlueskyHandle}
+                            />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                              <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#6364FF' }} />
+                              Mastodon accounts
+                            </div>
+                            <TagInput
+                              tags={socialAccountsMastodon}
+                              onChange={(tags) => setSocialAccountsMastodon(tags.map(normalizeMastodonHandle))}
+                              placeholder="@user@mastodon.social — press Enter"
+                              validate={validateMastodonHandle}
+                            />
+                          </div>
                         </div>
                       )}
 

@@ -3,7 +3,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState, useEffect, useRef, type ReactNode } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { api } from '@/api/client'
 import type { HealthResponse, PipelineStatus } from '@/api/client'
 
@@ -92,21 +92,21 @@ export function Sidebar({ showToast }: Props) {
   }, [])
 
   const hasErrors = (pipelineStatus?.sensors.some(s => s.error !== null)) ?? false
+  const runId = pipelineStatus?.completed_at ?? pipelineStatus?.started_at ?? ''
 
-  // Track whether the user has seen the current errors by visiting /console
-  const errorsSeen = useRef(false)
+  // Persist which pipeline run the user last viewed on /console.
+  // Badge shows when errors exist for a run the user hasn't seen yet.
+  const SEEN_KEY = 'console-errors-seen-run'
   const onConsolePage = pathname === '/console'
 
-  // Mark as seen when the user is on the console page and there are errors
-  if (onConsolePage && hasErrors) {
-    errorsSeen.current = true
-  }
-  // Reset "seen" when errors clear (so badge reappears if errors come back)
-  if (!hasErrors) {
-    errorsSeen.current = false
-  }
+  useEffect(() => {
+    if (onConsolePage && hasErrors && runId) {
+      localStorage.setItem(SEEN_KEY, runId)
+    }
+  }, [onConsolePage, hasErrors, runId])
 
-  const showBadge = hasErrors && !errorsSeen.current
+  const seenRun = typeof window !== 'undefined' ? localStorage.getItem(SEEN_KEY) : null
+  const showBadge = hasErrors && runId !== seenRun
 
   const handleFetchNow = async () => {
     setFetching(true)

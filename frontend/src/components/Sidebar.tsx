@@ -5,7 +5,15 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect, type ReactNode } from 'react'
 import { api } from '@/api/client'
-import type { HealthResponse } from '@/api/client'
+import type { HealthResponse, PipelineStatus } from '@/api/client'
+
+/** CSS keyframes for the animated "new" badge pulse */
+const BADGE_PULSE_CSS = `
+@keyframes badge-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+`
 
 const CONFIG_NAV = [
   { href: '/api-keys',  label: 'Connections',  num: '01' },
@@ -77,12 +85,21 @@ export function Sidebar({ showToast }: Props) {
   const pathname = usePathname()
   const [health, setHealth] = useState<HealthResponse | null>(null)
   const [fetching, setFetching] = useState(false)
+  const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null)
 
   useEffect(() => {
     api.health().then(setHealth).catch(() => setHealth({ status: 'error', last_fetch: null }))
     const iv = setInterval(() => api.health().then(setHealth).catch(() => {}), 30_000)
     return () => clearInterval(iv)
   }, [])
+
+  useEffect(() => {
+    api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
+    const iv = setInterval(() => api.getPipelineStatus().then(setPipelineStatus).catch(() => {}), 10_000)
+    return () => clearInterval(iv)
+  }, [])
+
+  const hasErrors = (pipelineStatus?.sensors.some(s => s.error !== null)) ?? false
 
   const handleFetchNow = async () => {
     setFetching(true)
@@ -117,6 +134,7 @@ export function Sidebar({ showToast }: Props) {
       flexShrink: 0,
       borderRight: '1px solid var(--sb-border)',
     }}>
+      <style dangerouslySetInnerHTML={{ __html: BADGE_PULSE_CSS }} />
       {/* Brand */}
       <div style={{ padding: '2rem 1.75rem 1.5rem' }}>
         <div style={{
@@ -161,6 +179,19 @@ export function Sidebar({ showToast }: Props) {
         <NavLink href="/console" active={pathname === '/console'}>
           <NumTag>04</NumTag>
           Console
+          {hasErrors && (
+            <span style={{
+              fontSize: '0.5rem',
+              fontWeight: 700,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              color: 'var(--err)',
+              marginLeft: 'auto',
+              animation: 'badge-pulse 2s ease-in-out infinite',
+            }}>
+              new
+            </span>
+          )}
         </NavLink>
 
         <SideDivider />

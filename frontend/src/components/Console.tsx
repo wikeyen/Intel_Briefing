@@ -4,6 +4,10 @@
 import { useState, useEffect } from 'react'
 import { api } from '@/api/client'
 import type { PipelineStatus, SensorProgress } from '@/api/client'
+import { Pagination } from './Pagination'
+
+const MAX_ERRORS = 100
+const PAGE_SIZE = 20
 
 const SENSOR_LABELS: Record<string, string> = {
   hacker_news: 'Hacker News',
@@ -18,6 +22,9 @@ const SENSOR_LABELS: Record<string, string> = {
   politics: 'Accounts',
   topics: 'Topics',
 }
+
+/** Threshold (chars) above which error messages are truncated with a "more" toggle. */
+const TRUNCATE_LENGTH = 120
 
 function KindBadge({ kind }: { kind: 'config' | 'api' | null | undefined }) {
   const isConfig = kind === 'config'
@@ -43,6 +50,10 @@ function KindBadge({ kind }: { kind: 'config' | 'api' | null | undefined }) {
 
 function ErrorRow({ sensor }: { sensor: SensorProgress }) {
   const label = SENSOR_LABELS[sensor.name] ?? sensor.name
+  const msg = sensor.error ?? ''
+  const isLong = msg.length > TRUNCATE_LENGTH
+  const [expanded, setExpanded] = useState(false)
+
   return (
     <div style={{
       display: 'flex',
@@ -65,7 +76,7 @@ function ErrorRow({ sensor }: { sensor: SensorProgress }) {
       {/* Error kind badge */}
       <KindBadge kind={sensor.error_kind} />
 
-      {/* Error message */}
+      {/* Error message with optional expand toggle */}
       <span style={{
         fontSize: '0.75rem',
         fontFamily: 'ui-monospace, monospace',
@@ -74,7 +85,27 @@ function ErrorRow({ sensor }: { sensor: SensorProgress }) {
         wordBreak: 'break-word',
         minWidth: 0,
       }}>
-        {sensor.error}
+        {isLong && !expanded ? msg.slice(0, TRUNCATE_LENGTH) + '…' : msg}
+        {isLong && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            style={{
+              display: 'inline',
+              marginLeft: '0.375rem',
+              fontSize: '0.6875rem',
+              fontWeight: 500,
+              color: 'var(--accent)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              textDecoration: 'underline',
+              textUnderlineOffset: '2px',
+            }}
+          >
+            {expanded ? 'less' : 'more'}
+          </button>
+        )}
       </span>
     </div>
   )
@@ -82,6 +113,7 @@ function ErrorRow({ sensor }: { sensor: SensorProgress }) {
 
 export function Console() {
   const [status, setStatus] = useState<PipelineStatus | null>(null)
+  const [page, setPage] = useState(1)
 
   useEffect(() => {
     const load = () => {
@@ -92,9 +124,24 @@ export function Console() {
     return () => clearInterval(iv)
   }, [])
 
-  const errors = status?.sensors.filter(s => s.error !== null) ?? []
+  // Cap errors at MAX_ERRORS as a safety limit
+  const allErrors = status?.sensors.filter(s => s.error !== null) ?? []
+  const errors = allErrors.slice(0, MAX_ERRORS)
   const configErrors = errors.filter(s => s.error_kind === 'config')
   const apiErrors = errors.filter(s => s.error_kind !== 'config')
+
+  // Paginate the combined error list
+  const totalPages = Math.ceil(errors.length / PAGE_SIZE)
+  const currentPage = Math.min(page, totalPages || 1)
+  const pageStart = (currentPage - 1) * PAGE_SIZE
+  const pagedConfig = configErrors.slice(
+    Math.max(0, pageStart - 0),
+    Math.min(configErrors.length, pageStart + PAGE_SIZE)
+  )
+  // For a flat pagination across both groups: compute which items fall on the current page
+  const pagedErrors = errors.slice(pageStart, pageStart + PAGE_SIZE)
+  const pagedConfigErrors = pagedErrors.filter(s => s.error_kind === 'config')
+  const pagedApiErrors = pagedErrors.filter(s => s.error_kind !== 'config')
 
   const runTime = status?.completed_at
     ? new Date(status.completed_at).toLocaleString()
@@ -143,7 +190,7 @@ export function Console() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {/* Config errors */}
-          {configErrors.length > 0 && (
+          {pagedConfigErrors.length > 0 && (
             <div style={{
               background: 'var(--surface)',
               border: '1px solid var(--border)',
@@ -161,12 +208,12 @@ export function Console() {
               }}>
                 Configuration ({configErrors.length})
               </div>
-              {configErrors.map(s => <ErrorRow key={s.name} sensor={s} />)}
+              {pagedConfigErrors.map(s => <ErrorRow key={s.name} sensor={s} />)}
             </div>
           )}
 
           {/* API errors */}
-          {apiErrors.length > 0 && (
+          {pagedApiErrors.length > 0 && (
             <div style={{
               background: 'var(--surface)',
               border: '1px solid var(--border)',
@@ -184,11 +231,11 @@ export function Console() {
               }}>
                 API Errors ({apiErrors.length})
               </div>
-              {apiErrors.map(s => <ErrorRow key={s.name} sensor={s} />)}
+              {pagedApiErrors.map(s => <ErrorRow key={s.name} sensor={s} />)}
             </div>
           )}
 
-          {/* Summary */}
+          {/* Summary + pagination */}
           <div style={{
             textAlign: 'center',
             fontSize: '0.8125rem',
@@ -204,6 +251,8 @@ export function Console() {
             </span>
             {' '}sensor{errors.length !== 1 ? 's' : ''} with issues
           </div>
+
+          <Pagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
         </div>
       )}
     </section>

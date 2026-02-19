@@ -5,6 +5,9 @@ import { useState, useEffect, useMemo } from 'react'
 import { api } from '@/api/client'
 import type { IntelReport, IntelItem, ConfigSettings } from '@/api/client'
 import { SENSOR_TOKEN_FIELD } from '@/lib/sensors'
+import { Pagination } from './Pagination'
+
+const PAGE_SIZE = 20
 
 const SECTIONS: { key: string; label: string }[] = [
   { key: 'tech_trends',  label: 'Tech Trends' },
@@ -121,6 +124,9 @@ function FilterTag({ label, active, onClick }: { label: string; active: boolean;
 }
 
 function ItemCard({ item }: { item: IntelItem }) {
+  const isArxiv = item.source === 'arxiv'
+  const [abstractExpanded, setAbstractExpanded] = useState(false)
+
   return (
     <article style={{
       background: 'var(--surface)',
@@ -186,19 +192,40 @@ function ItemCard({ item }: { item: IntelItem }) {
         )}
       </div>
 
-      {/* Abstract preview — 2-line clamp */}
+      {/* Abstract preview — arxiv items get a collapse/expand toggle */}
       {item.abstract && (
-        <p
-          className="line-clamp-2"
-          style={{
-            marginTop: '0.625rem',
-            fontSize: '0.8125rem',
-            color: 'var(--ink-muted)',
-            lineHeight: 1.65,
-          }}
-        >
-          {item.abstract}
-        </p>
+        <div style={{ marginTop: '0.625rem' }}>
+          <p
+            className={isArxiv && !abstractExpanded ? 'line-clamp-2' : undefined}
+            style={{
+              fontSize: '0.8125rem',
+              color: 'var(--ink-muted)',
+              lineHeight: 1.65,
+              margin: 0,
+            }}
+          >
+            {item.abstract}
+          </p>
+          {isArxiv && (
+            <button
+              onClick={() => setAbstractExpanded(!abstractExpanded)}
+              style={{
+                marginTop: '0.375rem',
+                fontSize: '0.6875rem',
+                fontWeight: 500,
+                color: 'var(--accent)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+                textDecoration: 'underline',
+                textUnderlineOffset: '2px',
+              }}
+            >
+              {abstractExpanded ? 'collapse' : 'expand abstract'}
+            </button>
+          )}
+        </div>
       )}
     </article>
   )
@@ -228,6 +255,7 @@ export function Data() {
   const [loading, setLoading] = useState(true)
   const [activeSection, setActiveSection] = useState(SECTIONS[0].key)
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set())
+  const [page, setPage] = useState(1)
 
   useEffect(() => {
     api.getConfig().then(setConfig).catch(() => {})
@@ -247,10 +275,12 @@ export function Data() {
     return [...seen].sort()
   }, [sectionItems])
 
-  // Reset selected sources when section changes (select all by default)
+  // Reset selected sources and page when section changes (select all by default)
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedSources(new Set(availableSources))
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPage(1)
   }, [activeSection, availableSources.join(',')])
 
   const toggleSource = (src: string) => {
@@ -265,9 +295,13 @@ export function Data() {
       }
       return next
     })
+    setPage(1)
   }
 
   const filteredItems = sectionItems.filter(item => selectedSources.has(item.source))
+  const totalPages = Math.ceil(filteredItems.length / PAGE_SIZE)
+  const currentPage = Math.min(page, totalPages || 1)
+  const pagedItems = filteredItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
   const totalItems = Object.values(report?.items ?? {}).reduce((s, a) => s + a.length, 0)
 
   return (
@@ -378,7 +412,7 @@ export function Data() {
                   ))}
                   {selectedSources.size < availableSources.length && (
                     <button
-                      onClick={() => setSelectedSources(new Set(availableSources))}
+                      onClick={() => { setSelectedSources(new Set(availableSources)); setPage(1) }}
                       style={{
                         fontSize: '0.6875rem',
                         color: 'var(--ink-faint)',
@@ -419,7 +453,23 @@ export function Data() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {filteredItems.length === 0
                 ? <EmptySection needsKey={sectionNeedsKey(activeSection, config)} />
-                : filteredItems.map(item => <ItemCard key={item.id} item={item} />)
+                : (
+                  <>
+                    {/* Item range indicator */}
+                    {filteredItems.length > PAGE_SIZE && (
+                      <div style={{
+                        fontSize: '0.75rem',
+                        fontFamily: 'ui-monospace, monospace',
+                        color: 'var(--ink-faint)',
+                        textAlign: 'right',
+                      }}>
+                        {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredItems.length)} of {filteredItems.length}
+                      </div>
+                    )}
+                    {pagedItems.map(item => <ItemCard key={item.id} item={item} />)}
+                    <Pagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
+                  </>
+                )
               }
             </div>
           ) : null}

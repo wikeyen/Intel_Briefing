@@ -1,6 +1,7 @@
 // ABOUTME: Grok/xAI sensor for X (Twitter) tech trend intelligence.
 // ABOUTME: Queries the Grok API for trending tech discussions; returns structured IntelItem list.
 import type { ConfigSettings, IntelItem } from '../models'
+import { SensorConfigError } from './errors'
 
 const SYSTEM_PROMPT =
   'You are a tech intelligence analyst. Return ONLY a valid JSON array with no markdown fences, ' +
@@ -33,7 +34,7 @@ function parseGrokResponse(text: string): Array<Record<string, unknown>> {
 }
 
 export async function fetchGrok(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
-  if (!config.xai_api_key) return []
+  if (!config.xai_api_key) throw new SensorConfigError('xAI API key not configured')
 
   const today = new Date().toISOString().slice(0, 10)
   const resp = await fetch(config.xai_base_url, {

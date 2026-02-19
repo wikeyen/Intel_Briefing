@@ -35,12 +35,14 @@ export async function POST(): Promise<NextResponse> {
       state: string,
       itemCount: number,
       error: string | null,
+      errorKind: 'config' | 'api' | null,
     ) => {
       for (const sp of status.sensors) {
         if (sp.name === sensorName) {
           sp.state = state as SensorProgress['state']
           sp.item_count = itemCount
           sp.error = error
+          sp.error_kind = errorKind
           break
         }
       }

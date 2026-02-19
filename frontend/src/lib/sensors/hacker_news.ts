@@ -7,7 +7,7 @@ export async function fetchHackerNews(_config: ConfigSettings, limit: number): P
     const resp = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json', {
       signal: AbortSignal.timeout(15000),
     })
-    if (!resp.ok) return []
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} from Hacker News`)
     const storyIds = await resp.json() as number[]
 
     const candidateIds = storyIds.slice(0, Math.min(limit * 2, 30))
@@ -41,7 +41,7 @@ export async function fetchHackerNews(_config: ConfigSettings, limit: number): P
       }
     }
     return items
-  } catch {
-    return []
+  } catch (err) {
+    throw err instanceof Error ? err : new Error(String(err))
   }
 }

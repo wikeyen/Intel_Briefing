@@ -1,6 +1,7 @@
 // ABOUTME: Topics sensor -- monitors configurable keywords and hashtags on X via Grok API.
 // ABOUTME: Returns recent matching posts as structured IntelItem objects; deduplicates multi-keyword matches.
 import type { ConfigSettings, IntelItem } from '../models'
+import { SensorConfigError } from './errors'
 
 const SYSTEM_PROMPT =
   'You are a social media intelligence analyst tracking specific topics on X (Twitter). ' +
@@ -35,8 +36,8 @@ function parseResponse(text: string): Array<Record<string, unknown>> {
 }
 
 export async function fetchTopics(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
-  if (!config.xai_api_key) return []
-  if (!config.topics_keywords || config.topics_keywords.length === 0) return []
+  if (!config.xai_api_key) throw new SensorConfigError('xAI API key not configured')
+  if (!config.topics_keywords || config.topics_keywords.length === 0) throw new SensorConfigError('No topic keywords configured')
 
   const today = new Date().toISOString().slice(0, 10)
   const resp = await fetch(config.xai_base_url, {

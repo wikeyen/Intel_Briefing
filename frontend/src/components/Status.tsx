@@ -5,7 +5,6 @@ import { useState, useEffect, useRef } from 'react'
 import { api } from '@/api/client'
 import type { HealthResponse, IntelReport, ConfigSettings, PipelineStatus, SensorProgress } from '@/api/client'
 import { useToast } from '@/lib/toast-context'
-import { SENSOR_TOKEN_FIELD } from '@/lib/sensors'
 
 function timeAgo(isoString: string): string {
   const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000)
@@ -498,26 +497,35 @@ export function Status() {
                   const sp = liveSensors[sensorKey]
                   const state = sp?.state ?? 'pending'
 
+                  const isConfigErr = state === 'failed' && sp?.error_kind === 'config'
+                  const isOkZero = state === 'ok' && sp!.item_count === 0
+
                   const dotColor =
-                    state === 'ok'      ? 'var(--ok)'    :
-                    state === 'failed'  ? 'var(--err)'   :
+                    isOkZero            ? 'var(--warn)'   :
+                    state === 'ok'      ? 'var(--ok)'     :
+                    isConfigErr         ? 'var(--warn)'   :
+                    state === 'failed'  ? 'var(--err)'    :
                     state === 'running' ? 'var(--accent)' :
                     'var(--border)'
 
                   const labelColor =
-                    state === 'failed'  ? 'var(--err)'      :
-                    state === 'pending' ? 'var(--ink-faint)' :
+                    state === 'failed' && !isConfigErr ? 'var(--err)'      :
+                    state === 'pending'                ? 'var(--ink-faint)' :
                     'var(--ink)'
 
                   const rightText =
-                    state === 'ok'      ? String(sp!.item_count) :
-                    state === 'failed'  ? (sp?.error ?? 'Failed') :
-                    state === 'running' ? 'Running…'              :
+                    isOkZero            ? '0'                                  :
+                    state === 'ok'      ? String(sp!.item_count)               :
+                    isConfigErr         ? (sp?.error ?? 'Missing config').slice(0, 30) :
+                    state === 'failed'  ? (sp?.error ?? 'Failed')              :
+                    state === 'running' ? 'Running…'                           :
                     '—'
 
                   const rightColor =
-                    state === 'failed'  ? 'var(--err)'      :
-                    state === 'ok'      ? 'var(--accent)'   :
+                    isOkZero            ? 'var(--warn)'    :
+                    isConfigErr         ? 'var(--warn)'    :
+                    state === 'failed'  ? 'var(--err)'     :
+                    state === 'ok'      ? 'var(--accent)'  :
                     state === 'running' ? 'var(--ink-muted)' :
                     'var(--ink-faint)'
 
@@ -553,31 +561,36 @@ export function Status() {
                   )
                 }
 
-                // Idle state: derive status from report + config
+                // Idle state: derive status from report + last pipeline status
                 const isDisabled = config?.sensors_enabled[sensorKey] === false
                 const isOk       = !isDisabled && report?.sources_ok.includes(sensorKey)
                 const isFailed   = !isDisabled && report?.sources_failed.includes(sensorKey)
                 const count      = sensorCounts[sensorKey] ?? 0
 
-                const tokenField = SENSOR_TOKEN_FIELD[sensorKey]
-                const missingKey = !isDisabled && tokenField && config && !config[tokenField]
+                // Use pipeline status error_kind as source of truth for failure classification
+                const lastSp = pipelineStatus?.sensors.find(s => s.name === sensorKey)
+                const idleConfigErr = isFailed && lastSp?.error_kind === 'config'
+                const idleOkZero = isOk && count === 0
 
-                const dotColor = isDisabled  ? 'var(--border)'
-                  : missingKey ? 'var(--warn)'
-                  : isOk       ? 'var(--ok)'
-                  : isFailed   ? 'var(--err)'
+                const dotColor = isDisabled    ? 'var(--border)'
+                  : idleOkZero   ? 'var(--warn)'
+                  : isOk         ? 'var(--ok)'
+                  : idleConfigErr ? 'var(--warn)'
+                  : isFailed     ? 'var(--err)'
                   : 'var(--border)'
 
-                const rightText = isDisabled ? 'Off'
-                  : missingKey ? 'No key'
-                  : isOk       ? `${count}`
-                  : isFailed   ? 'Failed'
-                  : report     ? '—' : '…'
+                const rightText = isDisabled     ? 'Off'
+                  : idleOkZero   ? '0'
+                  : isOk         ? `${count}`
+                  : idleConfigErr ? (lastSp?.error ?? 'Missing config').slice(0, 30)
+                  : isFailed     ? 'Failed'
+                  : report       ? '—' : '…'
 
-                const rightColor = isDisabled ? 'var(--ink-faint)'
-                  : missingKey ? 'var(--warn)'
-                  : isFailed   ? 'var(--err)'
-                  : isOk       ? 'var(--accent)'
+                const rightColor = isDisabled    ? 'var(--ink-faint)'
+                  : idleOkZero   ? 'var(--warn)'
+                  : idleConfigErr ? 'var(--warn)'
+                  : isFailed     ? 'var(--err)'
+                  : isOk         ? 'var(--accent)'
                   : 'var(--ink-faint)'
 
                 return (

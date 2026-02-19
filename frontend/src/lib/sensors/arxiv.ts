@@ -14,14 +14,20 @@ function sleep(ms: number): Promise<void> {
 }
 
 export async function fetchArxiv(_config: ConfigSettings, limit: number): Promise<IntelItem[]> {
+  let lastError: Error | null = null
   for (let i = 0; i < STRATEGIES.length; i++) {
     const [query, sortBy] = STRATEGIES[i]
-    const papers = await queryArxiv(query, sortBy, limit)
-    if (papers.length > 0) return papers
+    try {
+      const papers = await queryArxiv(query, sortBy, limit)
+      if (papers.length > 0) return papers
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err))
+    }
     if (i < STRATEGIES.length - 1) {
       await sleep(3000)
     }
   }
+  if (lastError) throw lastError
   return []
 }
 
@@ -36,7 +42,7 @@ async function queryArxiv(query: string, sortBy: string, limit: number): Promise
 
   try {
     const resp = await fetch(url, { signal: AbortSignal.timeout(30000) })
-    if (!resp.ok) return []
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} from ArXiv`)
     const xml = await resp.text()
 
     const parser = new XMLParser({
@@ -86,7 +92,7 @@ async function queryArxiv(query: string, sortBy: string, limit: number): Promise
       }
     }
     return items
-  } catch {
-    return []
+  } catch (err) {
+    throw err instanceof Error ? err : new Error(String(err))
   }
 }

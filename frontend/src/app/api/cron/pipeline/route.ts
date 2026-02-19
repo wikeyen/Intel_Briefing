@@ -35,8 +35,30 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
   await writePipelineStatus(status).catch(() => {})
 
+  const onProgress = async (
+    sensorName: string,
+    state: string,
+    itemCount: number,
+    error: string | null,
+    errorKind: 'config' | 'api' | null,
+  ) => {
+    for (const sp of status.sensors) {
+      if (sp.name === sensorName) {
+        sp.state = state as SensorProgress['state']
+        sp.item_count = itemCount
+        sp.error = error
+        sp.error_kind = errorKind
+        break
+      }
+    }
+    status.total_items = status.sensors
+      .filter((sp) => sp.state === 'ok')
+      .reduce((sum, sp) => sum + sp.item_count, 0)
+    await writePipelineStatus(status).catch(() => {})
+  }
+
   try {
-    const report = await collect(config)
+    const report = await collect(config, onProgress)
     status.running = false
     status.completed_at = new Date().toISOString().replace(/\.\d+Z$/, 'Z')
     status.total_items = Object.values(report.items)

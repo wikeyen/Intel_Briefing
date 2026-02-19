@@ -11,6 +11,7 @@ import { createReport, sensorResultSucceeded, emptyItemsMap, sensorLimit } from 
 import { dedupItems, dedupAcrossSections } from './dedup'
 import { writeReport } from './cache'
 import { SENSOR_REGISTRY } from '../sensors'
+import { SensorConfigError } from '../sensors/errors'
 
 // Section routing: maps sensor_name to report section key
 const SENSOR_SECTION_MAP: Record<string, SectionKey> = {
@@ -32,6 +33,7 @@ type ProgressCallback = (
   state: string,
   itemCount: number,
   error: string | null,
+  errorKind: 'config' | 'api' | null,
 ) => void | Promise<void>
 
 /**
@@ -45,10 +47,11 @@ async function runSensor(
 ): Promise<SensorResult> {
   try {
     const items = await fetchFn(config, limit)
-    return { sensor_name: sensorName, items, error: null }
+    return { sensor_name: sensorName, items, error: null, error_kind: null }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    return { sensor_name: sensorName, items: [], error: message }
+    const isConfig = err instanceof SensorConfigError
+    return { sensor_name: sensorName, items: [], error: message, error_kind: isConfig ? 'config' : 'api' }
   }
 }
 
@@ -74,7 +77,7 @@ export async function collect(
   // Mark all as running (sequential awaits to prevent write-ordering races)
   if (onProgress) {
     for (const [name] of enabledSensors) {
-      await onProgress(name, 'running', 0, null)
+      await onProgress(name, 'running', 0, null, null)
     }
   }
 
@@ -103,9 +106,9 @@ export async function collect(
   if (onProgress) {
     for (const result of results) {
       if (sensorResultSucceeded(result)) {
-        await onProgress(result.sensor_name, 'ok', result.items.length, null)
+        await onProgress(result.sensor_name, 'ok', result.items.length, null, null)
       } else {
-        await onProgress(result.sensor_name, 'failed', 0, result.error)
+        await onProgress(result.sensor_name, 'failed', 0, result.error, result.error_kind ?? 'api')
       }
     }
   }

@@ -1,6 +1,7 @@
 // ABOUTME: GitHub sensor using the GitHub GraphQL API to find recently-created trending repos.
 // ABOUTME: Requires a valid GitHub token in config.github_token; skips gracefully without one.
 import type { ConfigSettings, IntelItem } from '../models'
+import { SensorConfigError } from './errors'
 
 const GRAPHQL_URL = 'https://api.github.com/graphql'
 
@@ -24,7 +25,7 @@ query($search_query: String!, $count: Int!) {
 }`
 
 export async function fetchGitHub(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
-  if (!config.github_token) return []
+  if (!config.github_token) throw new SensorConfigError('GitHub token not configured')
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     .toISOString().slice(0, 10)
@@ -44,10 +45,13 @@ export async function fetchGitHub(config: ConfigSettings, limit: number): Promis
       }),
       signal: AbortSignal.timeout(30000),
     })
-    if (!resp.ok) return []
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} from GitHub`)
     const data = await resp.json() as Record<string, unknown>
 
-    if ('errors' in data) return []
+    if ('errors' in data) {
+      const errMsg = JSON.stringify((data as Record<string, unknown>).errors).slice(0, 200)
+      throw new Error(`GitHub GraphQL error: ${errMsg}`)
+    }
 
     const items: IntelItem[] = []
     const edges = ((data.data as Record<string, unknown>)?.search as Record<string, unknown>)?.edges as Array<Record<string, unknown>> ?? []
@@ -73,7 +77,7 @@ export async function fetchGitHub(config: ConfigSettings, limit: number): Promis
       })
     }
     return items.slice(0, limit)
-  } catch {
-    return []
+  } catch (err) {
+    throw err instanceof Error ? err : new Error(String(err))
   }
 }

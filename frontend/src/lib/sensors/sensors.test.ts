@@ -1,8 +1,9 @@
 // ABOUTME: Integration tests for individual sensors using mocked fetch.
-// ABOUTME: Verifies IntelItem shape and graceful degradation on errors.
+// ABOUTME: Verifies IntelItem shape, SensorConfigError on missing config, and Error on API failures.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { ConfigSettings } from '../models'
 import { defaultConfig } from '../models'
+import { SensorConfigError } from './errors'
 
 function makeConfig(overrides: Partial<ConfigSettings> = {}): ConfigSettings {
   return { ...defaultConfig(), ...overrides }
@@ -45,11 +46,10 @@ describe('HackerNewsSensor', () => {
     }
   })
 
-  it('returns empty on HTTP error', async () => {
+  it('throws on HTTP error', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 })
     const { fetchHackerNews } = await import('./hacker_news')
-    const items = await fetchHackerNews(makeConfig(), 5)
-    expect(items).toEqual([])
+    await expect(fetchHackerNews(makeConfig(), 5)).rejects.toThrow('HTTP 500')
   })
 
   it('skips non-story type', async () => {
@@ -96,63 +96,55 @@ describe('V2EXSensor', () => {
     }
   })
 
-  it('returns empty on HTTP error', async () => {
+  it('throws on HTTP error', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 503 })
     const { fetchV2ex } = await import('./v2ex')
-    const items = await fetchV2ex(makeConfig(), 5)
-    expect(items).toEqual([])
+    await expect(fetchV2ex(makeConfig(), 5)).rejects.toThrow('HTTP 503')
   })
 })
 
 describe('SensorProtocolCompliance', () => {
-  it('grok sensor skips without API key', async () => {
+  it('grok sensor throws SensorConfigError without API key', async () => {
     globalThis.fetch = vi.fn()
     const { fetchGrok } = await import('./grok')
-    const items = await fetchGrok(makeConfig({ xai_api_key: null }), 5)
-    expect(items).toEqual([])
+    await expect(fetchGrok(makeConfig({ xai_api_key: null }), 5)).rejects.toThrow(SensorConfigError)
     expect(globalThis.fetch).not.toHaveBeenCalled()
   })
 
-  it('politics sensor skips without API key', async () => {
+  it('politics sensor throws SensorConfigError without API key', async () => {
     globalThis.fetch = vi.fn()
     const { fetchPolitics } = await import('./politics')
-    const items = await fetchPolitics(makeConfig({ xai_api_key: null, politics_accounts: ['@user1'] }), 5)
-    expect(items).toEqual([])
+    await expect(fetchPolitics(makeConfig({ xai_api_key: null, politics_accounts: ['@user1'] }), 5)).rejects.toThrow(SensorConfigError)
   })
 
-  it('politics sensor skips without accounts', async () => {
+  it('politics sensor throws SensorConfigError without accounts', async () => {
     globalThis.fetch = vi.fn()
     const { fetchPolitics } = await import('./politics')
-    const items = await fetchPolitics(makeConfig({ xai_api_key: 'key123', politics_accounts: [] }), 5)
-    expect(items).toEqual([])
+    await expect(fetchPolitics(makeConfig({ xai_api_key: 'key123', politics_accounts: [] }), 5)).rejects.toThrow(SensorConfigError)
   })
 
-  it('topics sensor skips without API key', async () => {
+  it('topics sensor throws SensorConfigError without API key', async () => {
     globalThis.fetch = vi.fn()
     const { fetchTopics } = await import('./topics')
-    const items = await fetchTopics(makeConfig({ xai_api_key: null, topics_keywords: ['AI'] }), 5)
-    expect(items).toEqual([])
+    await expect(fetchTopics(makeConfig({ xai_api_key: null, topics_keywords: ['AI'] }), 5)).rejects.toThrow(SensorConfigError)
   })
 
-  it('topics sensor skips without keywords', async () => {
+  it('topics sensor throws SensorConfigError without keywords', async () => {
     globalThis.fetch = vi.fn()
     const { fetchTopics } = await import('./topics')
-    const items = await fetchTopics(makeConfig({ xai_api_key: 'key', topics_keywords: [] }), 5)
-    expect(items).toEqual([])
+    await expect(fetchTopics(makeConfig({ xai_api_key: 'key', topics_keywords: [] }), 5)).rejects.toThrow(SensorConfigError)
   })
 
-  it('github sensor skips without token', async () => {
+  it('github sensor throws SensorConfigError without token', async () => {
     globalThis.fetch = vi.fn()
     const { fetchGitHub } = await import('./github')
-    const items = await fetchGitHub(makeConfig({ github_token: null }), 5)
-    expect(items).toEqual([])
+    await expect(fetchGitHub(makeConfig({ github_token: null }), 5)).rejects.toThrow(SensorConfigError)
   })
 
-  it('product hunt skips without token', async () => {
+  it('product hunt throws SensorConfigError without token', async () => {
     globalThis.fetch = vi.fn()
     const { fetchProductHunt } = await import('./product_hunt')
-    const items = await fetchProductHunt(makeConfig({ producthunt_token: null }), 5)
-    expect(items).toEqual([])
+    await expect(fetchProductHunt(makeConfig({ producthunt_token: null }), 5)).rejects.toThrow(SensorConfigError)
   })
 
   it('sensor registry has all 11 sensors', async () => {

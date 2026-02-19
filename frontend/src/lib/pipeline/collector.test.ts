@@ -1,8 +1,9 @@
 // ABOUTME: Integration tests for the collect() pipeline with mocked sensors.
-// ABOUTME: Validates IntelReport structure, sensor failure isolation, and cache write.
+// ABOUTME: Validates IntelReport structure, sensor failure isolation, error_kind propagation, and cache write.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { ConfigSettings, IntelItem } from '../models'
 import { defaultConfig } from '../models'
+import { SensorConfigError } from '../sensors/errors'
 
 // Mock SQLite cache adapter
 const mockWriteReport = vi.fn()
@@ -106,5 +107,77 @@ describe('collect', () => {
     const config = makeConfig({ sensors_enabled: { hacker_news: true } })
     const report = await collect(config)
     expect(report.items.tech_trends).toHaveLength(1)
+  })
+
+  it('SensorConfigError produces error_kind config in progress callback', async () => {
+    mockSensorFns['broken_sensor'] = vi.fn().mockRejectedValue(
+      new SensorConfigError('API key not configured'),
+    )
+
+    const progressCalls: Array<{ name: string; state: string; errorKind: string | null }> = []
+    const onProgress = vi.fn(async (
+      name: string,
+      state: string,
+      _count: number,
+      _error: string | null,
+      errorKind: 'config' | 'api' | null,
+    ) => {
+      progressCalls.push({ name, state, errorKind })
+    })
+
+    const config = makeConfig({ sensors_enabled: { broken_sensor: true } })
+    const report = await collect(config, onProgress)
+    expect(report.sources_failed).toContain('broken_sensor')
+
+    const failCall = progressCalls.find(c => c.name === 'broken_sensor' && c.state === 'failed')
+    expect(failCall).toBeDefined()
+    expect(failCall!.errorKind).toBe('config')
+  })
+
+  it('regular Error produces error_kind api in progress callback', async () => {
+    mockSensorFns['api_sensor'] = vi.fn().mockRejectedValue(
+      new Error('HTTP 500 from source'),
+    )
+
+    const progressCalls: Array<{ name: string; state: string; errorKind: string | null }> = []
+    const onProgress = vi.fn(async (
+      name: string,
+      state: string,
+      _count: number,
+      _error: string | null,
+      errorKind: 'config' | 'api' | null,
+    ) => {
+      progressCalls.push({ name, state, errorKind })
+    })
+
+    const config = makeConfig({ sensors_enabled: { api_sensor: true } })
+    const report = await collect(config, onProgress)
+    expect(report.sources_failed).toContain('api_sensor')
+
+    const failCall = progressCalls.find(c => c.name === 'api_sensor' && c.state === 'failed')
+    expect(failCall).toBeDefined()
+    expect(failCall!.errorKind).toBe('api')
+  })
+
+  it('successful sensor produces error_kind null in progress callback', async () => {
+    mockSensorFns['good_sensor'] = vi.fn().mockResolvedValue([makeItem('1', 'good_sensor')])
+
+    const progressCalls: Array<{ name: string; state: string; errorKind: string | null }> = []
+    const onProgress = vi.fn(async (
+      name: string,
+      state: string,
+      _count: number,
+      _error: string | null,
+      errorKind: 'config' | 'api' | null,
+    ) => {
+      progressCalls.push({ name, state, errorKind })
+    })
+
+    const config = makeConfig({ sensors_enabled: { good_sensor: true } })
+    await collect(config, onProgress)
+
+    const okCall = progressCalls.find(c => c.name === 'good_sensor' && c.state === 'ok')
+    expect(okCall).toBeDefined()
+    expect(okCall!.errorKind).toBeNull()
   })
 })

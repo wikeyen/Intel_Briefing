@@ -10,7 +10,7 @@ export async function fetchV2ex(_config: ConfigSettings, limit: number): Promise
       headers: { 'User-Agent': 'Intel-Briefing/1.0' },
       signal: AbortSignal.timeout(15000),
     })
-    if (!resp.ok) return []
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} from V2EX`)
     const data = await resp.json() as Array<Record<string, unknown>>
 
     const items: IntelItem[] = []
@@ -26,7 +26,7 @@ export async function fetchV2ex(_config: ConfigSettings, limit: number): Promise
       })
     }
     return items
-  } catch {
-    return []
+  } catch (err) {
+    throw err instanceof Error ? err : new Error(String(err))
   }
 }

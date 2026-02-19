@@ -158,6 +158,10 @@ export function Sidebar({ showToast }: Props) {
           <NumTag>00</NumTag>
           Status
         </NavLink>
+        <NavLink href="/console" active={pathname === '/console'}>
+          <NumTag>04</NumTag>
+          Console
+        </NavLink>
 
         <SideDivider />
 

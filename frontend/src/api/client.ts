@@ -47,6 +47,7 @@ export interface SensorProgress {
   state: 'pending' | 'running' | 'ok' | 'failed'
   item_count: number
   error: string | null
+  error_kind?: 'config' | 'api' | null
 }
 
 export interface PipelineStatus {

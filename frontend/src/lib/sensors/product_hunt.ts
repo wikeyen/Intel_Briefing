@@ -1,6 +1,7 @@
 // ABOUTME: Product Hunt sensor using the official GraphQL API.
 // ABOUTME: Fetches trending products ordered by votes; requires a valid producthunt_token in config.
 import type { ConfigSettings, IntelItem } from '../models'
+import { SensorConfigError } from './errors'
 
 const PH_API = 'https://api.producthunt.com/v2/api/graphql'
 
@@ -24,7 +25,7 @@ function buildQuery(limit: number): string {
 }
 
 export async function fetchProductHunt(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
-  if (!config.producthunt_token) return []
+  if (!config.producthunt_token) throw new SensorConfigError('Product Hunt token not configured')
 
   try {
     const resp = await fetch(PH_API, {
@@ -36,7 +37,7 @@ export async function fetchProductHunt(config: ConfigSettings, limit: number): P
       body: JSON.stringify({ query: buildQuery(limit) }),
       signal: AbortSignal.timeout(15000),
     })
-    if (!resp.ok) return []
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} from Product Hunt`)
     const data = await resp.json() as Record<string, unknown>
 
     const items: IntelItem[] = []
@@ -65,7 +66,7 @@ export async function fetchProductHunt(config: ConfigSettings, limit: number): P
       })
     }
     return items.slice(0, limit)
-  } catch {
-    return []
+  } catch (err) {
+    throw err instanceof Error ? err : new Error(String(err))
   }
 }

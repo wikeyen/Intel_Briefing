@@ -11,7 +11,7 @@ export async function fetchWallStreetCN(_config: ConfigSettings, limit: number):
       signal: AbortSignal.timeout(15000),
       redirect: 'follow',
     })
-    if (!resp.ok) return []
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} from WallStreetCN`)
     const data = await resp.json() as Record<string, unknown>
 
     const items: IntelItem[] = []
@@ -39,8 +39,8 @@ export async function fetchWallStreetCN(_config: ConfigSettings, limit: number):
       })
     }
     return items
-  } catch {
-    return []
+  } catch (err) {
+    throw err instanceof Error ? err : new Error(String(err))
   }
 }
 

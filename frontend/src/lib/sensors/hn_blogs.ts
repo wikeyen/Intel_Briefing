@@ -132,7 +132,7 @@ export async function fetchHnBlogs(_config: ConfigSettings, limit: number): Prom
     // Sort by published_at descending; items without a date sort last
     articles.sort((a, b) => (b.published_at ?? '').localeCompare(a.published_at ?? ''))
     return articles.slice(0, limit)
-  } catch {
-    return []
+  } catch (err) {
+    throw err instanceof Error ? err : new Error(String(err))
   }
 }

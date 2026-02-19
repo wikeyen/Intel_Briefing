@@ -16,7 +16,7 @@ export async function fetch36kr(_config: ConfigSettings, limit: number): Promise
       signal: AbortSignal.timeout(15000),
       redirect: 'follow',
     })
-    if (!resp.ok) return []
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} from 36Kr`)
     const html = await resp.text()
     const root = parseHTML(html)
 
@@ -45,8 +45,8 @@ export async function fetch36kr(_config: ConfigSettings, limit: number): Promise
       })
     }
     return items
-  } catch {
-    return []
+  } catch (err) {
+    throw err instanceof Error ? err : new Error(String(err))
   }
 }
 

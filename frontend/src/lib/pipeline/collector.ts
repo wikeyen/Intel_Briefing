@@ -14,6 +14,7 @@ import { SENSOR_REGISTRY } from '../sensors'
 import { SensorConfigError } from '../sensors/errors'
 import { verifyLink } from '../utils/verifier'
 import { fetchContent } from '../utils/jina-reader'
+import { decodeItemEntities } from '../utils/decode-entities'
 
 // Section routing: maps sensor_name to report section key
 const SENSOR_SECTION_MAP: Record<string, SectionKey> = {
@@ -138,6 +139,13 @@ export async function collect(
 
   // Deduplicate within the social section (accounts take priority over topics/trends)
   const dedupedSections = dedupAcrossSections(sections)
+
+  // Decode HTML entities in all text fields
+  for (const key of Object.keys(dedupedSections) as SectionKey[]) {
+    for (const item of dedupedSections[key]) {
+      decodeItemEntities(item as Record<string, unknown>)
+    }
+  }
 
   // Post-processing: verify links (Grok items) + enrich content (hn_blogs) — concurrent
   const postProcessTasks: Promise<void>[] = []

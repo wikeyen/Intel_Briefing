@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { loadConfig } from '@/lib/config'
 import { collect } from '@/lib/pipeline/collector'
 import { writePipelineStatus } from '@/lib/pipeline/cache'
+import { summarizeReport } from '@/lib/summary/summarizer'
+import { writeSummary } from '@/lib/summary/cache'
 import type { PipelineStatus, SensorProgress } from '@/lib/models'
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -65,6 +67,20 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       .flat()
       .length
     await writePipelineStatus(status).catch(() => {})
+
+    // Auto-summarize if LLM provider is configured
+    if (config.summary_provider) {
+      try {
+        const summary = await summarizeReport(report, {
+          base_url: config.summary_base_url,
+          api_key: config.summary_api_key,
+          model: config.summary_model,
+        })
+        await writeSummary(summary)
+      } catch (err) {
+        console.error('Auto-summarization failed:', err)
+      }
+    }
 
     return NextResponse.json({
       status: 'ok',

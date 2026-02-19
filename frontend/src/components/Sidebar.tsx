@@ -3,17 +3,9 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { api } from '@/api/client'
 import type { HealthResponse, PipelineStatus } from '@/api/client'
-
-/** CSS keyframes for the animated "new" badge pulse */
-const BADGE_PULSE_CSS = `
-@keyframes badge-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-`
 
 const CONFIG_NAV = [
   { href: '/api-keys',  label: 'Connections',  num: '01' },
@@ -101,6 +93,21 @@ export function Sidebar({ showToast }: Props) {
 
   const hasErrors = (pipelineStatus?.sensors.some(s => s.error !== null)) ?? false
 
+  // Track whether the user has seen the current errors by visiting /console
+  const errorsSeen = useRef(false)
+  const onConsolePage = pathname === '/console'
+
+  // Mark as seen when the user is on the console page and there are errors
+  if (onConsolePage && hasErrors) {
+    errorsSeen.current = true
+  }
+  // Reset "seen" when errors clear (so badge reappears if errors come back)
+  if (!hasErrors) {
+    errorsSeen.current = false
+  }
+
+  const showBadge = hasErrors && !errorsSeen.current
+
   const handleFetchNow = async () => {
     setFetching(true)
     try {
@@ -134,7 +141,6 @@ export function Sidebar({ showToast }: Props) {
       flexShrink: 0,
       borderRight: '1px solid var(--sb-border)',
     }}>
-      <style dangerouslySetInnerHTML={{ __html: BADGE_PULSE_CSS }} />
       {/* Brand */}
       <div style={{ padding: '2rem 1.75rem 1.5rem' }}>
         <div style={{
@@ -179,7 +185,7 @@ export function Sidebar({ showToast }: Props) {
         <NavLink href="/console" active={pathname === '/console'}>
           <NumTag>04</NumTag>
           Console
-          {hasErrors && (
+          {showBadge && (
             <span style={{
               fontSize: '0.5rem',
               fontWeight: 700,
@@ -187,7 +193,6 @@ export function Sidebar({ showToast }: Props) {
               textTransform: 'uppercase',
               color: 'var(--err)',
               marginLeft: 'auto',
-              animation: 'badge-pulse 2s ease-in-out infinite',
             }}>
               new
             </span>

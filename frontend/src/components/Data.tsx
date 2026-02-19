@@ -75,15 +75,23 @@ const LINE_CLAMP_CSS = `
 }
 `
 
+/** Platform-specific badge colors for social sources. */
+const PLATFORM_COLORS: Record<string, { color: string; bg: string }> = {
+  x:        { color: '#000000', bg: 'rgba(0,0,0,0.08)' },
+  bluesky:  { color: '#0085FF', bg: 'rgba(0,133,255,0.08)' },
+  mastodon: { color: '#6364FF', bg: 'rgba(99,100,255,0.08)' },
+}
+
 function SourceChip({ source }: { source: string }) {
+  const platform = PLATFORM_COLORS[source]
   return (
     <span style={{
       fontSize: '0.625rem',
       fontWeight: 600,
       letterSpacing: '0.06em',
       textTransform: 'uppercase',
-      color: 'var(--ink-faint)',
-      background: 'var(--surface-alt)',
+      color: platform?.color ?? 'var(--ink-faint)',
+      background: platform?.bg ?? 'var(--surface-alt)',
       padding: '0.2rem 0.5rem',
       borderRadius: 3,
     }}>

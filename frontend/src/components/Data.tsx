@@ -15,9 +15,8 @@ const SECTIONS: { key: string; label: string }[] = [
   { key: 'capital_flow', label: 'Capital Flow' },
   { key: 'products',     label: 'Products' },
   { key: 'community',    label: 'Community' },
+  { key: 'social',       label: 'Social' },
   { key: 'insights',     label: 'Insights' },
-  { key: 'politics',     label: 'Accounts' },
-  { key: 'topics',       label: 'Topics' },
 ]
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -28,23 +27,22 @@ const SOURCE_LABELS: Record<string, string> = {
   chrome_radar: 'Chrome',
   v2ex:         'V2EX',
   hn_blogs:     'HN Blogs',
-  grok:         'Grok',
   sources_36kr: '36Kr',
   wallstreetcn: 'WSCN',
-  politics:     'Politics',
-  topics:       'Topics',
+  x:            'X',
+  bluesky:      'Bluesky',
+  mastodon:     'Mastodon',
 }
 
 /** Maps each section to the sensors that feed it. */
 const SECTION_SENSORS: Record<string, string[]> = {
-  tech_trends:  ['hacker_news', 'github', 'grok'],
+  tech_trends:  ['hacker_news', 'github'],
   research:     ['arxiv'],
   insights:     ['hn_blogs'],
   products:     ['product_hunt', 'chrome_radar'],
   community:    ['v2ex'],
   capital_flow: ['sources_36kr', 'wallstreetcn'],
-  politics:     ['politics'],
-  topics:       ['topics'],
+  social:       ['social_accounts', 'social_topics', 'social_trends'],
 }
 
 /** Check if a section is empty because every sensor feeding it lacks a required token. */

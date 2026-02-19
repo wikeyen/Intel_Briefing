@@ -7,9 +7,11 @@ import type { ConfigSettings } from '@/api/client'
 import { useToast } from '@/lib/toast-context'
 
 const KEY_FIELDS: { field: keyof ConfigSettings; label: string; hint: string }[] = [
-  { field: 'xai_api_key',        label: 'xAI API Key',         hint: 'Required for Grok-based politics and topics sensors.' },
-  { field: 'github_token',       label: 'GitHub Token',        hint: 'Personal access token for GitHub Trending sensor.' },
-  { field: 'producthunt_token',  label: 'Product Hunt Token',  hint: 'API token for Product Hunt daily launches.' },
+  { field: 'xai_api_key',           label: 'xAI API Key',              hint: 'Required for X/Twitter social sensors via Grok.' },
+  { field: 'github_token',          label: 'GitHub Token',             hint: 'Personal access token for GitHub Trending sensor.' },
+  { field: 'producthunt_token',     label: 'Product Hunt Token',       hint: 'API token for Product Hunt daily launches.' },
+  { field: 'bluesky_app_password',  label: 'Bluesky App Password',     hint: 'App password for Bluesky social sensors. Generate at bsky.app/settings/app-passwords.' },
+  { field: 'mastodon_token',        label: 'Mastodon Access Token',    hint: 'Access token for Mastodon account monitoring.' },
 ]
 
 const inputBase: React.CSSProperties = {
@@ -197,6 +199,7 @@ export function ApiKeys() {
   const [savedFlags, setSavedFlags] = useState<Record<string, boolean>>({})
   // pendingValues: new values the user is typing (only sent if non-empty)
   const [pendingValues, setPendingValues] = useState<Record<string, string>>({})
+  const [blueskyHandle, setBlueskyHandle] = useState('')
   const [xaiModel, setXaiModel] = useState('')
   const [xaiBaseUrl, setXaiBaseUrl] = useState('')
   const [saving, setSaving] = useState(false)
@@ -209,6 +212,7 @@ export function ApiKeys() {
       }
       setSavedFlags(flags)
       setPendingValues({})
+      setBlueskyHandle(cfg.bluesky_handle ?? '')
       setXaiModel(cfg.xai_model)
       setXaiBaseUrl(cfg.xai_base_url)
     })
@@ -219,7 +223,7 @@ export function ApiKeys() {
   const save = async () => {
     setSaving(true)
     try {
-      const partial: Partial<ConfigSettings> = { xai_model: xaiModel, xai_base_url: xaiBaseUrl }
+      const partial: Partial<ConfigSettings> = { xai_model: xaiModel, xai_base_url: xaiBaseUrl, bluesky_handle: blueskyHandle || null }
       for (const { field } of KEY_FIELDS) {
         const v = pendingValues[field]
         if (v) (partial as Record<string, string>)[field] = v
@@ -265,6 +269,24 @@ export function ApiKeys() {
             }}
           />
         ))}
+
+        <div>
+          <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '0.5rem' }}>
+            Bluesky Handle
+          </label>
+          <input
+            type="text"
+            value={blueskyHandle}
+            onChange={(e) => setBlueskyHandle(e.target.value)}
+            placeholder="e.g., alice.bsky.social"
+            style={inputStyle}
+            onFocus={focus}
+            onBlur={blur}
+          />
+          <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.375rem' }}>
+            Your Bluesky handle (e.g., <code style={{ fontFamily: 'ui-monospace, monospace' }}>alice.bsky.social</code>).
+          </p>
+        </div>
 
         <div style={{ height: 1, background: 'var(--border-soft)' }} />
 

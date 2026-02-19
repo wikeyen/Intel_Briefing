@@ -1,5 +1,5 @@
 // ABOUTME: Unit tests for the Markdown renderer in renderer/markdown.ts.
-// ABOUTME: Covers all 8 sections, empty data, stale warning, and optional field handling.
+// ABOUTME: Covers all 7 sections, empty data, stale warning, and optional field handling.
 import { describe, it, expect } from 'vitest'
 import type { IntelItem, IntelReport } from '../models'
 import { createReport, emptyItemsMap } from '../models'
@@ -24,11 +24,11 @@ describe('renderMarkdown', () => {
     expect(md).toContain('2026-02-17')
   })
 
-  it('all 8 section headers present', () => {
+  it('all 7 section headers present', () => {
     const report = makeReport()
     const md = renderMarkdown(report)
     for (const header of ['Tech Trends', 'Research', 'Insights', 'Products',
-      'Capital Flow', 'Community', 'Politics', 'Topics']) {
+      'Capital Flow', 'Community', 'Social']) {
       expect(md).toContain(header)
     }
   })

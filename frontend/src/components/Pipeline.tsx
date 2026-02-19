@@ -14,8 +14,7 @@ const OUTPUT_SECTIONS = [
   { key: 'products',     label: 'Products' },
   { key: 'capital_flow', label: 'Capital Flow' },
   { key: 'community',    label: 'Community' },
-  { key: 'politics',     label: 'Politics' },
-  { key: 'topics',       label: 'Topics' },
+  { key: 'social',       label: 'Social' },
 ]
 
 const TIMEZONES = [

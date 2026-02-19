@@ -23,6 +23,7 @@ const SENSOR_GROUPS: { label: string; sensors: SensorDef[] }[] = [
       { key: 'github',       label: 'GitHub Trending',  desc: 'Daily trending repositories' },
       { key: 'product_hunt', label: 'Product Hunt',     desc: 'Top products of the day' },
       { key: 'hn_blogs',     label: 'HN Blogs',         desc: 'Curated blog posts from Hacker News' },
+      { key: 'chrome_radar', label: 'Chrome Radar',     desc: 'Chrome Web Store surveillance' },
     ],
   },
   {
@@ -34,11 +35,11 @@ const SENSOR_GROUPS: { label: string; sensors: SensorDef[] }[] = [
     ],
   },
   {
-    label: 'Grok / xAI',
+    label: 'Social',
     sensors: [
-      { key: 'grok',     label: 'Grok Tech Trends',  desc: 'Tech trends via xAI Grok search' },
-      { key: 'politics', label: 'Accounts',           desc: 'X/Twitter accounts monitored via Grok' },
-      { key: 'topics',   label: 'Topics Keywords',   desc: 'Keyword searches via Grok' },
+      { key: 'social_accounts', label: 'Social Accounts', desc: 'Monitor accounts across X, Bluesky, Mastodon' },
+      { key: 'social_topics',   label: 'Social Topics',   desc: 'Track keywords across X, Bluesky, Mastodon' },
+      { key: 'social_trends',   label: 'Social Trends',   desc: 'Trending content across X, Bluesky, Mastodon' },
     ],
   },
 ]
@@ -49,9 +50,9 @@ const ALL_SENSORS = SENSOR_GROUPS.flatMap((g) => g.sensors)
 const SENSOR_LOOKBACK_SUPPORT: Record<string, number> = {
   hacker_news: 24,
   github: 168,
-  grok: 24,
-  politics: 48,
-  topics: 48,
+  social_accounts: 48,
+  social_topics: 48,
+  social_trends: 24,
   hn_blogs: 72,
   arxiv: 72,
   wallstreetcn: 24,
@@ -204,8 +205,11 @@ export function Settings() {
 
   // Sources state
   const [enabled, setEnabled] = useState<Record<string, boolean>>({})
-  const [politicsAccounts, setPoliticsAccounts] = useState<string[]>([])
-  const [topicsKeywords, setTopicsKeywords] = useState<string[]>([])
+  const [statuses, setStatuses] = useState<Record<string, SensorStatus>>({})
+  const [socialAccountsX, setSocialAccountsX] = useState<string[]>([])
+  const [socialAccountsBluesky, setSocialAccountsBluesky] = useState<string[]>([])
+  const [socialAccountsMastodon, setSocialAccountsMastodon] = useState<string[]>([])
+  const [socialTopicsKeywords, setSocialTopicsKeywords] = useState<string[]>([])
 
   // Limits state — raw strings for controlled inputs, parsed on save
   const [defaultLimit, setDefaultLimit] = useState(10)
@@ -232,8 +236,8 @@ export function Settings() {
       const defaults: Record<string, boolean> = {}
       for (const { key } of ALL_SENSORS) defaults[key] = true
       setEnabled({ ...defaults, ...cfg.sensors_enabled })
-      setPoliticsAccounts(cfg.politics_accounts)
-      setTopicsKeywords(cfg.topics_keywords)
+      setSocialAccountsX(cfg.social_accounts_x)
+      setSocialTopicsKeywords(cfg.social_topics_keywords)
       setSensorLimits(cfg.sensor_limits ?? {})
       setSensorLookback(cfg.sensor_lookback_hours ?? {})
       setDefaultLimit(cfg.default_limit)
@@ -287,8 +291,8 @@ export function Settings() {
         sensor_limits: sensorLimits,
         sensor_lookback_hours: sensorLookback,
         default_limit: defaultLimit,
-        politics_accounts: politicsAccounts,
-        topics_keywords: topicsKeywords,
+        social_accounts_x: socialAccountsX,
+        social_topics_keywords: socialTopicsKeywords,
         fetch_time: fetchTime,
         fetch_timezone: timezone,
         cache_ttl_hours: cacheTtl,
@@ -461,12 +465,12 @@ export function Settings() {
 
                 {group.sensors.map(({ key, label, desc }, i) => {
                   const isLast = i === group.sensors.length - 1
-                  const isPolitics = key === 'politics'
-                  const isTopics = key === 'topics'
+                  const isSocialAccounts = key === 'social_accounts'
+                  const isSocialTopics = key === 'social_topics'
                   const isOn = enabled[key] ?? true
                   const hasLookback = key in SENSOR_LOOKBACK_SUPPORT
                   const lookbackDefault = SENSOR_LOOKBACK_SUPPORT[key] ?? defaultLookback
-                  const showSubConfig = (isPolitics || isTopics) && isOn
+                  const showSubConfig = (isSocialAccounts || isSocialTopics) && isOn
 
                   return (
                     <div key={key}>
@@ -514,8 +518,8 @@ export function Settings() {
                         )}
                       </div>
 
-                      {/* Inline sub-config: Politics Accounts */}
-                      {isPolitics && isOn && (
+                      {/* Inline sub-config: Social Accounts */}
+                      {isSocialAccounts && isOn && (
                         <div style={{
                           padding: '1rem 1rem 1.25rem 3.5rem',
                           background: 'var(--canvas)',
@@ -525,16 +529,16 @@ export function Settings() {
                             X/Twitter handles to monitor
                           </div>
                           <TagInput
-                            tags={politicsAccounts}
-                            onChange={(tags) => setPoliticsAccounts(tags.map(normalizeHandle))}
+                            tags={socialAccountsX}
+                            onChange={(tags) => setSocialAccountsX(tags.map(normalizeHandle))}
                             placeholder="@handle — press Enter"
                             validate={validateHandle}
                           />
                         </div>
                       )}
 
-                      {/* Inline sub-config: Topics Keywords */}
-                      {isTopics && isOn && (
+                      {/* Inline sub-config: Social Topics */}
+                      {isSocialTopics && isOn && (
                         <div style={{
                           padding: '1rem 1rem 1.25rem 3.5rem',
                           background: 'var(--canvas)',
@@ -544,8 +548,8 @@ export function Settings() {
                             Keywords and hashtags to search
                           </div>
                           <TagInput
-                            tags={topicsKeywords}
-                            onChange={setTopicsKeywords}
+                            tags={socialTopicsKeywords}
+                            onChange={setSocialTopicsKeywords}
                             placeholder="keyword or #hashtag — press Enter"
                           />
                         </div>

@@ -37,27 +37,27 @@ function nextFetchIn(fetchTime: string, timezone: string): string {
 }
 
 const ALL_SENSORS = [
-  { key: 'hacker_news',  label: 'Hacker News' },
-  { key: 'arxiv',        label: 'ArXiv AI' },
-  { key: 'github',       label: 'GitHub Trending' },
-  { key: 'product_hunt', label: 'Product Hunt' },
-  { key: 'v2ex',         label: 'V2EX' },
-  { key: 'hn_blogs',     label: 'HN Blogs' },
-  { key: 'grok',         label: 'Grok' },
-  { key: 'sources_36kr', label: '36Kr' },
-  { key: 'wallstreetcn', label: 'WallStreetCN' },
-  { key: 'politics',     label: 'Accounts' },
-  { key: 'topics',       label: 'Topics' },
+  { key: 'hacker_news',     label: 'Hacker News' },
+  { key: 'arxiv',           label: 'ArXiv AI' },
+  { key: 'github',          label: 'GitHub Trending' },
+  { key: 'product_hunt',    label: 'Product Hunt' },
+  { key: 'v2ex',            label: 'V2EX' },
+  { key: 'hn_blogs',        label: 'HN Blogs' },
+  { key: 'sources_36kr',    label: '36Kr' },
+  { key: 'wallstreetcn',    label: 'WallStreetCN' },
+  { key: 'social_accounts', label: 'Social Accounts' },
+  { key: 'social_topics',   label: 'Social Topics' },
+  { key: 'social_trends',   label: 'Social Trends' },
+  { key: 'chrome_radar',    label: 'Chrome Radar' },
 ]
 
 const SECTION_SENSORS = [
-  { key: 'tech_trends',  label: 'Tech Trends',  sensors: ['hacker_news', 'github', 'grok'] },
+  { key: 'tech_trends',  label: 'Tech Trends',  sensors: ['hacker_news', 'github'] },
   { key: 'research',     label: 'Research',      sensors: ['arxiv'] },
   { key: 'capital_flow', label: 'Capital Flow',  sensors: ['sources_36kr', 'wallstreetcn'] },
-  { key: 'products',     label: 'Products',      sensors: ['product_hunt'] },
+  { key: 'products',     label: 'Products',      sensors: ['product_hunt', 'chrome_radar'] },
   { key: 'community',    label: 'Community',     sensors: ['v2ex'] },
-  { key: 'politics',     label: 'Accounts',      sensors: ['politics'] },
-  { key: 'topics',       label: 'Topics',        sensors: ['topics'] },
+  { key: 'social',       label: 'Social',        sensors: ['social_accounts', 'social_topics', 'social_trends'] },
   { key: 'insights',     label: 'Insights',      sensors: ['hn_blogs'] },
 ]
 
@@ -448,12 +448,16 @@ export function Status() {
       }}>
         {SECTION_SENSORS.map((section) => {
           // Section total: sum of sensor counts for this section
+          // Social items have source='x'/'bluesky'/'mastodon' (not the sensor name),
+          // so we count them from the report section directly when idle.
           const sectionTotal = isRunning
             ? section.sensors.reduce((sum, sk) => {
                 const sp = liveSensors[sk]
                 return sum + (sp?.state === 'ok' ? sp.item_count : 0)
               }, 0)
-            : section.sensors.reduce((sum, sk) => sum + (sensorCounts[sk] ?? 0), 0)
+            : section.key === 'social'
+              ? (report?.items['social']?.length ?? 0)
+              : section.sensors.reduce((sum, sk) => sum + (sensorCounts[sk] ?? 0), 0)
 
           return (
             <div key={section.key} style={{

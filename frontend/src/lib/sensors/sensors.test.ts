@@ -74,6 +74,71 @@ describe('HackerNewsSensor', () => {
     expect(items).toHaveLength(1)
     expect(items[0].id).toBe('hn-2')
   })
+
+  it('populates published_at from time field', async () => {
+    const storyIds = [1]
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('topstories.json')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(storyIds) })
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          id: 1, type: 'story', title: 'Story 1',
+          url: 'https://example.com/1', score: 100, descendants: 20,
+          time: 1700000000, kids: [],
+        }),
+      })
+    })
+
+    const { fetchHackerNews } = await import('./hacker_news')
+    const items = await fetchHackerNews(makeConfig(), 5)
+    expect(items[0].published_at).toBe('2023-11-14T22:13:20.000Z')
+  })
+
+  it('fetches top-level comments into content', async () => {
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('topstories.json')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([1]) })
+      }
+      if (url.includes('/item/1.json')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            id: 1, type: 'story', title: 'Story',
+            url: 'https://example.com', score: 50, descendants: 10,
+            time: 1700000000, kids: [10, 20, 30],
+          }),
+        })
+      }
+      if (url.includes('/item/10.json')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ id: 10, by: 'user1', text: 'Great article!' }),
+        })
+      }
+      if (url.includes('/item/20.json')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ id: 20, by: 'user2', text: 'I disagree with this take.' }),
+        })
+      }
+      if (url.includes('/item/30.json')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ id: 30, by: 'user3', text: '<p>HTML <b>comment</b> here</p>' }),
+        })
+      }
+      return Promise.resolve({ ok: false, status: 404 })
+    })
+
+    const { fetchHackerNews } = await import('./hacker_news')
+    const items = await fetchHackerNews(makeConfig(), 5)
+    expect(items[0].content).toContain('@user1: Great article!')
+    expect(items[0].content).toContain('@user2: I disagree with this take.')
+    expect(items[0].content).toContain('@user3: HTML comment here')
+    expect(items[0].content).toContain('Top comments:')
+  })
 })
 
 describe('V2EXSensor', () => {

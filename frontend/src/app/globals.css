@@ -348,23 +348,14 @@ input[type="range"]::-moz-range-thumb {
     grid-template-columns: 1fr !important;
   }
 
-  /* ── Settings table — horizontal scroll ── */
-  .sensor-table-row {
-    grid-template-columns: 36px 1fr 56px 56px 48px !important;
-    gap: 0.25rem !important;
-    padding-left: 0.75rem !important;
-    padding-right: 0.75rem !important;
-  }
+  /* ── Settings sensor table ── */
+  .sensor-table-row,
   .sensor-table-header {
-    grid-template-columns: 36px 1fr 56px 56px 48px !important;
+    grid-template-columns: 36px 1fr 56px 56px !important;
     gap: 0.25rem !important;
     padding-left: 0.75rem !important;
     padding-right: 0.75rem !important;
   }
-
-  /* ── Status badge: dot on mobile ── */
-  .badge-full { display: none !important; }
-  .badge-dot  { display: inline-block !important; }
 
   /* ── Touch interactions ── */
   button:active, a:active {
@@ -398,8 +389,6 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
-/* Status badge — dot hidden on desktop, text hidden on mobile */
-.badge-dot { display: none; }
 
 /* ─── Animations ────────────────────────────────────────────────────────── */
 @keyframes fadeInUp {

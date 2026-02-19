@@ -73,44 +73,8 @@ const TIMEZONES = [
   'Australia/Sydney',
 ]
 
-type SensorStatus = 'ok' | 'failed' | 'disabled'
-
 /* ── Shared sub-components ── */
 
-function Badge({ status }: { status: SensorStatus | undefined }) {
-  if (!status) return null
-  const map: Record<string, { bg: string; color: string; label: string }> = {
-    ok:       { bg: 'var(--ok-bg)',       color: 'var(--ok)',        label: 'OK' },
-    failed:   { bg: 'var(--err-bg)',      color: 'var(--err)',       label: 'Failed' },
-    disabled: { bg: 'var(--surface-alt)', color: 'var(--ink-faint)', label: 'Off' },
-  }
-  const s = map[status]
-  return (
-    <>
-      {/* Full badge on desktop */}
-      <span className="badge-full" style={{
-        fontSize: '0.6875rem',
-        fontWeight: 600,
-        letterSpacing: '0.06em',
-        textTransform: 'uppercase',
-        background: s.bg,
-        color: s.color,
-        padding: '0.2rem 0.625rem',
-        borderRadius: 999,
-      }}>
-        {s.label}
-      </span>
-      {/* Dot only on mobile */}
-      <span className="badge-dot" style={{
-        width: 8,
-        height: 8,
-        borderRadius: '50%',
-        background: s.color,
-        flexShrink: 0,
-      }} />
-    </>
-  )
-}
 
 function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
   return (
@@ -240,7 +204,6 @@ export function Settings() {
 
   // Sources state
   const [enabled, setEnabled] = useState<Record<string, boolean>>({})
-  const [statuses, setStatuses] = useState<Record<string, SensorStatus>>({})
   const [politicsAccounts, setPoliticsAccounts] = useState<string[]>([])
   const [topicsKeywords, setTopicsKeywords] = useState<string[]>([])
 
@@ -282,12 +245,6 @@ export function Settings() {
       setSuppress(cfg.suppress_keywords)
       setPostExpiryDays(cfg.post_expiry_days ?? 30)
     })
-    api.getLatest().then((report) => {
-      const map: Record<string, SensorStatus> = {}
-      for (const key of report.sources_ok) map[key] = 'ok'
-      for (const key of report.sources_failed) map[key] = 'failed'
-      setStatuses(map)
-    }).catch(() => {})
   }, [])
 
   const toggle = (key: string) => setEnabled((prev) => ({ ...prev, [key]: !prev[key] }))
@@ -346,9 +303,6 @@ export function Settings() {
       setSaving(false)
     }
   }
-
-  const getBadge = (key: string): SensorStatus | undefined =>
-    !enabled[key] ? 'disabled' : statuses[key]
 
   /* ── Compact number input for the table ── */
   const numInput = (
@@ -486,7 +440,7 @@ export function Settings() {
                 {/* Table header */}
                 <div className="sensor-table-header" style={{
                   display: 'grid',
-                  gridTemplateColumns: '36px 1fr 64px 64px 56px',
+                  gridTemplateColumns: '36px 1fr 64px 64px',
                   gap: '0.5rem',
                   alignItems: 'center',
                   padding: '0.4rem 1rem',
@@ -502,9 +456,6 @@ export function Settings() {
                   </span>
                   <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--ink-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right' }}>
                     Hours
-                  </span>
-                  <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--ink-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right' }}>
-                    Status
                   </span>
                 </div>
 
@@ -524,7 +475,7 @@ export function Settings() {
                         className="sensor-table-row"
                         style={{
                           display: 'grid',
-                          gridTemplateColumns: '36px 1fr 64px 64px 56px',
+                          gridTemplateColumns: '36px 1fr 64px 64px',
                           gap: '0.5rem',
                           alignItems: 'center',
                           padding: '0.625rem 1rem',
@@ -561,11 +512,6 @@ export function Settings() {
                         ) : (
                           <span style={{ textAlign: 'right', color: 'var(--ink-faint)', fontSize: '0.8125rem' }}>—</span>
                         )}
-
-                        {/* Status badge */}
-                        <div style={{ textAlign: 'right' }}>
-                          <Badge status={getBadge(key)} />
-                        </div>
                       </div>
 
                       {/* Inline sub-config: Politics Accounts */}

@@ -65,5 +65,8 @@ htmlcov/
 # Cache and runtime data
 cache/
 
+# Git worktrees
+.worktrees/
+
 # Local settings — contains API keys, never commit
 config/settings.local.json

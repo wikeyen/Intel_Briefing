@@ -128,8 +128,7 @@ describe('GET /api/intel/latest', () => {
   it('returns 503 when no cache', async () => {
     mockReadReport.mockResolvedValue(null)
     const { GET } = await import('@/app/api/intel/latest/route')
-    const req = new NextRequest('http://localhost/api/intel/latest')
-    const resp = await GET(req)
+    const resp = await GET()
     expect(resp.status).toBe(503)
   })
 
@@ -138,8 +137,7 @@ describe('GET /api/intel/latest', () => {
     mockReadReport.mockResolvedValue(report)
     mockIsStale.mockReturnValue(false)
     const { GET } = await import('@/app/api/intel/latest/route')
-    const req = new NextRequest('http://localhost/api/intel/latest')
-    const resp = await GET(req)
+    const resp = await GET()
     expect(resp.status).toBe(200)
     const data = await resp.json()
     expect(data.items).toBeDefined()
@@ -148,24 +146,22 @@ describe('GET /api/intel/latest', () => {
     expect(data.stale).toBeDefined()
   })
 
-  it('limit truncates items', async () => {
+  it('returns all items without truncation', async () => {
     const items = Array.from({ length: 10 }, (_, i) => makeItem(String(i), `Item ${i}`))
     const report = makeReport({ items: { ...emptyItemsMap(), tech_trends: items } })
     mockReadReport.mockResolvedValue(report)
     mockIsStale.mockReturnValue(false)
     const { GET } = await import('@/app/api/intel/latest/route')
-    const req = new NextRequest('http://localhost/api/intel/latest?limit=3')
-    const resp = await GET(req)
+    const resp = await GET()
     const data = await resp.json()
-    expect(data.items.tech_trends).toHaveLength(3)
+    expect(data.items.tech_trends).toHaveLength(10)
   })
 
   it('stale flag propagated', async () => {
     mockReadReport.mockResolvedValue(makeReport())
     mockIsStale.mockReturnValue(true)
     const { GET } = await import('@/app/api/intel/latest/route')
-    const req = new NextRequest('http://localhost/api/intel/latest')
-    const resp = await GET(req)
+    const resp = await GET()
     const data = await resp.json()
     expect(data.stale).toBe(true)
   })

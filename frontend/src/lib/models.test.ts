@@ -10,7 +10,7 @@ import {
   defaultConfig,
   emptyItemsMap,
   ensureAllSections,
-  sectionLimit,
+  sensorLimit,
   sensorResultSucceeded,
 } from './models'
 
@@ -112,16 +112,16 @@ describe('ConfigSettings', () => {
     expect(cfg.sensors_enabled.politics).toBe(true)
   })
 
-  it('should fall back to default_limit for sectionLimit', () => {
+  it('should fall back to default_limit for sensorLimit', () => {
     const cfg = defaultConfig()
-    expect(sectionLimit(cfg, 'tech_trends')).toBe(10)
-    expect(sectionLimit(cfg, 'nonexistent')).toBe(10)
+    expect(sensorLimit(cfg, 'hacker_news')).toBe(10)
+    expect(sensorLimit(cfg, 'nonexistent')).toBe(10)
   })
 
-  it('should use section override in sectionLimit', () => {
-    const cfg = { ...defaultConfig(), section_limits: { research: 5 } }
-    expect(sectionLimit(cfg, 'research')).toBe(5)
-    expect(sectionLimit(cfg, 'tech_trends')).toBe(10)
+  it('should use sensor override in sensorLimit', () => {
+    const cfg = { ...defaultConfig(), sensor_limits: { arxiv: 5 } }
+    expect(sensorLimit(cfg, 'arxiv')).toBe(5)
+    expect(sensorLimit(cfg, 'hacker_news')).toBe(10)
   })
 })
 

@@ -89,7 +89,7 @@ export function Pipeline() {
       setBoost(cfg.boost_keywords)
       setSuppress(cfg.suppress_keywords)
       setDefaultLimit(cfg.default_limit)
-      setSectionLimits(cfg.section_limits ?? {})
+      setSectionLimits(cfg.sensor_limits ?? {})
     })
   }, [])
 
@@ -106,7 +106,7 @@ export function Pipeline() {
         boost_keywords: boost,
         suppress_keywords: suppress,
         default_limit: defaultLimit,
-        section_limits: sectionLimits,
+        sensor_limits: sectionLimits,
       })
       showToast('Pipeline settings saved')
     } catch (e) {

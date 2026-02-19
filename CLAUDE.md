@@ -17,6 +17,7 @@ The frontend uses a local SQLite database for key-value caching.
 - **Worktree note**: When running from a git worktree, you must either:
   - Symlink the data dir: `ln -s /path/to/main/data .worktrees/<branch>/frontend/data`
   - Or set `DATABASE_URL` to an absolute path in `.env.local`
+- **Worktree cleanup**: Always `cd` back to the main repo root before running `rm -rf` on a worktree directory — deleting the current working directory breaks the shell
 
 ## Running Locally
 

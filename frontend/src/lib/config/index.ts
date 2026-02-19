@@ -34,6 +34,9 @@ function applyEnvFallback(config: ConfigSettings): ConfigSettings {
     mastodon_token:       config.mastodon_token        ?? process.env.MASTODON_TOKEN       ?? null,
     social_following_bluesky:  config.social_following_bluesky  || process.env.SOCIAL_FOLLOWING_BLUESKY === 'true',
     social_following_mastodon: config.social_following_mastodon || process.env.SOCIAL_FOLLOWING_MASTODON === 'true',
+    rss_feed_urls:            config.rss_feed_urls?.length
+                                ? config.rss_feed_urls
+                                : (process.env.RSS_FEED_URLS ? process.env.RSS_FEED_URLS.split(',').map(u => u.trim()).filter(Boolean) : []),
   }
 }
 

@@ -330,6 +330,12 @@ function ItemCard({ item }: { item: IntelItem }) {
   )
 }
 
+/** Get the filter key for an item — uses feed name for feeds section, source elsewhere. */
+function filterKey(item: IntelItem, section: string): string {
+  if (section === 'feeds' && item.account) return item.account
+  return item.source
+}
+
 function EmptySection({ needsKey }: { needsKey?: boolean }) {
   return (
     <div style={{
@@ -366,21 +372,21 @@ export function Data() {
     }).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
-  // Derive the unique sources present in the current section
+  // Derive the unique filter keys present in the current section
   const sectionItems = report?.items[activeSection] ?? []
-  const availableSources = useMemo(() => {
+  const availableFilters = useMemo(() => {
     const seen = new Set<string>()
-    for (const item of sectionItems) seen.add(item.source)
+    for (const item of sectionItems) seen.add(filterKey(item, activeSection))
     return [...seen].sort()
-  }, [sectionItems])
+  }, [sectionItems, activeSection])
 
-  // Reset selected sources and page when section changes (select all by default)
+  // Reset selected filters and page when section changes (select all by default)
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSelectedSources(new Set(availableSources))
+    setSelectedSources(new Set(availableFilters))
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1)
-  }, [activeSection, availableSources.join(',')])
+  }, [activeSection, availableFilters.join(',')])
 
   const toggleSource = (src: string) => {
     setSelectedSources(prev => {
@@ -397,7 +403,7 @@ export function Data() {
     setPage(1)
   }
 
-  const filteredItems = sectionItems.filter(item => selectedSources.has(item.source))
+  const filteredItems = sectionItems.filter(item => selectedSources.has(filterKey(item, activeSection)))
   const totalPages = Math.ceil(filteredItems.length / PAGE_SIZE)
   const currentPage = Math.min(page, totalPages || 1)
   const pagedItems = filteredItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
@@ -496,23 +502,23 @@ export function Data() {
               flexWrap: 'wrap',
             }}>
               <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--ink-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '0.25rem' }}>
-                Source
+                {activeSection === 'feeds' ? 'Feed' : 'Source'}
               </span>
-              {availableSources.length === 0 ? (
+              {availableFilters.length === 0 ? (
                 <span style={{ fontSize: '0.75rem', color: 'var(--ink-faint)' }}>—</span>
               ) : (
                 <>
-                  {availableSources.map(src => (
+                  {availableFilters.map(key => (
                     <FilterTag
-                      key={src}
-                      label={SOURCE_LABELS[src] ?? src}
-                      active={selectedSources.has(src)}
-                      onClick={() => toggleSource(src)}
+                      key={key}
+                      label={activeSection === 'feeds' ? key : (SOURCE_LABELS[key] ?? key)}
+                      active={selectedSources.has(key)}
+                      onClick={() => toggleSource(key)}
                     />
                   ))}
-                  {selectedSources.size < availableSources.length && (
+                  {selectedSources.size < availableFilters.length && (
                     <button
-                      onClick={() => { setSelectedSources(new Set(availableSources)); setPage(1) }}
+                      onClick={() => { setSelectedSources(new Set(availableFilters)); setPage(1) }}
                       style={{
                         fontSize: '0.6875rem',
                         color: 'var(--ink-faint)',

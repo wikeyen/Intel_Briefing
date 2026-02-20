@@ -19,10 +19,7 @@ import { SENSOR_REGISTRY } from '../sensors'
 import { SensorConfigError } from '../sensors/errors'
 import { SENSOR_LABELS } from './sensor-map'
 import { assembleReport } from './report-builder'
-
-// Hardcoded prompts (will be replaced by configurable prompts in a future task)
-const SUMMARY_SYSTEM = 'You are an intel analyst writing concise briefings. Summarize the key themes, notable items, and emerging trends. Be specific — cite names, numbers, and links where relevant. Keep each summary to 2-4 sentences.'
-const OVERALL_SYSTEM = 'You are an intel analyst writing an executive briefing. Synthesize the per-source summaries into a coherent overview of the most important developments. Highlight cross-cutting themes. Keep it to 3-6 sentences.'
+import { getSensorPrompt, getOverallPrompt } from '../summary/prompts'
 
 export interface PipelineResult {
   report: IntelReport | null
@@ -84,6 +81,7 @@ async function summarizeSensor(
   sensorName: string,
   items: IntelItem[],
   llmConfig: LlmConfig,
+  promptOverrides?: Record<string, string>,
 ): Promise<SensorSummary | null> {
   if (items.length === 0) return null
 
@@ -91,7 +89,7 @@ async function summarizeSensor(
   const itemsText = items.map(formatItem).join('\n\n')
 
   const messages: ChatMessage[] = [
-    { role: 'system', content: SUMMARY_SYSTEM },
+    { role: 'system', content: getSensorPrompt(sensorName, promptOverrides) },
     { role: 'user', content: `Summarize these ${items.length} items from ${label}:\n\n${itemsText}` },
   ]
 
@@ -208,7 +206,7 @@ export async function runPipeline(
           if (items.length === 0) return null
           tracker.setSummaryState(sensorName, 'running')
           try {
-            const result = await summarizeSensor(sensorName, items, llmConfig)
+            const result = await summarizeSensor(sensorName, items, llmConfig, config.summary_sensor_prompts)
             tracker.setSummaryState(sensorName, 'ok')
             return result
           } catch (err) {
@@ -231,7 +229,7 @@ export async function runPipeline(
         : 'No data was collected in this run.'
 
       const overallMessages: ChatMessage[] = [
-        { role: 'system', content: OVERALL_SYSTEM },
+        { role: 'system', content: getOverallPrompt(config.summary_overall_prompt) },
         { role: 'user', content: `Write an executive briefing based on these source summaries:\n\n${overallContext}` },
       ]
 

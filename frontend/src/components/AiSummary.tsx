@@ -1,8 +1,9 @@
 // ABOUTME: AI Summary configuration page — LLM provider, model, API key, and connection test.
-// ABOUTME: Standalone page extracted from the unified settings component.
+// ABOUTME: Includes collapsible prompt customization for per-sensor and overall summary prompts.
 'use client'
 import { useState, useEffect } from 'react'
 import { api } from '@/api/client'
+import { DEFAULT_SENSOR_PROMPTS, DEFAULT_OVERALL_PROMPT } from '@/lib/summary/prompts'
 
 import { useToast } from '@/lib/toast-context'
 
@@ -18,13 +19,48 @@ const inputBase: React.CSSProperties = {
   fontFamily: 'inherit',
 }
 
-function focus(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) {
+function focus(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
   e.currentTarget.style.borderColor = 'var(--accent)'
   e.currentTarget.style.boxShadow = '0 0 0 3px rgba(29,107,79,0.1)'
 }
-function blur(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) {
+function blur(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
   e.currentTarget.style.borderColor = 'var(--border)'
   e.currentTarget.style.boxShadow = 'none'
+}
+
+const PROMPT_SENSORS: Array<{ key: string; label: string }> = [
+  { key: 'hacker_news', label: 'Hacker News' },
+  { key: 'arxiv', label: 'ArXiv AI' },
+  { key: 'github', label: 'GitHub Trending' },
+  { key: 'product_hunt', label: 'Product Hunt' },
+  { key: 'v2ex', label: 'V2EX' },
+  { key: 'hn_blogs', label: 'HN Blogs' },
+  { key: 'sources_36kr', label: '36Kr' },
+  { key: 'wallstreetcn', label: 'WallStreetCN' },
+  { key: 'social_accounts', label: 'Social Accounts' },
+  { key: 'social_topics', label: 'Social Topics' },
+  { key: 'social_trends', label: 'Social Trends' },
+  { key: 'chrome_radar', label: 'Chrome Radar' },
+  { key: 'rss_feeds', label: 'RSS Feeds' },
+]
+
+function PromptBadge({ isCustom }: { isCustom: boolean }) {
+  return (
+    <span style={{
+      fontSize: '0.5625rem',
+      fontWeight: 700,
+      letterSpacing: '0.08em',
+      textTransform: 'uppercase',
+      padding: '0.125rem 0.5rem',
+      borderRadius: 3,
+      color: isCustom ? 'var(--accent)' : 'var(--ink-faint)',
+      background: isCustom ? 'rgba(29,107,79,0.08)' : 'var(--surface-alt)',
+      border: `1px solid ${isCustom ? 'var(--accent)' : 'var(--border)'}`,
+      flexShrink: 0,
+    }}>
+      {isCustom ? 'Custom' : 'Default'}
+    </span>
+  )
 }
 
 export function AiSummary() {
@@ -37,6 +73,12 @@ export function AiSummary() {
   const [testingLlm, setTestingLlm] = useState(false)
   const [saving, setSaving] = useState(false)
 
+  // Prompt customization state
+  const [sensorPrompts, setSensorPrompts] = useState<Record<string, string>>({})
+  const [overallPrompt, setOverallPrompt] = useState('')
+  const [promptsExpanded, setPromptsExpanded] = useState(false)
+  const [expandedSensor, setExpandedSensor] = useState<string | null>(null)
+
   const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
   const OLLAMA_BASE_URL = 'http://localhost:11434/v1'
 
@@ -46,6 +88,8 @@ export function AiSummary() {
       setSummaryApiKey(cfg.summary_api_key && cfg.summary_api_key !== '***' ? cfg.summary_api_key : '')
       setSummaryBaseUrl(cfg.summary_base_url || OPENROUTER_BASE_URL)
       setSummaryModel(cfg.summary_model || 'anthropic/claude-sonnet-4')
+      setSensorPrompts(cfg.summary_sensor_prompts ?? {})
+      setOverallPrompt(cfg.summary_overall_prompt ?? '')
     })
   }, [])
 
@@ -68,6 +112,8 @@ export function AiSummary() {
         summary_api_key: summaryApiKey || null,
         summary_base_url: summaryBaseUrl,
         summary_model: summaryModel,
+        summary_sensor_prompts: sensorPrompts,
+        summary_overall_prompt: overallPrompt,
       })
       showToast('AI summary settings saved')
     } catch (e) {
@@ -93,6 +139,18 @@ export function AiSummary() {
     } finally {
       setTestingLlm(false)
     }
+  }
+
+  const updateSensorPrompt = (sensorKey: string, value: string) => {
+    setSensorPrompts(prev => {
+      const next = { ...prev }
+      if (value) {
+        next[sensorKey] = value
+      } else {
+        delete next[sensorKey]
+      }
+      return next
+    })
   }
 
   return (
@@ -250,6 +308,203 @@ export function AiSummary() {
             </button>
           )}
         </div>
+
+        {/* ── Prompt Customization (collapsible) ─────────── */}
+        {summaryProvider !== null && (
+          <div style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            overflow: 'hidden',
+          }}>
+            <button
+              onClick={() => setPromptsExpanded(!promptsExpanded)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
+                padding: '1rem 1.25rem',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--ink)',
+              }}
+            >
+              <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>
+                Prompt Customization
+              </span>
+              <span style={{
+                fontSize: '0.75rem',
+                color: 'var(--ink-faint)',
+                transition: 'transform 200ms',
+                transform: promptsExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+              }}>
+                ▾
+              </span>
+            </button>
+
+            {promptsExpanded && (
+              <div style={{ padding: '0 1.25rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+
+                {/* Overall Summary Prompt */}
+                <div>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '0.5rem',
+                  }}>
+                    <label style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      color: 'var(--ink-muted)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                    }}>
+                      Overall Summary Prompt
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <PromptBadge isCustom={!!overallPrompt} />
+                      {overallPrompt && (
+                        <button
+                          onClick={() => setOverallPrompt('')}
+                          style={{
+                            fontSize: '0.6875rem',
+                            color: 'var(--accent)',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            textDecoration: 'underline',
+                            textUnderlineOffset: '2px',
+                            padding: 0,
+                          }}
+                        >
+                          Reset
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <textarea
+                    value={overallPrompt}
+                    onChange={(e) => setOverallPrompt(e.target.value)}
+                    placeholder={DEFAULT_OVERALL_PROMPT.slice(0, 120) + '…'}
+                    rows={6}
+                    style={{
+                      ...inputBase,
+                      width: '100%',
+                      resize: 'vertical',
+                      lineHeight: 1.6,
+                      fontSize: '0.8125rem',
+                    }}
+                    onFocus={focus}
+                    onBlur={blur}
+                  />
+                </div>
+
+                {/* Per-Sensor Prompts */}
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    color: 'var(--ink-muted)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    marginBottom: '0.5rem',
+                  }}>
+                    Per-Sensor Prompts
+                  </label>
+                  <div style={{
+                    border: '1px solid var(--border)',
+                    borderRadius: 6,
+                    overflow: 'hidden',
+                  }}>
+                    {PROMPT_SENSORS.map((sensor, idx) => {
+                      const isExpanded = expandedSensor === sensor.key
+                      const isCustom = !!sensorPrompts[sensor.key]
+                      const defaultPrompt = DEFAULT_SENSOR_PROMPTS[sensor.key] ?? ''
+
+                      return (
+                        <div key={sensor.key} style={{
+                          borderBottom: idx < PROMPT_SENSORS.length - 1 ? '1px solid var(--border)' : 'none',
+                        }}>
+                          <button
+                            onClick={() => setExpandedSensor(isExpanded ? null : sensor.key)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              width: '100%',
+                              padding: '0.625rem 1rem',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              color: 'var(--ink)',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <span style={{
+                                fontSize: '0.75rem',
+                                color: 'var(--ink-faint)',
+                                transition: 'transform 200ms',
+                                transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                              }}>
+                                ▸
+                              </span>
+                              <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>
+                                {sensor.label}
+                              </span>
+                            </div>
+                            <PromptBadge isCustom={isCustom} />
+                          </button>
+
+                          {isExpanded && (
+                            <div style={{ padding: '0 1rem 0.75rem' }}>
+                              <textarea
+                                value={sensorPrompts[sensor.key] ?? ''}
+                                onChange={(e) => updateSensorPrompt(sensor.key, e.target.value)}
+                                placeholder={defaultPrompt.slice(0, 80) + '…'}
+                                rows={5}
+                                style={{
+                                  ...inputBase,
+                                  width: '100%',
+                                  resize: 'vertical',
+                                  lineHeight: 1.6,
+                                  fontSize: '0.8125rem',
+                                }}
+                                onFocus={focus}
+                                onBlur={blur}
+                              />
+                              {isCustom && (
+                                <button
+                                  onClick={() => updateSensorPrompt(sensor.key, '')}
+                                  style={{
+                                    fontSize: '0.6875rem',
+                                    color: 'var(--accent)',
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    textDecoration: 'underline',
+                                    textUnderlineOffset: '2px',
+                                    padding: 0,
+                                    marginTop: '0.375rem',
+                                  }}
+                                >
+                                  Reset to default
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </section>
   )

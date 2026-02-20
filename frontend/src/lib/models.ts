@@ -229,6 +229,10 @@ export interface ConfigSettings {
   summary_api_key: string | null
   summary_base_url: string
   summary_model: string
+
+  // Customizable summary prompts
+  summary_sensor_prompts: Record<string, string>
+  summary_overall_prompt: string
 }
 
 export function defaultConfig(): ConfigSettings {
@@ -277,6 +281,8 @@ export function defaultConfig(): ConfigSettings {
     summary_api_key: null,
     summary_base_url: 'https://openrouter.ai/api/v1',
     summary_model: 'anthropic/claude-sonnet-4',
+    summary_sensor_prompts: {},
+    summary_overall_prompt: '',
   }
 }
 

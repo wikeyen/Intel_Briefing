@@ -330,6 +330,10 @@ const PULSE_CSS = `
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
 }
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
 `
 
 /** Sensor label lookup for progress display — imported from taxonomy. */
@@ -603,7 +607,11 @@ function SummaryProgressBanner({ progress, pipelineStatus, config }: {
         <div style={{
           height: '100%',
           width: `${pct}%`,
-          background: 'var(--accent)',
+          background: pct < 100
+            ? 'linear-gradient(90deg, var(--accent) 30%, rgba(29,107,79,0.4) 50%, var(--accent) 70%)'
+            : 'var(--accent)',
+          backgroundSize: pct < 100 ? '200% 100%' : 'auto',
+          animation: pct < 100 ? 'shimmer 2s linear infinite' : 'none',
           borderRadius: '0 2px 2px 0',
           transition: 'width 400ms ease',
         }} />
@@ -642,21 +650,35 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
       {summary && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-            <span style={{
-              fontSize: '0.75rem',
-              color: 'var(--ink-faint)',
-              fontFamily: 'ui-monospace, monospace',
-            }}>
-              {summary.generated_at.slice(0, 16).replace('T', ' ')} · {timeAgo(summary.generated_at)}
-            </span>
-            {isSummarizing && (
+            {isSummarizing ? (
               <span style={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: 'var(--accent)',
-                animation: 'pulseDot 1.6s ease-in-out infinite',
-              }} />
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontSize: '0.75rem',
+                fontWeight: 500,
+                color: 'var(--accent)',
+                background: 'rgba(29,107,79,0.08)',
+                padding: '0.3rem 0.75rem',
+                borderRadius: 4,
+              }}>
+                <span style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: '50%',
+                  background: 'var(--accent)',
+                  animation: 'pulseDot 1.2s ease-in-out infinite',
+                }} />
+                Updating briefing
+              </span>
+            ) : (
+              <span style={{
+                fontSize: '0.75rem',
+                color: 'var(--ink-faint)',
+                fontFamily: 'ui-monospace, monospace',
+              }}>
+                {summary.generated_at.slice(0, 16).replace('T', ' ')} · {timeAgo(summary.generated_at)}
+              </span>
             )}
             {isPendingRefresh && (
               <span style={{
@@ -699,7 +721,7 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
               >
                 Stop
               </button>
-            ) : (
+            ) : !isPendingRefresh ? (
               <button
                 onClick={onTrigger}
                 style={{
@@ -716,7 +738,7 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
               >
                 Regenerate
               </button>
-            )
+            ) : null
           )}
         </div>
       )}

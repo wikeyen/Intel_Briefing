@@ -4,22 +4,24 @@ import { Scraper, type Tweet } from '@the-convocation/twitter-scraper'
 import { parse as parseHTML } from 'node-html-parser'
 import type { ConfigSettings, IntelItem } from '../models'
 
-// ── Anti-detection constants ─────────────────────────────────────────────────
-const ACCOUNT_DELAY_MIN_MS = 1_500  // min delay between accounts
-const ACCOUNT_DELAY_MAX_MS = 4_000  // max delay between accounts
-const BATCH_SIZE_MIN = 2            // min accounts per concurrent batch
-const BATCH_SIZE_MAX = 4            // max accounts per concurrent batch
+// ── Anti-detection: human-like browsing timing ───────────────────────────────
 
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-function randomDelay(min: number, max: number): Promise<void> {
-  return delay(min + Math.random() * (max - min))
-}
-
-function randomInt(min: number, max: number): number {
-  return Math.floor(min + Math.random() * (max - min + 1))
+/**
+ * Simulate human browsing rhythm: mostly quick scrolls (2-4s),
+ * occasional pause to read a thread (8-15s, ~20% chance).
+ */
+function humanDelay(): Promise<void> {
+  const roll = Math.random()
+  if (roll < 0.2) {
+    // 20% chance: pausing to read — 8-15s
+    return delay(8_000 + Math.random() * 7_000)
+  }
+  // 80% chance: quick scroll past — 2-4s
+  return delay(2_000 + Math.random() * 2_000)
 }
 
 // ── Scraper singleton (reuse across calls to keep auth session) ──────────────
@@ -108,7 +110,9 @@ async function fetchViaScraper(
   const cutoff = Date.now() - lookbackMs
   const items: IntelItem[] = []
 
-  for await (const tweet of scraper.getTweets(handle, perAccountLimit * 3)) {
+  // Cap fetch depth: a real user scrolls 1-2 times (~20 tweets visible max)
+  const fetchDepth = Math.min(perAccountLimit * 2, 20)
+  for await (const tweet of scraper.getTweets(handle, fetchDepth)) {
     if (items.length >= perAccountLimit) break
     if (tweet.isRetweet) continue
     if (tweet.isReply) continue
@@ -148,7 +152,7 @@ function formatCount(n: number): string {
   return String(n)
 }
 
-// ── Anti-detection: staggered batched requests ───────────────────────────────
+// ── Anti-detection: sequential requests with human-like timing ───────────────
 
 async function fetchViaScraperAll(
   scraper: Scraper,
@@ -160,24 +164,14 @@ async function fetchViaScraperAll(
   // Shuffle handles to vary request order across runs
   const shuffled = [...handles].sort(() => Math.random() - 0.5)
 
-  // Process in small random-sized batches with delays between them
+  // Sequential: one account at a time, like a human browsing profiles
   const allResults: PromiseSettledResult<IntelItem[]>[] = []
-  let i = 0
-  while (i < shuffled.length) {
-    const batchSize = Math.min(randomInt(BATCH_SIZE_MIN, BATCH_SIZE_MAX), shuffled.length - i)
-    const batch = shuffled.slice(i, i + batchSize)
-
-    // Run batch concurrently
-    const batchResults = await Promise.allSettled(
-      batch.map(h => fetchViaScraper(scraper, h.replace(/^@/, ''), lookbackMs, perAccountLimit)),
-    )
-    allResults.push(...batchResults)
-
-    i += batchSize
-    // Jittered delay between batches (skip after last batch)
-    if (i < shuffled.length) {
-      await randomDelay(ACCOUNT_DELAY_MIN_MS, ACCOUNT_DELAY_MAX_MS)
-    }
+  for (let i = 0; i < shuffled.length; i++) {
+    if (i > 0) await humanDelay()
+    const result = await Promise.allSettled([
+      fetchViaScraper(scraper, shuffled[i].replace(/^@/, ''), lookbackMs, perAccountLimit),
+    ])
+    allResults.push(result[0])
   }
 
   return collectItems(allResults, limit)

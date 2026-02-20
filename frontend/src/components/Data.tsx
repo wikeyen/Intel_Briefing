@@ -518,7 +518,7 @@ function SummaryProgressBanner({ progress, pipelineStatus, config }: {
                 borderRadius: '50%',
                 background: color,
                 flexShrink: 0,
-                animation: s.state === 'running' ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
+
               }} />
               <span style={{
                 fontSize: '0.6875rem',
@@ -581,7 +581,7 @@ function SummaryProgressBanner({ progress, pipelineStatus, config }: {
               : overallSensor.state === 'running' ? 'var(--accent)'
               : 'var(--ink-faint)',
             flexShrink: 0,
-            animation: overallSensor.state === 'running' ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
+
           }} />
           <span style={{
             fontSize: '0.6875rem',
@@ -662,14 +662,7 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
                 padding: '0.3rem 0.75rem',
                 borderRadius: 4,
               }}>
-                <span style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: '50%',
-                  background: 'var(--accent)',
-                  animation: 'pulseDot 1.2s ease-in-out infinite',
-                }} />
-                Updating briefing
+                Updating briefing…
               </span>
             ) : (
               <span style={{
@@ -682,9 +675,6 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
             )}
             {isPendingRefresh && (
               <span style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.375rem',
                 fontSize: '0.6875rem',
                 fontWeight: 500,
                 color: 'var(--ink-faint)',
@@ -692,14 +682,7 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
                 padding: '0.2rem 0.5rem',
                 borderRadius: 3,
               }}>
-                <span style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: '50%',
-                  background: 'var(--accent)',
-                  animation: 'pulseDot 1.6s ease-in-out infinite',
-                }} />
-                Refreshing soon
+                Refreshing soon…
               </span>
             )}
           </div>
@@ -1160,18 +1143,9 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
           borderRadius: 8,
         }}>
           {isPendingRefresh ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: 'var(--accent)',
-                animation: 'pulseDot 1.6s ease-in-out infinite',
-              }} />
-              <p style={{ color: 'var(--ink-muted)', fontSize: '0.8125rem', margin: 0 }}>
-                Pipeline running — briefing will generate after fetch completes.
-              </p>
-            </div>
+            <p style={{ color: 'var(--ink-muted)', fontSize: '0.8125rem', margin: 0 }}>
+              Pipeline running — briefing will generate after fetch completes.
+            </p>
           ) : !hasProvider ? (
             <p style={{ color: 'var(--ink-faint)', fontSize: '0.8125rem', margin: 0 }}>
               Configure an AI provider in{' '}

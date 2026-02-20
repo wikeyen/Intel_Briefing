@@ -73,6 +73,89 @@ const STATUS_META: Record<string, { color: string; bg: string; label: string; de
 
 const SENSOR_LABEL_MAP: Record<string, string> = Object.fromEntries(ALL_SENSORS.map(s => [s.key, s.label]))
 
+/** Threshold (chars) above which error messages are truncated with a "more" toggle. */
+const ERROR_TRUNCATE_LENGTH = 120
+
+function KindBadge({ kind }: { kind: 'config' | 'api' | null | undefined }) {
+  const isConfig = kind === 'config'
+  return (
+    <span style={{
+      display: 'inline-block',
+      fontSize: '0.5625rem',
+      fontWeight: 700,
+      letterSpacing: '0.08em',
+      textTransform: 'uppercase',
+      padding: '0.125rem 0.5rem',
+      borderRadius: 3,
+      color: isConfig ? 'var(--warn)' : 'var(--err)',
+      background: isConfig ? 'var(--warn-bg)' : 'var(--err-bg)',
+      border: `1px solid ${isConfig ? 'var(--warn)' : 'var(--err)'}`,
+      opacity: 0.85,
+      flexShrink: 0,
+    }}>
+      {isConfig ? 'config' : 'api'}
+    </span>
+  )
+}
+
+function ErrorRow({ sensor }: { sensor: SensorProgress }) {
+  const label = SENSOR_LABEL_MAP[sensor.name] ?? sensor.name
+  const msg = sensor.error ?? ''
+  const isLong = msg.length > ERROR_TRUNCATE_LENGTH
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'flex-start',
+      gap: '0.75rem',
+      padding: '0.75rem 1.25rem',
+      borderBottom: '1px solid var(--border)',
+    }}>
+      <span style={{
+        fontSize: '0.8125rem',
+        fontWeight: 600,
+        color: 'var(--ink)',
+        minWidth: 120,
+        flexShrink: 0,
+      }}>
+        {label}
+      </span>
+      <KindBadge kind={sensor.error_kind} />
+      <span style={{
+        fontSize: '0.75rem',
+        fontFamily: 'ui-monospace, monospace',
+        color: 'var(--ink-muted)',
+        lineHeight: 1.5,
+        wordBreak: 'break-word',
+        minWidth: 0,
+      }}>
+        {isLong && !expanded ? msg.slice(0, ERROR_TRUNCATE_LENGTH) + '...' : msg}
+        {isLong && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            style={{
+              display: 'inline',
+              marginLeft: '0.375rem',
+              fontSize: '0.6875rem',
+              fontWeight: 500,
+              color: 'var(--accent)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              textDecoration: 'underline',
+              textUnderlineOffset: '2px',
+            }}
+          >
+            {expanded ? 'less' : 'more'}
+          </button>
+        )}
+      </span>
+    </div>
+  )
+}
+
 export function Status() {
   const showToast = useToast()
   const [health, setHealth]           = useState<HealthResponse | null>(null)
@@ -472,54 +555,99 @@ export function Status() {
         </div>
       </div>
 
-      {/* ── AI Briefing Link ──────────────────────────────── */}
-      {summary && (
-        <Link href="/briefing" style={{ textDecoration: 'none' }}>
-          <div style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            padding: '1rem 1.5rem',
-            marginBottom: '2rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            cursor: 'pointer',
-            transition: 'border-color 120ms',
-          }}>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.25rem' }}>
-                <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>
-                  AI Briefing
-                </h3>
-                <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>
-                  {timeAgo(summary.generated_at)}
-                </span>
-              </div>
-              <p style={{
-                fontSize: '0.8125rem',
-                color: 'var(--ink-muted)',
-                lineHeight: 1.5,
-                margin: 0,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}>
-                {summary.overall}
-              </p>
-            </div>
+      {/* ── AI Briefing ─────────────────────────────────── */}
+      <div style={{
+        background: summary
+          ? 'linear-gradient(135deg, var(--surface) 0%, var(--accent-wash, var(--surface)) 100%)'
+          : 'var(--surface)',
+        border: summary ? '1px solid var(--accent-dim, var(--border))' : '1px solid var(--border)',
+        borderRadius: 10,
+        padding: '1.5rem 2rem',
+        marginBottom: '2rem',
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: summary ? '1rem' : 0,
+        }}>
+          <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>
+            AI Briefing
+          </h3>
+          {summary && (
             <span style={{
-              fontSize: '0.8125rem',
-              color: 'var(--accent)',
-              fontWeight: 500,
-              marginLeft: '1rem',
-              flexShrink: 0,
+              fontSize: '0.6875rem',
+              color: 'var(--ink-faint)',
+              fontFamily: 'ui-monospace, monospace',
             }}>
-              View →
+              {summary.generated_at.slice(0, 16).replace('T', ' ')} · {timeAgo(summary.generated_at)}
             </span>
-          </div>
-        </Link>
-      )}
+          )}
+        </div>
+        {summary ? (
+          <>
+            <p style={{
+              fontSize: '0.9375rem',
+              color: 'var(--ink)',
+              lineHeight: 1.8,
+              margin: 0,
+              marginBottom: summary.sections.length > 0 ? '1.25rem' : 0,
+            }}>
+              {summary.overall}
+            </p>
+            {summary.sections.length > 0 && (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: '0.75rem',
+              }}>
+                {summary.sections.map(s => (
+                  <div key={s.sensor_name} style={{
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 6,
+                    padding: '1rem 1.25rem',
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '0.5rem',
+                    }}>
+                      <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)' }}>
+                        {s.label}
+                      </span>
+                      <span style={{
+                        fontSize: '0.625rem',
+                        color: 'var(--ink-faint)',
+                        fontFamily: 'ui-monospace, monospace',
+                      }}>
+                        {s.item_count} items
+                      </span>
+                    </div>
+                    <p style={{
+                      fontSize: '0.8125rem',
+                      color: 'var(--ink-muted)',
+                      lineHeight: 1.65,
+                      margin: 0,
+                    }}>
+                      {s.summary}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <p style={{ color: 'var(--ink-faint)', fontSize: '0.8125rem', margin: '0.75rem 0 0' }}>
+            No briefing available yet. Configure an AI provider in{' '}
+            <Link href="/ai" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
+              AI Summary settings
+            </Link>
+            {' '}and run a fetch.
+          </p>
+        )}
+      </div>
 
       {/* ── Summarization Progress ───────────────────────────── */}
       {isSummarizing && summaryProgress && (
@@ -894,6 +1022,89 @@ export function Status() {
           {' '}items total
         </div>
       )}
+
+      {/* ── Console — sensor errors from last run ─────────── */}
+      {(() => {
+        const allErrors = pipelineStatus?.sensors.filter(s => s.error !== null) ?? []
+        const errors = allErrors.slice(0, 100)
+        const configErrors = errors.filter(s => s.error_kind === 'config')
+        const apiErrors = errors.filter(s => s.error_kind !== 'config')
+
+        return (
+          <div style={{ marginTop: '2rem' }}>
+            <h3 style={{
+              fontSize: '0.625rem',
+              fontWeight: 700,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: 'var(--ink-faint)',
+              marginBottom: '0.75rem',
+            }}>
+              Console
+            </h3>
+
+            {errors.length === 0 ? (
+              <div style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: 8,
+                padding: '1.25rem',
+                textAlign: 'center',
+                color: 'var(--ink-faint)',
+                fontSize: '0.8125rem',
+              }}>
+                {pipelineStatus ? 'No errors — all sensors reporting clean.' : 'Loading pipeline status\u2026'}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {configErrors.length > 0 && (
+                  <div style={{
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderTop: '3px solid var(--warn)',
+                    borderRadius: 8,
+                    overflow: 'hidden',
+                  }}>
+                    <div style={{
+                      padding: '0.75rem 1.25rem',
+                      fontSize: '0.625rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.14em',
+                      textTransform: 'uppercase',
+                      color: 'var(--warn)',
+                    }}>
+                      Configuration ({configErrors.length})
+                    </div>
+                    {configErrors.map(s => <ErrorRow key={s.name} sensor={s} />)}
+                  </div>
+                )}
+
+                {apiErrors.length > 0 && (
+                  <div style={{
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderTop: '3px solid var(--err)',
+                    borderRadius: 8,
+                    overflow: 'hidden',
+                  }}>
+                    <div style={{
+                      padding: '0.75rem 1.25rem',
+                      fontSize: '0.625rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.14em',
+                      textTransform: 'uppercase',
+                      color: 'var(--err)',
+                    }}>
+                      API Errors ({apiErrors.length})
+                    </div>
+                    {apiErrors.map(s => <ErrorRow key={s.name} sensor={s} />)}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })()}
     </section>
   )
 }

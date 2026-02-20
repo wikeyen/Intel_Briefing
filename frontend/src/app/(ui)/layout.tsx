@@ -8,25 +8,21 @@ import { Toaster } from '@/components/Toaster'
 import { ToastContext } from '@/lib/toast-context'
 
 const PAGE_TITLES: Record<string, string> = {
-  '/briefing': 'Briefing',
   '/status': 'Status',
-  '/console': 'Console',
   '/api-keys': 'Connections',
   '/settings': 'Settings',
   '/pipeline': 'Pipeline',
   '/sensors': 'Sensors',
-  '/data': 'Intel Data',
+  '/data': 'Feed',
 }
 
 const PAGE_DESCS: Record<string, string> = {
-  '/briefing': 'AI-generated intelligence summary',
-  '/status': 'Pipeline health and scheduled activity',
-  '/console': 'Errors and warnings from the last run',
+  '/status': 'Pipeline health, briefing, and sensor errors',
   '/api-keys': 'Credentials for data sources and AI',
   '/settings': 'Sources, limits, scheduling, and filters',
   '/pipeline': 'Scheduling, filters, and output limits',
   '/sensors': 'Active data sources for your pipeline',
-  '/data': 'Items from all configured sources',
+  '/data': 'AI summary and items from all sources',
 }
 
 export default function UiLayout({ children }: { children: React.ReactNode }) {

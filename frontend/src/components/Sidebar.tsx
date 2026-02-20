@@ -85,20 +85,20 @@ export function Sidebar({ showToast, onNavigate }: Props) {
   const hasErrors = (pipelineStatus?.sensors.some(s => s.error !== null)) ?? false
   const runId = pipelineStatus?.completed_at ?? pipelineStatus?.started_at ?? ''
 
-  // Track which pipeline run the user last viewed on /console via server-side KV store.
+  // Track which pipeline run the user last viewed on /status via server-side KV store.
   // Badge shows when errors exist for a run the user hasn't seen yet.
   const [seenRun, setSeenRun] = useState<string | null>(null)
-  const onConsolePage = pathname === '/console'
+  const onStatusPage = pathname === '/status'
 
   useEffect(() => {
     api.getConsoleSeen().then(r => setSeenRun(r.runId)).catch(() => {})
   }, [])
 
   useEffect(() => {
-    if (onConsolePage && hasErrors && runId) {
+    if (onStatusPage && hasErrors && runId) {
       api.setConsoleSeen(runId).then(() => setSeenRun(runId)).catch(() => {})
     }
-  }, [onConsolePage, hasErrors, runId])
+  }, [onStatusPage, hasErrors, runId])
 
   const showBadge = hasErrors && !!runId && runId !== seenRun
 
@@ -173,14 +173,8 @@ export function Sidebar({ showToast, onNavigate }: Props) {
       {/* Nav */}
       <div style={{ flex: 1, padding: '1rem 0' }}>
         <SideLabel>Overview</SideLabel>
-        <NavLink href="/briefing" active={pathname === '/briefing'} onClick={onNavigate}>
-          Briefing
-        </NavLink>
         <NavLink href="/status" active={pathname === '/status'} onClick={onNavigate}>
           Status
-        </NavLink>
-        <NavLink href="/console" active={pathname === '/console'} onClick={onNavigate}>
-          Console
           {showBadge && (
             <span style={{
               fontSize: '0.5rem',
@@ -190,12 +184,12 @@ export function Sidebar({ showToast, onNavigate }: Props) {
               color: 'var(--err)',
               marginLeft: 'auto',
             }}>
-              new
+              errors
             </span>
           )}
         </NavLink>
         <NavLink href="/data" active={pathname === '/data'} onClick={onNavigate}>
-          Raw Feed
+          Feed
         </NavLink>
 
         <SideDivider />

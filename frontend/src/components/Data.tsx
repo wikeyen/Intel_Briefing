@@ -1,15 +1,17 @@
-// ABOUTME: Intel data preview page — shows fetched items grouped by section with section tabs.
-// ABOUTME: Card-per-item news reader layout with source filtering and 2-line abstract previews.
+// ABOUTME: Intel feed page — shows fetched items grouped by section with section tabs.
+// ABOUTME: Includes AI Summary tab plus card-per-item news reader with source filtering and pagination.
 'use client'
 import { useState, useEffect, useMemo } from 'react'
+import Link from 'next/link'
 import { api } from '@/api/client'
-import type { IntelReport, IntelItem, ConfigSettings } from '@/api/client'
+import type { IntelReport, IntelItem, ConfigSettings, BriefingSummary, SummaryProgress } from '@/api/client'
 import { SENSOR_TOKEN_FIELD } from '@/lib/sensors/constants'
 import { Pagination } from './Pagination'
 
 const PAGE_SIZE = 20
 
 const SECTIONS: { key: string; label: string }[] = [
+  { key: 'summary',      label: 'Summary' },
   { key: 'tech_trends',  label: 'Tech Trends' },
   { key: 'research',     label: 'Research' },
   { key: 'capital_flow', label: 'Capital Flow' },
@@ -336,6 +338,187 @@ function filterKey(item: IntelItem, section: string): string {
   return item.source
 }
 
+function timeAgo(isoString: string): string {
+  const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000)
+  if (diff < 60) return `${diff}s ago`
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+  return `${Math.floor(diff / 86400)}d ago`
+}
+
+/** Pulsing-dot + progress-bar animation CSS for the summary progress banner. */
+const PULSE_CSS = `
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+`
+
+function SummaryProgressBanner({ progress }: { progress: SummaryProgress }) {
+  const done = progress.sensors.filter(s => s.state === 'ok' || s.state === 'failed').length
+  const total = progress.sensors.length
+  return (
+    <div style={{
+      background: 'var(--warn-bg)',
+      border: '1px solid var(--border)',
+      borderRadius: 8,
+      padding: '1rem 1.5rem',
+      marginBottom: '1.5rem',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.75rem',
+      position: 'relative',
+      overflow: 'hidden',
+    }}>
+      <span style={{
+        width: 10,
+        height: 10,
+        borderRadius: '50%',
+        background: 'var(--accent)',
+        flexShrink: 0,
+        animation: 'pulseDot 1.6s ease-in-out infinite',
+      }} />
+      <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--ink)' }}>
+        Summarizing — {done}/{total} sources complete
+      </span>
+      <div style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 3,
+        background: 'var(--border)',
+      }}>
+        <div style={{
+          height: '100%',
+          width: total > 0 ? `${Math.round((done / total) * 100)}%` : '0%',
+          background: 'var(--accent)',
+          borderRadius: '0 2px 2px 0',
+          transition: 'width 400ms ease',
+        }} />
+      </div>
+    </div>
+  )
+}
+
+function SummaryView({ summary, summaryProgress }: { summary: BriefingSummary | null; summaryProgress: SummaryProgress | null }) {
+  const isSummarizing = !!(summaryProgress?.running && summaryProgress.started_at
+    && (Date.now() - new Date(summaryProgress.started_at).getTime()) < 5 * 60 * 1000)
+
+  if (!summary && !isSummarizing) {
+    return (
+      <div style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
+        borderRadius: 8,
+        padding: '2rem',
+        textAlign: 'center',
+      }}>
+        <p style={{ color: 'var(--ink-muted)', fontSize: '0.875rem', margin: 0, marginBottom: '0.75rem' }}>
+          No briefing available yet.
+        </p>
+        <p style={{ color: 'var(--ink-faint)', fontSize: '0.8125rem', margin: 0 }}>
+          Configure an AI provider in{' '}
+          <Link href="/ai" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
+            AI Summary settings
+          </Link>
+          {' '}and run a fetch to generate your first briefing.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {isSummarizing && summaryProgress && (
+        <SummaryProgressBanner progress={summaryProgress} />
+      )}
+
+      {summary && (
+        <>
+          {/* Executive Summary */}
+          <div style={{
+            background: 'linear-gradient(135deg, var(--surface) 0%, var(--accent-wash, var(--surface)) 100%)',
+            border: '1px solid var(--accent-dim, var(--border))',
+            borderRadius: 10,
+            padding: '2rem 2.5rem',
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '1.25rem',
+            }}>
+              <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>
+                Executive Summary
+              </h3>
+              <span style={{
+                fontSize: '0.6875rem',
+                color: 'var(--ink-faint)',
+                fontFamily: 'ui-monospace, monospace',
+              }}>
+                {summary.generated_at.slice(0, 16).replace('T', ' ')} · {timeAgo(summary.generated_at)}
+              </span>
+            </div>
+            <p style={{
+              fontSize: '0.9375rem',
+              color: 'var(--ink)',
+              lineHeight: 1.8,
+              margin: 0,
+            }}>
+              {summary.overall}
+            </p>
+          </div>
+
+          {/* Source Summaries Grid */}
+          {summary.sections.length > 0 && (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+              gap: '1rem',
+            }}>
+              {summary.sections.map(s => (
+                <div key={s.sensor_name} style={{
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 8,
+                  padding: '1.25rem 1.5rem',
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '0.625rem',
+                  }}>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)' }}>
+                      {s.label}
+                    </span>
+                    <span style={{
+                      fontSize: '0.6875rem',
+                      color: 'var(--ink-faint)',
+                      fontFamily: 'ui-monospace, monospace',
+                    }}>
+                      {s.item_count} items
+                    </span>
+                  </div>
+                  <p style={{
+                    fontSize: '0.8125rem',
+                    color: 'var(--ink-muted)',
+                    lineHeight: 1.7,
+                    margin: 0,
+                  }}>
+                    {s.summary}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
 function EmptySection({ needsKey }: { needsKey?: boolean }) {
   return (
     <div style={{
@@ -361,15 +544,33 @@ export function Data() {
   const [activeSection, setActiveSection] = useState(SECTIONS[0].key)
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set())
   const [page, setPage] = useState(1)
+  const [summary, setSummary] = useState<BriefingSummary | null>(null)
+  const [summaryProgress, setSummaryProgress] = useState<SummaryProgress | null>(null)
 
   useEffect(() => {
     api.getConfig().then(setConfig).catch(() => {})
+    api.getSummary().then(r => setSummary(r.summary)).catch(() => {})
     api.getLatest().then(r => {
       setReport(r)
-      // Default to first section that has items
-      const first = SECTIONS.find(s => (r.items[s.key]?.length ?? 0) > 0)
+      // Default to first section that has items (skip summary — it's not a report section)
+      const first = SECTIONS.find(s => s.key !== 'summary' && (r.items[s.key]?.length ?? 0) > 0)
       if (first) setActiveSection(first.key)
     }).catch(() => {}).finally(() => setLoading(false))
+  }, [])
+
+  // Poll summary status for live progress
+  useEffect(() => {
+    const check = () => {
+      api.getSummaryStatus().then(s => {
+        setSummaryProgress(s)
+        if (!s.running && s.completed_at) {
+          api.getSummary().then(r => setSummary(r.summary)).catch(() => {})
+        }
+      }).catch(() => {})
+    }
+    check()
+    const iv = setInterval(check, 3_000)
+    return () => clearInterval(iv)
   }, [])
 
   // Derive the unique filter keys present in the current section
@@ -411,7 +612,7 @@ export function Data() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
-      <style dangerouslySetInnerHTML={{ __html: LINE_CLAMP_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: LINE_CLAMP_CSS + PULSE_CSS }} />
 
       {/* Page header — not sticky (hidden on mobile — shown in top bar) */}
       <div className="page-padding page-header" style={{ maxWidth: 1024, margin: '0 auto', width: '100%', paddingLeft: '3rem', paddingRight: '3rem' }}>
@@ -423,7 +624,7 @@ export function Data() {
             letterSpacing: '-0.01em',
             marginBottom: '0.25rem',
           }}>
-            Raw Feed
+            Feed
           </h2>
           <p style={{ fontSize: '0.8125rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
             {loading ? 'Loading…' : report
@@ -452,7 +653,7 @@ export function Data() {
               scrollbarWidth: 'none',
             }}>
               {SECTIONS.map(({ key, label }, idx) => {
-                const count = report.items[key]?.length ?? 0
+                const count = key === 'summary' ? 0 : (report.items[key]?.length ?? 0)
                 const active = activeSection === key
                 return (
                   <button
@@ -492,9 +693,9 @@ export function Data() {
               })}
             </div>
 
-            {/* Source filters */}
+            {/* Source filters — hidden on Summary tab */}
             <div className="source-filters" style={{
-              display: 'flex',
+              display: activeSection === 'summary' ? 'none' : 'flex',
               gap: '0.5rem',
               alignItems: 'center',
               padding: '0.625rem 0',
@@ -540,10 +741,12 @@ export function Data() {
         </div>
       )}
 
-      {/* Scrollable content — card-per-item feed */}
+      {/* Scrollable content */}
       <div style={{ flex: 1 }}>
         <div className="data-content" style={{ maxWidth: 1024, margin: '0 auto', padding: '1.5rem 3rem 4rem' }}>
-          {!loading && !report ? (
+          {activeSection === 'summary' ? (
+            <SummaryView summary={summary} summaryProgress={summaryProgress} />
+          ) : !loading && !report ? (
             <div style={{
               padding: '4rem 1.5rem',
               textAlign: 'center',

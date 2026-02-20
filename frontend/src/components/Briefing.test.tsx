@@ -1,11 +1,13 @@
-// ABOUTME: Tests for the Briefing component — the dedicated AI summary page.
-// ABOUTME: Covers loading state, summary display, empty state, and section rendering.
-import { render, screen, waitFor } from '@testing-library/react'
+// ABOUTME: Tests for the Summary tab within the Data (Feed) component.
+// ABOUTME: Covers summary rendering, empty state, executive summary, and per-source section cards.
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock the API client
 vi.mock('@/api/client', () => ({
   api: {
+    getLatest: vi.fn(),
+    getConfig: vi.fn(),
     getSummary: vi.fn(),
     getSummaryStatus: vi.fn(),
   },
@@ -19,14 +21,27 @@ vi.mock('next/link', () => ({
 }))
 
 import { api } from '@/api/client'
-import { Briefing } from './Briefing'
+import { Data } from './Data'
 
+const mockGetLatest = api.getLatest as ReturnType<typeof vi.fn>
+const mockGetConfig = api.getConfig as ReturnType<typeof vi.fn>
 const mockGetSummary = api.getSummary as ReturnType<typeof vi.fn>
 const mockGetSummaryStatus = api.getSummaryStatus as ReturnType<typeof vi.fn>
 
-describe('Briefing', () => {
+const EMPTY_REPORT = {
+  date: '2026-02-19',
+  fetched_at: '2026-02-19T08:00:00Z',
+  stale: false,
+  sources_ok: ['hacker_news'],
+  sources_failed: [],
+  items: { tech_trends: [{ id: 'hn-1', source: 'hacker_news', title: 'Test', url: 'https://example.com' }] },
+}
+
+describe('Summary tab in Data', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockGetLatest.mockResolvedValue(EMPTY_REPORT)
+    mockGetConfig.mockResolvedValue({ sensors_enabled: {} })
     mockGetSummaryStatus.mockResolvedValue({
       running: false,
       started_at: null,
@@ -35,21 +50,27 @@ describe('Briefing', () => {
     })
   })
 
-  it('shows loading state initially', () => {
-    mockGetSummary.mockReturnValue(new Promise(() => {})) // never resolves
-    render(<Briefing />)
-    expect(screen.getByText('Loading briefing…')).toBeInTheDocument()
+  it('shows the Summary tab', async () => {
+    mockGetSummary.mockResolvedValue({ summary: null })
+    render(<Data />)
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /summary/i })).toBeInTheDocument()
+    })
   })
 
-  it('shows empty state when no summary available', async () => {
+  it('shows empty state when no summary and Summary tab is clicked', async () => {
     mockGetSummary.mockResolvedValue({ summary: null })
-    render(<Briefing />)
+    render(<Data />)
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /summary/i })).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByRole('button', { name: /summary/i }))
     await waitFor(() => {
       expect(screen.getByText(/no briefing available/i)).toBeInTheDocument()
     })
   })
 
-  it('renders the executive summary', async () => {
+  it('renders the executive summary when Summary tab is clicked', async () => {
     mockGetSummary.mockResolvedValue({
       summary: {
         generated_at: '2026-02-19T08:00:00Z',
@@ -58,7 +79,11 @@ describe('Briefing', () => {
         sections: [],
       },
     })
-    render(<Briefing />)
+    render(<Data />)
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /summary/i })).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByRole('button', { name: /summary/i }))
     await waitFor(() => {
       expect(screen.getByText('Major AI developments this week including new model releases.')).toBeInTheDocument()
     })
@@ -76,7 +101,11 @@ describe('Briefing', () => {
         ],
       },
     })
-    render(<Briefing />)
+    render(<Data />)
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /summary/i })).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByRole('button', { name: /summary/i }))
     await waitFor(() => {
       expect(screen.getByText('Hacker News')).toBeInTheDocument()
       expect(screen.getByText('HN had lots of AI discussion.')).toBeInTheDocument()
@@ -96,9 +125,13 @@ describe('Briefing', () => {
         sections: [],
       },
     })
-    render(<Briefing />)
+    render(<Data />)
     await waitFor(() => {
-      expect(screen.getByText(/2026-02-19/)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /summary/i })).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByRole('button', { name: /summary/i }))
+    await waitFor(() => {
+      expect(screen.getByText(/2026-02-19 08:00/)).toBeInTheDocument()
     })
   })
 })

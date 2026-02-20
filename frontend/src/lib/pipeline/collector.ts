@@ -15,6 +15,7 @@ import { SensorConfigError } from '../sensors/errors'
 import { verifyLink } from '../utils/verifier'
 import { fetchContent } from '../utils/jina-reader'
 import { decodeItemEntities } from '../utils/decode-entities'
+import { suppressItems, boostItems } from './keyword-filter'
 
 // Section routing: maps sensor_name to report section key
 const SENSOR_SECTION_MAP: Record<string, SectionKey> = {
@@ -146,6 +147,12 @@ export async function collect(
     for (const item of dedupedSections[key]) {
       decodeItemEntities(item as Record<string, unknown>)
     }
+  }
+
+  // Keyword filtering: suppress matching items, boost matching items to the top
+  for (const key of Object.keys(dedupedSections) as SectionKey[]) {
+    dedupedSections[key] = suppressItems(dedupedSections[key], config.suppress_keywords ?? [])
+    dedupedSections[key] = boostItems(dedupedSections[key], config.boost_keywords ?? [])
   }
 
   // Post-processing: verify links (Grok items) + enrich content (hn_blogs) — concurrent

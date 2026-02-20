@@ -283,3 +283,64 @@ describe('SensorProtocolCompliance', () => {
     }
   })
 })
+
+describe('Taxonomy', () => {
+  it('ALL_CATEGORIES has 8 category keys', async () => {
+    const { ALL_CATEGORIES } = await import('./taxonomy')
+    expect(ALL_CATEGORIES).toHaveLength(8)
+    const expected = ['tech', 'research', 'finance', 'products', 'community', 'social', 'insights', 'feeds']
+    expect([...ALL_CATEGORIES]).toEqual(expected)
+  })
+
+  it('SENSOR_CATEGORY_MAP maps every sensor to a valid category', async () => {
+    const { SENSOR_CATEGORY_MAP, ALL_CATEGORIES, SENSORS } = await import('./taxonomy')
+    for (const sensor of SENSORS) {
+      expect(SENSOR_CATEGORY_MAP[sensor.key]).toBeDefined()
+      expect(ALL_CATEGORIES).toContain(SENSOR_CATEGORY_MAP[sensor.key])
+    }
+  })
+
+  it('SENSOR_LABELS has an entry for every sensor in the registry', async () => {
+    const { SENSOR_LABELS } = await import('./taxonomy')
+    const { SENSOR_REGISTRY } = await import('./index')
+    for (const key of Object.keys(SENSOR_REGISTRY)) {
+      expect(SENSOR_LABELS[key]).toBeDefined()
+      expect(typeof SENSOR_LABELS[key]).toBe('string')
+    }
+  })
+
+  it('every sensor in SENSORS has a language of cn or row', async () => {
+    const { SENSORS } = await import('./taxonomy')
+    for (const sensor of SENSORS) {
+      expect(['cn', 'row']).toContain(sensor.language)
+    }
+  })
+
+  it('sensorsByLanguageAndCategory returns 2 groups (row and cn) with categorized sensors', async () => {
+    const { sensorsByLanguageAndCategory } = await import('./taxonomy')
+    const groups = sensorsByLanguageAndCategory()
+    expect(groups).toHaveLength(2)
+
+    // ROW comes first
+    expect(groups[0].language).toBe('row')
+    expect(groups[0].label).toBe('ROW')
+    expect(groups[0].categories.length).toBeGreaterThan(0)
+    for (const cat of groups[0].categories) {
+      expect(cat.sensors.length).toBeGreaterThan(0)
+      for (const sensor of cat.sensors) {
+        expect(sensor.language).toBe('row')
+      }
+    }
+
+    // CN comes second
+    expect(groups[1].language).toBe('cn')
+    expect(groups[1].label).toBe('CN')
+    expect(groups[1].categories.length).toBeGreaterThan(0)
+    for (const cat of groups[1].categories) {
+      expect(cat.sensors.length).toBeGreaterThan(0)
+      for (const sensor of cat.sensors) {
+        expect(sensor.language).toBe('cn')
+      }
+    }
+  })
+})

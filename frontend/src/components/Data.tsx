@@ -339,8 +339,10 @@ function SummaryProgressBanner({ progress, pipelineStatus, config }: {
   pipelineStatus: PipelineStatus | null
   config: ConfigSettings | null
 }) {
-  const done = progress.sensors.filter(s => s.state === 'ok' || s.state === 'failed').length
-  const total = progress.sensors.length
+  const sourceSensors = progress.sensors.filter(s => s.sensor_name !== '__overall__')
+  const overallSensor = progress.sensors.find(s => s.sensor_name === '__overall__')
+  const done = sourceSensors.filter(s => s.state === 'ok' || s.state === 'failed').length
+  const total = sourceSensors.length
   const pct = total > 0 ? Math.round((done / total) * 100) : 0
 
   // Derive workflow phase from pipeline status
@@ -478,14 +480,14 @@ function SummaryProgressBanner({ progress, pipelineStatus, config }: {
         </div>
       </div>
 
-      {/* Per-sensor progress rows */}
+      {/* Per-sensor progress rows (excludes __overall__) */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
         gap: 1,
         padding: '0.5rem 0.75rem',
       }}>
-        {progress.sensors.map(s => {
+        {sourceSensors.map(s => {
           const pSensor = pipelineStatus?.sensors.find(ps => ps.name === s.sensor_name)
           const chunksTotal = pSensor?.summary_chunks_total ?? 0
           const chunksDone = pSensor?.summary_chunks_done ?? 0
@@ -557,6 +559,45 @@ function SummaryProgressBanner({ progress, pipelineStatus, config }: {
         })}
       </div>
 
+      {/* Overall briefing — separate from per-source sensors */}
+      {overallSensor && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          padding: '0.5rem 1.25rem',
+          borderTop: '1px solid var(--border)',
+        }}>
+          <span style={{
+            width: 5,
+            height: 5,
+            borderRadius: '50%',
+            background: overallSensor.state === 'ok' ? 'var(--accent)'
+              : overallSensor.state === 'failed' ? 'var(--error, #c33)'
+              : overallSensor.state === 'running' ? 'var(--accent)'
+              : 'var(--ink-faint)',
+            flexShrink: 0,
+            animation: overallSensor.state === 'running' ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
+          }} />
+          <span style={{
+            fontSize: '0.6875rem',
+            fontWeight: 600,
+            color: overallSensor.state === 'ok' ? 'var(--accent)'
+              : overallSensor.state === 'failed' ? 'var(--error, #c33)'
+              : 'var(--ink-muted)',
+            letterSpacing: '0.02em',
+          }}>
+            Overall Briefing
+          </span>
+          {overallSensor.state === 'ok' && (
+            <span style={{ fontSize: '0.5625rem', color: 'var(--accent)' }}>&#10003;</span>
+          )}
+          {overallSensor.state === 'failed' && (
+            <span style={{ fontSize: '0.5625rem', color: 'var(--error, #c33)' }}>&#10007;</span>
+          )}
+        </div>
+      )}
+
       {/* Overall progress bar */}
       <div style={{ height: 3, background: 'var(--border)' }}>
         <div style={{
@@ -587,6 +628,12 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
 }) {
   const isSummarizing = !!(summaryProgress?.running)
 
+  // Summary is "lined up" — pipeline is running in a mode that will produce a summary,
+  // but the summary stage hasn't started yet (e.g. still fetching).
+  const isPendingRefresh = !isSummarizing
+    && !!(pipelineStatus?.running && pipelineStatus.alive !== false)
+    && (pipelineStatus?.mode === 'fetch_summarize' || pipelineStatus?.mode === 'summarize')
+
   const hasProvider = config?.summary_provider !== null && config?.summary_provider !== undefined
 
   return (
@@ -610,6 +657,28 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
                 background: 'var(--accent)',
                 animation: 'pulseDot 1.6s ease-in-out infinite',
               }} />
+            )}
+            {isPendingRefresh && (
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.375rem',
+                fontSize: '0.6875rem',
+                fontWeight: 500,
+                color: 'var(--ink-faint)',
+                background: 'var(--surface-alt, rgba(0,0,0,0.03))',
+                padding: '0.2rem 0.5rem',
+                borderRadius: 3,
+              }}>
+                <span style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: 'var(--accent)',
+                  animation: 'pulseDot 1.6s ease-in-out infinite',
+                }} />
+                Refreshing soon
+              </span>
             )}
           </div>
           {hasProvider && hasContent && (
@@ -1068,7 +1137,20 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
           border: '1px solid var(--border)',
           borderRadius: 8,
         }}>
-          {!hasProvider ? (
+          {isPendingRefresh ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: 'var(--accent)',
+                animation: 'pulseDot 1.6s ease-in-out infinite',
+              }} />
+              <p style={{ color: 'var(--ink-muted)', fontSize: '0.8125rem', margin: 0 }}>
+                Pipeline running — briefing will generate after fetch completes.
+              </p>
+            </div>
+          ) : !hasProvider ? (
             <p style={{ color: 'var(--ink-faint)', fontSize: '0.8125rem', margin: 0 }}>
               Configure an AI provider in{' '}
               <Link href="/ai" style={{ color: 'var(--accent)', textDecoration: 'none' }}>

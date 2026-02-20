@@ -18,7 +18,6 @@ import { SENSOR_SECTION_MAP } from './sensor-map'
 
 /**
  * Assemble a report from sensor results: dedup, filter, post-process, then write to cache.
- * Mirrors the assembly logic from collector.ts.
  */
 export async function assembleReport(
   results: SensorResult[],

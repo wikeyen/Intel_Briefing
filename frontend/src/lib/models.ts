@@ -108,15 +108,6 @@ export function sensorResultSucceeded(result: SensorResult): boolean {
   return result.error === null
 }
 
-/** @deprecated Use SensorJobProgress instead */
-export interface SensorProgress {
-  name: string
-  state: 'pending' | 'running' | 'ok' | 'failed'
-  item_count: number
-  error: string | null
-  error_kind?: 'config' | 'api' | null
-}
-
 export type RunMode = 'fetch' | 'summarize' | 'fetch_summarize'
 export type StageState = 'queued' | 'running' | 'ok' | 'failed' | 'skipped'
 

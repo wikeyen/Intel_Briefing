@@ -1,7 +1,7 @@
 // ABOUTME: Intel feed page — shows fetched items grouped by section with section tabs.
 // ABOUTME: Briefing tab shows AI-generated summary; other tabs show card-per-item news reader with source filtering and pagination.
 'use client'
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, Fragment } from 'react'
 import Link from 'next/link'
 import { api } from '@/api/client'
 import type { IntelReport, IntelItem, ConfigSettings, BriefingSummary, SummaryProgress, PipelineStatus, OverallBriefing } from '@/api/client'
@@ -1286,39 +1286,50 @@ export function Data() {
                 const count = report.items[key]?.length ?? 0
                 const active = activeSection === key
                 return (
-                  <button
-                    key={key}
-                    onClick={() => setActiveSection(key)}
-                    style={{
-                      padding: '0.625rem 1rem',
-                      paddingLeft: idx === 0 ? 0 : '1rem',
-                      fontSize: '0.8125rem',
-                      fontWeight: active ? 600 : 400,
-                      color: active ? 'var(--accent)' : 'var(--ink-muted)',
-                      background: 'none',
-                      border: 'none',
-                      borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      transition: 'color 100ms',
-                      marginBottom: -1,
-                      flexShrink: 0,
-                    }}
-                    onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.color = 'var(--ink)' }}
-                    onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.color = active ? 'var(--accent)' : 'var(--ink-muted)' }}
-                  >
-                    {label}
-                    {count > 0 && (
-                      <span style={{
-                        marginLeft: '0.375rem',
-                        fontSize: '0.625rem',
-                        color: active ? 'var(--accent-dim)' : 'var(--ink-faint)',
-                        fontFamily: 'ui-monospace, monospace',
-                      }}>
-                        {count}
-                      </span>
+                  <Fragment key={key}>
+                    <button
+                      onClick={() => setActiveSection(key)}
+                      style={{
+                        padding: '0.625rem 1rem',
+                        paddingLeft: idx === 0 ? 0 : '1rem',
+                        fontSize: '0.8125rem',
+                        fontWeight: active ? 600 : 400,
+                        color: active ? 'var(--accent)' : 'var(--ink-muted)',
+                        background: 'none',
+                        border: 'none',
+                        borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        transition: 'color 100ms',
+                        marginBottom: -1,
+                        flexShrink: 0,
+                      }}
+                      onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.color = 'var(--ink)' }}
+                      onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.color = active ? 'var(--accent)' : 'var(--ink-muted)' }}
+                    >
+                      {label}
+                      {count > 0 && (
+                        <span style={{
+                          marginLeft: '0.375rem',
+                          fontSize: '0.625rem',
+                          color: active ? 'var(--accent-dim)' : 'var(--ink-faint)',
+                          fontFamily: 'ui-monospace, monospace',
+                        }}>
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                    {idx === 0 && (
+                      <div style={{
+                        width: 1,
+                        height: 16,
+                        background: 'var(--border)',
+                        alignSelf: 'center',
+                        flexShrink: 0,
+                        margin: '0 0.375rem',
+                      }} />
                     )}
-                  </button>
+                  </Fragment>
                 )
               })}
             </div>

@@ -14,6 +14,9 @@ import { fetchSocialTopics } from './social_topics'
 import { fetchSocialTrends } from './social_trends'
 import { fetchChromeRadar } from './chrome_radar'
 import { fetchRssFeeds } from './rss_feeds'
+import { fetchWeibo } from './weibo'
+import { fetchZhihu } from './zhihu'
+import { fetchXiaohongshu } from './xiaohongshu'
 
 export type SensorFetchFn = (config: ConfigSettings, limit: number) => Promise<IntelItem[]>
 
@@ -33,4 +36,7 @@ export const SENSOR_REGISTRY: Record<string, SensorFetchFn> = {
   wallstreetcn: fetchWallStreetCN,
   chrome_radar: fetchChromeRadar,
   rss_feeds: fetchRssFeeds,
+  weibo: fetchWeibo,
+  zhihu: fetchZhihu,
+  xiaohongshu: fetchXiaohongshu,
 }

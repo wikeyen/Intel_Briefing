@@ -3,7 +3,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { loadConfig } from '@/lib/config'
 import { readReport, writeReport } from '@/lib/pipeline/cache'
-import type { IntelItem, SectionKey } from '@/lib/models'
+import type { IntelItem } from '@/lib/models'
+import type { CategoryKey } from '@/lib/sensors/taxonomy'
 
 /** Returns true if the item should be kept (not expired). */
 function isItemAlive(item: IntelItem, cutoffMs: number): boolean {
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   let totalRemoved = 0
   const prunedItems = { ...report.items }
 
-  for (const key of Object.keys(prunedItems) as SectionKey[]) {
+  for (const key of Object.keys(prunedItems) as CategoryKey[]) {
     const before = prunedItems[key].length
     prunedItems[key] = prunedItems[key].filter((item) => isItemAlive(item, cutoffMs))
     totalRemoved += before - prunedItems[key].length

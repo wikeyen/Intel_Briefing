@@ -1,6 +1,13 @@
 // ABOUTME: Shared TypeScript data models for Intel Briefing.
 // ABOUTME: Defines IntelItem, IntelReport, HealthResponse, ConfigSettings and pipeline status types.
 
+import { ALL_CATEGORIES, type CategoryKey, emptyCategoryMap } from './sensors/taxonomy'
+
+// Re-export taxonomy types for backward compatibility
+export { ALL_CATEGORIES, type CategoryKey }
+export { ALL_CATEGORIES as ALL_SECTIONS }
+export type SectionKey = CategoryKey
+
 export interface IntelItem {
   id: string
   source: string
@@ -28,38 +35,16 @@ export interface IntelItem {
   verified?: boolean | null
 }
 
-export const ALL_SECTIONS = [
-  'tech_trends',
-  'research',
-  'capital_flow',
-  'products',
-  'community',
-  'social',
-  'insights',
-  'feeds',
-] as const
-
-export type SectionKey = (typeof ALL_SECTIONS)[number]
-
-export function emptyItemsMap(): Record<SectionKey, IntelItem[]> {
-  return {
-    tech_trends: [],
-    research: [],
-    capital_flow: [],
-    products: [],
-    community: [],
-    social: [],
-    insights: [],
-    feeds: [],
-  }
+export function emptyItemsMap(): Record<CategoryKey, IntelItem[]> {
+  return emptyCategoryMap() as Record<CategoryKey, IntelItem[]>
 }
 
 /** Ensure every expected section key exists, filling missing ones with []. */
 export function ensureAllSections(
   items: Record<string, IntelItem[]>,
-): Record<SectionKey, IntelItem[]> {
+): Record<CategoryKey, IntelItem[]> {
   const result = emptyItemsMap()
-  for (const key of ALL_SECTIONS) {
+  for (const key of ALL_CATEGORIES) {
     if (items[key]) {
       result[key] = items[key]
     }
@@ -73,7 +58,7 @@ export interface IntelReport {
   stale: boolean
   sources_ok: string[]
   sources_failed: string[]
-  items: Record<SectionKey, IntelItem[]>
+  items: Record<CategoryKey, IntelItem[]>
 }
 
 export function createReport(
@@ -175,6 +160,9 @@ export const SOURCE_URLS: Record<string, string> = {
   social_accounts:  '',
   social_topics:    '',
   social_trends:    '',
+  weibo:            'https://weibo.com',
+  zhihu:            'https://www.zhihu.com',
+  xiaohongshu:      'https://www.xiaohongshu.com',
 }
 
 export interface OverallBriefing {
@@ -290,6 +278,9 @@ export function defaultConfig(): ConfigSettings {
       social_trends: true,
       chrome_radar: false,
       rss_feeds: false,
+      weibo: true,
+      zhihu: true,
+      xiaohongshu: true,
     },
     fetch_time: '07:51',
     fetch_timezone: 'Asia/Shanghai',

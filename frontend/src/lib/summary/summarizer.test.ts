@@ -12,14 +12,14 @@ function makeReport(overrides?: Partial<IntelReport>): IntelReport {
     fetched_at: '2026-02-19T09:00:00Z',
     sources_ok: ['hacker_news', 'arxiv'],
     items: {
-      tech_trends: [
+      tech: [
         { id: 'hn-1', source: 'hacker_news', title: 'AI breakthrough', url: 'https://example.com/1' },
         { id: 'hn-2', source: 'hacker_news', title: 'Rust 2.0 released', url: 'https://example.com/2' },
       ],
       research: [
         { id: 'ax-1', source: 'arxiv', title: 'Attention is still all you need', url: 'https://arxiv.org/1', abstract: 'We prove...' },
       ],
-      capital_flow: [],
+      finance: [],
       products: [],
       community: [],
       social: [],
@@ -83,11 +83,11 @@ describe('summarizeReport', () => {
     const report = makeReport({
       sources_ok: ['hacker_news'],
       items: {
-        tech_trends: [
+        tech: [
           { id: 'hn-1', source: 'hacker_news', title: 'Story', url: 'https://example.com/1' },
         ],
         research: [],
-        capital_flow: [],
+        finance: [],
         products: [],
         community: [],
         social: [],
@@ -111,9 +111,9 @@ describe('summarizeReport', () => {
     const report = makeReport({
       sources_ok: [],
       items: {
-        tech_trends: [],
+        tech: [],
         research: [],
-        capital_flow: [],
+        finance: [],
         products: [],
         community: [],
         social: [],

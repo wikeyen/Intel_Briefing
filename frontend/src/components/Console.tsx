@@ -5,24 +5,10 @@ import { useState, useEffect } from 'react'
 import { api } from '@/api/client'
 import type { PipelineStatus } from '@/api/client'
 import { Pagination } from './Pagination'
+import { SENSOR_LABELS } from '@/lib/sensors/taxonomy'
 
 const MAX_ERRORS = 100
 const PAGE_SIZE = 20
-
-const SENSOR_LABELS: Record<string, string> = {
-  hacker_news: 'Hacker News',
-  arxiv: 'ArXiv AI',
-  github: 'GitHub Trending',
-  product_hunt: 'Product Hunt',
-  v2ex: 'V2EX',
-  hn_blogs: 'HN Blogs',
-  sources_36kr: '36Kr',
-  wallstreetcn: 'WallStreetCN',
-  social_accounts: 'Social Accounts',
-  social_topics: 'Social Topics',
-  social_trends: 'Social Trends',
-  chrome_radar: 'Chrome Radar',
-}
 
 /** Threshold (chars) above which error messages are truncated with a "more" toggle. */
 const TRUNCATE_LENGTH = 120

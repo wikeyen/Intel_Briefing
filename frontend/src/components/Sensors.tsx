@@ -6,6 +6,7 @@ import { api } from '@/api/client'
 import { TagInput } from '@/components/TagInput'
 
 import { useToast } from '@/lib/toast-context'
+import { sensorsByLanguageAndCategory } from '@/lib/sensors/taxonomy'
 
 interface SensorDef {
   key: string
@@ -13,36 +14,12 @@ interface SensorDef {
   desc: string
 }
 
-const SENSOR_GROUPS: { label: string; sensors: SensorDef[] }[] = [
-  {
-    label: 'General',
-    sensors: [
-      { key: 'hacker_news',  label: 'Hacker News',     desc: 'Top stories from news.ycombinator.com' },
-      { key: 'arxiv',        label: 'ArXiv AI',         desc: 'Latest AI/ML research preprints' },
-      { key: 'github',       label: 'GitHub Trending',  desc: 'Daily trending repositories' },
-      { key: 'product_hunt', label: 'Product Hunt',     desc: 'Top products of the day' },
-      { key: 'hn_blogs',     label: 'HN Blogs',         desc: 'Curated blog posts from Hacker News' },
-      { key: 'chrome_radar', label: 'Chrome Radar',     desc: 'Chrome Web Store surveillance' },
-      { key: 'v2ex',         label: 'V2EX',             desc: 'Chinese tech community hot posts' },
-      { key: 'sources_36kr', label: '36Kr',              desc: 'Chinese startup and tech news' },
-      { key: 'wallstreetcn', label: 'WallStreetCN',      desc: 'Chinese financial and macro news' },
-    ],
-  },
-  {
-    label: 'Social',
-    sensors: [
-      { key: 'social_accounts', label: 'Social Accounts', desc: 'Monitor accounts across X, Bluesky, Mastodon' },
-      { key: 'social_topics',   label: 'Social Topics',   desc: 'Track keywords across X, Bluesky, Mastodon' },
-      { key: 'social_trends',   label: 'Social Trends',   desc: 'Trending content across X, Bluesky, Mastodon' },
-    ],
-  },
-  {
-    label: 'RSS',
-    sensors: [
-      { key: 'rss_feeds', label: 'RSS Feeds', desc: 'Custom RSS/Atom feed subscriptions' },
-    ],
-  },
-]
+const SENSOR_GROUPS: { label: string; sensors: SensorDef[] }[] = sensorsByLanguageAndCategory().flatMap(lang =>
+  lang.categories.map(cat => ({
+    label: `${lang.label} — ${cat.label}`,
+    sensors: cat.sensors.map(s => ({ key: s.key, label: s.label, desc: s.desc })),
+  }))
+)
 
 const ALL_SENSORS = SENSOR_GROUPS.flatMap((g) => g.sensors)
 

@@ -5,23 +5,7 @@ import type { IntelReport, IntelItem, BriefingSummary, SensorSummary } from '../
 import { SOURCE_URLS } from '../models'
 import { getSensorPrompt, getOverallPrompt } from './prompts'
 import { parseSensorJson, parseOverallJson } from './parse-json'
-
-/** Human-readable sensor labels for prompts and output. */
-const SENSOR_LABELS: Record<string, string> = {
-  hacker_news: 'Hacker News',
-  arxiv: 'ArXiv AI',
-  github: 'GitHub Trending',
-  product_hunt: 'Product Hunt',
-  v2ex: 'V2EX',
-  hn_blogs: 'HN Blogs',
-  sources_36kr: '36Kr',
-  wallstreetcn: 'WallStreetCN',
-  social_accounts: 'Social Accounts',
-  social_topics: 'Social Topics',
-  social_trends: 'Social Trends',
-  chrome_radar: 'Chrome Radar',
-  rss_feeds: 'RSS Feeds',
-}
+import { SENSOR_LABELS } from '../sensors/taxonomy'
 
 /** Format an IntelItem into a text block for the LLM prompt. */
 function formatItem(item: IntelItem): string {

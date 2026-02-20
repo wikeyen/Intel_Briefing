@@ -256,6 +256,111 @@ describe('ChromeRadarSensor', () => {
   })
 })
 
+describe('WeiboSensor', () => {
+  it('returns intel items from hot search', async () => {
+    const mockData = {
+      ok: 1,
+      data: {
+        realtime: [
+          { mid: '1001', word: 'test topic', num: 50000, label_name: 'Hot', word_scheme: '#test topic' },
+          { mid: '1002', word: 'another topic', num: 30000, label_name: '', word_scheme: '' },
+        ],
+      },
+    }
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true, json: () => Promise.resolve(mockData),
+    })
+    const { fetchWeibo } = await import('./weibo')
+    const items = await fetchWeibo(makeConfig(), 5)
+    expect(items).toHaveLength(2)
+    for (const item of items) {
+      expect(item.source).toBe('weibo')
+      expect(item.id).toMatch(/^weibo-/)
+      expect(item.url).toContain('s.weibo.com')
+    }
+    expect(items[0].heat).toBe('50000')
+  })
+
+  it('throws on HTTP error', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 })
+    const { fetchWeibo } = await import('./weibo')
+    await expect(fetchWeibo(makeConfig(), 5)).rejects.toThrow('HTTP 500')
+  })
+
+  it('returns empty array when ok !== 1', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true, json: () => Promise.resolve({ ok: 0, data: {} }),
+    })
+    const { fetchWeibo } = await import('./weibo')
+    const items = await fetchWeibo(makeConfig(), 5)
+    expect(items).toHaveLength(0)
+  })
+})
+
+describe('ZhihuSensor', () => {
+  it('returns intel items from hot list', async () => {
+    const mockData = {
+      data: [
+        {
+          id: 'z1',
+          target: { title: 'Zhihu Question 1' },
+          detail_text: '500 万热度',
+          card_id: 'Q_12345',
+          children: [{ thumbnail: 'https://pic.zhimg.com/thumb.jpg' }],
+        },
+      ],
+    }
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true, json: () => Promise.resolve(mockData),
+    })
+    const { fetchZhihu } = await import('./zhihu')
+    const items = await fetchZhihu(makeConfig(), 5)
+    expect(items).toHaveLength(1)
+    expect(items[0].source).toBe('zhihu')
+    expect(items[0].id).toMatch(/^zhihu-/)
+    expect(items[0].url).toContain('zhihu.com/question/12345')
+    expect(items[0].heat).toBe('5000000')
+  })
+
+  it('throws on HTTP error', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 403 })
+    const { fetchZhihu } = await import('./zhihu')
+    await expect(fetchZhihu(makeConfig(), 5)).rejects.toThrow('HTTP 403')
+  })
+})
+
+describe('XiaohongshuSensor', () => {
+  it('returns intel items from hot list', async () => {
+    const mockData = {
+      success: true,
+      data: {
+        items: [
+          { id: 'xhs1', title: 'XHS Topic 1', score: 99000, word_type: 'Hot' },
+          { id: 'xhs2', title: 'XHS Topic 2', score: 50000, word_type: '无' },
+        ],
+      },
+    }
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true, json: () => Promise.resolve(mockData),
+    })
+    const { fetchXiaohongshu } = await import('./xiaohongshu')
+    const items = await fetchXiaohongshu(makeConfig(), 5)
+    expect(items).toHaveLength(2)
+    for (const item of items) {
+      expect(item.source).toBe('xiaohongshu')
+      expect(item.id).toMatch(/^xhs-/)
+      expect(item.url).toContain('xiaohongshu.com')
+    }
+    expect(items[0].heat).toBe('99000')
+  })
+
+  it('throws on HTTP error', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 })
+    const { fetchXiaohongshu } = await import('./xiaohongshu')
+    await expect(fetchXiaohongshu(makeConfig(), 5)).rejects.toThrow('HTTP 500')
+  })
+})
+
 describe('SensorProtocolCompliance', () => {
   it('github sensor throws SensorConfigError without token', async () => {
     globalThis.fetch = vi.fn()
@@ -269,17 +374,79 @@ describe('SensorProtocolCompliance', () => {
     await expect(fetchProductHunt(makeConfig({ producthunt_token: null }), 5)).rejects.toThrow(SensorConfigError)
   })
 
-  it('sensor registry has all 13 sensors', async () => {
+  it('sensor registry has all 16 sensors', async () => {
     const { SENSOR_REGISTRY } = await import('./index')
-    expect(Object.keys(SENSOR_REGISTRY)).toHaveLength(13)
+    expect(Object.keys(SENSOR_REGISTRY)).toHaveLength(16)
     const expected = [
       'hacker_news', 'arxiv', 'github', 'product_hunt', 'v2ex',
       'hn_blogs', 'social_accounts', 'social_topics', 'social_trends',
       'sources_36kr', 'wallstreetcn', 'chrome_radar', 'rss_feeds',
+      'weibo', 'zhihu', 'xiaohongshu',
     ]
     for (const name of expected) {
       expect(SENSOR_REGISTRY[name]).toBeDefined()
       expect(typeof SENSOR_REGISTRY[name]).toBe('function')
+    }
+  })
+})
+
+describe('Taxonomy', () => {
+  it('ALL_CATEGORIES has 8 category keys', async () => {
+    const { ALL_CATEGORIES } = await import('./taxonomy')
+    expect(ALL_CATEGORIES).toHaveLength(8)
+    const expected = ['tech', 'research', 'finance', 'products', 'community', 'social', 'insights', 'feeds']
+    expect([...ALL_CATEGORIES]).toEqual(expected)
+  })
+
+  it('SENSOR_CATEGORY_MAP maps every sensor to a valid category', async () => {
+    const { SENSOR_CATEGORY_MAP, ALL_CATEGORIES, SENSORS } = await import('./taxonomy')
+    for (const sensor of SENSORS) {
+      expect(SENSOR_CATEGORY_MAP[sensor.key]).toBeDefined()
+      expect(ALL_CATEGORIES).toContain(SENSOR_CATEGORY_MAP[sensor.key])
+    }
+  })
+
+  it('SENSOR_LABELS has an entry for every sensor in the registry', async () => {
+    const { SENSOR_LABELS } = await import('./taxonomy')
+    const { SENSOR_REGISTRY } = await import('./index')
+    for (const key of Object.keys(SENSOR_REGISTRY)) {
+      expect(SENSOR_LABELS[key]).toBeDefined()
+      expect(typeof SENSOR_LABELS[key]).toBe('string')
+    }
+  })
+
+  it('every sensor in SENSORS has a language of cn or row', async () => {
+    const { SENSORS } = await import('./taxonomy')
+    for (const sensor of SENSORS) {
+      expect(['cn', 'row']).toContain(sensor.language)
+    }
+  })
+
+  it('sensorsByLanguageAndCategory returns 2 groups (row and cn) with categorized sensors', async () => {
+    const { sensorsByLanguageAndCategory } = await import('./taxonomy')
+    const groups = sensorsByLanguageAndCategory()
+    expect(groups).toHaveLength(2)
+
+    // ROW comes first
+    expect(groups[0].language).toBe('row')
+    expect(groups[0].label).toBe('ROW')
+    expect(groups[0].categories.length).toBeGreaterThan(0)
+    for (const cat of groups[0].categories) {
+      expect(cat.sensors.length).toBeGreaterThan(0)
+      for (const sensor of cat.sensors) {
+        expect(sensor.language).toBe('row')
+      }
+    }
+
+    // CN comes second
+    expect(groups[1].language).toBe('cn')
+    expect(groups[1].label).toBe('CN')
+    expect(groups[1].categories.length).toBeGreaterThan(0)
+    for (const cat of groups[1].categories) {
+      expect(cat.sensors.length).toBeGreaterThan(0)
+      for (const sensor of cat.sensors) {
+        expect(sensor.language).toBe('cn')
+      }
     }
   })
 })

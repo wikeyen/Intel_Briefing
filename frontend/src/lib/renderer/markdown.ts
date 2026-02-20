@@ -1,18 +1,14 @@
 // ABOUTME: Pure Markdown renderer for IntelReport — no I/O, no HTTP, no sleeps.
 // ABOUTME: Renders all 8 report sections from the IntelReport model.
-import type { IntelItem, IntelReport, SectionKey } from '../models'
+import type { IntelItem, IntelReport } from '../models'
+import { ALL_CATEGORIES, CATEGORY_META, type CategoryKey } from '../sensors/taxonomy'
 
 // Ordered section display config: [section_key, display_title, emoji]
-const SECTIONS: [SectionKey, string, string][] = [
-  ['tech_trends', 'Tech Trends', '🔥'],
-  ['research', 'Research', '📄'],
-  ['insights', 'Insights', '💡'],
-  ['products', 'Products', '🚀'],
-  ['capital_flow', 'Capital Flow', '💰'],
-  ['community', 'Community', '🗣️'],
-  ['social', 'Social', '📱'],
-  ['feeds', 'Feeds', '📰'],
-]
+const SECTIONS: [CategoryKey, string, string][] = ALL_CATEGORIES.map(key => [
+  key,
+  CATEGORY_META[key].label,
+  CATEGORY_META[key].emoji,
+])
 
 const NO_DATA_PLACEHOLDER = '_No data available for this section._'
 
@@ -62,7 +58,7 @@ function renderItem(item: IntelItem): string {
 }
 
 function renderSection(
-  _sectionKey: SectionKey,
+  _sectionKey: CategoryKey,
   title: string,
   emoji: string,
   items: IntelItem[],

@@ -17,7 +17,7 @@ describe('IntelReport', () => {
     expect(report.stale).toBe(false)
     expect(report.sources_ok).toEqual([])
     expect(report.sources_failed).toEqual([])
-    expect(report.items.tech_trends).toBeDefined()
+    expect(report.items.tech).toBeDefined()
     expect(report.items.research).toBeDefined()
     expect(report.items.social).toBeDefined()
   })
@@ -25,14 +25,14 @@ describe('IntelReport', () => {
   it('should have all 8 sections present by default', () => {
     const report = createReport({ date: '2026-01-01', fetched_at: '2026-01-01T07:00:00Z' })
     const expected = new Set([
-      'tech_trends', 'research', 'capital_flow', 'products',
+      'tech', 'research', 'finance', 'products',
       'community', 'social', 'insights', 'feeds',
     ])
     expect(new Set(Object.keys(report.items))).toEqual(expected)
   })
 
   it('should fill missing sections via ensureAllSections', () => {
-    const partial = { tech_trends: [] as IntelItem[] }
+    const partial = { tech: [] as IntelItem[] }
     const result = ensureAllSections(partial)
     expect(result.research).toBeDefined()
     expect(result.social).toBeDefined()

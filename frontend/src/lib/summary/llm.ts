@@ -16,7 +16,7 @@ interface ChatCompletionResponse {
   choices: { message: { content: string } }[]
 }
 
-const TIMEOUT_MS = 60_000
+const TIMEOUT_MS = 120_000
 
 /**
  * Call an OpenAI-compatible chat completions endpoint.

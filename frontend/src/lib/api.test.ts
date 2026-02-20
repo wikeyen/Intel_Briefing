@@ -182,13 +182,13 @@ describe('GET /api/intel/latest', () => {
 
   it('returns all items without truncation', async () => {
     const items = Array.from({ length: 10 }, (_, i) => makeItem(String(i), `Item ${i}`))
-    const report = makeReport({ items: { ...emptyItemsMap(), tech_trends: items } })
+    const report = makeReport({ items: { ...emptyItemsMap(), tech: items } })
     mockReadReport.mockResolvedValue(report)
     mockIsStale.mockReturnValue(false)
     const { GET } = await import('@/app/api/intel/latest/route')
     const resp = await GET()
     const data = await resp.json()
-    expect(data.items.tech_trends).toHaveLength(10)
+    expect(data.items.tech).toHaveLength(10)
   })
 
   it('stale flag propagated', async () => {
@@ -204,15 +204,15 @@ describe('GET /api/intel/latest', () => {
 describe('GET /api/intel/[section]', () => {
   it('returns items for known section', async () => {
     const item = makeItem('1', 'HN Top Post')
-    const report = makeReport({ items: { ...emptyItemsMap(), tech_trends: [item] } })
+    const report = makeReport({ items: { ...emptyItemsMap(), tech: [item] } })
     mockReadReport.mockResolvedValue(report)
     mockIsStale.mockReturnValue(false)
     const { GET } = await import('@/app/api/intel/[section]/route')
-    const req = new NextRequest('http://localhost/api/intel/tech_trends')
-    const resp = await GET(req, { params: Promise.resolve({ section: 'tech_trends' }) })
+    const req = new NextRequest('http://localhost/api/intel/tech')
+    const resp = await GET(req, { params: Promise.resolve({ section: 'tech' }) })
     expect(resp.status).toBe(200)
     const data = await resp.json()
-    expect(data.section).toBe('tech_trends')
+    expect(data.section).toBe('tech')
     expect(data.items).toHaveLength(1)
   })
 
@@ -226,8 +226,8 @@ describe('GET /api/intel/[section]', () => {
   it('returns 503 when no cache', async () => {
     mockReadReport.mockResolvedValue(null)
     const { GET } = await import('@/app/api/intel/[section]/route')
-    const req = new NextRequest('http://localhost/api/intel/tech_trends')
-    const resp = await GET(req, { params: Promise.resolve({ section: 'tech_trends' }) })
+    const req = new NextRequest('http://localhost/api/intel/tech')
+    const resp = await GET(req, { params: Promise.resolve({ section: 'tech' }) })
     expect(resp.status).toBe(503)
   })
 })

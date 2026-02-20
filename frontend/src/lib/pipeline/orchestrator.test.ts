@@ -92,8 +92,8 @@ describe('runPipeline', () => {
       sources_ok: ['hacker_news'],
       sources_failed: [],
       items: {
-        tech_trends: [makeItem('hn1', 'hacker_news')],
-        research: [], capital_flow: [], products: [],
+        tech: [makeItem('hn1', 'hacker_news')],
+        research: [], finance: [], products: [],
         community: [], social: [], insights: [], feeds: [],
       },
     }

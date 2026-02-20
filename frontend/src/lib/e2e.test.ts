@@ -16,7 +16,7 @@ describe('end-to-end: report creation and rendering', () => {
       date: '2026-02-18',
       fetched_at: '2026-02-18T07:00:00Z',
       sources_ok: ['hacker_news', 'arxiv'],
-      items: { ...emptyItemsMap(), tech_trends: [items[0]], research: [items[1]] },
+      items: { ...emptyItemsMap(), tech: [items[0]], research: [items[1]] },
     })
     const md = renderMarkdown(report)
     expect(md).toContain('2026-02-18')
@@ -40,7 +40,7 @@ describe('end-to-end: report creation and rendering', () => {
     const report = createReport({
       date: '2026-01-01',
       fetched_at: '2026-01-01T07:00:00Z',
-      items: { ...emptyItemsMap(), tech_trends: deduped },
+      items: { ...emptyItemsMap(), tech: deduped },
     })
     const md = renderMarkdown(report)
     expect(md).toContain('Same Title')

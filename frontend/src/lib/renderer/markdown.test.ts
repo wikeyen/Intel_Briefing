@@ -27,8 +27,8 @@ describe('renderMarkdown', () => {
   it('all 7 section headers present', () => {
     const report = makeReport()
     const md = renderMarkdown(report)
-    for (const header of ['Tech Trends', 'Research', 'Insights', 'Products',
-      'Capital Flow', 'Community', 'Social']) {
+    for (const header of ['Tech', 'Research', 'Insights', 'Products',
+      'Finance', 'Community', 'Social']) {
       expect(md).toContain(header)
     }
   })
@@ -41,7 +41,7 @@ describe('renderMarkdown', () => {
 
   it('item title and url rendered', () => {
     const item = makeItem('1', { title: 'My Article', url: 'https://example.com/article' })
-    const items = { ...emptyItemsMap(), tech_trends: [item] }
+    const items = { ...emptyItemsMap(), tech: [item] }
     const report = makeReport({ items })
     const md = renderMarkdown(report)
     expect(md).toContain('My Article')
@@ -64,7 +64,7 @@ describe('renderMarkdown', () => {
 
   it('item with heat shows heat', () => {
     const item = makeItem('1', { heat: '1234 pts' })
-    const items = { ...emptyItemsMap(), tech_trends: [item] }
+    const items = { ...emptyItemsMap(), tech: [item] }
     const report = makeReport({ items })
     const md = renderMarkdown(report)
     expect(md).toContain('1234 pts')

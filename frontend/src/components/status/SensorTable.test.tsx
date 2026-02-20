@@ -18,7 +18,7 @@ function makeReport(overrides: Partial<IntelReport> = {}): IntelReport {
     sources_ok: ['hacker_news', 'github', 'arxiv'],
     sources_failed: [],
     items: {
-      tech_trends: [
+      tech: [
         { id: '1', source: 'hacker_news', title: 'HN Post 1', url: 'https://hn.com/1' },
         { id: '2', source: 'hacker_news', title: 'HN Post 2', url: 'https://hn.com/2' },
         { id: '3', source: 'github', title: 'GH Repo 1', url: 'https://github.com/1' },
@@ -130,16 +130,16 @@ function buildProps(overrides: Partial<SensorTableProps> = {}): SensorTableProps
 
 describe('SensorTable', () => {
   // 1. Renders section headers
-  it('renders section headers (Tech Trends, Research, Social, etc.)', () => {
+  it('renders section headers (Tech, Research, Social, etc.)', () => {
     const props = buildProps({
       report: makeReport(),
       config: makeConfig(),
       pipelineStatus: makePipelineStatus(),
     })
     render(<SensorTable {...props} />)
-    expect(screen.getByText('TECH TRENDS')).toBeInTheDocument()
+    expect(screen.getByText('TECH')).toBeInTheDocument()
     expect(screen.getByText('RESEARCH')).toBeInTheDocument()
-    expect(screen.getByText('CAPITAL FLOW')).toBeInTheDocument()
+    expect(screen.getByText('FINANCE')).toBeInTheDocument()
     expect(screen.getByText('PRODUCTS')).toBeInTheDocument()
     expect(screen.getByText('COMMUNITY')).toBeInTheDocument()
     expect(screen.getByText('SOCIAL')).toBeInTheDocument()
@@ -211,7 +211,7 @@ describe('SensorTable', () => {
       sources_ok: ['hacker_news'],
       sources_failed: ['github'],
       items: {
-        tech_trends: [
+        tech: [
           { id: '1', source: 'hacker_news', title: 'HN Post', url: 'https://hn.com/1' },
         ],
       },
@@ -381,8 +381,8 @@ describe('SensorTable', () => {
       pipelineStatus: makePipelineStatus(),
     })
     render(<SensorTable {...props} />)
-    // Tech Trends section has 3 items (2 HN + 1 GH)
-    const techSection = screen.getByTestId('section-tech_trends')
+    // Tech section has 3 items (2 HN + 1 GH)
+    const techSection = screen.getByTestId('section-tech')
     expect(within(techSection).getByTestId('section-count')).toHaveTextContent('3')
   })
 })

@@ -547,7 +547,7 @@ function StatusBadge({ isCustom }: { isCustom: boolean }) {
 export function AiSummary() {
   const showToast = useToast()
 
-  const [summaryProvider, setSummaryProvider] = useState<'openrouter' | 'custom' | null>(null)
+  const [summaryProvider, setSummaryProvider] = useState<'openrouter' | 'local' | null>(null)
   const [summaryApiKey, setSummaryApiKey] = useState('')
   const [summaryBaseUrl, setSummaryBaseUrl] = useState('https://openrouter.ai/api/v1')
   const [summaryModel, setSummaryModel] = useState('anthropic/claude-sonnet-4')
@@ -574,12 +574,12 @@ export function AiSummary() {
   }, [])
 
   const handleProviderChange = (v: string) => {
-    const provider = v === '' ? null : v as 'openrouter' | 'custom'
+    const provider = v === '' ? null : v as 'openrouter' | 'local'
     setSummaryProvider(provider)
     if (provider === 'openrouter') {
       setSummaryBaseUrl(OPENROUTER_BASE_URL)
       setSummaryModel('anthropic/claude-sonnet-4')
-    } else if (provider === 'custom') {
+    } else if (provider === 'local') {
       setSummaryBaseUrl(OLLAMA_BASE_URL)
       setSummaryModel('')
     }
@@ -590,7 +590,7 @@ export function AiSummary() {
     try {
       await api.updateConfig({
         summary_provider: summaryProvider,
-        summary_api_key: summaryApiKey || null,
+        summary_api_key: summaryApiKey || '***',
         summary_base_url: summaryBaseUrl,
         summary_model: summaryModel,
         summary_sensor_prompts: sensorPrompts,
@@ -633,7 +633,7 @@ export function AiSummary() {
     })
   }
 
-  const isOllama = summaryProvider === 'custom'
+  const isOllama = summaryProvider === 'local'
   const isEnabled = summaryProvider !== null
 
   return (
@@ -676,7 +676,7 @@ export function AiSummary() {
                   >
                     <option value="">Disabled</option>
                     <option value="openrouter">OpenRouter</option>
-                    <option value="custom">Ollama (Local)</option>
+                    <option value="local">Local (Ollama)</option>
                   </select>
                   <span style={{
                     position: 'absolute',

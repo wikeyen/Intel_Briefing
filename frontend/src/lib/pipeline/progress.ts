@@ -11,8 +11,8 @@ type OnChangeCallback = (status: PipelineStatus) => void
 export class PipelineProgressTracker {
   private readonly sensors: SensorJobProgress[]
   private readonly mode: RunMode
-  private readonly fetchConcurrency: number
-  private readonly summaryConcurrency: number
+  private readonly defaultConcurrency: number
+  private readonly localSummaryConcurrency: number
   private readonly onChange?: OnChangeCallback
   private readonly startedAt: string
   private completedAt: string | null = null
@@ -23,13 +23,13 @@ export class PipelineProgressTracker {
   constructor(
     sensorNames: string[],
     mode: RunMode,
-    fetchConcurrency: number,
-    summaryConcurrency: number,
+    defaultConcurrency: number,
+    localSummaryConcurrency: number,
     onChange?: OnChangeCallback,
   ) {
     this.mode = mode
-    this.fetchConcurrency = fetchConcurrency
-    this.summaryConcurrency = summaryConcurrency
+    this.defaultConcurrency = defaultConcurrency
+    this.localSummaryConcurrency = localSummaryConcurrency
     this.onChange = onChange
     this.startedAt = new Date().toISOString().replace(/\.\d+Z$/, 'Z')
 
@@ -132,8 +132,8 @@ export class PipelineProgressTracker {
       running: this.running,
       cancelled: this.cancelled,
       mode: this.mode,
-      fetch_concurrency: this.fetchConcurrency,
-      summary_concurrency: this.summaryConcurrency,
+      default_concurrency: this.defaultConcurrency,
+      local_summary_concurrency: this.localSummaryConcurrency,
       started_at: this.startedAt,
       completed_at: this.completedAt,
       sensors: this.sensors.map(s => ({ ...s })),

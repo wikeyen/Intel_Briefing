@@ -110,8 +110,8 @@ export interface PipelineStatus {
   running: boolean
   cancelled: boolean
   mode: RunMode
-  fetch_concurrency: number
-  summary_concurrency: number
+  default_concurrency: number
+  local_summary_concurrency: number
   started_at: string | null
   completed_at: string | null
   sensors: SensorJobProgress[]
@@ -239,15 +239,15 @@ export interface ConfigSettings {
   // Cache
   cache_ttl_hours: number
 
-  // Per-stage concurrency — separate limits for fetch and summary stages
-  fetch_concurrency: number
-  summary_concurrency: number
+  // Concurrency — default applies to both fetch and summary; local override for local LLM models
+  default_concurrency: number
+  local_summary_concurrency: number
 
   // Post expiry — items older than this are pruned by the cleanup cron
   post_expiry_days: number
 
   // AI summary — LLM provider config
-  summary_provider: 'openrouter' | 'custom' | null
+  summary_provider: 'openrouter' | 'local' | null
   summary_api_key: string | null
   summary_base_url: string
   summary_model: string
@@ -300,8 +300,8 @@ export function defaultConfig(): ConfigSettings {
     social_following_mastodon: false,
     rss_feed_urls: [],
     cache_ttl_hours: 6,
-    fetch_concurrency: 4,
-    summary_concurrency: 4,
+    default_concurrency: 4,
+    local_summary_concurrency: 1,
     post_expiry_days: 30,
     summary_provider: null,
     summary_api_key: null,

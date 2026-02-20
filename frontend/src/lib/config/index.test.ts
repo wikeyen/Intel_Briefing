@@ -147,18 +147,34 @@ describe('config migration', () => {
     expect(config.social_accounts_x).toEqual(['@new_user'])
   })
 
-  it('migrates pipeline_concurrency to fetch/summary concurrency', async () => {
+  it('migrates pipeline_concurrency to default_concurrency', async () => {
     kvStore['intel:config'] = { pipeline_concurrency: 8 }
     const config = await loadConfig()
-    expect(config.fetch_concurrency).toBe(8)
-    expect(config.summary_concurrency).toBe(8)
+    expect(config.default_concurrency).toBe(8)
+  })
+
+  it('migrates fetch_concurrency to default_concurrency', async () => {
+    kvStore['intel:config'] = { fetch_concurrency: 6 }
+    const config = await loadConfig()
+    expect(config.default_concurrency).toBe(6)
+  })
+
+  it('migrates summary_concurrency to local_summary_concurrency', async () => {
+    kvStore['intel:config'] = { summary_concurrency: 3 }
+    const config = await loadConfig()
+    expect(config.local_summary_concurrency).toBe(3)
   })
 
   it('does not overwrite existing concurrency fields with legacy key', async () => {
-    kvStore['intel:config'] = { pipeline_concurrency: 8, fetch_concurrency: 3 }
+    kvStore['intel:config'] = { pipeline_concurrency: 8, default_concurrency: 3 }
     const config = await loadConfig()
-    expect(config.fetch_concurrency).toBe(3)
-    expect(config.summary_concurrency).toBe(8)
+    expect(config.default_concurrency).toBe(3)
+  })
+
+  it('migrates summary_provider custom to local', async () => {
+    kvStore['intel:config'] = { summary_provider: 'custom' }
+    const config = await loadConfig()
+    expect(config.summary_provider).toBe('local')
   })
 
   it('applies migration to YAML file data too', async () => {

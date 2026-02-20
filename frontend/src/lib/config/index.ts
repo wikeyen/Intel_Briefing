@@ -99,12 +99,25 @@ function migrateConfig(data: Record<string, unknown>): Record<string, unknown> {
     migrated.social_topics_keywords = migrated.topics_keywords
   }
   delete migrated.topics_keywords
-  // pipeline_concurrency → fetch_concurrency + summary_concurrency
+  // pipeline_concurrency → default_concurrency (legacy two-hop)
   if ('pipeline_concurrency' in migrated) {
     const val = migrated.pipeline_concurrency as number
-    if (!('fetch_concurrency' in migrated)) migrated.fetch_concurrency = val
-    if (!('summary_concurrency' in migrated)) migrated.summary_concurrency = val
+    if (!('default_concurrency' in migrated)) migrated.default_concurrency = val
     delete migrated.pipeline_concurrency
+  }
+  // fetch_concurrency → default_concurrency
+  if ('fetch_concurrency' in migrated && !('default_concurrency' in migrated)) {
+    migrated.default_concurrency = migrated.fetch_concurrency
+  }
+  delete migrated.fetch_concurrency
+  // summary_concurrency → local_summary_concurrency
+  if ('summary_concurrency' in migrated && !('local_summary_concurrency' in migrated)) {
+    migrated.local_summary_concurrency = migrated.summary_concurrency
+  }
+  delete migrated.summary_concurrency
+  // summary_provider: 'custom' → 'local'
+  if (migrated.summary_provider === 'custom') {
+    migrated.summary_provider = 'local'
   }
   return migrated
 }

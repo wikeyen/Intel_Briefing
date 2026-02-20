@@ -10,8 +10,8 @@ export async function GET(): Promise<NextResponse<PipelineStatus>> {
     return NextResponse.json({
       running: false,
       mode: 'fetch_summarize',
-      fetch_concurrency: 4,
-      summary_concurrency: 4,
+      default_concurrency: 4,
+      local_summary_concurrency: 1,
       started_at: null,
       completed_at: null,
       sensors: [],

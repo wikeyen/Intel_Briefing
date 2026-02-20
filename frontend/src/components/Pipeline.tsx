@@ -69,8 +69,8 @@ export function Pipeline() {
   const showToast = useToast()
   const [fetchTime, setFetchTime] = useState('07:00')
   const [timezone, setTimezone] = useState('UTC')
-  const [fetchConcurrency, setFetchConcurrency] = useState(4)
-  const [summaryConcurrency, setSummaryConcurrency] = useState(4)
+  const [defaultConcurrency, setDefaultConcurrency] = useState(4)
+  const [localSummaryConcurrency, setLocalSummaryConcurrency] = useState(1)
   const [cacheTtl, setCacheTtl] = useState(25)
   const [postExpiryDays, setPostExpiryDays] = useState(30)
   const [boost, setBoost] = useState<string[]>([])
@@ -85,8 +85,8 @@ export function Pipeline() {
     api.getConfig().then((cfg) => {
       setFetchTime(cfg.fetch_time)
       setTimezone(cfg.fetch_timezone)
-      setFetchConcurrency(cfg.fetch_concurrency ?? 4)
-      setSummaryConcurrency(cfg.summary_concurrency ?? 4)
+      setDefaultConcurrency(cfg.default_concurrency ?? 4)
+      setLocalSummaryConcurrency(cfg.local_summary_concurrency ?? 1)
       setCacheTtl(cfg.cache_ttl_hours)
       setPostExpiryDays(cfg.post_expiry_days ?? 30)
       setBoost(cfg.boost_keywords)
@@ -105,8 +105,8 @@ export function Pipeline() {
       await api.updateConfig({
         fetch_time: fetchTime,
         fetch_timezone: timezone,
-        fetch_concurrency: fetchConcurrency,
-        summary_concurrency: summaryConcurrency,
+        default_concurrency: defaultConcurrency,
+        local_summary_concurrency: localSummaryConcurrency,
         cache_ttl_hours: cacheTtl,
         post_expiry_days: postExpiryDays,
         boost_keywords: boost,
@@ -224,42 +224,42 @@ export function Pipeline() {
             <div>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
                 <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
-                  Fetch Concurrency
+                  Default Concurrency
                 </label>
                 <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--ink)', fontFamily: 'ui-monospace, monospace' }}>
-                  {fetchConcurrency}
+                  {defaultConcurrency}
                 </span>
               </div>
               <input
                 type="range"
                 min={1}
                 max={13}
-                value={fetchConcurrency}
-                onChange={(e) => setFetchConcurrency(Number(e.target.value))}
+                value={defaultConcurrency}
+                onChange={(e) => setDefaultConcurrency(Number(e.target.value))}
               />
               <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, marginTop: '0.5rem' }}>
-                Maximum number of sensors fetching in parallel.
+                Parallel limit for fetching and summarization. Applies to both stages.
               </p>
             </div>
 
             <div>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
                 <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
-                  Summary Concurrency
+                  Local Model Summary Concurrency
                 </label>
                 <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--ink)', fontFamily: 'ui-monospace, monospace' }}>
-                  {summaryConcurrency}
+                  {localSummaryConcurrency}
                 </span>
               </div>
               <input
                 type="range"
                 min={1}
                 max={13}
-                value={summaryConcurrency}
-                onChange={(e) => setSummaryConcurrency(Number(e.target.value))}
+                value={localSummaryConcurrency}
+                onChange={(e) => setLocalSummaryConcurrency(Number(e.target.value))}
               />
               <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, marginTop: '0.5rem' }}>
-                Maximum number of LLM summary calls in parallel.
+                Override for local models (Ollama). Cloud providers use the default concurrency above.
               </p>
             </div>
 

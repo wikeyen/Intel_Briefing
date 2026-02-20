@@ -206,10 +206,12 @@ export async function runPipeline(
   const abortController = new AbortController()
   const { signal } = abortController
 
-  const fetchConcurrency = config.fetch_concurrency ?? 4
-  const summaryConcurrency = config.summary_concurrency ?? 4
-  const fetchSemaphore = new Semaphore(fetchConcurrency)
-  const summarySemaphore = new Semaphore(summaryConcurrency)
+  const defaultConcurrency = config.default_concurrency ?? 4
+  const localSummaryConcurrency = config.local_summary_concurrency ?? 1
+  const isLocalModel = config.summary_provider === 'local'
+  const effectiveSummaryConcurrency = isLocalModel ? localSummaryConcurrency : defaultConcurrency
+  const fetchSemaphore = new Semaphore(defaultConcurrency)
+  const summarySemaphore = new Semaphore(effectiveSummaryConcurrency)
 
   // Identify enabled sensors from the registry
   const registrySensorNames = Object.keys(SENSOR_REGISTRY).filter(
@@ -227,7 +229,7 @@ export async function runPipeline(
     cachedReport = await readReport()
     if (!cachedReport) {
       // No cached report — create a minimal tracker, mark complete, return empty
-      const tracker = new PipelineProgressTracker([], mode, fetchConcurrency, summaryConcurrency, (status) => {
+      const tracker = new PipelineProgressTracker([], mode, defaultConcurrency, localSummaryConcurrency, (status) => {
         writePipelineStatus(status).catch(() => {})
       })
       writePipelineStatus(tracker.snapshot()).catch(() => {})
@@ -243,7 +245,7 @@ export async function runPipeline(
     : registrySensorNames
 
   // Create progress tracker with persistence callback
-  const tracker = new PipelineProgressTracker(trackerSensorNames, mode, fetchConcurrency, summaryConcurrency, (status) => {
+  const tracker = new PipelineProgressTracker(trackerSensorNames, mode, defaultConcurrency, localSummaryConcurrency, (status) => {
     writePipelineStatus(status).catch(() => {})
   })
 

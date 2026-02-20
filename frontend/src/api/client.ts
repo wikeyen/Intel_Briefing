@@ -31,10 +31,10 @@ export interface ConfigSettings {
   social_following_mastodon: boolean
   rss_feed_urls: string[]
   cache_ttl_hours: number
-  fetch_concurrency: number
-  summary_concurrency: number
+  default_concurrency: number
+  local_summary_concurrency: number
   post_expiry_days: number
-  summary_provider: 'openrouter' | 'custom' | null
+  summary_provider: 'openrouter' | 'local' | null
   summary_api_key: string | null
   summary_base_url: string
   summary_model: string
@@ -79,8 +79,8 @@ export interface PipelineStatus {
   running: boolean
   cancelled: boolean
   mode: RunMode
-  fetch_concurrency: number
-  summary_concurrency: number
+  default_concurrency: number
+  local_summary_concurrency: number
   started_at: string | null
   completed_at: string | null
   sensors: SensorJobProgress[]

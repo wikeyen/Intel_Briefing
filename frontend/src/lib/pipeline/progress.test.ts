@@ -11,8 +11,8 @@ describe('PipelineProgressTracker', () => {
     const snap = tracker.snapshot()
     expect(snap.running).toBe(true)
     expect(snap.mode).toBe('fetch_summarize')
-    expect(snap.fetch_concurrency).toBe(4)
-    expect(snap.summary_concurrency).toBe(4)
+    expect(snap.default_concurrency).toBe(4)
+    expect(snap.local_summary_concurrency).toBe(4)
     expect(snap.sensors).toHaveLength(3)
     for (const s of snap.sensors) {
       expect(s.fetch).toBe('queued')
@@ -107,8 +107,8 @@ describe('PipelineProgressTracker', () => {
   it('snapshot reflects separate concurrency values', () => {
     const tracker = new PipelineProgressTracker(sensors, 'fetch_summarize', 3, 6)
     const snap = tracker.snapshot()
-    expect(snap.fetch_concurrency).toBe(3)
-    expect(snap.summary_concurrency).toBe(6)
+    expect(snap.default_concurrency).toBe(3)
+    expect(snap.local_summary_concurrency).toBe(6)
   })
 
   it('cancel() transitions queued and running stages to cancelled', () => {

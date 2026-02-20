@@ -94,8 +94,8 @@ describe('writePipelineStatus', () => {
     const status: PipelineStatus = {
       running: true,
       mode: 'fetch_summarize',
-      fetch_concurrency: 4,
-      summary_concurrency: 4,
+      default_concurrency: 4,
+      local_summary_concurrency: 4,
       started_at: '2026-01-01T07:00:00Z',
       completed_at: null,
       sensors: [],
@@ -116,8 +116,8 @@ describe('readPipelineStatus', () => {
     const status: PipelineStatus = {
       running: false,
       mode: 'fetch_summarize',
-      fetch_concurrency: 4,
-      summary_concurrency: 4,
+      default_concurrency: 4,
+      local_summary_concurrency: 4,
       started_at: '2026-01-01T07:00:00Z',
       completed_at: '2026-01-01T07:01:00Z',
       sensors: [],

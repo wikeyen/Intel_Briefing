@@ -74,8 +74,8 @@ describe('runPipeline', () => {
 
     const config = makeConfig({
       sensors_enabled: { hacker_news: true, arxiv: true },
-      fetch_concurrency: 2,
-      summary_concurrency: 2,
+      default_concurrency: 2,
+      local_summary_concurrency: 2,
     })
 
     const result = await runPipeline(config, 'fetch')
@@ -102,8 +102,8 @@ describe('runPipeline', () => {
 
     const config = makeConfig({
       sensors_enabled: { hacker_news: true },
-      fetch_concurrency: 2,
-      summary_concurrency: 2,
+      default_concurrency: 2,
+      local_summary_concurrency: 2,
       summary_provider: 'openrouter',
       summary_api_key: 'key',
       summary_base_url: 'https://openrouter.ai/api/v1',
@@ -121,8 +121,8 @@ describe('runPipeline', () => {
 
     const config = makeConfig({
       sensors_enabled: { hacker_news: true },
-      fetch_concurrency: 2,
-      summary_concurrency: 2,
+      default_concurrency: 2,
+      local_summary_concurrency: 2,
       summary_provider: 'openrouter',
       summary_api_key: 'key',
       summary_base_url: 'https://openrouter.ai/api/v1',
@@ -155,8 +155,8 @@ describe('runPipeline', () => {
 
     const config = makeConfig({
       sensors_enabled: { s1: true, s2: true, s3: true, s4: true, s5: true },
-      fetch_concurrency: 2,
-      summary_concurrency: 2,
+      default_concurrency: 2,
+      local_summary_concurrency: 2,
     })
 
     await runPipeline(config, 'fetch')
@@ -169,8 +169,8 @@ describe('runPipeline', () => {
 
     const config = makeConfig({
       sensors_enabled: { good: true, bad: true },
-      fetch_concurrency: 4,
-      summary_concurrency: 4,
+      default_concurrency: 4,
+      local_summary_concurrency: 4,
     })
 
     const result = await runPipeline(config, 'fetch')
@@ -185,8 +185,8 @@ describe('runPipeline', () => {
 
     const config = makeConfig({
       sensors_enabled: { broken: true },
-      fetch_concurrency: 4,
-      summary_concurrency: 4,
+      default_concurrency: 4,
+      local_summary_concurrency: 4,
     })
 
     const result = await runPipeline(config, 'fetch')
@@ -202,8 +202,8 @@ describe('runPipeline', () => {
 
     const config = makeConfig({
       sensors_enabled: { hacker_news: true },
-      fetch_concurrency: 4,
-      summary_concurrency: 4,
+      default_concurrency: 4,
+      local_summary_concurrency: 4,
       summary_provider: 'openrouter',
       summary_api_key: 'key',
       summary_base_url: 'https://openrouter.ai/api/v1',
@@ -222,8 +222,8 @@ describe('runPipeline', () => {
 
     const config = makeConfig({
       sensors_enabled: { hacker_news: true },
-      fetch_concurrency: 4,
-      summary_concurrency: 4,
+      default_concurrency: 4,
+      local_summary_concurrency: 4,
       summary_provider: 'openrouter',
       summary_api_key: 'key',
       summary_base_url: 'https://openrouter.ai/api/v1',
@@ -241,8 +241,8 @@ describe('runPipeline', () => {
 
     const config = makeConfig({
       sensors_enabled: { hacker_news: true },
-      fetch_concurrency: 4,
-      summary_concurrency: 4,
+      default_concurrency: 4,
+      local_summary_concurrency: 4,
     })
 
     await runPipeline(config, 'fetch')
@@ -255,8 +255,8 @@ describe('runPipeline', () => {
 
     const config = makeConfig({
       sensors_enabled: { good: true, bad: true },
-      fetch_concurrency: 4,
-      summary_concurrency: 4,
+      default_concurrency: 4,
+      local_summary_concurrency: 4,
       summary_provider: 'openrouter',
       summary_api_key: 'key',
       summary_base_url: 'https://openrouter.ai/api/v1',
@@ -294,8 +294,8 @@ describe('runPipeline', () => {
 
     const config = makeConfig({
       sensors_enabled: { s1: true, s2: true, s3: true, s4: true },
-      fetch_concurrency: 2,
-      summary_concurrency: 3,
+      default_concurrency: 2,
+      local_summary_concurrency: 3,
     })
 
     await runPipeline(config, 'fetch')
@@ -303,8 +303,8 @@ describe('runPipeline', () => {
 
     // Verify status snapshot reflects both concurrency values
     const lastStatus = mockWritePipelineStatus.mock.calls.at(-1)?.[0]
-    expect(lastStatus?.fetch_concurrency).toBe(2)
-    expect(lastStatus?.summary_concurrency).toBe(3)
+    expect(lastStatus?.default_concurrency).toBe(2)
+    expect(lastStatus?.local_summary_concurrency).toBe(3)
   })
 })
 
@@ -324,8 +324,8 @@ describe('cancelPipeline', () => {
 
     const config = makeConfig({
       sensors_enabled: { slow: true },
-      fetch_concurrency: 4,
-      summary_concurrency: 4,
+      default_concurrency: 4,
+      local_summary_concurrency: 4,
     })
 
     // Start pipeline — don't await, it will block on the slow sensor
@@ -366,8 +366,8 @@ describe('cancelPipeline', () => {
 
     const config = makeConfig({
       sensors_enabled: { s1: true },
-      fetch_concurrency: 4,
-      summary_concurrency: 4,
+      default_concurrency: 4,
+      local_summary_concurrency: 4,
     })
 
     const firstRun = runPipeline(config, 'fetch')

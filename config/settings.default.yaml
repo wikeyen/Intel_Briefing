@@ -41,7 +41,7 @@ sensor_lookback_hours: {}
 boost_keywords: []
 suppress_keywords: []
 cache_ttl_hours: 6
-fetch_concurrency: 4
+default_concurrency: 4
 post_expiry_days: 30
 
 # --- Social ---
@@ -54,10 +54,10 @@ social_following_mastodon: false
 rss_feed_urls: []
 
 # --- AI Summary ---
-# summary_provider: null       # "openrouter" or "custom" (Ollama)
+# summary_provider: null       # "openrouter" or "local" (Ollama)
 # summary_api_key: null
 summary_base_url: https://openrouter.ai/api/v1
 summary_model: anthropic/claude-sonnet-4
-summary_concurrency: 4
+local_summary_concurrency: 1
 summary_sensor_prompts: {}
 summary_overall_prompt: ""

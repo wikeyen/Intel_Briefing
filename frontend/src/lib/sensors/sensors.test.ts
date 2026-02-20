@@ -256,6 +256,111 @@ describe('ChromeRadarSensor', () => {
   })
 })
 
+describe('WeiboSensor', () => {
+  it('returns intel items from hot search', async () => {
+    const mockData = {
+      ok: 1,
+      data: {
+        realtime: [
+          { mid: '1001', word: 'test topic', num: 50000, label_name: 'Hot', word_scheme: '#test topic' },
+          { mid: '1002', word: 'another topic', num: 30000, label_name: '', word_scheme: '' },
+        ],
+      },
+    }
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true, json: () => Promise.resolve(mockData),
+    })
+    const { fetchWeibo } = await import('./weibo')
+    const items = await fetchWeibo(makeConfig(), 5)
+    expect(items).toHaveLength(2)
+    for (const item of items) {
+      expect(item.source).toBe('weibo')
+      expect(item.id).toMatch(/^weibo-/)
+      expect(item.url).toContain('s.weibo.com')
+    }
+    expect(items[0].heat).toBe('50000')
+  })
+
+  it('throws on HTTP error', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 })
+    const { fetchWeibo } = await import('./weibo')
+    await expect(fetchWeibo(makeConfig(), 5)).rejects.toThrow('HTTP 500')
+  })
+
+  it('returns empty array when ok !== 1', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true, json: () => Promise.resolve({ ok: 0, data: {} }),
+    })
+    const { fetchWeibo } = await import('./weibo')
+    const items = await fetchWeibo(makeConfig(), 5)
+    expect(items).toHaveLength(0)
+  })
+})
+
+describe('ZhihuSensor', () => {
+  it('returns intel items from hot list', async () => {
+    const mockData = {
+      data: [
+        {
+          id: 'z1',
+          target: { title: 'Zhihu Question 1' },
+          detail_text: '500 万热度',
+          card_id: 'Q_12345',
+          children: [{ thumbnail: 'https://pic.zhimg.com/thumb.jpg' }],
+        },
+      ],
+    }
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true, json: () => Promise.resolve(mockData),
+    })
+    const { fetchZhihu } = await import('./zhihu')
+    const items = await fetchZhihu(makeConfig(), 5)
+    expect(items).toHaveLength(1)
+    expect(items[0].source).toBe('zhihu')
+    expect(items[0].id).toMatch(/^zhihu-/)
+    expect(items[0].url).toContain('zhihu.com/question/12345')
+    expect(items[0].heat).toBe('5000000')
+  })
+
+  it('throws on HTTP error', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 403 })
+    const { fetchZhihu } = await import('./zhihu')
+    await expect(fetchZhihu(makeConfig(), 5)).rejects.toThrow('HTTP 403')
+  })
+})
+
+describe('XiaohongshuSensor', () => {
+  it('returns intel items from hot list', async () => {
+    const mockData = {
+      success: true,
+      data: {
+        items: [
+          { id: 'xhs1', title: 'XHS Topic 1', score: 99000, word_type: 'Hot' },
+          { id: 'xhs2', title: 'XHS Topic 2', score: 50000, word_type: '无' },
+        ],
+      },
+    }
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true, json: () => Promise.resolve(mockData),
+    })
+    const { fetchXiaohongshu } = await import('./xiaohongshu')
+    const items = await fetchXiaohongshu(makeConfig(), 5)
+    expect(items).toHaveLength(2)
+    for (const item of items) {
+      expect(item.source).toBe('xiaohongshu')
+      expect(item.id).toMatch(/^xhs-/)
+      expect(item.url).toContain('xiaohongshu.com')
+    }
+    expect(items[0].heat).toBe('99000')
+  })
+
+  it('throws on HTTP error', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 })
+    const { fetchXiaohongshu } = await import('./xiaohongshu')
+    await expect(fetchXiaohongshu(makeConfig(), 5)).rejects.toThrow('HTTP 500')
+  })
+})
+
 describe('SensorProtocolCompliance', () => {
   it('github sensor throws SensorConfigError without token', async () => {
     globalThis.fetch = vi.fn()
@@ -269,13 +374,14 @@ describe('SensorProtocolCompliance', () => {
     await expect(fetchProductHunt(makeConfig({ producthunt_token: null }), 5)).rejects.toThrow(SensorConfigError)
   })
 
-  it('sensor registry has all 13 sensors', async () => {
+  it('sensor registry has all 16 sensors', async () => {
     const { SENSOR_REGISTRY } = await import('./index')
-    expect(Object.keys(SENSOR_REGISTRY)).toHaveLength(13)
+    expect(Object.keys(SENSOR_REGISTRY)).toHaveLength(16)
     const expected = [
       'hacker_news', 'arxiv', 'github', 'product_hunt', 'v2ex',
       'hn_blogs', 'social_accounts', 'social_topics', 'social_trends',
       'sources_36kr', 'wallstreetcn', 'chrome_radar', 'rss_feeds',
+      'weibo', 'zhihu', 'xiaohongshu',
     ]
     for (const name of expected) {
       expect(SENSOR_REGISTRY[name]).toBeDefined()

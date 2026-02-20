@@ -210,6 +210,33 @@ describe('parseOverallJson', () => {
     expect(result2.sentiment.overall_mood).toBe('neutral')
   })
 
+  it('extracts JSON when LLM adds preamble text', () => {
+    const json = JSON.stringify({
+      quick_scan: [{ text: 'AI news', source: 'HN', refs: [] }],
+      executive_summary: 'A busy day in tech.',
+      sections: [{ title: 'Tech', entries: [{ text: 'Big release', source: 'GH', refs: [] }] }],
+      sentiment: { overall_mood: 'bullish', mood_summary: 'Optimism', controversies: [], opinion_shifts: [], risk_flags: [] },
+    })
+    const input = `Here is the briefing summary:\n\n${json}\n\nI hope this helps!`
+    const result = parseOverallJson(input)
+    expect(result.quick_scan).toHaveLength(1)
+    expect(result.quick_scan[0].text).toBe('AI news')
+    expect(result.executive_summary).toBe('A busy day in tech.')
+    expect(result.sections).toHaveLength(1)
+    expect(result.sentiment.overall_mood).toBe('bullish')
+  })
+
+  it('extracts sensor JSON when LLM adds preamble text', () => {
+    const json = JSON.stringify({
+      summary: 'Top stories from HN.',
+      items: [{ title: 'Story 1', url: 'https://example.com', brief: 'Hot topic' }],
+    })
+    const input = `Sure, here is the summary:\n${json}`
+    const result = parseSensorJson(input)
+    expect(result.summary).toBe('Top stories from HN.')
+    expect(result.items).toHaveLength(1)
+  })
+
   it('filters malformed sentiment entries', () => {
     const input = JSON.stringify({
       quick_scan: [],

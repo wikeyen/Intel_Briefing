@@ -324,7 +324,7 @@ function ItemCard({ item }: { item: IntelItem }) {
               textUnderlineOffset: '2px',
             }}
           >
-            {contentExpanded ? 'collapse' : 'show comments'}
+            {contentExpanded ? 'collapse' : 'more'}
           </button>
         </div>
       )}

@@ -119,6 +119,23 @@ export async function collect(
     }
   }
 
+  // Apply per-sensor lookback time filtering
+  for (const result of results) {
+    if (!sensorResultSucceeded(result)) continue
+    const lookbackHours = config.sensor_lookback_hours?.[result.sensor_name]
+    if (!lookbackHours) continue
+    const cutoffMs = Date.now() - lookbackHours * 60 * 60 * 1000
+    const cutoffDayStr = new Date(cutoffMs).toISOString().slice(0, 10)
+    result.items = result.items.filter((item) => {
+      if (!item.published_at) return true
+      // Date-only timestamps (YYYY-MM-DD): compare at day granularity
+      if (item.published_at.length <= 10) return item.published_at >= cutoffDayStr
+      // Full timestamps: compare at ms precision
+      const pubMs = new Date(item.published_at).getTime()
+      return !isNaN(pubMs) && pubMs >= cutoffMs
+    })
+  }
+
   // Assemble sections
   const sections = emptyItemsMap()
   const sourcesOk: string[] = []

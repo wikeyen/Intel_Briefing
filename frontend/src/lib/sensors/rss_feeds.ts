@@ -21,6 +21,7 @@ interface RawItem {
   url: string
   published: string | null
   summary: string | null
+  fullContent: string | null
   feedTitle: string
 }
 
@@ -30,10 +31,21 @@ function parseDate(raw: string | undefined | null): Date | null {
   return isNaN(d.getTime()) ? null : d
 }
 
+/** Extract text content from an XML node that may be a string or an object with #text. */
+function textOf(node: unknown): string | null {
+  if (node == null) return null
+  if (typeof node === 'string') return node
+  if (typeof node === 'object' && '#text' in (node as Record<string, unknown>)) {
+    return String((node as Record<string, unknown>)['#text'])
+  }
+  return String(node)
+}
+
 function parseFeed(xml: string): { feedTitle: string; items: RawItem[] } {
   const parser = new XMLParser({
     ignoreAttributes: false,
     attributeNamePrefix: '@_',
+    removeNSPrefix: true,
     isArray: (name) => ['entry', 'item', 'link', 'author'].includes(name),
   })
   const parsed = parser.parse(xml)
@@ -53,7 +65,10 @@ function parseFeed(xml: string): { feedTitle: string; items: RawItem[] } {
       if (!url) continue
       const published = String(entry.published ?? entry.updated ?? '') || null
       const summary = entry.summary ? stripHtml(String(entry.summary)) : null
-      items.push({ title, url, published, summary, feedTitle })
+      // Atom <content> holds the full article HTML
+      const rawContent = textOf(entry.content)
+      const fullContent = rawContent ? stripHtml(rawContent) : null
+      items.push({ title, url, published, summary, fullContent, feedTitle })
     }
   } else {
     const channel = feed.rss?.channel ?? feed.channel ?? feed
@@ -65,7 +80,10 @@ function parseFeed(xml: string): { feedTitle: string; items: RawItem[] } {
       if (!url) continue
       const published = item.pubDate ? String(item.pubDate) : null
       const summary = item.description ? stripHtml(String(item.description)) : null
-      items.push({ title, url, published, summary, feedTitle })
+      // RSS 2.0 <content:encoded> holds full article HTML (NS prefix stripped by removeNSPrefix)
+      const rawEncoded = textOf(item.encoded)
+      const fullContent = rawEncoded ? stripHtml(rawEncoded) : null
+      items.push({ title, url, published, summary, fullContent, feedTitle })
     }
   }
   return { feedTitle: items[0]?.feedTitle ?? 'Unknown Feed', items }
@@ -97,6 +115,8 @@ async function scrapeArticles(items: RawItem[]): Promise<RawItem[]> {
     const batch = items.slice(i, i + SCRAPE_CONCURRENCY)
     const scraped = await Promise.allSettled(
       batch.map(async (item) => {
+        // Skip scraping if the feed already provided full content
+        if (item.fullContent) return item
         const content = await extractArticle(item.url)
         return { ...item, summary: content ?? item.summary }
       }),
@@ -154,7 +174,7 @@ export async function fetchRssFeeds(config: ConfigSettings, limit: number): Prom
     title: item.title,
     url: item.url,
     published_at: parseDate(item.published)?.toISOString().slice(0, 10) ?? null,
-    content: item.summary,
+    content: item.fullContent ?? item.summary,
     account: item.feedTitle,
   }))
 }

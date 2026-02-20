@@ -17,6 +17,7 @@ export class PipelineProgressTracker {
   private readonly startedAt: string
   private completedAt: string | null = null
   private running = true
+  private cancelled = false
   private overallSummary: StageState
 
   constructor(
@@ -105,6 +106,21 @@ export class PipelineProgressTracker {
     this.notify()
   }
 
+  /** Cancel the pipeline: mark incomplete stages as 'cancelled', stop running. */
+  cancel(): void {
+    this.running = false
+    this.cancelled = true
+    this.completedAt = new Date().toISOString().replace(/\.\d+Z$/, 'Z')
+    for (const s of this.sensors) {
+      if (s.fetch === 'queued' || s.fetch === 'running') s.fetch = 'cancelled'
+      if (s.summary === 'queued' || s.summary === 'running') s.summary = 'cancelled'
+    }
+    if (this.overallSummary === 'queued' || this.overallSummary === 'running') {
+      this.overallSummary = 'cancelled'
+    }
+    this.notify()
+  }
+
   complete(): void {
     this.running = false
     this.completedAt = new Date().toISOString().replace(/\.\d+Z$/, 'Z')
@@ -114,6 +130,7 @@ export class PipelineProgressTracker {
   snapshot(): PipelineStatus {
     return {
       running: this.running,
+      cancelled: this.cancelled,
       mode: this.mode,
       fetch_concurrency: this.fetchConcurrency,
       summary_concurrency: this.summaryConcurrency,

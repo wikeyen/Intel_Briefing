@@ -12,7 +12,9 @@ function buildProps(overrides: Partial<ActionBarProps> = {}): ActionBarProps {
     phase: 'idle',
     progress: { done: 0, total: 0 },
     fetching: false,
+    isStopping: false,
     onRun: vi.fn(),
+    onStop: vi.fn(),
     ...overrides,
   }
 }
@@ -128,15 +130,44 @@ describe('ActionBar', () => {
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
   })
 
-  it('disables Run button and shows "Running\u2026" when running', () => {
+  it('shows Stop button when running', () => {
+    const onStop = vi.fn()
     const props = buildProps({
       isRunning: true,
       phase: 'fetching',
       progress: { done: 2, total: 13 },
+      onStop,
     })
     render(<ActionBar {...props} />)
-    const btn = screen.getByRole('button', { name: /running/i })
+    const btn = screen.getByRole('button', { name: /stop/i })
+    expect(btn).toBeEnabled()
+    expect(btn).toHaveTextContent('Stop')
+    fireEvent.click(btn)
+    expect(onStop).toHaveBeenCalledOnce()
+  })
+
+  it('shows disabled "Stopping\u2026" button when isStopping', () => {
+    const props = buildProps({
+      isRunning: true,
+      phase: 'stopping',
+      progress: { done: 2, total: 13 },
+      isStopping: true,
+    })
+    render(<ActionBar {...props} />)
+    const btn = screen.getByRole('button', { name: /stopping/i })
     expect(btn).toBeDisabled()
-    expect(btn).toHaveTextContent('Running\u2026')
+    expect(btn).toHaveTextContent('Stopping\u2026')
+  })
+
+  it('shows "Stopping\u2026" in subtitle when stopping phase', () => {
+    const props = buildProps({
+      isRunning: true,
+      phase: 'stopping',
+      progress: { done: 5, total: 13 },
+      isStopping: true,
+    })
+    render(<ActionBar {...props} />)
+    const subtitle = screen.getByTestId('action-bar-subtitle')
+    expect(subtitle).toHaveTextContent(/Stopping/)
   })
 })

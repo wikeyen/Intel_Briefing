@@ -52,7 +52,7 @@ vi.mock('../sensors', () => ({
   }),
 }))
 
-const { runPipeline } = await import('./orchestrator')
+const { runPipeline, cancelPipeline, isPipelineRunning } = await import('./orchestrator')
 
 function makeConfig(overrides: Partial<ConfigSettings> = {}): ConfigSettings {
   return { ...defaultConfig(), ...overrides }
@@ -305,5 +305,82 @@ describe('runPipeline', () => {
     const lastStatus = mockWritePipelineStatus.mock.calls.at(-1)?.[0]
     expect(lastStatus?.fetch_concurrency).toBe(2)
     expect(lastStatus?.summary_concurrency).toBe(3)
+  })
+})
+
+describe('cancelPipeline', () => {
+  it('returns false when no pipeline is running', () => {
+    expect(cancelPipeline()).toBe(false)
+  })
+
+  it('returns true and aborts a running pipeline', async () => {
+    // Use a slow sensor so we can cancel mid-flight
+    let resolveSlowSensor: (() => void) | null = null
+    mockSensorFns['slow'] = vi.fn().mockImplementation(() =>
+      new Promise<IntelItem[]>(resolve => {
+        resolveSlowSensor = () => resolve([makeItem('s1', 'slow')])
+      }),
+    )
+
+    const config = makeConfig({
+      sensors_enabled: { slow: true },
+      fetch_concurrency: 4,
+      summary_concurrency: 4,
+    })
+
+    // Start pipeline — don't await, it will block on the slow sensor
+    const pipelinePromise = runPipeline(config, 'fetch')
+
+    // Wait for the sensor to start
+    await vi.waitFor(() => expect(resolveSlowSensor).not.toBeNull())
+
+    // Verify pipeline is running
+    expect(isPipelineRunning()).toBe(true)
+
+    // Cancel it
+    const cancelled = cancelPipeline()
+    expect(cancelled).toBe(true)
+    expect(isPipelineRunning()).toBe(false)
+
+    // Resolve the slow sensor so the pipeline finishes
+    resolveSlowSensor!()
+    const result = await pipelinePromise
+
+    // Pipeline should return partial results (the slow sensor resolved after abort,
+    // but the report may or may not contain its results depending on timing)
+    expect(result.summary).toBeNull()
+
+    // Verify the final status was written with cancelled state
+    const lastStatus = mockWritePipelineStatus.mock.calls.at(-1)?.[0]
+    expect(lastStatus?.cancelled).toBe(true)
+  })
+
+  it('allows a new run after cancel', async () => {
+    // First run: cancel it
+    let resolveSensor: (() => void) | null = null
+    mockSensorFns['s1'] = vi.fn().mockImplementation(() =>
+      new Promise<IntelItem[]>(resolve => {
+        resolveSensor = () => resolve([makeItem('1', 's1')])
+      }),
+    )
+
+    const config = makeConfig({
+      sensors_enabled: { s1: true },
+      fetch_concurrency: 4,
+      summary_concurrency: 4,
+    })
+
+    const firstRun = runPipeline(config, 'fetch')
+    await vi.waitFor(() => expect(resolveSensor).not.toBeNull())
+    cancelPipeline()
+    resolveSensor!()
+    await firstRun
+
+    // Second run: should complete normally
+    resolveSensor = null
+    mockSensorFns['s1'] = vi.fn().mockResolvedValue([makeItem('1', 's1')])
+    const result = await runPipeline(config, 'fetch')
+    expect(result.report).toBeDefined()
+    expect(result.report!.sources_ok).toContain('s1')
   })
 })

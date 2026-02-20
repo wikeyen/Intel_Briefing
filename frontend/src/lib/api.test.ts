@@ -30,8 +30,11 @@ vi.mock('./config', () => ({
   maskConfig: (...args: unknown[]) => mockMaskConfig(...args),
 }))
 
+const mockIsPipelineRunning = vi.fn().mockReturnValue(false)
 vi.mock('./pipeline/orchestrator', () => ({
   runPipeline: (...args: unknown[]) => mockRunPipeline(...args),
+  isPipelineRunning: () => mockIsPipelineRunning(),
+  cancelPipeline: vi.fn().mockReturnValue(false),
 }))
 
 function makeReport(overrides: Partial<IntelReport> = {}): IntelReport {

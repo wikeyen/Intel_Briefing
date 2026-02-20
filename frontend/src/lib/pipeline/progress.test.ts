@@ -110,4 +110,58 @@ describe('PipelineProgressTracker', () => {
     expect(snap.fetch_concurrency).toBe(3)
     expect(snap.summary_concurrency).toBe(6)
   })
+
+  it('cancel() transitions queued and running stages to cancelled', () => {
+    const tracker = new PipelineProgressTracker(sensors, 'fetch_summarize', 4, 4)
+    // Set some sensors to various states before cancelling
+    tracker.setFetchState('hacker_news', 'ok', 10)
+    tracker.setFetchState('arxiv', 'running')
+    // github remains 'queued'
+
+    tracker.cancel()
+    const snap = tracker.snapshot()
+
+    expect(snap.running).toBe(false)
+    expect(snap.cancelled).toBe(true)
+    expect(snap.completed_at).toBeTruthy()
+
+    // 'ok' is preserved
+    expect(snap.sensors[0].fetch).toBe('ok')
+    expect(snap.sensors[0].item_count).toBe(10)
+    // 'running' becomes 'cancelled'
+    expect(snap.sensors[1].fetch).toBe('cancelled')
+    // 'queued' becomes 'cancelled'
+    expect(snap.sensors[2].fetch).toBe('cancelled')
+
+    // All summaries were queued, so all become cancelled
+    for (const s of snap.sensors) {
+      expect(s.summary).toBe('cancelled')
+    }
+    expect(snap.overall_summary).toBe('cancelled')
+  })
+
+  it('cancel() preserves failed stages', () => {
+    const tracker = new PipelineProgressTracker(sensors, 'fetch_summarize', 4, 4)
+    tracker.setFetchState('hacker_news', 'failed', 0, 'timeout', 'api')
+    tracker.cancel()
+    const snap = tracker.snapshot()
+    expect(snap.sensors[0].fetch).toBe('failed')
+    expect(snap.sensors[0].fetch_error).toBe('timeout')
+  })
+
+  it('cancel() calls onChange listener', () => {
+    const onChange = vi.fn()
+    const tracker = new PipelineProgressTracker(sensors, 'fetch', 4, 4, onChange)
+    onChange.mockClear()
+    tracker.cancel()
+    expect(onChange).toHaveBeenCalledTimes(1)
+    const snap = onChange.mock.calls[0][0]
+    expect(snap.cancelled).toBe(true)
+    expect(snap.running).toBe(false)
+  })
+
+  it('snapshot includes cancelled field (false by default)', () => {
+    const tracker = new PipelineProgressTracker(sensors, 'fetch', 4, 4)
+    expect(tracker.snapshot().cancelled).toBe(false)
+  })
 })

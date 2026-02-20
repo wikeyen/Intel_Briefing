@@ -27,6 +27,25 @@ export interface PipelineResult {
   summary: BriefingSummary | null
 }
 
+// Module-level singletons for abort support
+let activeAbortController: AbortController | null = null
+let activeTracker: PipelineProgressTracker | null = null
+
+/** Cancel the running pipeline, if any. Returns true if a pipeline was cancelled. */
+export function cancelPipeline(): boolean {
+  if (!activeAbortController || !activeTracker) return false
+  activeAbortController.abort()
+  activeTracker.cancel()
+  activeAbortController = null
+  activeTracker = null
+  return true
+}
+
+/** Check whether a pipeline is currently running. */
+export function isPipelineRunning(): boolean {
+  return activeAbortController !== null
+}
+
 /** Format an IntelItem into a text block for the LLM prompt. */
 function formatItem(item: IntelItem): string {
   const parts = [`- ${item.title}`]
@@ -99,6 +118,7 @@ async function summarizeSensor(
   llmConfig: LlmConfig,
   promptOverrides?: Record<string, string>,
   onChunkProgress?: ChunkProgressFn,
+  signal?: AbortSignal,
 ): Promise<SensorSummary | null> {
   if (items.length === 0) return null
 
@@ -113,7 +133,7 @@ async function summarizeSensor(
     summaryText = await chatCompletion([
       { role: 'system', content: sensorPrompt },
       { role: 'user', content: `综合分析以下 ${label} 的 ${items.length} 条内容：\n\n${itemsText}` },
-    ], llmConfig)
+    ], llmConfig, signal)
   } else {
     // Map-reduce: chunk → extract signals → merge
     const chunks = chunkArray(items, CHUNK_SIZE)
@@ -126,7 +146,7 @@ async function summarizeSensor(
       return chatCompletion([
         { role: 'system', content: CHUNK_EXTRACT_PROMPT },
         { role: 'user', content: `以下是 ${label} 的第 ${i + 1}/${chunks.length} 批内容（${chunk.length} 条）：\n\n${chunkText}` },
-      ], llmConfig).then(result => {
+      ], llmConfig, signal).then(result => {
         chunksCompleted++
         onChunkProgress?.(chunks.length, chunksCompleted)
         return result
@@ -141,7 +161,7 @@ async function summarizeSensor(
     summaryText = await chatCompletion([
       { role: 'system', content: sensorPrompt },
       { role: 'user', content: `以下是从 ${items.length} 条 ${label} 内容中提取的关键信号（分 ${chunks.length} 批提取）。请综合分析：\n\n${mergedExtractions}` },
-    ], llmConfig)
+    ], llmConfig, signal)
   }
 
   const parsed = parseSensorJson(summaryText)
@@ -183,6 +203,9 @@ export async function runPipeline(
   config: ConfigSettings,
   mode: RunMode,
 ): Promise<PipelineResult> {
+  const abortController = new AbortController()
+  const { signal } = abortController
+
   const fetchConcurrency = config.fetch_concurrency ?? 4
   const summaryConcurrency = config.summary_concurrency ?? 4
   const fetchSemaphore = new Semaphore(fetchConcurrency)
@@ -224,121 +247,158 @@ export async function runPipeline(
     writePipelineStatus(status).catch(() => {})
   })
 
+  // Store singletons for abort support
+  activeAbortController = abortController
+  activeTracker = tracker
+
   // Write initial status
   writePipelineStatus(tracker.snapshot()).catch(() => {})
 
   let report: IntelReport | null = null
   let summary: BriefingSummary | null = null
 
-  // Track which sensors failed fetch — they are excluded from summary
-  const failedSensors = new Set<string>()
+  try {
+    // Track which sensors failed fetch — they are excluded from summary
+    const failedSensors = new Set<string>()
 
-  if (shouldFetch) {
-    // Stage 1: Run all sensor fetches concurrently through the fetch semaphore
-    const fetchPromises = registrySensorNames.map(name =>
-      fetchSemaphore.run(async () => {
-        tracker.setFetchState(name, 'running')
-        const result = await fetchSensor(name, config)
-        if (sensorResultSucceeded(result)) {
-          tracker.setFetchState(name, 'ok', result.items.length)
-        } else {
-          tracker.setFetchState(name, 'failed', 0, result.error, result.error_kind ?? 'api')
-          failedSensors.add(name)
-        }
-        return result
-      }),
-    )
-
-    // Wait for ALL fetches to complete before moving to summary stage
-    const results = await Promise.all(fetchPromises)
-    report = await assembleReport(results, config)
-
-    // Mark failed sensors' summaries as skipped — they don't pass to the next stage
-    if (shouldSummarize) {
-      for (const name of failedSensors) {
-        tracker.skipSummaryForSensor(name)
-      }
-    }
-  }
-
-  if (shouldSummarize) {
-    // Use the freshly-fetched report, or the pre-loaded cached report
-    const sourceReport = report ?? cachedReport
-    if (!sourceReport) {
-      tracker.complete()
-      return { report: null, summary: null }
-    }
-
-    if (llmConfig) {
-      const sensorGroups = groupBySensor(sourceReport)
-      const sensorSummaries: SensorSummary[] = []
-
-      // Per-sensor summaries — concurrent through the summary semaphore
-      // Only summarize sensors that successfully fetched
-      const summaryPromises = Array.from(sensorGroups.entries())
-        .filter(([sensorName]) => !failedSensors.has(sensorName))
-        .map(([sensorName, items]) =>
-          summarySemaphore.run(async () => {
-          if (items.length === 0) return null
-          tracker.setSummaryState(sensorName, 'running')
-          try {
-            const result = await summarizeSensor(
-              sensorName, items, llmConfig, config.summary_sensor_prompts,
-              (total, done) => tracker.setSummaryChunks(sensorName, total, done),
-            )
-            tracker.setSummaryState(sensorName, 'ok')
-            return result
-          } catch (err) {
-            const message = err instanceof Error ? err.message : String(err)
-            tracker.setSummaryState(sensorName, 'failed', message)
-            return null
+    if (shouldFetch) {
+      // Stage 1: Run all sensor fetches concurrently through the fetch semaphore
+      const fetchPromises = registrySensorNames.map(name =>
+        fetchSemaphore.run(async () => {
+          if (signal.aborted) return null
+          tracker.setFetchState(name, 'running')
+          const result = await fetchSensor(name, config)
+          if (signal.aborted) return null
+          if (sensorResultSucceeded(result)) {
+            tracker.setFetchState(name, 'ok', result.items.length)
+          } else {
+            tracker.setFetchState(name, 'failed', 0, result.error, result.error_kind ?? 'api')
+            failedSensors.add(name)
           }
+          return result
         }),
       )
 
-      const summaryResults = await Promise.all(summaryPromises)
-      for (const result of summaryResults) {
-        if (result) sensorSummaries.push(result)
+      // Wait for ALL fetches to complete before moving to summary stage
+      const results = await Promise.all(fetchPromises)
+
+      if (signal.aborted) {
+        // Assemble partial report from completed (non-null) results
+        const completed = results.filter((r): r is SensorResult => r !== null)
+        if (completed.length > 0) {
+          report = await assembleReport(completed, config)
+        }
+        return { report, summary: null }
       }
 
-      // Overall briefing summary
-      tracker.setOverallSummary('running')
-      const overallContext = sensorSummaries.length > 0
-        ? sensorSummaries.map(s => `**${s.label}** (${s.item_count} items): ${s.summary}`).join('\n\n')
-        : 'No data was collected in this run.'
+      report = await assembleReport(results as SensorResult[], config)
 
-      const overallMessages: ChatMessage[] = [
-        { role: 'system', content: getOverallPrompt(config.summary_overall_prompt) },
-        { role: 'user', content: `请根据以下各信息源摘要生成简报：\n\n${overallContext}` },
-      ]
-
-      try {
-        const overallRaw = await chatCompletion(overallMessages, llmConfig)
-        const overall = parseOverallJson(overallRaw)
-        tracker.setOverallSummary('ok')
-
-        summary = {
-          generated_at: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
-          report_fetched_at: sourceReport.fetched_at,
-          sections: sensorSummaries,
-          overall,
+      // Mark failed sensors' summaries as skipped — they don't pass to the next stage
+      if (shouldSummarize) {
+        for (const name of failedSensors) {
+          tracker.skipSummaryForSensor(name)
         }
-
-        // Persist summary to cache
-        try {
-          await writeSummary(summary)
-        } catch (err) {
-          console.error('Failed to write summary cache:', err)
-        }
-      } catch (err) {
-        tracker.setOverallSummary('failed')
-        console.error('Failed to generate overall summary:', err)
       }
     }
-  }
 
-  tracker.complete()
-  return { report, summary }
+    if (shouldSummarize) {
+      // Use the freshly-fetched report, or the pre-loaded cached report
+      const sourceReport = report ?? cachedReport
+      if (!sourceReport) {
+        tracker.complete()
+        return { report: null, summary: null }
+      }
+
+      if (llmConfig) {
+        const sensorGroups = groupBySensor(sourceReport)
+        const sensorSummaries: SensorSummary[] = []
+
+        // Per-sensor summaries — concurrent through the summary semaphore
+        // Only summarize sensors that successfully fetched
+        const summaryPromises = Array.from(sensorGroups.entries())
+          .filter(([sensorName]) => !failedSensors.has(sensorName))
+          .map(([sensorName, items]) =>
+            summarySemaphore.run(async () => {
+            if (signal.aborted) return null
+            if (items.length === 0) return null
+            tracker.setSummaryState(sensorName, 'running')
+            try {
+              const result = await summarizeSensor(
+                sensorName, items, llmConfig, config.summary_sensor_prompts,
+                (total, done) => tracker.setSummaryChunks(sensorName, total, done),
+                signal,
+              )
+              if (signal.aborted) return null
+              tracker.setSummaryState(sensorName, 'ok')
+              return result
+            } catch (err) {
+              if (signal.aborted) return null
+              const message = err instanceof Error ? err.message : String(err)
+              tracker.setSummaryState(sensorName, 'failed', message)
+              return null
+            }
+          }),
+        )
+
+        const summaryResults = await Promise.all(summaryPromises)
+
+        if (signal.aborted) {
+          return { report, summary: null }
+        }
+
+        for (const result of summaryResults) {
+          if (result) sensorSummaries.push(result)
+        }
+
+        // Overall briefing summary
+        tracker.setOverallSummary('running')
+        const overallContext = sensorSummaries.length > 0
+          ? sensorSummaries.map(s => `**${s.label}** (${s.item_count} items): ${s.summary}`).join('\n\n')
+          : 'No data was collected in this run.'
+
+        const overallMessages: ChatMessage[] = [
+          { role: 'system', content: getOverallPrompt(config.summary_overall_prompt) },
+          { role: 'user', content: `请根据以下各信息源摘要生成简报：\n\n${overallContext}` },
+        ]
+
+        try {
+          const overallRaw = await chatCompletion(overallMessages, llmConfig, signal)
+          const overall = parseOverallJson(overallRaw)
+          tracker.setOverallSummary('ok')
+
+          summary = {
+            generated_at: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
+            report_fetched_at: sourceReport.fetched_at,
+            sections: sensorSummaries,
+            overall,
+          }
+
+          // Persist summary to cache
+          try {
+            await writeSummary(summary)
+          } catch (err) {
+            console.error('Failed to write summary cache:', err)
+          }
+        } catch (err) {
+          if (!signal.aborted) {
+            tracker.setOverallSummary('failed')
+            console.error('Failed to generate overall summary:', err)
+          }
+        }
+      }
+    }
+
+    if (!signal.aborted) {
+      tracker.complete()
+    }
+    return { report, summary }
+  } finally {
+    // Clear singletons so a new run can start
+    if (activeAbortController === abortController) {
+      activeAbortController = null
+      activeTracker = null
+    }
+  }
 }
 
 /** Extract unique sensor names from a report's items. */

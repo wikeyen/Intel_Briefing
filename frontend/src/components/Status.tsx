@@ -17,6 +17,7 @@ export function Status() {
   const [config, setConfig]           = useState<ConfigSettings | null>(null)
   const [fetching, setFetching]       = useState(false)
   const [running, setRunning]         = useState(false)
+  const [stopping, setStopping]       = useState(false)
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null)
   const [, setTick]                   = useState(0)
   const lastFetchedAtRef              = useRef<string | null>(null)
@@ -62,7 +63,10 @@ export function Status() {
         // Clear running flag if pipeline is stopped or if the run is stale (started > 5 min ago)
         const isStale = s.started_at
           && (Date.now() - new Date(s.started_at).getTime()) > STALE_THRESHOLD
-        if (!s.running || isStale) setRunning(false)
+        if (!s.running || isStale) {
+          setRunning(false)
+          setStopping(false)
+        }
       }).catch(() => {})
     }
     check()
@@ -84,6 +88,17 @@ export function Status() {
     }
   }
 
+  const handleStop = async () => {
+    setStopping(true)
+    try {
+      await api.stopPipeline()
+      showToast('Pipeline stop requested')
+    } catch {
+      showToast('Failed to stop pipeline')
+      setStopping(false)
+    }
+  }
+
   // Consider pipeline stale if started_at is more than 5 minutes ago
   const isRunning = !!(pipelineStatus?.running && pipelineStatus.started_at
     && (Date.now() - new Date(pipelineStatus.started_at).getTime()) < 5 * 60 * 1000)
@@ -98,6 +113,7 @@ export function Status() {
 
   // Pipeline phase — determines ActionBar label and progress tracking
   const phase: Phase = (() => {
+    if (stopping) return 'stopping'
     if (!isRunning) return 'idle'
     if (!pipelineStatus) return 'fetching'
     if (pipelineStatus.overall_summary === 'running') return 'briefing'
@@ -110,11 +126,12 @@ export function Status() {
   const progress = (() => {
     if (!pipelineStatus) return { done: 0, total: 0 }
     const total = pipelineStatus.sensors.length
+    const terminal = ['ok', 'failed', 'skipped', 'cancelled']
     if (phase === 'summarizing' || phase === 'briefing') {
-      const done = pipelineStatus.sensors.filter(s => ['ok', 'failed', 'skipped'].includes(s.summary)).length
+      const done = pipelineStatus.sensors.filter(s => terminal.includes(s.summary)).length
       return { done, total }
     }
-    const done = pipelineStatus.sensors.filter(s => ['ok', 'failed', 'skipped'].includes(s.fetch)).length
+    const done = pipelineStatus.sensors.filter(s => terminal.includes(s.fetch)).length
     return { done, total }
   })()
 
@@ -126,7 +143,9 @@ export function Status() {
         phase={phase}
         progress={progress}
         fetching={fetching}
+        isStopping={stopping}
         onRun={handleRun}
+        onStop={handleStop}
       />
 
       <SensorTable

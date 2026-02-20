@@ -91,7 +91,7 @@ export function sensorResultSucceeded(result: SensorResult): boolean {
 }
 
 export type RunMode = 'fetch' | 'summarize' | 'fetch_summarize'
-export type StageState = 'queued' | 'running' | 'ok' | 'failed' | 'skipped'
+export type StageState = 'queued' | 'running' | 'ok' | 'failed' | 'skipped' | 'cancelled'
 
 export interface SensorJobProgress {
   name: string
@@ -108,6 +108,7 @@ export interface SensorJobProgress {
 
 export interface PipelineStatus {
   running: boolean
+  cancelled: boolean
   mode: RunMode
   fetch_concurrency: number
   summary_concurrency: number

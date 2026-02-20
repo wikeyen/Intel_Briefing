@@ -25,6 +25,7 @@ const TIMEOUT_MS = 120_000
 export async function chatCompletion(
   messages: ChatMessage[],
   config: LlmConfig,
+  signal?: AbortSignal,
 ): Promise<string> {
   const baseUrl = config.base_url.replace(/\/+$/, '')
   const url = `${baseUrl}/chat/completions`
@@ -36,6 +37,10 @@ export async function chatCompletion(
     headers['Authorization'] = `Bearer ${config.api_key}`
   }
 
+  const combinedSignal = signal
+    ? AbortSignal.any([signal, AbortSignal.timeout(TIMEOUT_MS)])
+    : AbortSignal.timeout(TIMEOUT_MS)
+
   const res = await fetch(url, {
     method: 'POST',
     headers,
@@ -43,7 +48,7 @@ export async function chatCompletion(
       model: config.model,
       messages,
     }),
-    signal: AbortSignal.timeout(TIMEOUT_MS),
+    signal: combinedSignal,
   })
 
   if (!res.ok) {

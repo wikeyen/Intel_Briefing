@@ -61,7 +61,7 @@ export interface IntelItem {
 
 
 export type RunMode = 'fetch' | 'summarize' | 'fetch_summarize'
-export type StageState = 'queued' | 'running' | 'ok' | 'failed' | 'skipped'
+export type StageState = 'queued' | 'running' | 'ok' | 'failed' | 'skipped' | 'cancelled'
 
 export interface SensorJobProgress {
   name: string
@@ -77,6 +77,7 @@ export interface SensorJobProgress {
 
 export interface PipelineStatus {
   running: boolean
+  cancelled: boolean
   mode: RunMode
   fetch_concurrency: number
   summary_concurrency: number
@@ -227,6 +228,9 @@ export const api = {
 
   cleanupExpired: () =>
     apiFetch<{ ok: boolean; removed: number; expiry_days: number }>('/cache/cleanup', { method: 'POST' }),
+
+  stopPipeline: () =>
+    apiFetch<{ status: string }>('/fetch/stop', { method: 'POST' }),
 
   getOllamaModels: (baseUrl?: string) =>
     apiFetch<{ models: OllamaModelInfo[]; error?: string }>(

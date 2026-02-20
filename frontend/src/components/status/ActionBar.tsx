@@ -6,7 +6,7 @@ import type { HealthResponse, RunMode } from '@/api/client'
 import { STATUS_META } from './constants'
 import { timeAgo } from './time-helpers'
 
-export type Phase = 'idle' | 'fetching' | 'summarizing' | 'briefing'
+export type Phase = 'idle' | 'fetching' | 'summarizing' | 'briefing' | 'stopping'
 
 export interface ActionBarProps {
   health: HealthResponse | null
@@ -14,7 +14,9 @@ export interface ActionBarProps {
   phase: Phase
   progress: { done: number; total: number }
   fetching: boolean
+  isStopping: boolean
   onRun: (mode: RunMode) => void
+  onStop: () => void
 }
 
 const MODE_OPTIONS: { value: RunMode; label: string }[] = [
@@ -32,6 +34,8 @@ function phaseLabel(phase: Phase, progress: { done: number; total: number }): st
       return `Summarizing \u00b7 ${progress.done} of ${progress.total} sensors`
     case 'briefing':
       return 'Generating briefing\u2026'
+    case 'stopping':
+      return 'Stopping\u2026'
     default:
       return ''
   }
@@ -43,7 +47,9 @@ export function ActionBar({
   phase,
   progress,
   fetching,
+  isStopping,
   onRun,
+  onStop,
 }: ActionBarProps) {
   const [selectedMode, setSelectedMode] = useState<RunMode>('fetch_summarize')
 
@@ -125,25 +131,46 @@ export function ActionBar({
           </select>
         )}
 
-        {/* Run button */}
-        <button
-          onClick={() => onRun(selectedMode)}
-          disabled={disabled}
-          style={{
-            fontSize: '0.75rem',
-            fontWeight: 600,
-            padding: '0.375rem 1rem',
-            borderRadius: 6,
-            border: 'none',
-            color: disabled ? 'var(--ink-faint)' : '#FFFFFF',
-            background: disabled ? 'var(--border)' : 'var(--accent)',
-            cursor: disabled ? 'not-allowed' : 'pointer',
-            transition: 'background 120ms',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {isRunning ? 'Running\u2026' : 'Run'}
-        </button>
+        {/* Run / Stop button */}
+        {isRunning ? (
+          <button
+            onClick={onStop}
+            disabled={isStopping}
+            style={{
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              padding: '0.375rem 1rem',
+              borderRadius: 6,
+              border: 'none',
+              color: isStopping ? 'var(--ink-faint)' : '#FFFFFF',
+              background: isStopping ? 'var(--border)' : 'var(--danger, #d93025)',
+              cursor: isStopping ? 'not-allowed' : 'pointer',
+              transition: 'background 120ms',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {isStopping ? 'Stopping\u2026' : 'Stop'}
+          </button>
+        ) : (
+          <button
+            onClick={() => onRun(selectedMode)}
+            disabled={disabled}
+            style={{
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              padding: '0.375rem 1rem',
+              borderRadius: 6,
+              border: 'none',
+              color: disabled ? 'var(--ink-faint)' : '#FFFFFF',
+              background: disabled ? 'var(--border)' : 'var(--accent)',
+              cursor: disabled ? 'not-allowed' : 'pointer',
+              transition: 'background 120ms',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Run
+          </button>
+        )}
       </div>
 
       {/* ── Progress bar — thin strip at the bottom when running ── */}

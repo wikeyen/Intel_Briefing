@@ -2,7 +2,9 @@
 # ABOUTME: PreToolUse hook — blocks Edit/Write on main branch.
 # ABOUTME: Forces worktree workflow for all code changes.
 
-BRANCH=$(git -C "${CLAUDE_PROJECT_DIR:-.}" branch --show-current 2>/dev/null)
+# Use CWD for branch detection — CLAUDE_PROJECT_DIR may point to the main tree
+# even when we're working inside a git worktree on a feature branch.
+BRANCH=$(git branch --show-current 2>/dev/null)
 
 if [[ "$BRANCH" == "main" || "$BRANCH" == "master" ]]; then
   # Read stdin to check file path — allow edits to config/docs/memory

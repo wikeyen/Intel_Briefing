@@ -261,6 +261,7 @@ export function Settings() {
   const [summaryApiKey, setSummaryApiKey] = useState('')
   const [summaryBaseUrl, setSummaryBaseUrl] = useState('https://openrouter.ai/api/v1')
   const [summaryModel, setSummaryModel] = useState('anthropic/claude-sonnet-4')
+  const [testingLlm, setTestingLlm] = useState(false)
 
   const [saving, setSaving] = useState(false)
 
@@ -358,6 +359,24 @@ export function Settings() {
       showToast('Save failed: ' + (e as Error).message)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const testLlm = async () => {
+    setTestingLlm(true)
+    try {
+      // Save current config first so the endpoint uses the latest values
+      await save()
+      const result = await api.testSummary()
+      if (result.ok) {
+        showToast(`LLM connected (${result.latency_ms}ms)`)
+      } else {
+        showToast('LLM test failed: ' + (result.error ?? 'Unknown error'))
+      }
+    } catch (e) {
+      showToast('LLM test failed: ' + (e as Error).message)
+    } finally {
+      setTestingLlm(false)
     }
   }
 
@@ -934,7 +953,7 @@ export function Settings() {
 
           {/* Base URL — shown only for custom provider */}
           {summaryProvider === 'custom' && (
-            <div>
+            <div style={{ marginBottom: '1rem' }}>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
                 Base URL
               </label>
@@ -948,6 +967,27 @@ export function Settings() {
                 onBlur={blurInput}
               />
             </div>
+          )}
+
+          {/* Test connection button */}
+          {summaryProvider !== null && (
+            <button
+              onClick={testLlm}
+              disabled={testingLlm || saving}
+              style={{
+                fontSize: '0.8125rem',
+                fontWeight: 500,
+                padding: '0.5rem 1.25rem',
+                borderRadius: 6,
+                border: '1px solid var(--border)',
+                color: (testingLlm || saving) ? 'var(--ink-faint)' : 'var(--ink)',
+                background: 'var(--surface)',
+                cursor: (testingLlm || saving) ? 'not-allowed' : 'pointer',
+                transition: 'background 120ms',
+              }}
+            >
+              {testingLlm ? 'Testing…' : 'Test Connection'}
+            </button>
           )}
         </div>
 

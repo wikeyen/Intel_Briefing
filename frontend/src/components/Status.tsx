@@ -208,8 +208,8 @@ export function Status() {
     : 0
   const summaryTotalSensors = summaryProgress?.sensors.length ?? 0
 
-  // Hero banner background: running overrides to amber, otherwise reflects health
-  const heroBg = isRunning ? 'var(--warn-bg)' : meta.bg
+  // Hero banner background: running or summarizing overrides to amber, otherwise reflects health
+  const heroBg = (isRunning || isSummarizing) ? 'var(--warn-bg)' : meta.bg
 
   return (
     <section id="status" style={{ padding: '4.5rem 0' }}>
@@ -246,9 +246,9 @@ export function Status() {
               width: 14,
               height: 14,
               borderRadius: '50%',
-              background: isRunning ? 'var(--accent)' : meta.color,
+              background: (isRunning || isSummarizing) ? 'var(--accent)' : meta.color,
               flexShrink: 0,
-              animation: isRunning ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
+              animation: (isRunning || isSummarizing) ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
             }} />
             <div style={{ minWidth: 0 }}>
               <div style={{
@@ -257,7 +257,7 @@ export function Status() {
                 color: 'var(--ink)',
                 lineHeight: 1.3,
               }}>
-                {isRunning ? 'Pipeline Running' : meta.label}
+                {isRunning ? 'Pipeline Running' : isSummarizing ? 'Summarizing' : meta.label}
               </div>
               <div style={{
                 fontSize: '0.8125rem',
@@ -266,7 +266,9 @@ export function Status() {
               }}>
                 {isRunning && pipelineStatus
                   ? `${doneSensors}/${totalSensors} sensors complete · ${pipelineStatus.total_items} items`
-                  : meta.desc}
+                  : isSummarizing
+                    ? `${summaryDoneSensors}/${summaryTotalSensors} sources summarized`
+                    : meta.desc}
               </div>
             </div>
           </div>

@@ -166,4 +166,7 @@ export const api = {
 
   getSummaryStatus: () =>
     apiFetch<SummaryProgress>('/summary/status'),
+
+  testSummary: () =>
+    apiFetch<{ ok: boolean; latency_ms?: number; error?: string }>('/summary/test', { method: 'POST' }),
 }

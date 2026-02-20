@@ -28,7 +28,7 @@ export async function fetch36kr(_config: ConfigSettings, limit: number): Promise
 
 /** Parse newsflash items from window.initialState JSON blob */
 function parseFromInitialState(html: string, limit: number): IntelItem[] {
-  const match = html.match(/window\.initialState\s*=\s*({.+?})\s*<\/script>/s)
+  const match = html.match(new RegExp('window\\.initialState\\s*=\\s*({.+?})\\s*<\\/script>', 's'))
   if (!match) return []
 
   try {

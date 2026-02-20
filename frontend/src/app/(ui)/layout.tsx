@@ -32,6 +32,7 @@ export default function UiLayout({ children }: { children: React.ReactNode }) {
   const closeSidebar = useCallback(() => setSidebarOpen(false), [])
 
   // Close sidebar on route change
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setSidebarOpen(false) }, [pathname])
 
   const pageTitle = PAGE_TITLES[pathname] ?? 'Intel Briefing'

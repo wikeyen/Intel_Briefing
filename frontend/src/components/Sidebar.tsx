@@ -82,7 +82,7 @@ export function Sidebar({ showToast, onNavigate }: Props) {
     return () => clearInterval(iv)
   }, [])
 
-  const hasErrors = (pipelineStatus?.sensors.some(s => s.error !== null)) ?? false
+  const hasErrors = (pipelineStatus?.sensors.some(s => s.fetch_error !== null || s.summary_error !== null)) ?? false
   const runId = pipelineStatus?.completed_at ?? pipelineStatus?.started_at ?? ''
 
   // Track which pipeline run the user last viewed on /status via server-side KV store.

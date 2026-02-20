@@ -438,3 +438,58 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
+/* ─── Markdown Summary Rendering ─────────────────────────────────────── */
+.markdown-summary p {
+  margin: 0 0 0.5em;
+}
+.markdown-summary p:last-child {
+  margin-bottom: 0;
+}
+.markdown-summary ul,
+.markdown-summary ol {
+  margin: 0.25em 0 0.5em;
+  padding-left: 1.5em;
+}
+.markdown-summary li {
+  margin-bottom: 0.2em;
+}
+.markdown-summary strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+.markdown-summary em {
+  font-style: italic;
+}
+.markdown-summary code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.875em;
+  background: var(--surface-alt);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+}
+.markdown-summary a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.markdown-summary h1,
+.markdown-summary h2,
+.markdown-summary h3,
+.markdown-summary h4 {
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0.75em 0 0.25em;
+}
+.markdown-summary h1 { font-size: 1.1em; }
+.markdown-summary h2 { font-size: 1.05em; }
+.markdown-summary h3 { font-size: 1em; }
+.markdown-summary blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 0.75em;
+  margin: 0.5em 0;
+  color: var(--ink-muted);
+}
+.markdown-summary-sm strong {
+  color: var(--ink-muted);
+}
+

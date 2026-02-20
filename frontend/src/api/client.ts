@@ -127,6 +127,13 @@ export interface RssDiscoveryResult {
   message?: string
 }
 
+export interface OllamaModelInfo {
+  name: string
+  size: string
+  family: string
+  quantization: string
+}
+
 const BASE = '/api'
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
@@ -195,4 +202,9 @@ export const api = {
 
   cleanupExpired: () =>
     apiFetch<{ ok: boolean; removed: number; expiry_days: number }>('/cache/cleanup', { method: 'POST' }),
+
+  getOllamaModels: (baseUrl?: string) =>
+    apiFetch<{ models: OllamaModelInfo[]; error?: string }>(
+      `/ollama/models${baseUrl ? `?base_url=${encodeURIComponent(baseUrl)}` : ''}`,
+    ),
 }

@@ -7,6 +7,7 @@ import { api } from '@/api/client'
 import type { IntelReport, IntelItem, ConfigSettings, BriefingSummary, SummaryProgress, PipelineStatus } from '@/api/client'
 import { SENSOR_TOKEN_FIELD } from '@/lib/sensors/constants'
 import { useToast } from '@/lib/toast-context'
+import ReactMarkdown from 'react-markdown'
 import { Pagination } from './Pagination'
 
 const PAGE_SIZE = 20
@@ -581,6 +582,7 @@ function SummarySection({ summary, summaryProgress, pipelineStatus, config, hasC
 }) {
   const [open, setOpen] = useState(!!summary)
   const isSummarizing = !!(summaryProgress?.running && summaryProgress.started_at
+    // eslint-disable-next-line react-hooks/purity
     && (Date.now() - new Date(summaryProgress.started_at).getTime()) < 5 * 60 * 1000)
 
   const hasProvider = config?.summary_provider !== null && config?.summary_provider !== undefined
@@ -655,14 +657,13 @@ function SummarySection({ summary, summaryProgress, pipelineStatus, config, hasC
           {summary ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {/* Executive Summary */}
-              <p style={{
+              <div className="markdown-summary" style={{
                 fontSize: '0.9375rem',
                 color: 'var(--ink)',
                 lineHeight: 1.8,
-                margin: 0,
               }}>
-                {summary.overall}
-              </p>
+                <ReactMarkdown>{summary.overall}</ReactMarkdown>
+              </div>
 
               {/* Source Summaries Grid */}
               {summary.sections.length > 0 && (
@@ -695,14 +696,13 @@ function SummarySection({ summary, summaryProgress, pipelineStatus, config, hasC
                           {s.item_count} items
                         </span>
                       </div>
-                      <p style={{
+                      <div className="markdown-summary markdown-summary-sm" style={{
                         fontSize: '0.8125rem',
                         color: 'var(--ink-muted)',
                         lineHeight: 1.65,
-                        margin: 0,
                       }}>
-                        {s.summary}
-                      </p>
+                        <ReactMarkdown>{s.summary}</ReactMarkdown>
+                      </div>
                     </div>
                   ))}
                 </div>

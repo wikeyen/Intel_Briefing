@@ -66,7 +66,7 @@ export async function assembleReport(
   // Decode HTML entities in all text fields
   for (const key of Object.keys(dedupedSections) as SectionKey[]) {
     for (const item of dedupedSections[key]) {
-      decodeItemEntities(item as Record<string, unknown>)
+      decodeItemEntities(item as unknown as Record<string, unknown>)
     }
   }
 

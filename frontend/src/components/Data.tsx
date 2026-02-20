@@ -546,6 +546,19 @@ function SummaryProgressBanner({ progress, pipelineStatus, config }: {
                   }} />
                 </div>
               )}
+              {/* Verification retry indicator */}
+              {pSensor && pSensor.verify_max_retries > 0 && pSensor.verify_attempt > 0 && s.state === 'running' && (
+                <span style={{
+                  fontSize: '0.5rem',
+                  color: 'var(--ink-muted)',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                }}
+                  title={`Verifying refs: ${pSensor.verify_failures} bad URL(s), retry ${pSensor.verify_attempt}/${pSensor.verify_max_retries}`}
+                >
+                  &#x1F50D; {pSensor.verify_attempt}/{pSensor.verify_max_retries}
+                </span>
+              )}
               {s.state === 'ok' && (
                 <span style={{ fontSize: '0.5625rem', color: 'var(--accent)' }}>&#10003;</span>
               )}

@@ -76,7 +76,7 @@ export async function assembleReport(
     dedupedSections[key] = boostItems(dedupedSections[key], config.boost_keywords ?? [])
   }
 
-  // Post-processing: verify links (Grok items) + enrich content (hn_blogs) — concurrent
+  // Post-processing: verify links + enrich content (hn_blogs) — concurrent
   const postProcessTasks: Promise<void>[] = []
   for (const key of Object.keys(dedupedSections) as CategoryKey[]) {
     for (const item of dedupedSections[key]) {

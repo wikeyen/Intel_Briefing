@@ -1,51 +1,8 @@
-// ABOUTME: Social trends sensor — surfaces trending content across X, Bluesky, and Mastodon.
+// ABOUTME: Social trends sensor — surfaces trending content across Bluesky and Mastodon.
 // ABOUTME: Aggregates trending posts and discussions into a unified IntelItem feed.
 import type { ConfigSettings, IntelItem } from '../models'
-import { SensorConfigError } from './errors'
-import { queryGrok } from '../platforms/x'
 import { createBlueskyAgent, blueskyPostToItem } from '../platforms/bluesky'
 import { mastodonPublicGet, mastodonStatusToItem } from '../platforms/mastodon'
-
-const X_SYSTEM_PROMPT =
-  'You are a tech intelligence analyst. Return ONLY a valid JSON array with no markdown fences, ' +
-  'no explanation, no extra text. Each element must be a JSON object with exactly these keys: ' +
-  '{"title": "<post or trend title>", "url": "<direct URL or empty string>", ' +
-  '"heat": "<engagement metric or empty string>", "summary": "<one sentence summary>"}. ' +
-  'Focus on the last 24 hours only. Return 0–15 items.'
-
-function buildXPrompt(today: string): string {
-  return (
-    `Today is ${today}. Search X (Twitter) for the top trending tech discussions, ` +
-    'product launches, AI breakthroughs, and developer news from the last 24 hours. ' +
-    'Return a JSON array of the most significant items. No markdown, no prose — JSON only.'
-  )
-}
-
-async function fetchXTrends(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
-  if (!config.xai_api_key) return []
-  const today = new Date().toISOString().slice(0, 10)
-  const raw = await queryGrok({
-    apiKey: config.xai_api_key, baseUrl: config.xai_base_url, model: config.xai_model,
-    systemPrompt: X_SYSTEM_PROMPT, userPrompt: buildXPrompt(today),
-    temperature: 0.4,
-  })
-  const items: IntelItem[] = []
-  for (let idx = 0; idx < Math.min(raw.length, limit); idx++) {
-    const r = raw[idx]
-    if (typeof r !== 'object') continue
-    const title = String(r.title ?? '').trim()
-    if (!title) continue
-    items.push({
-      id: `x-trends-${today}-${idx}`,
-      source: 'x',
-      title, url: String(r.url ?? ''),
-      heat: String(r.heat ?? '') || null,
-      abstract: String(r.summary ?? '') || null,
-      published_at: today,
-    })
-  }
-  return items
-}
 
 async function fetchBlueskyTrends(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
   if (!config.bluesky_handle || !config.bluesky_app_password) return []
@@ -80,17 +37,7 @@ async function fetchMastodonTrends(_config: ConfigSettings, limit: number): Prom
 }
 
 export async function fetchSocialTrends(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
-  const hasX = !!config.xai_api_key
-  const hasBsky = !!(config.bluesky_handle && config.bluesky_app_password)
-  // Mastodon trends endpoint is public — always available
-
-  if (!hasX && !hasBsky) {
-    // Mastodon trends is always tried since it's public, but if user has no
-    // credentials at all for any platform, we still attempt Mastodon public trends
-  }
-
   const results = await Promise.allSettled([
-    fetchXTrends(config, limit),
     fetchBlueskyTrends(config, limit),
     fetchMastodonTrends(config, limit),
   ])
@@ -102,9 +49,9 @@ export async function fetchSocialTrends(config: ConfigSettings, limit: number): 
     else errors.push(String(r.reason))
   }
 
-  // Only throw if ALL platforms failed
-  if (items.length === 0 && errors.length === 3) {
-    throw new SensorConfigError('No platform available for trends — configure xAI, Bluesky, or check Mastodon connectivity')
+  // Mastodon trends is public — only fail if both platforms errored
+  if (items.length === 0 && errors.length === 2) {
+    throw new Error('No platform available for trends — configure Bluesky or check Mastodon connectivity')
   }
 
   return items.slice(0, limit)

@@ -11,9 +11,6 @@ vi.mock('./time-helpers', () => ({
 
 function buildConfig(overrides: Partial<ConfigSettings> = {}): ConfigSettings {
   return {
-    xai_api_key: null,
-    xai_base_url: 'https://api.x.ai/v1',
-    xai_model: 'grok-3',
     github_token: null,
     producthunt_token: null,
     sensors_enabled: {},

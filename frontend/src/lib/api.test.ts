@@ -275,13 +275,13 @@ describe('GET /api/briefing/markdown', () => {
 
 describe('GET /api/config', () => {
   it('returns masked config', async () => {
-    const configWithKey = { ...freshConfig, xai_api_key: 'secret' }
+    const configWithKey = { ...freshConfig, summary_api_key: 'secret' }
     mockLoadConfig.mockResolvedValue(configWithKey)
-    mockMaskConfig.mockReturnValue({ ...configWithKey, xai_api_key: '***' })
+    mockMaskConfig.mockReturnValue({ ...configWithKey, summary_api_key: '***' })
     const { GET } = await import('@/app/api/config/route')
     const resp = await GET()
     const data = await resp.json()
-    expect(data.xai_api_key).toBe('***')
+    expect(data.summary_api_key).toBe('***')
   })
 
   it('null keys not masked', async () => {
@@ -289,7 +289,7 @@ describe('GET /api/config', () => {
     const { GET } = await import('@/app/api/config/route')
     const resp = await GET()
     const data = await resp.json()
-    expect(data.xai_api_key).toBeNull()
+    expect(data.summary_api_key).toBeNull()
   })
 })
 
@@ -315,19 +315,19 @@ describe('PUT /api/config', () => {
     const { PUT } = await import('@/app/api/config/route')
     const req = new NextRequest('http://localhost/api/config', {
       method: 'PUT',
-      body: JSON.stringify({ xai_api_key: '***' }),
+      body: JSON.stringify({ summary_api_key: '***' }),
       headers: { 'Content-Type': 'application/json' },
     })
     await PUT(req)
     // saveConfig should have been called without the masked key
     const callArg = mockSaveConfig.mock.calls[0][0]
-    expect(callArg.xai_api_key).toBeUndefined()
+    expect(callArg.summary_api_key).toBeUndefined()
   })
 
   it('returns masked response', async () => {
-    const configWithKey = { ...freshConfig, xai_api_key: 'real-key' }
+    const configWithKey = { ...freshConfig, summary_api_key: 'real-key' }
     mockSaveConfig.mockResolvedValue(configWithKey)
-    mockMaskConfig.mockReturnValue({ ...configWithKey, xai_api_key: '***' })
+    mockMaskConfig.mockReturnValue({ ...configWithKey, summary_api_key: '***' })
     const { PUT } = await import('@/app/api/config/route')
     const req = new NextRequest('http://localhost/api/config', {
       method: 'PUT',
@@ -336,6 +336,6 @@ describe('PUT /api/config', () => {
     })
     const resp = await PUT(req)
     const data = await resp.json()
-    expect(data.xai_api_key).toBe('***')
+    expect(data.summary_api_key).toBe('***')
   })
 })

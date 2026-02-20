@@ -19,11 +19,6 @@ const KEY_GROUPS: FieldGroup[] = [
     title: 'AI Providers',
     secrets: [
       { field: 'summary_api_key',       label: 'OpenRouter API Key',       hint: 'API key for LLM summarization via OpenRouter. Get one at openrouter.ai/keys.' },
-      { field: 'xai_api_key',           label: 'xAI API Key',              hint: 'Required for X/Twitter social sensors via Grok.' },
-    ],
-    plains: [
-      { field: 'xai_model',    label: 'xAI Model',    hint: 'Model identifier used for Grok queries (e.g., grok-3-mini-fast).' },
-      { field: 'xai_base_url', label: 'xAI Base URL' },
     ],
   },
   {
@@ -232,7 +227,7 @@ export function ApiKeys() {
   const [savedFlags, setSavedFlags] = useState<Record<string, boolean>>({})
   // pendingValues: new values the user is typing (only sent if non-empty)
   const [pendingValues, setPendingValues] = useState<Record<string, string>>({})
-  // plainValues: non-secret config fields (xai_model, xai_base_url, bluesky_handle)
+  // plainValues: non-secret config fields (bluesky_handle)
   const [plainValues, setPlainValues] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
 
@@ -245,8 +240,6 @@ export function ApiKeys() {
       setSavedFlags(flags)
       setPendingValues({})
       setPlainValues({
-        xai_model: cfg.xai_model,
-        xai_base_url: cfg.xai_base_url,
         bluesky_handle: cfg.bluesky_handle ?? '',
       })
     })
@@ -258,8 +251,6 @@ export function ApiKeys() {
     setSaving(true)
     try {
       const partial: Partial<ConfigSettings> = {
-        xai_model: plainValues.xai_model,
-        xai_base_url: plainValues.xai_base_url,
         bluesky_handle: plainValues.bluesky_handle || null,
       }
       for (const { field } of KEY_FIELDS) {

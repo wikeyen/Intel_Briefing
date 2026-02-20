@@ -13,7 +13,6 @@ export const GITHUB_API_URL = 'https://api.github.com/graphql'
 
 // Timeout constants (milliseconds)
 export const DEFAULT_TIMEOUT = 15_000
-export const GROK_TIMEOUT = 60_000
 export const RSS_FETCH_TIMEOUT = 10_000
 
 // Content limit constants
@@ -21,7 +20,7 @@ export const CONTENT_TRUNCATE_LIMIT = 3000
 export const MAX_BLOGS_TO_FETCH = 20
 export const MAX_ARTICLES_PER_BLOG = 2
 
-const KEY_FIELDS = new Set(['xai_api_key', 'github_token', 'producthunt_token', 'bluesky_app_password', 'mastodon_token', 'summary_api_key'])
+const KEY_FIELDS = new Set(['github_token', 'producthunt_token', 'bluesky_app_password', 'mastodon_token', 'summary_api_key'])
 
 /** Resolve the path to the local YAML config file (lazy — reads env at call time). */
 function configFilePath(): string {
@@ -63,9 +62,6 @@ function applyEnvOverrides(config: ConfigSettings): ConfigSettings {
   const env = process.env
   return {
     ...config,
-    xai_api_key:          env.XAI_API_KEY          ?? config.xai_api_key,
-    xai_base_url:         env.XAI_BASE_URL         || config.xai_base_url,
-    xai_model:            env.XAI_MODEL            || config.xai_model,
     github_token:         env.GITHUB_TOKEN         ?? config.github_token,
     producthunt_token:    env.PRODUCTHUNT_TOKEN    ?? config.producthunt_token,
     bluesky_handle:       env.BLUESKY_HANDLE       ?? config.bluesky_handle,

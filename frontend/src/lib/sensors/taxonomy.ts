@@ -20,9 +20,10 @@ export const SENSORS: SensorDef[] = [
   { key: 'product_hunt',    label: 'Product Hunt',      desc: 'Top products of the day',                        language: 'row', category: 'products' },
   { key: 'chrome_radar',    label: 'Chrome Radar',      desc: 'Chrome Web Store surveillance',                  language: 'row', category: 'products' },
   { key: 'hn_blogs',        label: 'HN Blogs',          desc: 'Curated blog posts from Hacker News',            language: 'row', category: 'insights' },
-  { key: 'social_accounts', label: 'Social Accounts',   desc: 'Monitor accounts across X, Bluesky, Mastodon',  language: 'row', category: 'social' },
-  { key: 'social_topics',   label: 'Social Topics',     desc: 'Track keywords across X, Bluesky, Mastodon',    language: 'row', category: 'social' },
-  { key: 'social_trends',   label: 'Social Trends',     desc: 'Trending content across X, Bluesky, Mastodon',  language: 'row', category: 'social' },
+  { key: 'x_posts',         label: 'X Posts',            desc: 'Recent posts from monitored X accounts',         language: 'row', category: 'social' },
+  { key: 'social_accounts', label: 'Social Accounts',   desc: 'Monitor accounts across Bluesky and Mastodon',  language: 'row', category: 'social' },
+  { key: 'social_topics',   label: 'Social Topics',     desc: 'Track keywords across Bluesky and Mastodon',    language: 'row', category: 'social' },
+  { key: 'social_trends',   label: 'Social Trends',     desc: 'Trending content across Bluesky and Mastodon',  language: 'row', category: 'social' },
   { key: 'rss_feeds',       label: 'RSS Feeds',         desc: 'Custom RSS/Atom feed subscriptions',             language: 'row', category: 'feeds' },
   // CN
   { key: 'sources_36kr',    label: '36Kr',              desc: 'Chinese startup and tech news',                  language: 'cn',  category: 'finance' },

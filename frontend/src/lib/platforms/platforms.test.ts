@@ -1,66 +1,10 @@
-// ABOUTME: Unit tests for platform adapters (X/Grok, Bluesky, Mastodon).
-// ABOUTME: Covers JSON parsing, item conversion, engagement formatting, and error handling.
+// ABOUTME: Unit tests for platform adapters (Bluesky, Mastodon).
+// ABOUTME: Covers item conversion, engagement formatting, and error handling.
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { SensorConfigError } from '../sensors/errors'
 
 const originalFetch = globalThis.fetch
 afterEach(() => { globalThis.fetch = originalFetch })
-
-describe('X platform adapter', () => {
-  it('parseGrokJson strips markdown fences', async () => {
-    const { parseGrokJson } = await import('./x')
-    const result = parseGrokJson('```json\n[{"title":"Hello"}]\n```')
-    expect(result).toHaveLength(1)
-    expect(result[0].title).toBe('Hello')
-  })
-
-  it('parseGrokJson returns empty array on invalid JSON', async () => {
-    const { parseGrokJson } = await import('./x')
-    expect(parseGrokJson('not json')).toEqual([])
-  })
-
-  it('parseGrokJson handles plain JSON array', async () => {
-    const { parseGrokJson } = await import('./x')
-    const result = parseGrokJson('[{"a":1},{"a":2}]')
-    expect(result).toHaveLength(2)
-  })
-
-  it('queryGrok sends request and parses response', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
-        choices: [{ message: { content: '[{"title":"Test","url":"https://x.com/post"}]' } }],
-      }),
-    })
-    const { queryGrok } = await import('./x')
-    const result = await queryGrok({
-      apiKey: 'key', baseUrl: 'https://api.x.ai/v1/chat/completions', model: 'grok-3',
-      systemPrompt: 'return json', userPrompt: 'test',
-    })
-    expect(result).toHaveLength(1)
-    expect(result[0].title).toBe('Test')
-  })
-
-  it('queryGrok throws SensorConfigError without API key', async () => {
-    const { queryGrok } = await import('./x')
-    await expect(queryGrok({
-      apiKey: '', baseUrl: '', model: '',
-      systemPrompt: '', userPrompt: '',
-    })).rejects.toThrow(SensorConfigError)
-  })
-
-  it('queryGrok throws on HTTP error', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: false, status: 500,
-      text: () => Promise.resolve('Internal Server Error'),
-    })
-    const { queryGrok } = await import('./x')
-    await expect(queryGrok({
-      apiKey: 'key', baseUrl: 'https://api.x.ai', model: 'grok-3',
-      systemPrompt: 's', userPrompt: 'u',
-    })).rejects.toThrow('xAI API 500')
-  })
-})
 
 describe('Bluesky platform adapter', () => {
   it('extractPostId extracts rkey from AT URI', async () => {

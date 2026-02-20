@@ -34,9 +34,6 @@ function makeReport(overrides: Partial<IntelReport> = {}): IntelReport {
 
 function makeConfig(overrides: Partial<ConfigSettings> = {}): ConfigSettings {
   return {
-    xai_api_key: 'key',
-    xai_base_url: 'https://api.x.ai',
-    xai_model: 'grok-beta',
     github_token: 'gh_token',
     producthunt_token: 'ph_token',
     sensors_enabled: {

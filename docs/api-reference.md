@@ -136,13 +136,13 @@ Every item in the report conforms to this shape. Only `id`, `source`, `title`, a
 | `handle`       | Social sensors                  | `"elonmusk"`                   |
 | `topic`        | Social Topics                   | `"AI agents"`                  |
 | `content`      | HN Blogs, RSS Feeds             | Full article body              |
-| `verified`     | Grok-sourced items              | `true` / `false`               |
+| `verified`     | X Posts (if verified badge)     | `true` / `false`               |
 
 ---
 
 ### Sensors & Taxonomy
 
-The system organizes 16 sensors into 8 categories across two language groups.
+The system organizes 17 sensors into 8 categories across two language groups.
 
 | Sensor Key         | Label            | Category    | Language |
 |--------------------|------------------|-------------|----------|
@@ -152,6 +152,7 @@ The system organizes 16 sensors into 8 categories across two language groups.
 | `product_hunt`     | Product Hunt     | products    | ROW      |
 | `chrome_radar`     | Chrome Radar     | products    | ROW      |
 | `hn_blogs`         | HN Blogs         | insights    | ROW      |
+| `x_posts`          | X Posts          | social      | ROW      |
 | `social_accounts`  | Social Accounts  | social      | ROW      |
 | `social_topics`    | Social Topics    | social      | ROW      |
 | `social_trends`    | Social Trends    | social      | ROW      |
@@ -413,7 +414,7 @@ Get the full intel report rendered as Markdown.
 
 Returns current config with sensitive fields masked as `"***"`.
 
-**Masked fields:** `xai_api_key`, `github_token`, `producthunt_token`, `bluesky_app_password`, `mastodon_token`, `summary_api_key`
+**Masked fields:** `github_token`, `producthunt_token`, `bluesky_app_password`, `mastodon_token`, `summary_api_key`
 
 **Response** `200` — Full `ConfigSettings` object.
 

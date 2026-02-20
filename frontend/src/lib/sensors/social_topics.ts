@@ -1,59 +1,9 @@
-// ABOUTME: Social topics sensor — tracks keywords and hashtags across X, Bluesky, and Mastodon.
+// ABOUTME: Social topics sensor — tracks keywords and hashtags across Bluesky and Mastodon.
 // ABOUTME: Aggregates matching posts from multiple platforms into a unified IntelItem feed.
 import type { ConfigSettings, IntelItem } from '../models'
 import { SensorConfigError } from './errors'
-import { queryGrok } from '../platforms/x'
 import { createBlueskyAgent, blueskyPostToItem } from '../platforms/bluesky'
 import { mastodonPublicGet, mastodonStatusToItem } from '../platforms/mastodon'
-
-const X_SYSTEM_PROMPT =
-  'You are a social media intelligence analyst tracking specific topics on X (Twitter). ' +
-  'Return ONLY a valid JSON array with no markdown fences and no extra text. ' +
-  'Each element must be a JSON object with exactly these keys: ' +
-  '{"topic": "<the keyword or hashtag that matched>", "handle": "<@author handle>", ' +
-  '"title": "<post text, max 280 chars>", "url": "<direct post URL or empty string>", ' +
-  '"published_at": "<ISO date YYYY-MM-DD or empty string>"}. ' +
-  'Only include REAL posts from the last 48 hours. If a post matches multiple topics, ' +
-  'include it once under the first matching topic. Return 0–20 items total.'
-
-function buildXPrompt(keywords: string[], today: string): string {
-  return (
-    `Today is ${today}. Search X for recent posts about these topics or hashtags: ${keywords.join(', ')}. ` +
-    'For each topic, find 1–3 high-signal posts from the last 48 hours. ' +
-    'Deduplicate: if the same post matches multiple topics, include it once under the first matching topic. ' +
-    'Return a JSON array. No markdown, no prose — JSON only.'
-  )
-}
-
-async function fetchXTopics(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
-  if (!config.xai_api_key || config.social_topics_keywords.length === 0) return []
-  const today = new Date().toISOString().slice(0, 10)
-  const raw = await queryGrok({
-    apiKey: config.xai_api_key, baseUrl: config.xai_base_url, model: config.xai_model,
-    systemPrompt: X_SYSTEM_PROMPT, userPrompt: buildXPrompt(config.social_topics_keywords, today),
-  })
-  const items: IntelItem[] = []
-  const seenUrls = new Set<string>()
-  for (let idx = 0; idx < Math.min(raw.length, limit); idx++) {
-    const r = raw[idx]
-    if (typeof r !== 'object') continue
-    const title = String(r.title ?? '').trim()
-    if (!title) continue
-    const url = String(r.url ?? '')
-    if (url && seenUrls.has(url)) continue
-    if (url) seenUrls.add(url)
-    const handle = String(r.handle ?? '').trim().replace(/^@/, '')
-    items.push({
-      id: `x-topics-${today}-${idx}`,
-      source: 'x',
-      title, url,
-      handle: handle || null,
-      topic: String(r.topic ?? '') || null,
-      published_at: String(r.published_at ?? today) || null,
-    })
-  }
-  return items
-}
 
 async function fetchBlueskyTopics(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
   if (!config.bluesky_handle || !config.bluesky_app_password || config.social_topics_keywords.length === 0) return []
@@ -105,7 +55,6 @@ export async function fetchSocialTopics(config: ConfigSettings, limit: number): 
   }
 
   const results = await Promise.allSettled([
-    fetchXTopics(config, limit),
     fetchBlueskyTopics(config, limit),
     fetchMastodonTopics(config, limit),
   ])

@@ -43,9 +43,6 @@ describe('IntelReport', () => {
 describe('ConfigSettings', () => {
   it('should have safe defaults', () => {
     const cfg = defaultConfig()
-    expect(cfg.xai_api_key).toBeNull()
-    expect(cfg.xai_base_url).toBe('https://api.x.ai/v1/chat/completions')
-    expect(cfg.xai_model).toBe('grok-3')
     expect(cfg.default_limit).toBe(10)
     expect(cfg.cache_ttl_hours).toBe(6)
   })

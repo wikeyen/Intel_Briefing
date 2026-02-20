@@ -2,16 +2,11 @@
 # ABOUTME: Copy to settings.local.yaml and fill in secrets to get started.
 
 # --- API Keys & Tokens (fill these in settings.local.yaml) ---
-# xai_api_key: null
 # github_token: null
 # producthunt_token: null
 # bluesky_handle: null
 # bluesky_app_password: null
 # mastodon_token: null
-
-# --- Grok / xAI ---
-xai_base_url: https://api.x.ai/v1/chat/completions
-xai_model: grok-3
 
 # --- Sensors ---
 sensors_enabled:
@@ -28,6 +23,7 @@ sensors_enabled:
   social_trends: true
   chrome_radar: false
   rss_feeds: false
+  x_posts: true
   weibo: true
   zhihu: true
   xiaohongshu: true

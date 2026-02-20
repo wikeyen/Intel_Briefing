@@ -37,15 +37,13 @@ describe('loadConfig', () => {
   it('returns defaults when db and file have no data', async () => {
     const config = await loadConfig()
     expect(config.default_limit).toBe(10)
-    expect(config.xai_api_key).toBeNull()
-    expect(config.xai_base_url).toBe('https://api.x.ai/v1/chat/completions')
+    expect(config.summary_api_key).toBeNull()
   })
 
   it('returns merged config from db', async () => {
     kvStore['intel:config'] = { default_limit: 42 }
     const config = await loadConfig()
     expect(config.default_limit).toBe(42)
-    expect(config.xai_model).toBe('grok-3')
   })
 
   it('settings from db override defaults', async () => {
@@ -55,11 +53,11 @@ describe('loadConfig', () => {
   })
 
   it('YAML file overrides db values', async () => {
-    kvStore['intel:config'] = { default_limit: 5, xai_model: 'grok-2' }
-    await writeFile(TEMP_YAML, 'default_limit: 99\nxai_model: grok-3\n')
+    kvStore['intel:config'] = { default_limit: 5, summary_model: 'old-model' }
+    await writeFile(TEMP_YAML, 'default_limit: 99\nsummary_model: anthropic/claude-sonnet-4\n')
     const config = await loadConfig()
     expect(config.default_limit).toBe(99)
-    expect(config.xai_model).toBe('grok-3')
+    expect(config.summary_model).toBe('anthropic/claude-sonnet-4')
   })
 
   it('db values used when YAML file missing', async () => {
@@ -77,10 +75,10 @@ describe('saveConfig', () => {
   })
 
   it('preserves existing config fields', async () => {
-    kvStore['intel:config'] = { xai_api_key: 'real-key', default_limit: 10 }
+    kvStore['intel:config'] = { summary_api_key: 'real-key', default_limit: 10 }
     const result = await saveConfig({ default_limit: 25 })
     expect(result.default_limit).toBe(25)
-    expect(result.xai_api_key).toBe('real-key')
+    expect(result.summary_api_key).toBe('real-key')
   })
 
   it('writes updated values to YAML file', async () => {
@@ -95,14 +93,14 @@ describe('maskConfig', () => {
   it('masks API key values with ***', () => {
     const config: ConfigSettings = {
       ...defaultConfig(),
-      xai_api_key: 'secret-key',
+      summary_api_key: 'secret-key',
       github_token: 'gh-token',
       producthunt_token: 'ph-token',
       bluesky_app_password: 'bsky-pass',
       mastodon_token: 'masto-token',
     }
     const masked = maskConfig(config)
-    expect(masked.xai_api_key).toBe('***')
+    expect(masked.summary_api_key).toBe('***')
     expect(masked.github_token).toBe('***')
     expect(masked.producthunt_token).toBe('***')
     expect(masked.bluesky_app_password).toBe('***')
@@ -112,7 +110,7 @@ describe('maskConfig', () => {
   it('does not mask null key values', () => {
     const config = defaultConfig()
     const masked = maskConfig(config)
-    expect(masked.xai_api_key).toBeNull()
+    expect(masked.summary_api_key).toBeNull()
     expect(masked.github_token).toBeNull()
     expect(masked.bluesky_app_password).toBeNull()
     expect(masked.mastodon_token).toBeNull()

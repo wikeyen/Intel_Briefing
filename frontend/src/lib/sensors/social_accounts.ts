@@ -1,51 +1,9 @@
-// ABOUTME: Social accounts sensor — monitors specific accounts across X, Bluesky, and Mastodon.
+// ABOUTME: Social accounts sensor — monitors specific accounts across Bluesky and Mastodon.
 // ABOUTME: Aggregates posts from configured watch lists into a unified IntelItem feed.
 import type { ConfigSettings, IntelItem } from '../models'
 import { SensorConfigError } from './errors'
-import { queryGrok } from '../platforms/x'
 import { createBlueskyAgent, blueskyPostToItem, getBlueskyFollowing } from '../platforms/bluesky'
 import { mastodonGet, mastodonStatusToItem, getMastodonFollowing } from '../platforms/mastodon'
-
-const X_SYSTEM_PROMPT =
-  'You are a social media intelligence analyst monitoring specific accounts. ' +
-  'Return ONLY a valid JSON array with no markdown fences and no extra text. ' +
-  'Each element must be a JSON object with exactly these keys: ' +
-  '{"handle": "<@handle>", "account": "<Display Name>", "title": "<post text, max 280 chars>", ' +
-  '"url": "<direct post URL or empty string>", "published_at": "<ISO date YYYY-MM-DD or empty string>"}. ' +
-  'Only include REAL posts from the last 48 hours. Return 0–20 items total across all handles.'
-
-function buildXPrompt(handles: string[], today: string): string {
-  return (
-    `Today is ${today}. Search X for recent posts from these accounts: ${handles.join(', ')}. ` +
-    'For each account, find their 1–3 most significant posts from the last 48 hours. ' +
-    'Return a JSON array. No markdown, no prose — JSON only.'
-  )
-}
-
-async function fetchXAccounts(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
-  if (!config.xai_api_key || config.social_accounts_x.length === 0) return []
-  const today = new Date().toISOString().slice(0, 10)
-  const raw = await queryGrok({
-    apiKey: config.xai_api_key, baseUrl: config.xai_base_url, model: config.xai_model,
-    systemPrompt: X_SYSTEM_PROMPT, userPrompt: buildXPrompt(config.social_accounts_x, today),
-  })
-  const items: IntelItem[] = []
-  for (let idx = 0; idx < Math.min(raw.length, limit); idx++) {
-    const r = raw[idx]
-    if (typeof r !== 'object') continue
-    const title = String(r.title ?? '').trim()
-    if (!title) continue
-    const handle = String(r.handle ?? '').trim().replace(/^@/, '')
-    items.push({
-      id: `x-accounts-${today}-${idx}`,
-      source: 'x',
-      title, url: String(r.url ?? ''),
-      account: String(r.account ?? handle), handle: handle || null,
-      published_at: String(r.published_at ?? today) || null,
-    })
-  }
-  return items
-}
 
 async function fetchBlueskyAccounts(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
   if (!config.bluesky_handle || !config.bluesky_app_password) return []
@@ -117,18 +75,16 @@ async function fetchMastodonAccounts(config: ConfigSettings, limit: number): Pro
 }
 
 export async function fetchSocialAccounts(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
-  const hasX = config.xai_api_key && config.social_accounts_x.length > 0
   const hasBsky = config.bluesky_handle && config.bluesky_app_password &&
     (config.social_accounts_bluesky.length > 0 || config.social_following_bluesky)
   const hasMasto = config.mastodon_token &&
     (config.social_accounts_mastodon.length > 0 || config.social_following_mastodon)
 
-  if (!hasX && !hasBsky && !hasMasto) {
-    throw new SensorConfigError('No social accounts configured on any platform')
+  if (!hasBsky && !hasMasto) {
+    throw new SensorConfigError('No social accounts configured on Bluesky or Mastodon')
   }
 
   const results = await Promise.allSettled([
-    fetchXAccounts(config, limit),
     fetchBlueskyAccounts(config, limit),
     fetchMastodonAccounts(config, limit),
   ])

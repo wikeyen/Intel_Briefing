@@ -7,9 +7,6 @@ export interface HealthResponse {
 }
 
 export interface ConfigSettings {
-  xai_api_key: string | null
-  xai_base_url: string
-  xai_model: string
   github_token: string | null
   producthunt_token: string | null
   sensors_enabled: Record<string, boolean>

@@ -28,7 +28,7 @@ export interface IntelItem {
   // Full content (blog articles)
   content?: string | null
 
-  // Link verification status (Grok-sourced items only)
+  // Link verification status
   verified?: boolean | null
 }
 
@@ -168,6 +168,7 @@ export const SOURCE_URLS: Record<string, string> = {
   wallstreetcn:     'https://wallstreetcn.com',
   chrome_radar:     'https://chromewebstore.google.com',
   rss_feeds:        '',
+  x_posts:          'https://x.com',
   social_accounts:  '',
   social_topics:    '',
   social_trends:    '',
@@ -228,9 +229,6 @@ export interface SummaryProgress {
 
 export interface ConfigSettings {
   // API keys
-  xai_api_key: string | null
-  xai_base_url: string
-  xai_model: string
   github_token: string | null
   producthunt_token: string | null
 
@@ -295,9 +293,6 @@ export interface ConfigSettings {
 
 export function defaultConfig(): ConfigSettings {
   return {
-    xai_api_key: null,
-    xai_base_url: 'https://api.x.ai/v1/chat/completions',
-    xai_model: 'grok-3',
     github_token: null,
     producthunt_token: null,
     sensors_enabled: {
@@ -314,6 +309,7 @@ export function defaultConfig(): ConfigSettings {
       social_trends: true,
       chrome_radar: false,
       rss_feeds: false,
+      x_posts: true,
       weibo: true,
       zhihu: true,
       xiaohongshu: true,

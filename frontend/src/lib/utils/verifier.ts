@@ -1,4 +1,4 @@
-// ABOUTME: Link verifier utility for validating URLs from Grok-sourced items.
+// ABOUTME: Link verifier utility for validating URLs from scraped items.
 // ABOUTME: Uses HEAD with GET fallback; returns true (valid), false (bad URL).
 
 const DEFAULT_TIMEOUT = 5000

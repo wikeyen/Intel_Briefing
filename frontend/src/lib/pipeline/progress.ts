@@ -46,6 +46,9 @@ export class PipelineProgressTracker {
       item_count: 0,
       summary_chunks_total: 0,
       summary_chunks_done: 0,
+      verify_attempt: 0,
+      verify_max_retries: 0,
+      verify_failures: 0,
     }))
 
     this.overallSummary = skipSummary ? 'skipped' : 'queued'
@@ -98,6 +101,14 @@ export class PipelineProgressTracker {
     const s = this.find(name)
     s.summary_chunks_total = total
     s.summary_chunks_done = done
+    this.notify()
+  }
+
+  setVerifyProgress(name: string, attempt: number, maxRetries: number, failures: number): void {
+    const s = this.find(name)
+    s.verify_attempt = attempt
+    s.verify_max_retries = maxRetries
+    s.verify_failures = failures
     this.notify()
   }
 

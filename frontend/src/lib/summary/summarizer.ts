@@ -18,6 +18,7 @@ export type SummaryProgressCallback = (
   state: 'pending' | 'running' | 'ok' | 'failed' | 'cached',
   error: string | null,
   chunks?: { total: number; done: number },
+  verify?: { attempt: number; maxRetries: number; failures: number },
 ) => void | Promise<void>
 
 export interface SummarizeOptions {
@@ -59,6 +60,7 @@ async function summarizeSensor(
   promptOverrides?: Record<string, string>,
   onChunkProgress?: (total: number, done: number) => void,
   signal?: AbortSignal,
+  onVerifyRetry?: (attempt: number, maxRetries: number, failures: number) => void | Promise<void>,
 ): Promise<SensorSummary | null> {
   if (items.length === 0) return null
 
@@ -121,6 +123,7 @@ async function summarizeSensor(
       }
     },
     signal,
+    onRetry: onVerifyRetry,
   })
 
   return {
@@ -204,6 +207,7 @@ export async function summarizeReport(
             sensorName, items, llmConfig, promptOverrides,
             (total, done) => onProgress?.(sensorName, label, 'running', null, { total, done }),
             signal,
+            (attempt, maxRetries, failures) => onProgress?.(sensorName, label, 'running', null, undefined, { attempt, maxRetries, failures }),
           )
           if (signal?.aborted) return null
           if (result) {
@@ -291,6 +295,8 @@ export async function summarizeReport(
         }
       },
       signal,
+      onRetry: (attempt, maxRetries, failures) =>
+        onProgress?.('__overall__', 'Overall', 'running', null, undefined, { attempt, maxRetries, failures }),
     })
     await onProgress?.('__overall__', 'Overall', 'ok', null)
   } catch (err) {

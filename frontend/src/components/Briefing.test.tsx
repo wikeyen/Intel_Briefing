@@ -1,6 +1,6 @@
-// ABOUTME: Tests for the collapsible Daily Report section within the Data (Feed) component.
+// ABOUTME: Tests for the Briefing tab within the Data (Feed) component.
 // ABOUTME: Covers summary rendering, empty states, quick scan, themed sections, and per-source cards.
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock the API client
@@ -40,7 +40,7 @@ const EMPTY_REPORT = {
   items: { tech_trends: [{ id: 'hn-1', source: 'hacker_news', title: 'Test', url: 'https://example.com' }] },
 }
 
-describe('Daily Report section in Data', () => {
+describe('Briefing tab in Data', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetLatest.mockResolvedValue(EMPTY_REPORT)
@@ -63,28 +63,26 @@ describe('Daily Report section in Data', () => {
     })
   })
 
-  it('shows the Daily Report collapsible header', async () => {
+  it('shows the Briefing tab as the first tab', async () => {
     mockGetSummary.mockResolvedValue({ summary: null })
     render(<Data />)
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /daily report/i })).toBeInTheDocument()
+      const tabs = screen.getAllByRole('button')
+      const briefingTab = tabs.find(t => t.textContent?.includes('Briefing'))
+      expect(briefingTab).toBeInTheDocument()
     })
   })
 
-  it('shows empty state when no provider configured and section is expanded', async () => {
+  it('shows empty state when no provider configured', async () => {
     mockGetSummary.mockResolvedValue({ summary: null })
     mockGetConfig.mockResolvedValue({ sensors_enabled: {}, summary_provider: null })
     render(<Data />)
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /daily report/i })).toBeInTheDocument()
-    })
-    fireEvent.click(screen.getByRole('button', { name: /daily report/i }))
     await waitFor(() => {
       expect(screen.getByText(/ai summary settings/i)).toBeInTheDocument()
     })
   })
 
-  it('renders quick scan entries when summary exists (auto-expanded)', async () => {
+  it('renders quick scan entries when summary exists', async () => {
     mockGetSummary.mockResolvedValue({
       summary: {
         generated_at: '2026-02-19T08:00:00Z',
@@ -104,7 +102,7 @@ describe('Daily Report section in Data', () => {
     })
   })
 
-  it('renders per-source section cards with summary and items (auto-expanded)', async () => {
+  it('renders per-source section cards with summary and items', async () => {
     mockGetSummary.mockResolvedValue({
       summary: {
         generated_at: '2026-02-19T08:00:00Z',
@@ -144,7 +142,7 @@ describe('Daily Report section in Data', () => {
     })
   })
 
-  it('shows the generated timestamp in the header', async () => {
+  it('shows the generated timestamp', async () => {
     mockGetSummary.mockResolvedValue({
       summary: {
         generated_at: '2026-02-19T08:00:00Z',
@@ -154,9 +152,6 @@ describe('Daily Report section in Data', () => {
       },
     })
     render(<Data />)
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /daily report/i })).toBeInTheDocument()
-    })
     await waitFor(() => {
       expect(screen.getByText(/2026-02-19 08:00/)).toBeInTheDocument()
     })

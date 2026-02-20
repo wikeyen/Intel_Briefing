@@ -1,5 +1,5 @@
 // ABOUTME: Intel feed page — shows fetched items grouped by section with section tabs.
-// ABOUTME: Collapsible AI Summary section above feed, plus card-per-item news reader with source filtering and pagination.
+// ABOUTME: Briefing tab shows AI-generated summary; other tabs show card-per-item news reader with source filtering and pagination.
 'use client'
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
@@ -12,6 +12,7 @@ import { Pagination } from './Pagination'
 const PAGE_SIZE = 20
 
 const SECTIONS: { key: string; label: string }[] = [
+  { key: 'briefing',     label: 'Briefing' },
   { key: 'tech_trends',  label: 'Tech Trends' },
   { key: 'research',     label: 'Research' },
   { key: 'capital_flow', label: 'Capital Flow' },
@@ -576,7 +577,7 @@ function isStructuredOverall(overall: OverallBriefing | string): overall is Over
   return typeof overall === 'object' && overall !== null && 'quick_scan' in overall
 }
 
-function SummarySection({ summary, summaryProgress, pipelineStatus, config, hasContent, onTrigger }: {
+function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, hasContent, onTrigger }: {
   summary: BriefingSummary | null
   summaryProgress: SummaryProgress | null
   pipelineStatus: PipelineStatus | null
@@ -584,7 +585,6 @@ function SummarySection({ summary, summaryProgress, pipelineStatus, config, hasC
   hasContent: boolean
   onTrigger: () => void
 }) {
-  const [open, setOpen] = useState(!!summary)
   const isSummarizing = !!(summaryProgress?.running && summaryProgress.started_at
     // eslint-disable-next-line react-hooks/purity
     && (Date.now() - new Date(summaryProgress.started_at).getTime()) < 5 * 60 * 1000)
@@ -592,362 +592,325 @@ function SummarySection({ summary, summaryProgress, pipelineStatus, config, hasC
   const hasProvider = config?.summary_provider !== null && config?.summary_provider !== undefined
 
   return (
-    <div style={{ marginBottom: '1rem' }}>
-      {/* Collapsible header */}
-      <button
-        onClick={() => setOpen(!open)}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          width: '100%',
-          padding: '0.875rem 1.25rem',
-          background: summary
-            ? 'linear-gradient(135deg, var(--surface) 0%, var(--accent-wash, var(--surface)) 100%)'
-            : 'var(--surface)',
-          border: summary ? '1px solid var(--accent-dim, var(--border))' : '1px solid var(--border)',
-          borderRadius: open ? '8px 8px 0 0' : 8,
-          cursor: 'pointer',
-          transition: 'border-radius 150ms',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-          <span style={{
-            fontSize: '0.625rem',
-            color: 'var(--ink-faint)',
-            transition: 'transform 150ms',
-            transform: open ? 'rotate(90deg)' : 'rotate(0deg)',
-            userSelect: 'none',
-          }}>
-            ▶
-          </span>
-          <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)' }}>
-            Daily Report
-          </span>
-          {isSummarizing && (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      {/* Timestamp + regenerate header */}
+      {summary && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
             <span style={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              background: 'var(--accent)',
-              animation: 'pulseDot 1.6s ease-in-out infinite',
-            }} />
+              fontSize: '0.75rem',
+              color: 'var(--ink-faint)',
+              fontFamily: 'ui-monospace, monospace',
+            }}>
+              {summary.generated_at.slice(0, 16).replace('T', ' ')} · {timeAgo(summary.generated_at)}
+            </span>
+            {isSummarizing && (
+              <span style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: 'var(--accent)',
+                animation: 'pulseDot 1.6s ease-in-out infinite',
+              }} />
+            )}
+          </div>
+          {hasProvider && hasContent && !isSummarizing && (
+            <button
+              onClick={onTrigger}
+              style={{
+                fontSize: '0.75rem',
+                fontWeight: 500,
+                color: 'var(--accent)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0.25rem 0',
+                textDecoration: 'underline',
+                textUnderlineOffset: '2px',
+              }}
+            >
+              Regenerate
+            </button>
           )}
         </div>
-        {summary && (
-          <span style={{
-            fontSize: '0.6875rem',
-            color: 'var(--ink-faint)',
-            fontFamily: 'ui-monospace, monospace',
-          }}>
-            {summary.generated_at.slice(0, 16).replace('T', ' ')} · {timeAgo(summary.generated_at)}
-          </span>
-        )}
-      </button>
+      )}
 
-      {/* Collapsible body */}
-      {open && (
-        <div style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderTop: 'none',
-          borderRadius: '0 0 8px 8px',
-          padding: '1.25rem 1.5rem',
-        }}>
-          {isSummarizing && summaryProgress && (
-            <SummaryProgressBanner progress={summaryProgress} pipelineStatus={pipelineStatus} />
-          )}
+      {isSummarizing && summaryProgress && (
+        <SummaryProgressBanner progress={summaryProgress} pipelineStatus={pipelineStatus} />
+      )}
 
-          {summary ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {/* Structured overall briefing */}
-              {isStructuredOverall(summary.overall) ? (
-                <>
-                  {/* Quick Scan */}
-                  {summary.overall.quick_scan.length > 0 && (
-                    <div style={{
-                      background: 'var(--accent-wash, var(--surface-alt))',
-                      border: '1px solid var(--accent-dim, var(--border))',
-                      borderRadius: 8,
+      {summary ? (
+        <>
+          {/* Structured overall briefing */}
+          {isStructuredOverall(summary.overall) ? (
+            <>
+              {/* Quick Scan */}
+              {summary.overall.quick_scan.length > 0 && (
+                <div style={{
+                  background: 'var(--accent-wash, var(--surface-alt))',
+                  border: '1px solid var(--accent-dim, var(--border))',
+                  borderRadius: 8,
+                  padding: '1rem 1.25rem',
+                }}>
+                  <div style={{
+                    fontSize: '0.6875rem',
+                    fontWeight: 600,
+                    color: 'var(--accent)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    marginBottom: '0.625rem',
+                  }}>
+                    Quick Scan
+                  </div>
+                  <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                    {summary.overall.quick_scan.map((entry, i) => (
+                      <li key={i} style={{
+                        padding: '0.375rem 0',
+                        borderBottom: i < summary.overall.quick_scan.length - 1 ? '1px solid var(--border-soft, var(--border))' : 'none',
+                        fontSize: '0.875rem',
+                        color: 'var(--ink)',
+                        lineHeight: 1.6,
+                      }}>
+                        {entry.text}
+                        {entry.source && (
+                          <span style={{
+                            marginLeft: '0.5rem',
+                            fontSize: '0.6875rem',
+                            color: 'var(--ink-faint)',
+                          }}>
+                            — {entry.source}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Themed sections */}
+              {summary.overall.sections.length > 0 && (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                  gap: '0.75rem',
+                }}>
+                  {summary.overall.sections.map((section, i) => (
+                    <div key={i} style={{
+                      background: 'var(--canvas)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 6,
                       padding: '1rem 1.25rem',
                     }}>
                       <div style={{
-                        fontSize: '0.6875rem',
+                        fontSize: '0.8125rem',
                         fontWeight: 600,
-                        color: 'var(--accent)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.06em',
-                        marginBottom: '0.625rem',
+                        color: 'var(--ink)',
+                        marginBottom: '0.5rem',
+                        paddingBottom: '0.375rem',
+                        borderBottom: '1px solid var(--border-soft, var(--border))',
                       }}>
-                        Quick Scan
+                        {section.title}
                       </div>
                       <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-                        {summary.overall.quick_scan.map((entry, i) => (
-                          <li key={i} style={{
-                            padding: '0.375rem 0',
-                            borderBottom: i < summary.overall.quick_scan.length - 1 ? '1px solid var(--border-soft, var(--border))' : 'none',
-                            fontSize: '0.875rem',
-                            color: 'var(--ink)',
+                        {section.entries.map((entry, j) => (
+                          <li key={j} style={{
+                            padding: '0.3rem 0',
+                            fontSize: '0.8125rem',
+                            color: 'var(--ink-muted)',
                             lineHeight: 1.6,
                           }}>
                             {entry.text}
                             {entry.source && (
                               <span style={{
-                                marginLeft: '0.5rem',
-                                fontSize: '0.6875rem',
+                                marginLeft: '0.375rem',
+                                fontSize: '0.625rem',
                                 color: 'var(--ink-faint)',
                               }}>
-                                — {entry.source}
+                                [{entry.source}]
                               </span>
                             )}
                           </li>
                         ))}
                       </ul>
                     </div>
-                  )}
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            /* Legacy plain-text fallback */
+            <div style={{
+              fontSize: '0.9375rem',
+              color: 'var(--ink)',
+              lineHeight: 1.8,
+              whiteSpace: 'pre-wrap',
+            }}>
+              {String(summary.overall)}
+            </div>
+          )}
 
-                  {/* Themed sections */}
-                  {summary.overall.sections.length > 0 && (
+          {/* Source Summaries */}
+          {summary.sections.length > 0 && (
+            <div>
+              <div style={{
+                fontSize: '0.6875rem',
+                fontWeight: 600,
+                color: 'var(--ink-faint)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                marginBottom: '0.625rem',
+              }}>
+                Sources
+              </div>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: '0.75rem',
+              }}>
+                {summary.sections.map(s => (
+                  <div key={s.sensor_name} style={{
+                    background: 'var(--canvas)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 6,
+                    padding: '1rem 1.25rem',
+                  }}>
+                    {/* Source header with link */}
                     <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                      gap: '0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '0.5rem',
                     }}>
-                      {summary.overall.sections.map((section, i) => (
-                        <div key={i} style={{
-                          background: 'var(--canvas)',
-                          border: '1px solid var(--border)',
-                          borderRadius: 6,
-                          padding: '1rem 1.25rem',
-                        }}>
-                          <div style={{
+                      {s.source_url ? (
+                        <a
+                          href={s.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
                             fontSize: '0.8125rem',
                             fontWeight: 600,
-                            color: 'var(--ink)',
-                            marginBottom: '0.5rem',
-                            paddingBottom: '0.375rem',
-                            borderBottom: '1px solid var(--border-soft, var(--border))',
-                          }}>
-                            {section.title}
-                          </div>
-                          <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-                            {section.entries.map((entry, j) => (
-                              <li key={j} style={{
-                                padding: '0.3rem 0',
-                                fontSize: '0.8125rem',
-                                color: 'var(--ink-muted)',
-                                lineHeight: 1.6,
-                              }}>
-                                {entry.text}
-                                {entry.source && (
-                                  <span style={{
-                                    marginLeft: '0.375rem',
-                                    fontSize: '0.625rem',
-                                    color: 'var(--ink-faint)',
-                                  }}>
-                                    [{entry.source}]
-                                  </span>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                /* Legacy plain-text fallback */
-                <div style={{
-                  fontSize: '0.9375rem',
-                  color: 'var(--ink)',
-                  lineHeight: 1.8,
-                  whiteSpace: 'pre-wrap',
-                }}>
-                  {String(summary.overall)}
-                </div>
-              )}
-
-              {/* Source Summaries */}
-              {summary.sections.length > 0 && (
-                <div>
-                  <div style={{
-                    fontSize: '0.6875rem',
-                    fontWeight: 600,
-                    color: 'var(--ink-faint)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                    marginBottom: '0.625rem',
-                  }}>
-                    Sources
-                  </div>
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                    gap: '0.75rem',
-                  }}>
-                    {summary.sections.map(s => (
-                      <div key={s.sensor_name} style={{
-                        background: 'var(--canvas)',
-                        border: '1px solid var(--border)',
-                        borderRadius: 6,
-                        padding: '1rem 1.25rem',
+                            color: 'var(--accent)',
+                            textDecoration: 'none',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                          }}
+                        >
+                          {s.label}
+                          <span style={{ fontSize: '0.625rem' }}>↗</span>
+                        </a>
+                      ) : (
+                        <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)' }}>
+                          {s.label}
+                        </span>
+                      )}
+                      <span style={{
+                        fontSize: '0.625rem',
+                        color: 'var(--ink-faint)',
+                        fontFamily: 'ui-monospace, monospace',
                       }}>
-                        {/* Source header with link */}
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          marginBottom: '0.5rem',
-                        }}>
-                          {s.source_url ? (
-                            <a
-                              href={s.source_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{
-                                fontSize: '0.8125rem',
-                                fontWeight: 600,
-                                color: 'var(--accent)',
-                                textDecoration: 'none',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.25rem',
-                              }}
-                            >
-                              {s.label}
-                              <span style={{ fontSize: '0.625rem' }}>↗</span>
-                            </a>
-                          ) : (
-                            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)' }}>
-                              {s.label}
-                            </span>
-                          )}
-                          <span style={{
-                            fontSize: '0.625rem',
-                            color: 'var(--ink-faint)',
-                            fontFamily: 'ui-monospace, monospace',
-                          }}>
-                            {s.item_count} items
-                          </span>
-                        </div>
+                        {s.item_count} items
+                      </span>
+                    </div>
 
-                        {/* Summary text */}
-                        <p style={{
-                          fontSize: '0.8125rem',
-                          color: 'var(--ink-muted)',
-                          lineHeight: 1.65,
-                          margin: 0,
-                        }}>
-                          {s.summary}
-                        </p>
-
-                        {/* Notable items list */}
-                        {s.items && s.items.length > 0 && (
-                          <ul style={{
-                            margin: '0.5rem 0 0',
-                            padding: 0,
-                            listStyle: 'none',
-                            borderTop: '1px solid var(--border-soft, var(--border))',
-                            paddingTop: '0.5rem',
-                          }}>
-                            {s.items.map((item, idx) => (
-                              <li key={idx} style={{
-                                fontSize: '0.75rem',
-                                lineHeight: 1.5,
-                                padding: '0.2rem 0',
-                              }}>
-                                {item.url ? (
-                                  <a
-                                    href={item.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    style={{
-                                      color: 'var(--accent)',
-                                      textDecoration: 'none',
-                                    }}
-                                  >
-                                    {item.title}
-                                  </a>
-                                ) : (
-                                  <span style={{ color: 'var(--ink)' }}>{item.title}</span>
-                                )}
-                                {item.brief && (
-                                  <span style={{ color: 'var(--ink-faint)', marginLeft: '0.375rem' }}>
-                                    — {item.brief}
-                                  </span>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Re-generate button */}
-              {hasProvider && hasContent && !isSummarizing && (
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onTrigger() }}
-                    style={{
-                      fontSize: '0.75rem',
-                      fontWeight: 500,
-                      color: 'var(--accent)',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: '0.25rem 0',
-                      textDecoration: 'underline',
-                      textUnderlineOffset: '2px',
-                    }}
-                  >
-                    Regenerate
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : !isSummarizing && (
-            <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-              {!hasProvider ? (
-                <p style={{ color: 'var(--ink-faint)', fontSize: '0.8125rem', margin: 0 }}>
-                  Configure an AI provider in{' '}
-                  <Link href="/ai" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
-                    AI Summary settings
-                  </Link>
-                  {' '}to enable briefings.
-                </p>
-              ) : !hasContent ? (
-                <p style={{ color: 'var(--ink-faint)', fontSize: '0.8125rem', margin: 0 }}>
-                  Run the pipeline first to fetch content for summarization.
-                </p>
-              ) : (
-                <div>
-                  <p style={{ color: 'var(--ink-muted)', fontSize: '0.8125rem', margin: 0, marginBottom: '0.75rem' }}>
-                    AI provider configured. Generate a summary of the current feed.
-                  </p>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onTrigger() }}
-                    style={{
+                    {/* Summary text */}
+                    <p style={{
                       fontSize: '0.8125rem',
-                      fontWeight: 500,
-                      padding: '0.5rem 1.25rem',
-                      borderRadius: 4,
-                      border: 'none',
-                      color: '#FFFFFF',
-                      background: 'var(--ink)',
-                      cursor: 'pointer',
-                      transition: 'background 120ms',
-                    }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#000000' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--ink)' }}
-                  >
-                    Generate Summary
-                  </button>
-                </div>
-              )}
+                      color: 'var(--ink-muted)',
+                      lineHeight: 1.65,
+                      margin: 0,
+                    }}>
+                      {s.summary}
+                    </p>
+
+                    {/* Notable items list */}
+                    {s.items && s.items.length > 0 && (
+                      <ul style={{
+                        margin: '0.5rem 0 0',
+                        padding: 0,
+                        listStyle: 'none',
+                        borderTop: '1px solid var(--border-soft, var(--border))',
+                        paddingTop: '0.5rem',
+                      }}>
+                        {s.items.map((item, idx) => (
+                          <li key={idx} style={{
+                            fontSize: '0.75rem',
+                            lineHeight: 1.5,
+                            padding: '0.2rem 0',
+                          }}>
+                            {item.url ? (
+                              <a
+                                href={item.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  color: 'var(--accent)',
+                                  textDecoration: 'none',
+                                }}
+                              >
+                                {item.title}
+                              </a>
+                            ) : (
+                              <span style={{ color: 'var(--ink)' }}>{item.title}</span>
+                            )}
+                            {item.brief && (
+                              <span style={{ color: 'var(--ink-faint)', marginLeft: '0.375rem' }}>
+                                — {item.brief}
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      ) : !isSummarizing && (
+        <div style={{
+          padding: '4rem 1.5rem',
+          textAlign: 'center',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 8,
+        }}>
+          {!hasProvider ? (
+            <p style={{ color: 'var(--ink-faint)', fontSize: '0.8125rem', margin: 0 }}>
+              Configure an AI provider in{' '}
+              <Link href="/ai" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
+                AI Summary settings
+              </Link>
+              {' '}to enable briefings.
+            </p>
+          ) : !hasContent ? (
+            <p style={{ color: 'var(--ink-faint)', fontSize: '0.8125rem', margin: 0 }}>
+              Run the pipeline first to fetch content for summarization.
+            </p>
+          ) : (
+            <div>
+              <p style={{ color: 'var(--ink-muted)', fontSize: '0.8125rem', margin: 0, marginBottom: '0.75rem' }}>
+                AI provider configured. Generate a summary of the current feed.
+              </p>
+              <button
+                onClick={onTrigger}
+                style={{
+                  fontSize: '0.8125rem',
+                  fontWeight: 500,
+                  padding: '0.5rem 1.25rem',
+                  borderRadius: 4,
+                  border: 'none',
+                  color: '#FFFFFF',
+                  background: 'var(--ink)',
+                  cursor: 'pointer',
+                  transition: 'background 120ms',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#000000' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--ink)' }}
+              >
+                Generate Summary
+              </button>
             </div>
           )}
         </div>
@@ -989,11 +952,7 @@ export function Data() {
   useEffect(() => {
     api.getConfig().then(setConfig).catch(() => {})
     api.getSummary().then(r => setSummary(r.summary)).catch(() => {})
-    api.getLatest().then(r => {
-      setReport(r)
-      const first = SECTIONS.find(s => (r.items[s.key]?.length ?? 0) > 0)
-      if (first) setActiveSection(first.key)
-    }).catch(() => {}).finally(() => setLoading(false))
+    api.getLatest().then(setReport).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
   // Poll summary and pipeline status for live progress
@@ -1084,20 +1043,6 @@ export function Data() {
         </div>
       </div>
 
-      {/* Daily Report — above the tabs, summarizes all sources */}
-      {report && (
-        <div style={{ maxWidth: 1024, margin: '0 auto', width: '100%', paddingLeft: '3rem', paddingRight: '3rem', paddingBottom: '0.5rem' }}>
-          <SummarySection
-            summary={summary}
-            summaryProgress={summaryProgress}
-            pipelineStatus={pipelineStatus}
-            config={config}
-            hasContent={hasContent}
-            onTrigger={handleTriggerSummary}
-          />
-        </div>
-      )}
-
       {/* Sticky navigation — tabs + source filters */}
       {report && (
         <div style={{
@@ -1157,50 +1102,52 @@ export function Data() {
               })}
             </div>
 
-            {/* Source filters */}
-            <div className="source-filters" style={{
-              display: 'flex',
-              gap: '0.5rem',
-              alignItems: 'center',
-              padding: '0.625rem 0',
-              borderTop: '1px solid var(--border-soft)',
-              flexWrap: 'wrap',
-            }}>
-              <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--ink-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '0.25rem' }}>
-                {activeSection === 'feeds' ? 'Feed' : 'Source'}
-              </span>
-              {availableFilters.length === 0 ? (
-                <span style={{ fontSize: '0.75rem', color: 'var(--ink-faint)' }}>—</span>
-              ) : (
-                <>
-                  {availableFilters.map(key => (
-                    <FilterTag
-                      key={key}
-                      label={activeSection === 'feeds' ? key : (SOURCE_LABELS[key] ?? key)}
-                      active={selectedSources.has(key)}
-                      onClick={() => toggleSource(key)}
-                    />
-                  ))}
-                  {selectedSources.size < availableFilters.length && (
-                    <button
-                      onClick={() => { setSelectedSources(new Set(availableFilters)); setPage(1) }}
-                      style={{
-                        fontSize: '0.6875rem',
-                        color: 'var(--ink-faint)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: '0.25rem 0.375rem',
-                      }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)' }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-faint)' }}
-                    >
-                      All
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
+            {/* Source filters — hidden on briefing tab */}
+            {activeSection !== 'briefing' && (
+              <div className="source-filters" style={{
+                display: 'flex',
+                gap: '0.5rem',
+                alignItems: 'center',
+                padding: '0.625rem 0',
+                borderTop: '1px solid var(--border-soft)',
+                flexWrap: 'wrap',
+              }}>
+                <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--ink-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '0.25rem' }}>
+                  {activeSection === 'feeds' ? 'Feed' : 'Source'}
+                </span>
+                {availableFilters.length === 0 ? (
+                  <span style={{ fontSize: '0.75rem', color: 'var(--ink-faint)' }}>—</span>
+                ) : (
+                  <>
+                    {availableFilters.map(key => (
+                      <FilterTag
+                        key={key}
+                        label={activeSection === 'feeds' ? key : (SOURCE_LABELS[key] ?? key)}
+                        active={selectedSources.has(key)}
+                        onClick={() => toggleSource(key)}
+                      />
+                    ))}
+                    {selectedSources.size < availableFilters.length && (
+                      <button
+                        onClick={() => { setSelectedSources(new Set(availableFilters)); setPage(1) }}
+                        style={{
+                          fontSize: '0.6875rem',
+                          color: 'var(--ink-faint)',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '0.25rem 0.375rem',
+                        }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)' }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-faint)' }}
+                      >
+                        All
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1208,7 +1155,16 @@ export function Data() {
       {/* Scrollable content */}
       <div style={{ flex: 1 }}>
         <div className="data-content" style={{ maxWidth: 1024, margin: '0 auto', padding: '1.5rem 3rem 4rem' }}>
-          {!loading && !report ? (
+          {activeSection === 'briefing' ? (
+            <BriefingTabContent
+              summary={summary}
+              summaryProgress={summaryProgress}
+              pipelineStatus={pipelineStatus}
+              config={config}
+              hasContent={hasContent}
+              onTrigger={handleTriggerSummary}
+            />
+          ) : !loading && !report ? (
             <div style={{
               padding: '4rem 1.5rem',
               textAlign: 'center',

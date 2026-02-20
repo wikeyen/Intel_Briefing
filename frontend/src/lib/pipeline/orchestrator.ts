@@ -235,7 +235,7 @@ export async function runPipeline(
 
       if (llmConfig) {
         // Bridge between tracker and the unified engine's progress callback
-        const onProgress: SummaryProgressCallback = (sensorName, _label, state, error, chunks) => {
+        const onProgress: SummaryProgressCallback = (sensorName, _label, state, error, chunks, verify) => {
           if (sensorName === '__overall__') {
             if (state === 'running') tracker.setOverallSummary('running')
             else if (state === 'ok') tracker.setOverallSummary('ok')
@@ -249,6 +249,9 @@ export async function runPipeline(
             } else if (state === 'failed') {
               tracker.setSummaryState(sensorName, 'failed', error ?? undefined)
             }
+          }
+          if (verify && sensorName !== '__overall__') {
+            tracker.setVerifyProgress(sensorName, verify.attempt, verify.maxRetries, verify.failures)
           }
 
           // Also update SummaryProgress for cross-page awareness

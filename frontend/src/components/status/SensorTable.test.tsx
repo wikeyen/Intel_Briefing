@@ -113,6 +113,9 @@ function makeSensorJob(name: string, overrides: Partial<SensorJobProgress> = {})
     item_count: 0,
     summary_chunks_total: 0,
     summary_chunks_done: 0,
+    verify_attempt: 0,
+    verify_max_retries: 0,
+    verify_failures: 0,
     ...overrides,
   }
 }

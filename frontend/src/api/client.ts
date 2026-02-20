@@ -73,6 +73,10 @@ export interface SensorJobProgress {
   item_count: number
   summary_chunks_total: number
   summary_chunks_done: number
+  // URL verification retry progress
+  verify_attempt: number
+  verify_max_retries: number
+  verify_failures: number
 }
 
 export interface PipelineStatus {

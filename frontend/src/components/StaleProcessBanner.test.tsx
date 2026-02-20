@@ -80,9 +80,9 @@ describe('detectStale', () => {
         running: true,
         alive: false,
         sensors: [
-          { name: 'hacker_news', fetch: 'ok', fetch_error: null, fetch_error_kind: null, summary: 'ok', summary_error: null, item_count: 5, summary_chunks_total: 0, summary_chunks_done: 0 },
-          { name: 'github', fetch: 'failed', fetch_error: 'timeout', fetch_error_kind: 'api', summary: 'skipped', summary_error: null, item_count: 0, summary_chunks_total: 0, summary_chunks_done: 0 },
-          { name: 'arxiv', fetch: 'running', fetch_error: null, fetch_error_kind: null, summary: 'queued', summary_error: null, item_count: 0, summary_chunks_total: 0, summary_chunks_done: 0 },
+          { name: 'hacker_news', fetch: 'ok', fetch_error: null, fetch_error_kind: null, summary: 'ok', summary_error: null, item_count: 5, summary_chunks_total: 0, summary_chunks_done: 0, verify_attempt: 0, verify_max_retries: 0, verify_failures: 0 },
+          { name: 'github', fetch: 'failed', fetch_error: 'timeout', fetch_error_kind: 'api', summary: 'skipped', summary_error: null, item_count: 0, summary_chunks_total: 0, summary_chunks_done: 0, verify_attempt: 0, verify_max_retries: 0, verify_failures: 0 },
+          { name: 'arxiv', fetch: 'running', fetch_error: null, fetch_error_kind: null, summary: 'queued', summary_error: null, item_count: 0, summary_chunks_total: 0, summary_chunks_done: 0, verify_attempt: 0, verify_max_retries: 0, verify_failures: 0 },
         ],
       }),
     )

@@ -1,6 +1,6 @@
 // ABOUTME: Unified summarization engine — per-sensor summaries with map-reduce and caching, plus overall briefing.
 // ABOUTME: Shared by both the pipeline orchestrator and the standalone trigger route.
-import type { IntelReport, IntelItem, BriefingSummary, SensorSummary } from '../models'
+import type { IntelReport, IntelItem, BriefingSummary, SensorSummary, BriefingRef } from '../models'
 import { SOURCE_URLS, EMPTY_SENTIMENT } from '../models'
 import { Semaphore } from '../pipeline/semaphore'
 import { chatCompletion, type LlmConfig, type ChatMessage } from './llm'
@@ -9,6 +9,8 @@ import { parseSensorJson, parseOverallJson } from './parse-json'
 import { SENSOR_LABELS } from '../sensors/taxonomy'
 import { formatItem, groupBySensor, chunkArray, computeContentHash } from './shared'
 import { readSensorSummary, writeSensorSummary } from './cache'
+import { buildUrlPool, buildSensorUrlPool } from './ref-verifier'
+import { summarizeWithVerification } from './retry-with-verification'
 
 export type SummaryProgressCallback = (
   sensorName: string,
@@ -16,6 +18,7 @@ export type SummaryProgressCallback = (
   state: 'pending' | 'running' | 'ok' | 'failed' | 'cached',
   error: string | null,
   chunks?: { total: number; done: number },
+  verify?: { attempt: number; maxRetries: number; failures: number },
 ) => void | Promise<void>
 
 export interface SummarizeOptions {
@@ -57,27 +60,30 @@ async function summarizeSensor(
   promptOverrides?: Record<string, string>,
   onChunkProgress?: (total: number, done: number) => void,
   signal?: AbortSignal,
+  onVerifyRetry?: (attempt: number, maxRetries: number, failures: number) => void | Promise<void>,
 ): Promise<SensorSummary | null> {
   if (items.length === 0) return null
 
   const label = SENSOR_LABELS[sensorName] ?? sensorName
   const sensorPrompt = getSensorPrompt(sensorName, promptOverrides)
+  const knownUrls = buildUrlPool(items)
 
-  let summaryText: string
+  let messages: ChatMessage[]
 
   if (items.length <= CHUNK_SIZE) {
     // Single-pass: small enough for one LLM call
     const itemsText = items.map(formatItem).join('\n\n')
-    summaryText = await chatCompletion([
+    messages = [
       { role: 'system', content: sensorPrompt },
       { role: 'user', content: `综合分析以下 ${label} 的 ${items.length} 条内容：\n\n${itemsText}` },
-    ], llmConfig, signal)
+    ]
   } else {
     // Map-reduce: chunk → extract signals → merge
     const chunks = chunkArray(items, CHUNK_SIZE)
     onChunkProgress?.(chunks.length, 0)
 
     // Map phase: extract key signals from each chunk concurrently
+    // (chunk extraction uses chatCompletion directly — no refs to verify)
     let chunksCompleted = 0
     const extractionPromises = chunks.map((chunk, i) => {
       const chunkText = chunk.map(formatItem).join('\n\n')
@@ -96,13 +102,30 @@ async function summarizeSensor(
     const mergedExtractions = extractions
       .map((ext, i) => `[批次 ${i + 1}] ${ext}`)
       .join('\n\n')
-    summaryText = await chatCompletion([
+    messages = [
       { role: 'system', content: sensorPrompt },
       { role: 'user', content: `以下是从 ${items.length} 条 ${label} 内容中提取的关键信号（分 ${chunks.length} 批提取）。请综合分析：\n\n${mergedExtractions}` },
-    ], llmConfig, signal)
+    ]
   }
 
-  const parsed = parseSensorJson(summaryText)
+  // Use retry-with-verification for the final synthesis call
+  const parsed = await summarizeWithVerification({
+    messages,
+    llmConfig,
+    parseFn: parseSensorJson,
+    knownUrls,
+    extractRefs: (p) => p.items.map(it => ({ title: it.title, url: it.url })),
+    applyVerified: (p, refs) => {
+      const refMap = new Map(refs.map(r => [r.url, r.verified]))
+      return {
+        ...p,
+        items: p.items.map(it => ({ ...it, verified: refMap.get(it.url) ?? null })),
+      }
+    },
+    signal,
+    onRetry: onVerifyRetry,
+  })
+
   return {
     sensor_name: sensorName,
     label,
@@ -184,6 +207,7 @@ export async function summarizeReport(
             sensorName, items, llmConfig, promptOverrides,
             (total, done) => onProgress?.(sensorName, label, 'running', null, { total, done }),
             signal,
+            (attempt, maxRetries, failures) => onProgress?.(sensorName, label, 'running', null, undefined, { attempt, maxRetries, failures }),
           )
           if (signal?.aborted) return null
           if (result) {
@@ -230,10 +254,50 @@ export async function summarizeReport(
     { role: 'user', content: `请根据以下各信息源摘要生成简报：\n\n${overallContext}` },
   ]
 
+  // Build URL pool from verified per-sensor notable items
+  const overallUrlPool = buildSensorUrlPool(sections)
+
   let overall: ReturnType<typeof parseOverallJson>
   try {
-    const overallRaw = await chatCompletion(overallMessages, llmConfig, signal)
-    overall = parseOverallJson(overallRaw)
+    overall = await summarizeWithVerification({
+      messages: overallMessages,
+      llmConfig,
+      parseFn: parseOverallJson,
+      knownUrls: overallUrlPool,
+      extractRefs: (parsed) => {
+        const allRefs: BriefingRef[] = []
+        for (const entry of parsed.quick_scan) allRefs.push(...entry.refs)
+        for (const sec of parsed.sections) {
+          for (const entry of sec.entries) allRefs.push(...entry.refs)
+        }
+        for (const entry of parsed.sentiment.controversies) allRefs.push(...entry.refs)
+        for (const entry of parsed.sentiment.opinion_shifts) allRefs.push(...entry.refs)
+        for (const entry of parsed.sentiment.risk_flags) allRefs.push(...entry.refs)
+        return allRefs
+      },
+      applyVerified: (parsed, refs) => {
+        const refMap = new Map(refs.map(r => [r.url, r.verified]))
+        const applyToRefs = (entryRefs: BriefingRef[]) =>
+          entryRefs.map(r => ({ ...r, verified: refMap.get(r.url) ?? r.verified }))
+        return {
+          ...parsed,
+          quick_scan: parsed.quick_scan.map(e => ({ ...e, refs: applyToRefs(e.refs) })),
+          sections: parsed.sections.map(s => ({
+            ...s,
+            entries: s.entries.map(e => ({ ...e, refs: applyToRefs(e.refs) })),
+          })),
+          sentiment: {
+            ...parsed.sentiment,
+            controversies: parsed.sentiment.controversies.map(e => ({ ...e, refs: applyToRefs(e.refs) })),
+            opinion_shifts: parsed.sentiment.opinion_shifts.map(e => ({ ...e, refs: applyToRefs(e.refs) })),
+            risk_flags: parsed.sentiment.risk_flags.map(e => ({ ...e, refs: applyToRefs(e.refs) })),
+          },
+        }
+      },
+      signal,
+      onRetry: (attempt, maxRetries, failures) =>
+        onProgress?.('__overall__', 'Overall', 'running', null, undefined, { attempt, maxRetries, failures }),
+    })
     await onProgress?.('__overall__', 'Overall', 'ok', null)
   } catch (err) {
     await onProgress?.('__overall__', 'Overall', 'failed', (err as Error).message)

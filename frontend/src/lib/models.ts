@@ -104,6 +104,10 @@ export interface SensorJobProgress {
   // Map-reduce chunk progress for summary stage
   summary_chunks_total: number
   summary_chunks_done: number
+  // URL verification retry progress
+  verify_attempt: number
+  verify_max_retries: number
+  verify_failures: number
 }
 
 export interface PipelineStatus {
@@ -123,6 +127,7 @@ export interface SensorSummaryItem {
   title: string
   url: string
   brief: string
+  verified?: boolean | null
 }
 
 export interface SensorSummary {
@@ -137,6 +142,7 @@ export interface SensorSummary {
 export interface BriefingRef {
   title: string
   url: string
+  verified?: boolean | null
 }
 
 export interface BriefingEntry {

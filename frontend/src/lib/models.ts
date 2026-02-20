@@ -134,9 +134,15 @@ export interface SensorSummary {
   items: SensorSummaryItem[]
 }
 
+export interface BriefingRef {
+  title: string
+  url: string
+}
+
 export interface BriefingEntry {
   text: string
   source: string
+  refs: BriefingRef[]
 }
 
 export interface BriefingSection {
@@ -166,6 +172,7 @@ export const SOURCE_URLS: Record<string, string> = {
 
 export interface OverallBriefing {
   quick_scan: BriefingEntry[]
+  executive_summary: string
   sections: BriefingSection[]
 }
 

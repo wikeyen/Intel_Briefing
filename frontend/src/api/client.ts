@@ -117,9 +117,15 @@ export interface SensorSummaryItem {
   brief: string
 }
 
+export interface BriefingRef {
+  title: string
+  url: string
+}
+
 export interface BriefingEntry {
   text: string
   source: string
+  refs: BriefingRef[]
 }
 
 export interface BriefingSection {
@@ -129,6 +135,7 @@ export interface BriefingSection {
 
 export interface OverallBriefing {
   quick_scan: BriefingEntry[]
+  executive_summary: string
   sections: BriefingSection[]
 }
 

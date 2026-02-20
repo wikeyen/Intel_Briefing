@@ -22,13 +22,14 @@ const SAMPLE: BriefingSummary = {
   ],
   overall: {
     quick_scan: [
-      { text: 'AI breakthroughs dominated today.', source: 'hacker_news' },
+      { text: 'AI breakthroughs dominated today.', source: 'hacker_news', refs: [] },
     ],
+    executive_summary: '',
     sections: [
       {
         title: 'Tech Highlights',
         entries: [
-          { text: 'Tech world focused on AI breakthroughs today.', source: 'hacker_news' },
+          { text: 'Tech world focused on AI breakthroughs today.', source: 'hacker_news', refs: [] },
         ],
       },
     ],
@@ -52,8 +53,9 @@ describe('summary cache', () => {
 
   it('overwrites previous summary', async () => {
     const updatedOverall = {
-      quick_scan: [{ text: 'Updated scan.', source: 'arxiv' }],
-      sections: [{ title: 'Updated', entries: [{ text: 'Updated briefing.', source: 'arxiv' }] }],
+      quick_scan: [{ text: 'Updated scan.', source: 'arxiv', refs: [] }],
+      executive_summary: '',
+      sections: [{ title: 'Updated', entries: [{ text: 'Updated briefing.', source: 'arxiv', refs: [] }] }],
     }
     const updated = { ...SAMPLE, overall: updatedOverall }
     await writeSummary(updated)

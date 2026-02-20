@@ -87,9 +87,14 @@ export async function summarizeReport(
     }
   }
 
-  // Overall briefing
+  // Overall briefing — include notable items with URLs so the LLM can cite sources
   const overallContext = sections.length > 0
-    ? sections.map(s => `**${s.label}** (${s.item_count} items): ${s.summary}`).join('\n\n')
+    ? sections.map(s => {
+        const itemsList = s.items.length > 0
+          ? '\n  Notable items:\n' + s.items.map(it => `  - "${it.title}" ${it.url}`).join('\n')
+          : ''
+        return `**${s.label}** (${s.item_count} items): ${s.summary}${itemsList}`
+      }).join('\n\n')
     : 'No data was collected in this run.'
 
   const overallMessages: ChatMessage[] = [
@@ -107,7 +112,7 @@ export async function summarizeReport(
   } catch (err) {
     await onProgress?.('__overall__', 'Overall', 'failed', (err as Error).message)
     // Return partial result with available per-sensor sections
-    overall = { quick_scan: [], sections: [] }
+    overall = { quick_scan: [], executive_summary: '', sections: [] }
   }
 
   return {

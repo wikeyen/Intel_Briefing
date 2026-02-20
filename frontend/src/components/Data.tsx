@@ -642,6 +642,28 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
                         lineHeight: 1.6,
                       }}>
                         {entry.text}
+                        {entry.refs?.length > 0 && entry.refs.map((ref, ri) => (
+                          <a
+                            key={ri}
+                            href={ref.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={ref.title}
+                            style={{
+                              fontSize: '0.5625rem',
+                              fontWeight: 600,
+                              color: 'var(--accent)',
+                              textDecoration: 'none',
+                              verticalAlign: 'super',
+                              marginLeft: '0.125rem',
+                              lineHeight: 1,
+                            }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'underline' }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'none' }}
+                          >
+                            [{ri + 1}]
+                          </a>
+                        ))}
                         {entry.source && (
                           <span style={{
                             marginLeft: '0.5rem',
@@ -654,6 +676,35 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
                       </li>
                     ))}
                   </ul>
+                </div>
+              )}
+
+              {/* Executive Summary */}
+              {summary.overall.executive_summary && (
+                <div style={{
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 8,
+                  padding: '1rem 1.25rem',
+                }}>
+                  <div style={{
+                    fontSize: '0.6875rem',
+                    fontWeight: 600,
+                    color: 'var(--ink-muted)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    marginBottom: '0.625rem',
+                  }}>
+                    Executive Summary
+                  </div>
+                  <div style={{
+                    fontSize: '0.875rem',
+                    color: 'var(--ink)',
+                    lineHeight: 1.8,
+                    whiteSpace: 'pre-wrap',
+                  }}>
+                    {summary.overall.executive_summary}
+                  </div>
                 </div>
               )}
 
@@ -690,15 +741,28 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
                             lineHeight: 1.6,
                           }}>
                             {entry.text}
-                            {entry.source && (
-                              <span style={{
-                                marginLeft: '0.375rem',
-                                fontSize: '0.625rem',
-                                color: 'var(--ink-faint)',
-                              }}>
-                                [{entry.source}]
-                              </span>
-                            )}
+                            {entry.refs?.length > 0 && entry.refs.map((ref, ri) => (
+                              <a
+                                key={ri}
+                                href={ref.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title={ref.title}
+                                style={{
+                                  fontSize: '0.5625rem',
+                                  fontWeight: 600,
+                                  color: 'var(--accent)',
+                                  textDecoration: 'none',
+                                  verticalAlign: 'super',
+                                  marginLeft: '0.125rem',
+                                  lineHeight: 1,
+                                }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'underline' }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'none' }}
+                              >
+                                [{ri + 1}]
+                              </a>
+                            ))}
                           </li>
                         ))}
                       </ul>

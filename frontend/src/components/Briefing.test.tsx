@@ -90,8 +90,9 @@ describe('Briefing tab in Data', () => {
         report_fetched_at: '2026-02-19T07:55:00Z',
         overall: {
           quick_scan: [
-            { text: 'Major AI developments this week including new model releases.', source: 'Hacker News' },
+            { text: 'Major AI developments this week including new model releases.', source: 'Hacker News', refs: [] },
           ],
+          executive_summary: '',
           sections: [],
         },
         sections: [],
@@ -108,7 +109,7 @@ describe('Briefing tab in Data', () => {
       summary: {
         generated_at: '2026-02-19T08:00:00Z',
         report_fetched_at: '2026-02-19T07:55:00Z',
-        overall: { quick_scan: [], sections: [] },
+        overall: { quick_scan: [], executive_summary: '', sections: [] },
         sections: [
           {
             sensor_name: 'hacker_news',
@@ -148,7 +149,7 @@ describe('Briefing tab in Data', () => {
       summary: {
         generated_at: '2026-02-19T08:00:00Z',
         report_fetched_at: '2026-02-19T07:55:00Z',
-        overall: { quick_scan: [], sections: [] },
+        overall: { quick_scan: [], executive_summary: '', sections: [] },
         sections: [],
       },
     })

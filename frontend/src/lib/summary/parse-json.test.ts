@@ -104,6 +104,55 @@ describe('parseOverallJson', () => {
     expect(result.sections).toEqual([])
   })
 
+  it('parses refs on entries', () => {
+    const input = JSON.stringify({
+      quick_scan: [
+        {
+          text: 'GPT-5 released',
+          source: 'HN',
+          refs: [
+            { title: 'GPT-5 Blog Post', url: 'https://example.com/gpt5' },
+            { title: 'Discussion Thread', url: 'https://example.com/discuss' },
+          ],
+        },
+      ],
+      sections: [
+        {
+          title: 'AI Products',
+          entries: [
+            { text: 'New model', source: 'PH', refs: [{ title: 'Launch', url: 'https://ph.com/1' }] },
+            { text: 'No refs entry', source: 'GH' },
+          ],
+        },
+      ],
+    })
+
+    const result = parseOverallJson(input)
+    expect(result.quick_scan[0].refs).toHaveLength(2)
+    expect(result.quick_scan[0].refs[0].url).toBe('https://example.com/gpt5')
+    expect(result.sections[0].entries[0].refs).toHaveLength(1)
+    expect(result.sections[0].entries[1].refs).toEqual([])
+  })
+
+  it('filters out refs with missing urls', () => {
+    const input = JSON.stringify({
+      quick_scan: [
+        {
+          text: 'Test',
+          source: 'HN',
+          refs: [
+            { title: 'Valid', url: 'https://example.com' },
+            { title: 'Missing URL' },
+            null,
+          ],
+        },
+      ],
+      sections: [],
+    })
+    const result = parseOverallJson(input)
+    expect(result.quick_scan[0].refs).toHaveLength(1)
+  })
+
   it('filters out malformed entries and sections', () => {
     const input = JSON.stringify({
       quick_scan: [

@@ -1,7 +1,7 @@
 // ABOUTME: JSON parsing utilities for LLM summary responses.
 // ABOUTME: Handles code fence stripping and fallback for malformed output.
 
-import type { SensorSummaryItem, OverallBriefing, BriefingEntry, BriefingSection } from '../models'
+import type { SensorSummaryItem, OverallBriefing, BriefingEntry, BriefingSection, BriefingRef } from '../models'
 
 /** Strip markdown code fences (```json ... ```) that LLMs sometimes add. */
 function stripCodeFences(text: string): string {
@@ -39,6 +39,21 @@ export function parseSensorJson(raw: string): ParsedSensorJson {
   }
 }
 
+/** Parse a single briefing entry, extracting refs if present. */
+function parseEntry(e: unknown): BriefingEntry {
+  const entry = e as Record<string, unknown>
+  const refs: BriefingRef[] = Array.isArray(entry.refs)
+    ? (entry.refs as unknown[])
+        .filter((r: unknown) => r && typeof r === 'object' && 'url' in r)
+        .map((r: unknown) => {
+          const ref = r as Record<string, unknown>
+          return { title: String(ref.title ?? ''), url: String(ref.url ?? '') }
+        })
+        .filter(r => r.url)
+    : []
+  return { text: String(entry.text ?? ''), source: String(entry.source ?? ''), refs }
+}
+
 /**
  * Parse the overall briefing LLM response as JSON.
  * Falls back to a single-section structure with the raw text if parsing fails.
@@ -51,10 +66,7 @@ export function parseOverallJson(raw: string): OverallBriefing {
     const quick_scan: BriefingEntry[] = Array.isArray(parsed.quick_scan)
       ? parsed.quick_scan
           .filter((e: unknown) => e && typeof e === 'object' && 'text' in e)
-          .map((e: unknown) => {
-            const entry = e as Record<string, unknown>
-            return { text: String(entry.text ?? ''), source: String(entry.source ?? '') }
-          })
+          .map(parseEntry)
       : []
 
     const sections: BriefingSection[] = Array.isArray(parsed.sections)
@@ -67,20 +79,22 @@ export function parseOverallJson(raw: string): OverallBriefing {
               entries: Array.isArray(sec.entries)
                 ? (sec.entries as unknown[])
                     .filter((e: unknown) => e && typeof e === 'object' && 'text' in e)
-                    .map((e: unknown) => {
-                      const entry = e as Record<string, unknown>
-                      return { text: String(entry.text ?? ''), source: String(entry.source ?? '') }
-                    })
+                    .map(parseEntry)
               : [],
             }
           })
       : []
 
-    return { quick_scan, sections }
+    const executive_summary = typeof parsed.executive_summary === 'string'
+      ? parsed.executive_summary
+      : ''
+
+    return { quick_scan, executive_summary, sections }
   } catch {
     return {
       quick_scan: [],
-      sections: [{ title: '简报', entries: [{ text: raw.trim(), source: '' }] }],
+      executive_summary: '',
+      sections: [{ title: '简报', entries: [{ text: raw.trim(), source: '', refs: [] }] }],
     }
   }
 }

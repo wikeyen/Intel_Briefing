@@ -70,7 +70,8 @@ describe('summarizeReport', () => {
     // Overall is OverallBriefing fallback shape (raw text not valid JSON)
     expect(result.overall).toEqual({
       quick_scan: [],
-      sections: [{ title: '简报', entries: [{ text: 'Overall briefing', source: '' }] }],
+      executive_summary: '',
+      sections: [{ title: '简报', entries: [{ text: 'Overall briefing', source: '', refs: [] }] }],
     })
     expect(result.report_fetched_at).toBe('2026-02-19T09:00:00Z')
     // Verify sequential order
@@ -131,7 +132,8 @@ describe('summarizeReport', () => {
     // Overall is OverallBriefing fallback shape (raw text not valid JSON)
     expect(result.overall).toEqual({
       quick_scan: [],
-      sections: [{ title: '简报', entries: [{ text: 'Nothing to report', source: '' }] }],
+      executive_summary: '',
+      sections: [{ title: '简报', entries: [{ text: 'Nothing to report', source: '', refs: [] }] }],
     })
   })
 

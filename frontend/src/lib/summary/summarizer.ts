@@ -47,6 +47,7 @@ export async function summarizeReport(
   report: IntelReport,
   llmConfig: LlmConfig,
   onProgress?: SummaryProgressCallback,
+  signal?: AbortSignal,
 ): Promise<BriefingSummary> {
   const sensorGroups = groupBySensor(report)
   const sections: SensorSummary[] = []
@@ -67,7 +68,7 @@ export async function summarizeReport(
     await onProgress?.(sensorName, label, 'running', null)
 
     try {
-      const raw = await chatCompletion(messages, llmConfig)
+      const raw = await chatCompletion(messages, llmConfig, signal)
       const parsed = parseSensorJson(raw)
       sections.push({
         sensor_name: sensorName,
@@ -106,7 +107,7 @@ export async function summarizeReport(
 
   let overall: ReturnType<typeof parseOverallJson>
   try {
-    const overallRaw = await chatCompletion(overallMessages, llmConfig)
+    const overallRaw = await chatCompletion(overallMessages, llmConfig, signal)
     overall = parseOverallJson(overallRaw)
     await onProgress?.('__overall__', 'Overall', 'ok', null)
   } catch (err) {

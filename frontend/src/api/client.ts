@@ -245,6 +245,9 @@ export const api = {
   triggerSummary: () =>
     apiFetch<{ ok: boolean; status?: string; error?: string }>('/summary/trigger', { method: 'POST' }),
 
+  stopSummary: () =>
+    apiFetch<{ status: string }>('/summary/stop', { method: 'POST' }),
+
   invalidateCache: () =>
     apiFetch<{ ok: boolean; invalidated: number }>('/cache/invalidate', { method: 'POST' }),
 

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect, type ReactNode } from 'react'
 import { api } from '@/api/client'
-import type { HealthResponse, PipelineStatus } from '@/api/client'
+import type { HealthResponse, PipelineStatus, SummaryProgress } from '@/api/client'
 
 const CONFIG_NAV = [
   { href: '/sources',     label: 'Sources' },
@@ -68,6 +68,7 @@ export function Sidebar({ onNavigate }: Props) {
   const router = useRouter()
   const [health, setHealth] = useState<HealthResponse | null>(null)
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null)
+  const [summaryProgress, setSummaryProgress] = useState<SummaryProgress | null>(null)
 
   useEffect(() => {
     api.health().then(setHealth).catch(() => setHealth({ status: 'error', last_fetch: null }))
@@ -76,8 +77,12 @@ export function Sidebar({ onNavigate }: Props) {
   }, [])
 
   useEffect(() => {
-    api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
-    const iv = setInterval(() => api.getPipelineStatus().then(setPipelineStatus).catch(() => {}), 10_000)
+    const poll = () => {
+      api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
+      api.getSummaryStatus().then(setSummaryProgress).catch(() => {})
+    }
+    poll()
+    const iv = setInterval(poll, 5_000)
     return () => clearInterval(iv)
   }, [])
 
@@ -99,6 +104,7 @@ export function Sidebar({ onNavigate }: Props) {
     }
   }, [onStatusPage, hasErrors, runId])
 
+  const isJobRunning = !!(pipelineStatus?.running || summaryProgress?.running)
   const showBadge = hasErrors && !!runId && runId !== seenRun
 
   const statusColor =
@@ -146,9 +152,10 @@ export function Sidebar({ onNavigate }: Props) {
             width: 5,
             height: 5,
             borderRadius: '50%',
-            background: statusColor,
+            background: isJobRunning ? 'var(--accent)' : statusColor,
             flexShrink: 0,
             transition: 'background 400ms',
+            animation: isJobRunning ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
           }} />
           <span style={{
             fontSize: '0.5625rem',

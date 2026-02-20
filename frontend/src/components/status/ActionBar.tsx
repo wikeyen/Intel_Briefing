@@ -1,5 +1,5 @@
-// ABOUTME: Slim toolbar (Zone 1) for the Status page — shows system health and run controls.
-// ABOUTME: Replaces the large HeroBanner with a compact 56px bar showing health, mode dropdown, and run button.
+// ABOUTME: Page header for the Status page — shows "Status" title with health dot and run controls.
+// ABOUTME: Follows the standard page-header pattern; health reflected via a colored dot next to the title.
 'use client'
 import { useState } from 'react'
 import type { HealthResponse, RunMode } from '@/api/client'
@@ -23,7 +23,7 @@ const MODE_OPTIONS: { value: RunMode; label: string }[] = [
   { value: 'summarize', label: 'Summarize' },
 ]
 
-/** Build the phase label shown on the left side when the pipeline is running. */
+/** Build the subtitle text shown below the title when the pipeline is running. */
 function phaseLabel(phase: Phase, progress: { done: number; total: number }): string {
   switch (phase) {
     case 'fetching':
@@ -52,56 +52,58 @@ export function ActionBar({
   const disabled = fetching || isRunning
   const pct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0
 
+  // Subtitle: progress text when running, health description when idle
+  const subtitle = isRunning
+    ? phaseLabel(phase, progress)
+    : health?.last_fetch
+      ? `${meta.desc} \u00b7 ${timeAgo(health.last_fetch)}`
+      : meta.desc
+
   return (
     <div className="page-header" style={{
       position: 'relative',
       display: 'flex',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       justifyContent: 'space-between',
-      padding: '0.875rem 1.25rem',
-      background: 'var(--surface)',
-      border: '1px solid var(--border)',
-      borderRadius: 10,
+      marginBottom: '2rem',
       overflow: 'hidden',
-      marginBottom: '1.25rem',
     }}>
-      {/* ── Left: title + health info ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
-        {/* Health / pulse dot */}
-        <span
-          aria-hidden="true"
-          style={{
-            width: 10,
-            height: 10,
-            borderRadius: '50%',
-            background: isRunning ? 'var(--accent)' : meta.color,
-            flexShrink: 0,
-            animation: isRunning ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
-          }}
-        />
-
-        <div style={{ minWidth: 0 }}>
-          {isRunning ? (
-            <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)' }}>
-              {phaseLabel(phase, progress)}
-            </div>
-          ) : (
-            <>
-              <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--ink)', lineHeight: 1.3 }}>
-                {meta.label}
-              </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.0625rem' }}>
-                {health?.last_fetch
-                  ? <span title={health.last_fetch}>{meta.desc} · {timeAgo(health.last_fetch)}</span>
-                  : meta.desc}
-              </div>
-            </>
-          )}
-        </div>
+      {/* ── Left: "Status" title with health dot + subtitle ── */}
+      <div>
+        <h2 style={{
+          fontSize: '1.125rem',
+          fontWeight: 600,
+          color: 'var(--ink)',
+          marginBottom: '0.375rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+        }}>
+          Status
+          <span
+            data-testid="health-dot"
+            aria-label={meta.label}
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: isRunning ? 'var(--accent)' : meta.color,
+              flexShrink: 0,
+              animation: isRunning ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
+            }}
+          />
+        </h2>
+        <p
+          data-testid="action-bar-subtitle"
+          style={{ fontSize: '0.875rem', color: 'var(--ink-muted)', lineHeight: 1.6 }}
+          title={health?.last_fetch ?? undefined}
+        >
+          {subtitle}
+        </p>
       </div>
 
       {/* ── Right: mode dropdown + Run button ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, paddingTop: '0.125rem' }}>
         {/* Mode dropdown — hidden during runs */}
         {!isRunning && (
           <select
@@ -144,7 +146,7 @@ export function ActionBar({
         </button>
       </div>
 
-      {/* ── Progress bar — thin strip at the bottom ── */}
+      {/* ── Progress bar — thin strip at the bottom when running ── */}
       {isRunning && (
         <div style={{
           position: 'absolute',

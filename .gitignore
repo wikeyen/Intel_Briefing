@@ -15,7 +15,11 @@ revenue/
 # 商业逻辑配置 (包含个人信息)
 .agent/skills/revenue-architect/prompts/
 
-# Python 缓存
+# Build output and runtime
+.next/
+node_modules/
+
+# Python cache (legacy)
 __pycache__/
 *.pyc
 *.pyo
@@ -64,6 +68,15 @@ htmlcov/
 
 # Cache and runtime data
 /cache/
+
+# Screenshots
+*.png
+
+# Playwright MCP
+.playwright-mcp/
+
+# Local data (SQLite DB, symlinks)
+data/
 
 # Git worktrees
 .worktrees/

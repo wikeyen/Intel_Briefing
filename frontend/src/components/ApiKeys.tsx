@@ -6,13 +6,46 @@ import { api } from '@/api/client'
 import type { ConfigSettings } from '@/api/client'
 import { useToast } from '@/lib/toast-context'
 
-const KEY_FIELDS: { field: keyof ConfigSettings; label: string; hint: string }[] = [
-  { field: 'xai_api_key',           label: 'xAI API Key',              hint: 'Required for X/Twitter social sensors via Grok.' },
-  { field: 'github_token',          label: 'GitHub Token',             hint: 'Personal access token for GitHub Trending sensor.' },
-  { field: 'producthunt_token',     label: 'Product Hunt Token',       hint: 'API token for Product Hunt daily launches.' },
-  { field: 'bluesky_app_password',  label: 'Bluesky App Password',     hint: 'App password for Bluesky social sensors. Generate at bsky.app/settings/app-passwords.' },
-  { field: 'mastodon_token',        label: 'Mastodon Access Token',    hint: 'Access token for Mastodon account monitoring.' },
+interface KeyFieldDef { field: keyof ConfigSettings; label: string; hint: string }
+interface PlainFieldDef { field: keyof ConfigSettings; label: string; hint?: string; placeholder?: string }
+interface FieldGroup {
+  title: string
+  secrets: KeyFieldDef[]
+  plains?: PlainFieldDef[]
+}
+
+const KEY_GROUPS: FieldGroup[] = [
+  {
+    title: 'AI Providers',
+    secrets: [
+      { field: 'summary_api_key',       label: 'OpenRouter API Key',       hint: 'API key for LLM summarization via OpenRouter. Get one at openrouter.ai/keys.' },
+      { field: 'xai_api_key',           label: 'xAI API Key',              hint: 'Required for X/Twitter social sensors via Grok.' },
+    ],
+    plains: [
+      { field: 'xai_model',    label: 'xAI Model',    hint: 'Model identifier used for Grok queries (e.g., grok-3-mini-fast).' },
+      { field: 'xai_base_url', label: 'xAI Base URL' },
+    ],
+  },
+  {
+    title: 'Data Sources',
+    secrets: [
+      { field: 'github_token',          label: 'GitHub Token',             hint: 'Personal access token for GitHub Trending sensor.' },
+      { field: 'producthunt_token',     label: 'Product Hunt Token',       hint: 'API token for Product Hunt daily launches.' },
+    ],
+  },
+  {
+    title: 'Social Platforms',
+    secrets: [
+      { field: 'bluesky_app_password',  label: 'Bluesky App Password',     hint: 'App password for Bluesky social sensors. Generate at bsky.app/settings/app-passwords.' },
+      { field: 'mastodon_token',        label: 'Mastodon Access Token',    hint: 'Access token for Mastodon account monitoring.' },
+    ],
+    plains: [
+      { field: 'bluesky_handle', label: 'Bluesky Handle', hint: 'Your Bluesky handle (e.g., alice.bsky.social).', placeholder: 'e.g., alice.bsky.social' },
+    ],
+  },
 ]
+
+const KEY_FIELDS = KEY_GROUPS.flatMap(g => g.secrets)
 
 const inputBase: React.CSSProperties = {
   width: '100%',
@@ -199,9 +232,8 @@ export function ApiKeys() {
   const [savedFlags, setSavedFlags] = useState<Record<string, boolean>>({})
   // pendingValues: new values the user is typing (only sent if non-empty)
   const [pendingValues, setPendingValues] = useState<Record<string, string>>({})
-  const [blueskyHandle, setBlueskyHandle] = useState('')
-  const [xaiModel, setXaiModel] = useState('')
-  const [xaiBaseUrl, setXaiBaseUrl] = useState('')
+  // plainValues: non-secret config fields (xai_model, xai_base_url, bluesky_handle)
+  const [plainValues, setPlainValues] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
 
   const loadConfig = () => {
@@ -212,9 +244,11 @@ export function ApiKeys() {
       }
       setSavedFlags(flags)
       setPendingValues({})
-      setBlueskyHandle(cfg.bluesky_handle ?? '')
-      setXaiModel(cfg.xai_model)
-      setXaiBaseUrl(cfg.xai_base_url)
+      setPlainValues({
+        xai_model: cfg.xai_model,
+        xai_base_url: cfg.xai_base_url,
+        bluesky_handle: cfg.bluesky_handle ?? '',
+      })
     })
   }
 
@@ -223,7 +257,11 @@ export function ApiKeys() {
   const save = async () => {
     setSaving(true)
     try {
-      const partial: Partial<ConfigSettings> = { xai_model: xaiModel, xai_base_url: xaiBaseUrl, bluesky_handle: blueskyHandle || null }
+      const partial: Partial<ConfigSettings> = {
+        xai_model: plainValues.xai_model,
+        xai_base_url: plainValues.xai_base_url,
+        bluesky_handle: plainValues.bluesky_handle || null,
+      }
       for (const { field } of KEY_FIELDS) {
         const v = pendingValues[field]
         if (v) (partial as Record<string, string>)[field] = v
@@ -254,72 +292,63 @@ export function ApiKeys() {
         </p>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        {KEY_FIELDS.map(({ field, label, hint }) => (
-          <MaskedInput
-            key={field}
-            label={label}
-            hint={hint}
-            saved={savedFlags[field] ?? false}
-            newValue={pendingValues[field] ?? ''}
-            onNewValue={(v) => setPendingValues((prev) => ({ ...prev, [field]: v }))}
-            onReveal={async () => {
-              const raw = await api.getRawConfig()
-              return (raw[field] as string | null) ?? ''
-            }}
-          />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        {KEY_GROUPS.map((group) => (
+          <div key={group.title} style={{
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            padding: '1.25rem 1.5rem',
+            background: 'var(--surface)',
+          }}>
+            <div style={{
+              fontSize: '0.6875rem',
+              fontWeight: 700,
+              letterSpacing: '0.09em',
+              textTransform: 'uppercase',
+              color: 'var(--ink-faint)',
+              marginBottom: '1.25rem',
+            }}>
+              {group.title}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {group.secrets.map(({ field, label, hint }) => (
+                <MaskedInput
+                  key={field}
+                  label={label}
+                  hint={hint}
+                  saved={savedFlags[field] ?? false}
+                  newValue={pendingValues[field] ?? ''}
+                  onNewValue={(v) => setPendingValues((prev) => ({ ...prev, [field]: v }))}
+                  onReveal={async () => {
+                    const raw = await api.getRawConfig()
+                    return (raw[field] as string | null) ?? ''
+                  }}
+                />
+              ))}
+              {group.plains?.map(({ field, label, hint, placeholder }) => (
+                <div key={field}>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '0.5rem' }}>
+                    {label}
+                  </label>
+                  <input
+                    type="text"
+                    value={plainValues[field] ?? ''}
+                    onChange={(e) => setPlainValues((prev) => ({ ...prev, [field]: e.target.value }))}
+                    placeholder={placeholder}
+                    style={inputStyle}
+                    onFocus={focus}
+                    onBlur={blur}
+                  />
+                  {hint && (
+                    <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.375rem', lineHeight: 1.5 }}>
+                      {hint}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         ))}
-
-        <div>
-          <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '0.5rem' }}>
-            Bluesky Handle
-          </label>
-          <input
-            type="text"
-            value={blueskyHandle}
-            onChange={(e) => setBlueskyHandle(e.target.value)}
-            placeholder="e.g., alice.bsky.social"
-            style={inputStyle}
-            onFocus={focus}
-            onBlur={blur}
-          />
-          <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.375rem' }}>
-            Your Bluesky handle (e.g., <code style={{ fontFamily: 'ui-monospace, monospace' }}>alice.bsky.social</code>).
-          </p>
-        </div>
-
-        <div style={{ height: 1, background: 'var(--border-soft)' }} />
-
-        <div>
-          <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '0.5rem' }}>
-            xAI Model
-          </label>
-          <input
-            type="text"
-            value={xaiModel}
-            onChange={(e) => setXaiModel(e.target.value)}
-            style={inputStyle}
-            onFocus={focus}
-            onBlur={blur}
-          />
-          <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.375rem' }}>
-            Model identifier used for Grok queries (e.g., <code style={{ fontFamily: 'ui-monospace, monospace' }}>grok-3-mini-fast</code>).
-          </p>
-        </div>
-
-        <div>
-          <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '0.5rem' }}>
-            xAI Base URL
-          </label>
-          <input
-            type="text"
-            value={xaiBaseUrl}
-            onChange={(e) => setXaiBaseUrl(e.target.value)}
-            style={inputStyle}
-            onFocus={focus}
-            onBlur={blur}
-          />
-        </div>
 
         <div>
           <button

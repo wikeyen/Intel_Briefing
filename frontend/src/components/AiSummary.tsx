@@ -548,7 +548,6 @@ export function AiSummary() {
   const showToast = useToast()
 
   const [summaryProvider, setSummaryProvider] = useState<'openrouter' | 'local' | null>(null)
-  const [summaryApiKey, setSummaryApiKey] = useState('')
   const [summaryBaseUrl, setSummaryBaseUrl] = useState('https://openrouter.ai/api/v1')
   const [summaryModel, setSummaryModel] = useState('anthropic/claude-sonnet-4')
   const [testingLlm, setTestingLlm] = useState(false)
@@ -565,7 +564,6 @@ export function AiSummary() {
   useEffect(() => {
     api.getConfig().then((cfg) => {
       setSummaryProvider(cfg.summary_provider ?? null)
-      setSummaryApiKey(cfg.summary_api_key && cfg.summary_api_key !== '***' ? cfg.summary_api_key : '')
       setSummaryBaseUrl(cfg.summary_base_url || OPENROUTER_BASE_URL)
       setSummaryModel(cfg.summary_model || 'anthropic/claude-sonnet-4')
       setSensorPrompts(cfg.summary_sensor_prompts ?? {})
@@ -590,7 +588,6 @@ export function AiSummary() {
     try {
       await api.updateConfig({
         summary_provider: summaryProvider,
-        summary_api_key: summaryApiKey || '***',
         summary_base_url: summaryBaseUrl,
         summary_model: summaryModel,
         summary_sensor_prompts: sensorPrompts,
@@ -723,25 +720,6 @@ export function AiSummary() {
                 )}
               </div>
             </div>
-
-            {/* API Key */}
-            {isEnabled && (
-              <div>
-                <FieldLabel hint={isOllama ? 'optional' : undefined}>API Key</FieldLabel>
-                <input
-                  type="password"
-                  value={summaryApiKey}
-                  onChange={(e) => setSummaryApiKey(e.target.value)}
-                  placeholder={isOllama ? 'Leave blank for local Ollama' : 'sk-or-v1-...'}
-                  style={{ ...inputBase, width: '100%' }}
-                  onFocus={focus}
-                  onBlur={blur}
-                />
-                {!isOllama && (
-                  <HelpText>Your OpenRouter API key. Get one at openrouter.ai/keys.</HelpText>
-                )}
-              </div>
-            )}
 
             {/* Base URL */}
             {isEnabled && (

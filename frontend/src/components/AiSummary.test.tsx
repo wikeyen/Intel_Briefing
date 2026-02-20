@@ -29,7 +29,6 @@ const mockGetConfig = api.getConfig as ReturnType<typeof vi.fn>
 
 const MOCK_CONFIG = {
   summary_provider: 'openrouter' as const,
-  summary_api_key: '',
   summary_base_url: 'https://openrouter.ai/api/v1',
   summary_model: 'anthropic/claude-sonnet-4',
   summary_sensor_prompts: {},
@@ -169,14 +168,14 @@ describe('AiSummary — OpenRouterModelPicker', () => {
       expect(screen.getByText('3 models available')).toBeInTheDocument()
     })
     const initialCallCount = fetchSpy.mock.calls.filter(
-      (c: [string | URL | Request]) => String(c[0]).includes('openrouter.ai'),
+      (c: unknown[]) => String(c[0]).includes('openrouter.ai'),
     ).length
     // Click Refresh — should bypass cache and fetch again
     const refreshBtn = screen.getByText('Refresh')
     fireEvent.click(refreshBtn)
     await waitFor(() => {
       const newCallCount = fetchSpy.mock.calls.filter(
-        (c: [string | URL | Request]) => String(c[0]).includes('openrouter.ai'),
+        (c: unknown[]) => String(c[0]).includes('openrouter.ai'),
       ).length
       expect(newCallCount).toBeGreaterThan(initialCallCount)
     })

@@ -108,7 +108,7 @@ async function scrapeArticles(items: RawItem[]): Promise<RawItem[]> {
   // Dynamic import to avoid pulling jsdom (Node.js-only) into the client bundle.
   // The static import chain Data.tsx → sensors/index.ts → rss_feeds.ts must not
   // reach readability.ts, which transitively depends on jsdom → child_process.
-  const { extractArticle } = await import('../readability')
+  const { extractArticle } = await import('../utils/readability')
 
   const results: RawItem[] = []
   for (let i = 0; i < items.length; i += SCRAPE_CONCURRENCY) {

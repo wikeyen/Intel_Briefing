@@ -5,7 +5,7 @@ import type {
   IntelItem,
   IntelReport,
   SensorResult,
-  SectionKey,
+  CategoryKey,
 } from '../models'
 import { createReport, sensorResultSucceeded, emptyItemsMap } from '../models'
 import { dedupItems, dedupAcrossSections } from './dedup'
@@ -14,7 +14,7 @@ import { fetchContent } from '../utils/jina-reader'
 import { decodeItemEntities } from '../utils/decode-entities'
 import { suppressItems, boostItems } from './keyword-filter'
 import { writeReport } from './cache'
-import { SENSOR_SECTION_MAP } from './sensor-map'
+import { SENSOR_CATEGORY_MAP } from '../sensors/taxonomy'
 
 /**
  * Assemble a report from sensor results: dedup, filter, post-process, then write to cache.
@@ -48,7 +48,7 @@ export async function assembleReport(
   for (const result of results) {
     if (sensorResultSucceeded(result)) {
       sourcesOk.push(result.sensor_name)
-      const section = SENSOR_SECTION_MAP[result.sensor_name] ?? 'tech'
+      const section = SENSOR_CATEGORY_MAP[result.sensor_name] ?? 'tech'
       sections[section].push(...result.items)
     } else {
       sourcesFailed.push(result.sensor_name)
@@ -56,7 +56,7 @@ export async function assembleReport(
   }
 
   // Deduplicate within each section
-  for (const key of Object.keys(sections) as SectionKey[]) {
+  for (const key of Object.keys(sections) as CategoryKey[]) {
     sections[key] = dedupItems(sections[key])
   }
 
@@ -64,21 +64,21 @@ export async function assembleReport(
   const dedupedSections = dedupAcrossSections(sections)
 
   // Decode HTML entities in all text fields
-  for (const key of Object.keys(dedupedSections) as SectionKey[]) {
+  for (const key of Object.keys(dedupedSections) as CategoryKey[]) {
     for (const item of dedupedSections[key]) {
       decodeItemEntities(item as unknown as Record<string, unknown>)
     }
   }
 
   // Keyword filtering: suppress matching items, boost matching items to the top
-  for (const key of Object.keys(dedupedSections) as SectionKey[]) {
+  for (const key of Object.keys(dedupedSections) as CategoryKey[]) {
     dedupedSections[key] = suppressItems(dedupedSections[key], config.suppress_keywords ?? [])
     dedupedSections[key] = boostItems(dedupedSections[key], config.boost_keywords ?? [])
   }
 
   // Post-processing: verify links (Grok items) + enrich content (hn_blogs) — concurrent
   const postProcessTasks: Promise<void>[] = []
-  for (const key of Object.keys(dedupedSections) as SectionKey[]) {
+  for (const key of Object.keys(dedupedSections) as CategoryKey[]) {
     for (const item of dedupedSections[key]) {
       if (item.source === 'x' && item.url) {
         postProcessTasks.push(
@@ -103,7 +103,7 @@ export async function assembleReport(
     stale: false,
     sources_ok: sourcesOk.sort(),
     sources_failed: sourcesFailed.sort(),
-    items: dedupedSections as Record<SectionKey, IntelItem[]>,
+    items: dedupedSections as Record<CategoryKey, IntelItem[]>,
   })
 
   // Write to cache

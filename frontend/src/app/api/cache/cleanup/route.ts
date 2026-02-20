@@ -3,7 +3,7 @@
 import { NextResponse } from 'next/server'
 import { loadConfig } from '@/lib/config'
 import { readReport, writeReport } from '@/lib/pipeline/cache'
-import type { IntelItem, SectionKey } from '@/lib/models'
+import type { IntelItem, CategoryKey } from '@/lib/models'
 
 function isItemAlive(item: IntelItem, cutoffMs: number): boolean {
   if (!item.published_at) return true
@@ -26,7 +26,7 @@ export async function POST(): Promise<NextResponse> {
   let totalRemoved = 0
   const prunedItems = { ...report.items }
 
-  for (const key of Object.keys(prunedItems) as SectionKey[]) {
+  for (const key of Object.keys(prunedItems) as CategoryKey[]) {
     const before = prunedItems[key].length
     prunedItems[key] = prunedItems[key].filter((item) => isItemAlive(item, cutoffMs))
     totalRemoved += before - prunedItems[key].length

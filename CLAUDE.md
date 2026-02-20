@@ -2,10 +2,10 @@
 
 ## Architecture
 
-- **Frontend**: Next.js 15 App Router in `frontend/` — serves on port 8000
-- **Backend**: Python FastAPI in `src/` — internal on port 8001
-- **Gateway**: `frontend/src/app/api/[...proxy]/route.ts` proxies `/api/*` to the backend; middleware guards with `X-API-Key`
+- **Frontend + Backend**: Next.js 15 App Router in `frontend/` — serves on port 8000
 - **Database**: SQLite via `@libsql/client` at `data/intel.db` (relative to `frontend/` working directory)
+- **Sensors**: TypeScript sensor modules in `frontend/src/lib/sensors/` — each fetches from a data source
+- **Pipeline**: Orchestrator in `frontend/src/lib/pipeline/` — coordinates fetch, dedup, filter, and cache
 
 ## Database
 
@@ -19,16 +19,12 @@ The frontend uses a local SQLite database for key-value caching.
 ## Running Locally
 
 ```bash
-# Frontend dev server (port 8000)
+# Dev server (port 8000)
 make dev
 # or: cd frontend && npm run dev
 
-# Backend (port 8001) — requires Python + uv
-cd src && uv run uvicorn intel_briefing.app:app --port 8001
-
 # Tests
 make test                          # frontend (vitest)
-cd src && uv run pytest            # backend (pytest, 104+ tests)
 ```
 
 ## Key Conventions
@@ -43,5 +39,4 @@ cd src && uv run pytest            # backend (pytest, 104+ tests)
 ## Testing
 
 - **Frontend**: `cd frontend && npx vitest run` — uses jsdom environment for component tests
-- **Backend**: `uv run pytest` — 104+ tests, 70% coverage threshold
 - Vitest config: `frontend/vitest.config.ts`

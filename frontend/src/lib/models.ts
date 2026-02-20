@@ -3,10 +3,7 @@
 
 import { ALL_CATEGORIES, type CategoryKey, emptyCategoryMap } from './sensors/taxonomy'
 
-// Re-export taxonomy types for backward compatibility
 export { ALL_CATEGORIES, type CategoryKey }
-export { ALL_CATEGORIES as ALL_SECTIONS }
-export type SectionKey = CategoryKey
 
 export interface IntelItem {
   id: string

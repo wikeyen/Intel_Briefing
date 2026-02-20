@@ -1,7 +1,7 @@
 // ABOUTME: API route for RSS feed auto-discovery — checks if a URL is a feed or discovers one from HTML.
 // ABOUTME: GET /api/rss-discover?url=<url> delegates to discoverFeed() and returns the result as JSON.
 import { NextRequest, NextResponse } from 'next/server'
-import { discoverFeed } from '@/lib/rss-discovery'
+import { discoverFeed } from '@/lib/utils/rss-discovery'
 
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get('url')

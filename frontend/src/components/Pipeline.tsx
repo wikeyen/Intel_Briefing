@@ -6,16 +6,12 @@ import { api } from '@/api/client'
 import { TagInput } from '@/components/TagInput'
 
 import { useToast } from '@/lib/toast-context'
+import { ALL_CATEGORIES, CATEGORY_META } from '@/lib/sensors/taxonomy'
 
-const OUTPUT_SECTIONS = [
-  { key: 'tech_trends',  label: 'Tech Trends' },
-  { key: 'research',     label: 'Research' },
-  { key: 'insights',     label: 'Insights' },
-  { key: 'products',     label: 'Products' },
-  { key: 'capital_flow', label: 'Capital Flow' },
-  { key: 'community',    label: 'Community' },
-  { key: 'social',       label: 'Social' },
-]
+const OUTPUT_SECTIONS = ALL_CATEGORIES.map(key => ({
+  key,
+  label: CATEGORY_META[key].label,
+}))
 
 const TIMEZONES = [
   'UTC',
@@ -73,7 +69,8 @@ export function Pipeline() {
   const showToast = useToast()
   const [fetchTime, setFetchTime] = useState('07:00')
   const [timezone, setTimezone] = useState('UTC')
-  const [concurrency, setConcurrency] = useState(4)
+  const [fetchConcurrency, setFetchConcurrency] = useState(4)
+  const [summaryConcurrency, setSummaryConcurrency] = useState(4)
   const [cacheTtl, setCacheTtl] = useState(25)
   const [postExpiryDays, setPostExpiryDays] = useState(30)
   const [boost, setBoost] = useState<string[]>([])
@@ -88,7 +85,8 @@ export function Pipeline() {
     api.getConfig().then((cfg) => {
       setFetchTime(cfg.fetch_time)
       setTimezone(cfg.fetch_timezone)
-      setConcurrency(cfg.pipeline_concurrency ?? 4)
+      setFetchConcurrency(cfg.fetch_concurrency ?? 4)
+      setSummaryConcurrency(cfg.summary_concurrency ?? 4)
       setCacheTtl(cfg.cache_ttl_hours)
       setPostExpiryDays(cfg.post_expiry_days ?? 30)
       setBoost(cfg.boost_keywords)
@@ -107,7 +105,8 @@ export function Pipeline() {
       await api.updateConfig({
         fetch_time: fetchTime,
         fetch_timezone: timezone,
-        pipeline_concurrency: concurrency,
+        fetch_concurrency: fetchConcurrency,
+        summary_concurrency: summaryConcurrency,
         cache_ttl_hours: cacheTtl,
         post_expiry_days: postExpiryDays,
         boost_keywords: boost,
@@ -225,21 +224,42 @@ export function Pipeline() {
             <div>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
                 <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
-                  Concurrency
+                  Fetch Concurrency
                 </label>
                 <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--ink)', fontFamily: 'ui-monospace, monospace' }}>
-                  {concurrency}
+                  {fetchConcurrency}
                 </span>
               </div>
               <input
                 type="range"
                 min={1}
                 max={13}
-                value={concurrency}
-                onChange={(e) => setConcurrency(Number(e.target.value))}
+                value={fetchConcurrency}
+                onChange={(e) => setFetchConcurrency(Number(e.target.value))}
               />
               <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, marginTop: '0.5rem' }}>
                 Maximum number of sensors fetching in parallel.
+              </p>
+            </div>
+
+            <div>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
+                <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
+                  Summary Concurrency
+                </label>
+                <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--ink)', fontFamily: 'ui-monospace, monospace' }}>
+                  {summaryConcurrency}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={1}
+                max={13}
+                value={summaryConcurrency}
+                onChange={(e) => setSummaryConcurrency(Number(e.target.value))}
+              />
+              <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, marginTop: '0.5rem' }}>
+                Maximum number of LLM summary calls in parallel.
               </p>
             </div>
 

@@ -93,9 +93,13 @@ describe('writePipelineStatus', () => {
   it('writes status to db with 1h TTL', async () => {
     const status: PipelineStatus = {
       running: true,
+      mode: 'fetch_summarize',
+      fetch_concurrency: 4,
+      summary_concurrency: 4,
       started_at: '2026-01-01T07:00:00Z',
       completed_at: null,
       sensors: [],
+      overall_summary: 'queued',
       total_items: 0,
     }
     await writePipelineStatus(status)
@@ -111,9 +115,13 @@ describe('readPipelineStatus', () => {
   it('returns status when data exists', async () => {
     const status: PipelineStatus = {
       running: false,
+      mode: 'fetch_summarize',
+      fetch_concurrency: 4,
+      summary_concurrency: 4,
       started_at: '2026-01-01T07:00:00Z',
       completed_at: '2026-01-01T07:01:00Z',
       sensors: [],
+      overall_summary: 'ok',
       total_items: 5,
     }
     mockKvGet.mockResolvedValue(status)

@@ -56,6 +56,13 @@ function migrateConfig(data: Record<string, unknown>): Record<string, unknown> {
     migrated.social_topics_keywords = migrated.topics_keywords
   }
   delete migrated.topics_keywords
+  // pipeline_concurrency → fetch_concurrency + summary_concurrency
+  if ('pipeline_concurrency' in migrated) {
+    const val = migrated.pipeline_concurrency as number
+    if (!('fetch_concurrency' in migrated)) migrated.fetch_concurrency = val
+    if (!('summary_concurrency' in migrated)) migrated.summary_concurrency = val
+    delete migrated.pipeline_concurrency
+  }
   return migrated
 }
 

@@ -1,5 +1,5 @@
-// ABOUTME: Pipeline orchestrator — coordinates sensor fetch+summarize jobs through a semaphore.
-// ABOUTME: Supports three run modes via strategy pattern; emits progress via PipelineProgressTracker.
+// ABOUTME: Pipeline orchestrator — coordinates sensor fetch+summarize through staged execution.
+// ABOUTME: Uses separate semaphores per stage; failed fetches are excluded from the summary stage.
 import type {
   ConfigSettings,
   IntelItem,
@@ -175,15 +175,18 @@ function buildLlmConfig(config: ConfigSettings): LlmConfig | null {
  *   - `summarize`: Skip fetching, load cached report, generate summaries only.
  *   - `fetch_summarize`: Fetch first, then summarize the fresh report.
  *
- * All sensor fetches and per-sensor summaries are concurrency-limited via a Semaphore.
+ * Each stage has its own Semaphore with independent concurrency limits.
+ * Failed sensors in the fetch stage are excluded from the summary stage.
  * Progress is tracked via PipelineProgressTracker and persisted to the database.
  */
 export async function runPipeline(
   config: ConfigSettings,
   mode: RunMode,
 ): Promise<PipelineResult> {
-  const concurrency = config.pipeline_concurrency ?? 4
-  const semaphore = new Semaphore(concurrency)
+  const fetchConcurrency = config.fetch_concurrency ?? 4
+  const summaryConcurrency = config.summary_concurrency ?? 4
+  const fetchSemaphore = new Semaphore(fetchConcurrency)
+  const summarySemaphore = new Semaphore(summaryConcurrency)
 
   // Identify enabled sensors from the registry
   const registrySensorNames = Object.keys(SENSOR_REGISTRY).filter(
@@ -201,7 +204,7 @@ export async function runPipeline(
     cachedReport = await readReport()
     if (!cachedReport) {
       // No cached report — create a minimal tracker, mark complete, return empty
-      const tracker = new PipelineProgressTracker([], mode, concurrency, (status) => {
+      const tracker = new PipelineProgressTracker([], mode, fetchConcurrency, summaryConcurrency, (status) => {
         writePipelineStatus(status).catch(() => {})
       })
       writePipelineStatus(tracker.snapshot()).catch(() => {})
@@ -217,7 +220,7 @@ export async function runPipeline(
     : registrySensorNames
 
   // Create progress tracker with persistence callback
-  const tracker = new PipelineProgressTracker(trackerSensorNames, mode, concurrency, (status) => {
+  const tracker = new PipelineProgressTracker(trackerSensorNames, mode, fetchConcurrency, summaryConcurrency, (status) => {
     writePipelineStatus(status).catch(() => {})
   })
 
@@ -227,23 +230,35 @@ export async function runPipeline(
   let report: IntelReport | null = null
   let summary: BriefingSummary | null = null
 
+  // Track which sensors failed fetch — they are excluded from summary
+  const failedSensors = new Set<string>()
+
   if (shouldFetch) {
-    // Run all sensor fetches concurrently through the semaphore
+    // Stage 1: Run all sensor fetches concurrently through the fetch semaphore
     const fetchPromises = registrySensorNames.map(name =>
-      semaphore.run(async () => {
+      fetchSemaphore.run(async () => {
         tracker.setFetchState(name, 'running')
         const result = await fetchSensor(name, config)
         if (sensorResultSucceeded(result)) {
           tracker.setFetchState(name, 'ok', result.items.length)
         } else {
           tracker.setFetchState(name, 'failed', 0, result.error, result.error_kind ?? 'api')
+          failedSensors.add(name)
         }
         return result
       }),
     )
 
+    // Wait for ALL fetches to complete before moving to summary stage
     const results = await Promise.all(fetchPromises)
     report = await assembleReport(results, config)
+
+    // Mark failed sensors' summaries as skipped — they don't pass to the next stage
+    if (shouldSummarize) {
+      for (const name of failedSensors) {
+        tracker.skipSummaryForSensor(name)
+      }
+    }
   }
 
   if (shouldSummarize) {
@@ -258,9 +273,12 @@ export async function runPipeline(
       const sensorGroups = groupBySensor(sourceReport)
       const sensorSummaries: SensorSummary[] = []
 
-      // Per-sensor summaries — concurrent through the semaphore
-      const summaryPromises = Array.from(sensorGroups.entries()).map(([sensorName, items]) =>
-        semaphore.run(async () => {
+      // Per-sensor summaries — concurrent through the summary semaphore
+      // Only summarize sensors that successfully fetched
+      const summaryPromises = Array.from(sensorGroups.entries())
+        .filter(([sensorName]) => !failedSensors.has(sensorName))
+        .map(([sensorName, items]) =>
+          summarySemaphore.run(async () => {
           if (items.length === 0) return null
           tracker.setSummaryState(sensorName, 'running')
           try {

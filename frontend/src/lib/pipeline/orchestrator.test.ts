@@ -74,7 +74,8 @@ describe('runPipeline', () => {
 
     const config = makeConfig({
       sensors_enabled: { hacker_news: true, arxiv: true },
-      pipeline_concurrency: 2,
+      fetch_concurrency: 2,
+      summary_concurrency: 2,
     })
 
     const result = await runPipeline(config, 'fetch')
@@ -101,7 +102,8 @@ describe('runPipeline', () => {
 
     const config = makeConfig({
       sensors_enabled: { hacker_news: true },
-      pipeline_concurrency: 2,
+      fetch_concurrency: 2,
+      summary_concurrency: 2,
       summary_provider: 'openrouter',
       summary_api_key: 'key',
       summary_base_url: 'https://openrouter.ai/api/v1',
@@ -119,7 +121,8 @@ describe('runPipeline', () => {
 
     const config = makeConfig({
       sensors_enabled: { hacker_news: true },
-      pipeline_concurrency: 2,
+      fetch_concurrency: 2,
+      summary_concurrency: 2,
       summary_provider: 'openrouter',
       summary_api_key: 'key',
       summary_base_url: 'https://openrouter.ai/api/v1',
@@ -152,7 +155,8 @@ describe('runPipeline', () => {
 
     const config = makeConfig({
       sensors_enabled: { s1: true, s2: true, s3: true, s4: true, s5: true },
-      pipeline_concurrency: 2,
+      fetch_concurrency: 2,
+      summary_concurrency: 2,
     })
 
     await runPipeline(config, 'fetch')
@@ -165,7 +169,8 @@ describe('runPipeline', () => {
 
     const config = makeConfig({
       sensors_enabled: { good: true, bad: true },
-      pipeline_concurrency: 4,
+      fetch_concurrency: 4,
+      summary_concurrency: 4,
     })
 
     const result = await runPipeline(config, 'fetch')
@@ -180,7 +185,8 @@ describe('runPipeline', () => {
 
     const config = makeConfig({
       sensors_enabled: { broken: true },
-      pipeline_concurrency: 4,
+      fetch_concurrency: 4,
+      summary_concurrency: 4,
     })
 
     const result = await runPipeline(config, 'fetch')
@@ -196,7 +202,8 @@ describe('runPipeline', () => {
 
     const config = makeConfig({
       sensors_enabled: { hacker_news: true },
-      pipeline_concurrency: 4,
+      fetch_concurrency: 4,
+      summary_concurrency: 4,
       summary_provider: 'openrouter',
       summary_api_key: 'key',
       summary_base_url: 'https://openrouter.ai/api/v1',
@@ -215,7 +222,8 @@ describe('runPipeline', () => {
 
     const config = makeConfig({
       sensors_enabled: { hacker_news: true },
-      pipeline_concurrency: 4,
+      fetch_concurrency: 4,
+      summary_concurrency: 4,
       summary_provider: 'openrouter',
       summary_api_key: 'key',
       summary_base_url: 'https://openrouter.ai/api/v1',
@@ -233,10 +241,69 @@ describe('runPipeline', () => {
 
     const config = makeConfig({
       sensors_enabled: { hacker_news: true },
-      pipeline_concurrency: 4,
+      fetch_concurrency: 4,
+      summary_concurrency: 4,
     })
 
     await runPipeline(config, 'fetch')
     expect(mockWritePipelineStatus.mock.calls.length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('failed sensor is excluded from summary stage', async () => {
+    mockSensorFns['good'] = vi.fn().mockResolvedValue([makeItem('g1', 'good')])
+    mockSensorFns['bad'] = vi.fn().mockRejectedValue(new Error('timeout'))
+
+    const config = makeConfig({
+      sensors_enabled: { good: true, bad: true },
+      fetch_concurrency: 4,
+      summary_concurrency: 4,
+      summary_provider: 'openrouter',
+      summary_api_key: 'key',
+      summary_base_url: 'https://openrouter.ai/api/v1',
+      summary_model: 'model',
+    })
+
+    const result = await runPipeline(config, 'fetch_summarize')
+    expect(result.report!.sources_failed).toContain('bad')
+
+    // Only "good" sensor should be summarized (1 sensor + 1 overall = 2 LLM calls)
+    expect(mockChatCompletion.mock.calls.length).toBe(2)
+
+    // Verify failed sensor is marked as 'skipped' in summary progress
+    const lastStatus = mockWritePipelineStatus.mock.calls.at(-1)?.[0]
+    const badSensor = lastStatus?.sensors.find((s: { name: string }) => s.name === 'bad')
+    expect(badSensor?.summary).toBe('skipped')
+    expect(badSensor?.fetch).toBe('failed')
+  })
+
+  it('uses separate concurrency for fetch and summary stages', async () => {
+    let fetchActive = 0
+    let maxFetchActive = 0
+    const slowFetch = vi.fn().mockImplementation(async () => {
+      fetchActive++
+      maxFetchActive = Math.max(maxFetchActive, fetchActive)
+      await new Promise(r => setTimeout(r, 20))
+      fetchActive--
+      return [makeItem('1', 'slow')]
+    })
+
+    mockSensorFns['s1'] = slowFetch
+    mockSensorFns['s2'] = slowFetch
+    mockSensorFns['s3'] = slowFetch
+    mockSensorFns['s4'] = slowFetch
+
+    const config = makeConfig({
+      sensors_enabled: { s1: true, s2: true, s3: true, s4: true },
+      fetch_concurrency: 2,
+      summary_concurrency: 3,
+    })
+
+    await runPipeline(config, 'fetch')
+    expect(maxFetchActive).toBeLessThanOrEqual(2)
+
+    // Verify status snapshot reflects both concurrency values
+    const lastStatus = mockWritePipelineStatus.mock.calls.at(-1)?.[0]
+    expect(lastStatus?.fetch_concurrency).toBe(2)
+    expect(lastStatus?.summary_concurrency).toBe(3)
   })
 })

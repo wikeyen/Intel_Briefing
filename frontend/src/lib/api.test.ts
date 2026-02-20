@@ -124,7 +124,8 @@ describe('GET /api/fetch/status', () => {
     const data = await resp.json()
     expect(data.running).toBe(false)
     expect(data.mode).toBe('fetch_summarize')
-    expect(data.concurrency).toBe(4)
+    expect(data.fetch_concurrency).toBe(4)
+    expect(data.summary_concurrency).toBe(4)
     expect(data.overall_summary).toBe('skipped')
     expect(data.sensors).toEqual([])
   })
@@ -133,7 +134,8 @@ describe('GET /api/fetch/status', () => {
     const status: PipelineStatus = {
       running: true,
       mode: 'fetch_summarize',
-      concurrency: 4,
+      fetch_concurrency: 4,
+      summary_concurrency: 4,
       started_at: '2026-01-01T07:00:00Z',
       completed_at: null,
       sensors: [{
@@ -144,6 +146,8 @@ describe('GET /api/fetch/status', () => {
         summary: 'queued',
         summary_error: null,
         item_count: 0,
+        summary_chunks_total: 0,
+        summary_chunks_done: 0,
       }],
       overall_summary: 'queued',
       total_items: 0,

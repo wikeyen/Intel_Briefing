@@ -112,7 +112,8 @@ export interface SensorJobProgress {
 export interface PipelineStatus {
   running: boolean
   mode: RunMode
-  concurrency: number
+  fetch_concurrency: number
+  summary_concurrency: number
   started_at: string | null
   completed_at: string | null
   sensors: SensorJobProgress[]
@@ -240,8 +241,9 @@ export interface ConfigSettings {
   // Cache
   cache_ttl_hours: number
 
-  // Pipeline concurrency
-  pipeline_concurrency: number
+  // Per-stage concurrency — separate limits for fetch and summary stages
+  fetch_concurrency: number
+  summary_concurrency: number
 
   // Post expiry — items older than this are pruned by the cleanup cron
   post_expiry_days: number
@@ -300,7 +302,8 @@ export function defaultConfig(): ConfigSettings {
     social_following_mastodon: false,
     rss_feed_urls: [],
     cache_ttl_hours: 6,
-    pipeline_concurrency: 4,
+    fetch_concurrency: 4,
+    summary_concurrency: 4,
     post_expiry_days: 30,
     summary_provider: null,
     summary_api_key: null,

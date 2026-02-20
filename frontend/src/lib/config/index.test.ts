@@ -122,5 +122,24 @@ describe('config migration', () => {
     const config = await loadConfig()
     expect(config.social_accounts_x).toEqual(['@new_user'])
   })
+
+  it('migrates pipeline_concurrency to fetch/summary concurrency', async () => {
+    mockKvGet.mockResolvedValue({
+      pipeline_concurrency: 8,
+    })
+    const config = await loadConfig()
+    expect(config.fetch_concurrency).toBe(8)
+    expect(config.summary_concurrency).toBe(8)
+  })
+
+  it('does not overwrite existing concurrency fields with legacy key', async () => {
+    mockKvGet.mockResolvedValue({
+      pipeline_concurrency: 8,
+      fetch_concurrency: 3,
+    })
+    const config = await loadConfig()
+    expect(config.fetch_concurrency).toBe(3)
+    expect(config.summary_concurrency).toBe(8)
+  })
 })
 

@@ -11,7 +11,8 @@ type OnChangeCallback = (status: PipelineStatus) => void
 export class PipelineProgressTracker {
   private readonly sensors: SensorJobProgress[]
   private readonly mode: RunMode
-  private readonly concurrency: number
+  private readonly fetchConcurrency: number
+  private readonly summaryConcurrency: number
   private readonly onChange?: OnChangeCallback
   private readonly startedAt: string
   private completedAt: string | null = null
@@ -21,11 +22,13 @@ export class PipelineProgressTracker {
   constructor(
     sensorNames: string[],
     mode: RunMode,
-    concurrency: number,
+    fetchConcurrency: number,
+    summaryConcurrency: number,
     onChange?: OnChangeCallback,
   ) {
     this.mode = mode
-    this.concurrency = concurrency
+    this.fetchConcurrency = fetchConcurrency
+    this.summaryConcurrency = summaryConcurrency
     this.onChange = onChange
     this.startedAt = new Date().toISOString().replace(/\.\d+Z$/, 'Z')
 
@@ -83,6 +86,13 @@ export class PipelineProgressTracker {
     this.notify()
   }
 
+  /** Mark a sensor's summary as skipped (used for sensors that failed fetch). */
+  skipSummaryForSensor(name: string): void {
+    const s = this.find(name)
+    s.summary = 'skipped'
+    this.notify()
+  }
+
   setSummaryChunks(name: string, total: number, done: number): void {
     const s = this.find(name)
     s.summary_chunks_total = total
@@ -105,7 +115,8 @@ export class PipelineProgressTracker {
     return {
       running: this.running,
       mode: this.mode,
-      concurrency: this.concurrency,
+      fetch_concurrency: this.fetchConcurrency,
+      summary_concurrency: this.summaryConcurrency,
       started_at: this.startedAt,
       completed_at: this.completedAt,
       sensors: this.sensors.map(s => ({ ...s })),

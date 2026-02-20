@@ -7,11 +7,12 @@ describe('PipelineProgressTracker', () => {
   const sensors = ['hacker_news', 'arxiv', 'github']
 
   it('initializes all sensors with correct initial states for fetch_summarize', () => {
-    const tracker = new PipelineProgressTracker(sensors, 'fetch_summarize', 4)
+    const tracker = new PipelineProgressTracker(sensors, 'fetch_summarize', 4, 4)
     const snap = tracker.snapshot()
     expect(snap.running).toBe(true)
     expect(snap.mode).toBe('fetch_summarize')
-    expect(snap.concurrency).toBe(4)
+    expect(snap.fetch_concurrency).toBe(4)
+    expect(snap.summary_concurrency).toBe(4)
     expect(snap.sensors).toHaveLength(3)
     for (const s of snap.sensors) {
       expect(s.fetch).toBe('queued')
@@ -21,7 +22,7 @@ describe('PipelineProgressTracker', () => {
   })
 
   it('initializes summary stages as skipped for fetch mode', () => {
-    const tracker = new PipelineProgressTracker(sensors, 'fetch', 4)
+    const tracker = new PipelineProgressTracker(sensors, 'fetch', 4, 4)
     const snap = tracker.snapshot()
     for (const s of snap.sensors) {
       expect(s.fetch).toBe('queued')
@@ -31,7 +32,7 @@ describe('PipelineProgressTracker', () => {
   })
 
   it('initializes fetch stages as skipped for summarize mode', () => {
-    const tracker = new PipelineProgressTracker(sensors, 'summarize', 4)
+    const tracker = new PipelineProgressTracker(sensors, 'summarize', 4, 4)
     const snap = tracker.snapshot()
     for (const s of snap.sensors) {
       expect(s.fetch).toBe('skipped')
@@ -41,7 +42,7 @@ describe('PipelineProgressTracker', () => {
   })
 
   it('updates fetch stage state', () => {
-    const tracker = new PipelineProgressTracker(sensors, 'fetch_summarize', 4)
+    const tracker = new PipelineProgressTracker(sensors, 'fetch_summarize', 4, 4)
     tracker.setFetchState('arxiv', 'running')
     expect(tracker.snapshot().sensors[1].fetch).toBe('running')
 
@@ -52,7 +53,7 @@ describe('PipelineProgressTracker', () => {
   })
 
   it('updates summary stage state', () => {
-    const tracker = new PipelineProgressTracker(sensors, 'fetch_summarize', 4)
+    const tracker = new PipelineProgressTracker(sensors, 'fetch_summarize', 4, 4)
     tracker.setSummaryState('arxiv', 'running')
     expect(tracker.snapshot().sensors[1].summary).toBe('running')
 
@@ -61,7 +62,7 @@ describe('PipelineProgressTracker', () => {
   })
 
   it('tracks fetch errors with kind', () => {
-    const tracker = new PipelineProgressTracker(sensors, 'fetch', 4)
+    const tracker = new PipelineProgressTracker(sensors, 'fetch', 4, 4)
     tracker.setFetchState('github', 'failed', 0, 'No token', 'config')
     const s = tracker.snapshot().sensors[2]
     expect(s.fetch).toBe('failed')
@@ -71,14 +72,14 @@ describe('PipelineProgressTracker', () => {
 
   it('calls onChange listener on state change', () => {
     const onChange = vi.fn()
-    const tracker = new PipelineProgressTracker(sensors, 'fetch', 4, onChange)
+    const tracker = new PipelineProgressTracker(sensors, 'fetch', 4, 4, onChange)
     tracker.setFetchState('hacker_news', 'running')
     expect(onChange).toHaveBeenCalledTimes(1)
     expect(onChange).toHaveBeenCalledWith(tracker.snapshot())
   })
 
   it('computes total_items from ok sensors', () => {
-    const tracker = new PipelineProgressTracker(sensors, 'fetch', 4)
+    const tracker = new PipelineProgressTracker(sensors, 'fetch', 4, 4)
     tracker.setFetchState('hacker_news', 'ok', 10)
     tracker.setFetchState('arxiv', 'ok', 5)
     tracker.setFetchState('github', 'failed')
@@ -86,10 +87,27 @@ describe('PipelineProgressTracker', () => {
   })
 
   it('complete() sets running=false and completed_at', () => {
-    const tracker = new PipelineProgressTracker(sensors, 'fetch', 4)
+    const tracker = new PipelineProgressTracker(sensors, 'fetch', 4, 4)
     tracker.complete()
     const snap = tracker.snapshot()
     expect(snap.running).toBe(false)
     expect(snap.completed_at).toBeTruthy()
+  })
+
+  it('skipSummaryForSensor marks a sensor summary as skipped', () => {
+    const tracker = new PipelineProgressTracker(sensors, 'fetch_summarize', 4, 4)
+    tracker.skipSummaryForSensor('arxiv')
+    const snap = tracker.snapshot()
+    expect(snap.sensors[1].summary).toBe('skipped')
+    // Other sensors remain queued
+    expect(snap.sensors[0].summary).toBe('queued')
+    expect(snap.sensors[2].summary).toBe('queued')
+  })
+
+  it('snapshot reflects separate concurrency values', () => {
+    const tracker = new PipelineProgressTracker(sensors, 'fetch_summarize', 3, 6)
+    const snap = tracker.snapshot()
+    expect(snap.fetch_concurrency).toBe(3)
+    expect(snap.summary_concurrency).toBe(6)
   })
 })

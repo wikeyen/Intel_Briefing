@@ -54,7 +54,8 @@ describe('Briefing tab in Data', () => {
     mockGetPipelineStatus.mockResolvedValue({
       running: false,
       mode: 'fetch',
-      concurrency: 4,
+      fetch_concurrency: 4,
+      summary_concurrency: 4,
       started_at: null,
       completed_at: null,
       sensors: [],

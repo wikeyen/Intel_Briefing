@@ -726,21 +726,27 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
                         {entry.refs?.length > 0 && entry.refs.map((ref, ri) => (
                           <a
                             key={ri}
-                            href={ref.url}
+                            href={ref.verified === false ? undefined : ref.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            title={ref.title}
+                            title={ref.verified === false ? `${ref.title} — link could not be verified` : ref.title}
                             style={{
                               fontSize: '0.5625rem',
                               fontWeight: 600,
-                              color: 'var(--accent)',
-                              textDecoration: 'none',
+                              color: ref.verified === false ? 'var(--ink-muted)' : 'var(--accent)',
+                              textDecoration: ref.verified === false ? 'line-through' : 'none',
                               verticalAlign: 'super',
                               marginLeft: '0.125rem',
                               lineHeight: 1,
+                              opacity: ref.verified === false ? 0.5 : 1,
+                              cursor: ref.verified === false ? 'not-allowed' : 'pointer',
                             }}
-                            onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'underline' }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'none' }}
+                            onMouseEnter={e => {
+                              if (ref.verified !== false) (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'underline'
+                            }}
+                            onMouseLeave={e => {
+                              if (ref.verified !== false) (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'none'
+                            }}
                           >
                             [{ri + 1}]
                           </a>
@@ -800,14 +806,20 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
                 }
                 const mood = moodConfig[s.overall_mood] ?? moodConfig.neutral
 
-                const renderSentimentRefs = (refs: { title: string; url: string }[]) =>
+                const renderSentimentRefs = (refs: { title: string; url: string; verified?: boolean | null }[]) =>
                   refs.map((ref, ri) => (
-                    <a key={ri} href={ref.url} target="_blank" rel="noopener noreferrer"
-                      title={ref.title}
+                    <a key={ri}
+                      href={ref.verified === false ? undefined : ref.url}
+                      target="_blank" rel="noopener noreferrer"
+                      title={ref.verified === false ? `${ref.title} — link could not be verified` : ref.title}
                       style={{
-                        fontSize: '0.5625rem', fontWeight: 600, color: 'var(--accent)',
-                        textDecoration: 'none', verticalAlign: 'super',
+                        fontSize: '0.5625rem', fontWeight: 600,
+                        color: ref.verified === false ? 'var(--ink-muted)' : 'var(--accent)',
+                        textDecoration: ref.verified === false ? 'line-through' : 'none',
+                        verticalAlign: 'super',
                         marginLeft: '0.125rem', lineHeight: 1,
+                        opacity: ref.verified === false ? 0.5 : 1,
+                        cursor: ref.verified === false ? 'not-allowed' : 'pointer',
                       }}
                     >[{ri + 1}]</a>
                   ))
@@ -915,21 +927,27 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
                             {entry.refs?.length > 0 && entry.refs.map((ref, ri) => (
                               <a
                                 key={ri}
-                                href={ref.url}
+                                href={ref.verified === false ? undefined : ref.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                title={ref.title}
+                                title={ref.verified === false ? `${ref.title} — link could not be verified` : ref.title}
                                 style={{
                                   fontSize: '0.5625rem',
                                   fontWeight: 600,
-                                  color: 'var(--accent)',
-                                  textDecoration: 'none',
+                                  color: ref.verified === false ? 'var(--ink-muted)' : 'var(--accent)',
+                                  textDecoration: ref.verified === false ? 'line-through' : 'none',
                                   verticalAlign: 'super',
                                   marginLeft: '0.125rem',
                                   lineHeight: 1,
+                                  opacity: ref.verified === false ? 0.5 : 1,
+                                  cursor: ref.verified === false ? 'not-allowed' : 'pointer',
                                 }}
-                                onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'underline' }}
-                                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'none' }}
+                                onMouseEnter={e => {
+                                  if (ref.verified !== false) (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'underline'
+                                }}
+                                onMouseLeave={e => {
+                                  if (ref.verified !== false) (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'none'
+                                }}
                               >
                                 [{ri + 1}]
                               </a>

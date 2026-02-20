@@ -1,5 +1,5 @@
 // ABOUTME: Tests for x_posts sensor — twitter-scraper primary path + xcancel fallback.
-// ABOUTME: Mocks @the-convocation/twitter-scraper and fetch to verify both code paths.
+// ABOUTME: Mocks @the-convocation/twitter-scraper, child_process, and fetch to verify all code paths.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { ConfigSettings } from '../models'
 import { defaultConfig } from '../models'
@@ -65,13 +65,25 @@ function makeConfig(overrides?: Partial<ConfigSettings>): ConfigSettings {
   return { ...defaultConfig(), social_accounts_x: ['testuser'], ...overrides }
 }
 
-// ── Xcancel fallback tests (no Twitter cookies) ─────────────────────────────
+// Mock child_process.execFile to prevent OpenClaw cookie detection in tests
+function mockExecFileNotFound() {
+  vi.doMock('child_process', () => ({
+    __esModule: true,
+    default: {},
+    execFile: vi.fn((_cmd: string, _args: string[], _opts: unknown, cb: Function) => {
+      cb(new Error('openclaw not found'), '', '')
+    }),
+  }))
+}
+
+// ── Xcancel fallback tests (no Twitter cookies, no OpenClaw) ─────────────────
 
 describe('fetchXPosts (xcancel fallback)', () => {
   beforeEach(async () => {
     vi.resetModules()
     vi.stubGlobal('fetch', vi.fn())
     vi.spyOn(Date, 'now').mockReturnValue(NOW)
+    mockExecFileNotFound()
     const mod = await import('./x_posts')
     fetchXPosts = mod.fetchXPosts
   })
@@ -222,6 +234,7 @@ describe('fetchXPosts (twitter-scraper)', () => {
     vi.doMock('@the-convocation/twitter-scraper', () => ({
       Scraper: vi.fn().mockImplementation(() => mockScraper),
     }))
+    mockExecFileNotFound()
     const mod = await import('./x_posts')
     fetchXPosts = mod.fetchXPosts
   })
@@ -258,5 +271,54 @@ describe('fetchXPosts (twitter-scraper)', () => {
   it('strips @ from handles before calling getTweets', async () => {
     await fetchXPosts(authConfig({ social_accounts_x: ['@testuser'] }), 10)
     expect(mockScraper.getTweets).toHaveBeenCalledWith('testuser', expect.any(Number))
+  })
+
+  it('falls back to xcancel when scraper throws', async () => {
+    mockScraper.setCookies.mockRejectedValue(new Error('auth failed'))
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true, text: () => Promise.resolve(SAMPLE_HTML),
+    }))
+    const items = await fetchXPosts(authConfig(), 10)
+    expect(items).toHaveLength(1)
+    expect(items[0].url).toContain('x.com/testuser/status/12345')
+  })
+})
+
+// ── OpenClaw cookie extraction tests ─────────────────────────────────────────
+
+describe('fetchXPosts (OpenClaw cookies)', () => {
+  let mockScraper: ReturnType<typeof makeMockScraper>
+
+  beforeEach(async () => {
+    vi.resetModules()
+    vi.spyOn(Date, 'now').mockReturnValue(NOW)
+    mockScraper = makeMockScraper()
+    vi.doMock('@the-convocation/twitter-scraper', () => ({
+      Scraper: vi.fn().mockImplementation(() => mockScraper),
+    }))
+    // Mock execFile to return valid cookies
+    vi.doMock('child_process', () => ({
+      __esModule: true,
+      default: {},
+      execFile: vi.fn((_cmd: string, _args: string[], _opts: unknown, cb: Function) => {
+        const json = JSON.stringify({
+          cookies: [
+            { name: 'auth_token', value: 'oc-auth-token' },
+            { name: 'ct0', value: 'oc-ct0' },
+          ],
+        })
+        cb(null, json, '')
+      }),
+    }))
+    const mod = await import('./x_posts')
+    fetchXPosts = mod.fetchXPosts
+  })
+
+  it('uses OpenClaw cookies when no config cookies are set', async () => {
+    const config = makeConfig() // no twitter_auth_token or twitter_ct0
+    const items = await fetchXPosts(config, 10)
+    expect(mockScraper.setCookies).toHaveBeenCalled()
+    expect(mockScraper.getTweets).toHaveBeenCalled()
+    expect(items).toHaveLength(1)
   })
 })

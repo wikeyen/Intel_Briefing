@@ -1,30 +1,100 @@
 // ABOUTME: X posts sensor — fetches recent tweets via @the-convocation/twitter-scraper.
-// ABOUTME: Uses cookie-based auth (auth_token + ct0). Falls back to xcancel.com HTML scraping.
+// ABOUTME: Auth priority: config cookies > OpenClaw browser cookies > xcancel.com fallback.
 import { Scraper, type Tweet } from '@the-convocation/twitter-scraper'
 import { parse as parseHTML } from 'node-html-parser'
 import type { ConfigSettings, IntelItem } from '../models'
+
+// ── Anti-detection constants ─────────────────────────────────────────────────
+const ACCOUNT_DELAY_MIN_MS = 1_500  // min delay between accounts
+const ACCOUNT_DELAY_MAX_MS = 4_000  // max delay between accounts
+const BATCH_SIZE_MIN = 2            // min accounts per concurrent batch
+const BATCH_SIZE_MAX = 4            // max accounts per concurrent batch
+
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function randomDelay(min: number, max: number): Promise<void> {
+  return delay(min + Math.random() * (max - min))
+}
+
+function randomInt(min: number, max: number): number {
+  return Math.floor(min + Math.random() * (max - min + 1))
+}
 
 // ── Scraper singleton (reuse across calls to keep auth session) ──────────────
 let _scraper: Scraper | null = null
 let _scraperCookiesKey: string | null = null
 
-function getScraper(authToken: string, ct0: string): Scraper {
+async function initScraper(authToken: string, ct0: string): Promise<Scraper> {
   const key = `${authToken}:${ct0}`
-  if (_scraper && _scraperCookiesKey === key) return _scraper
+  if (_scraper && _scraperCookiesKey === key) {
+    if (await _scraper.isLoggedIn()) return _scraper
+  }
   _scraper = new Scraper()
   _scraperCookiesKey = key
-  // setCookies is async — callers must await initScraper() instead of using this directly
-  return _scraper
-}
-
-async function initScraper(authToken: string, ct0: string): Promise<Scraper> {
-  const scraper = getScraper(authToken, ct0)
-  if (await scraper.isLoggedIn()) return scraper
-  await scraper.setCookies([
+  await _scraper.setCookies([
     `auth_token=${authToken}; Domain=.x.com; Path=/; Secure; HttpOnly`,
     `ct0=${ct0}; Domain=.x.com; Path=/; Secure`,
   ])
-  return scraper
+  return _scraper
+}
+
+// ── OpenClaw browser cookie extraction ───────────────────────────────────────
+
+interface XCookies { auth_token: string; ct0: string }
+
+let _openclawCookiesCache: XCookies | null = null
+let _openclawCookiesCacheTime = 0
+const OPENCLAW_CACHE_TTL_MS = 10 * 60 * 1000 // refresh every 10 min
+
+async function getOpenClawCookies(): Promise<XCookies | null> {
+  // Return cached if fresh
+  if (_openclawCookiesCache && Date.now() - _openclawCookiesCacheTime < OPENCLAW_CACHE_TTL_MS) {
+    return _openclawCookiesCache
+  }
+
+  try {
+    // Dynamic import to avoid top-level child_process dependency (easier to test)
+    const { execFile } = await import('child_process')
+    const json = await new Promise<string>((resolve, reject) => {
+      execFile('openclaw', ['browser', '--browser-profile', 'openclaw', 'cookies', '--json'], {
+        timeout: 10_000,
+        env: { ...process.env, NO_COLOR: '1' },
+      }, (err, stdout, stderr) => {
+        if (err) return reject(err)
+        resolve(stdout)
+      })
+    })
+
+    // OpenClaw prefixes stderr warnings; parse only the JSON part
+    const jsonStart = json.indexOf('{')
+    if (jsonStart < 0) return null
+    const data = JSON.parse(json.slice(jsonStart))
+    const cookies: Array<{ name: string; value: string }> = data.cookies ?? []
+    const authToken = cookies.find(c => c.name === 'auth_token')?.value
+    const ct0 = cookies.find(c => c.name === 'ct0')?.value
+
+    if (authToken && ct0) {
+      _openclawCookiesCache = { auth_token: authToken, ct0 }
+      _openclawCookiesCacheTime = Date.now()
+      return _openclawCookiesCache
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+// ── Resolve auth: config cookies > OpenClaw browser > null ───────────────────
+
+async function resolveAuth(config: ConfigSettings): Promise<XCookies | null> {
+  // Priority 1: explicit config
+  if (config.twitter_auth_token && config.twitter_ct0) {
+    return { auth_token: config.twitter_auth_token, ct0: config.twitter_ct0 }
+  }
+  // Priority 2: OpenClaw browser
+  return getOpenClawCookies()
 }
 
 // ── Primary: twitter-scraper (authenticated) ─────────────────────────────────
@@ -78,6 +148,41 @@ function formatCount(n: number): string {
   return String(n)
 }
 
+// ── Anti-detection: staggered batched requests ───────────────────────────────
+
+async function fetchViaScraperAll(
+  scraper: Scraper,
+  handles: string[],
+  lookbackMs: number,
+  perAccountLimit: number,
+  limit: number,
+): Promise<IntelItem[]> {
+  // Shuffle handles to vary request order across runs
+  const shuffled = [...handles].sort(() => Math.random() - 0.5)
+
+  // Process in small random-sized batches with delays between them
+  const allResults: PromiseSettledResult<IntelItem[]>[] = []
+  let i = 0
+  while (i < shuffled.length) {
+    const batchSize = Math.min(randomInt(BATCH_SIZE_MIN, BATCH_SIZE_MAX), shuffled.length - i)
+    const batch = shuffled.slice(i, i + batchSize)
+
+    // Run batch concurrently
+    const batchResults = await Promise.allSettled(
+      batch.map(h => fetchViaScraper(scraper, h.replace(/^@/, ''), lookbackMs, perAccountLimit)),
+    )
+    allResults.push(...batchResults)
+
+    i += batchSize
+    // Jittered delay between batches (skip after last batch)
+    if (i < shuffled.length) {
+      await randomDelay(ACCOUNT_DELAY_MIN_MS, ACCOUNT_DELAY_MAX_MS)
+    }
+  }
+
+  return collectItems(allResults, limit)
+}
+
 // ── Fallback: xcancel.com HTML scraping ──────────────────────────────────────
 
 const XCANCEL_BASE = 'https://xcancel.com'
@@ -96,10 +201,6 @@ const USER_AGENTS = [
 
 function randomUA(): string {
   return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 function jitteredDelay(): Promise<void> {
@@ -203,29 +304,19 @@ export async function fetchXPosts(config: ConfigSettings, limit: number): Promis
   const lookbackMs = lookbackHours * 60 * 60 * 1000
   const perAccountLimit = Math.max(10, Math.ceil(limit / handles.length) * 2)
 
-  const hasAuth = !!(config.twitter_auth_token && config.twitter_ct0)
-
-  if (hasAuth) {
-    return fetchViaScraperAll(config, handles, lookbackMs, perAccountLimit, limit)
+  // Try authenticated scraper (config cookies or OpenClaw browser)
+  const auth = await resolveAuth(config)
+  if (auth) {
+    try {
+      const scraper = await initScraper(auth.auth_token, auth.ct0)
+      return await fetchViaScraperAll(scraper, handles, lookbackMs, perAccountLimit, limit)
+    } catch (e) {
+      console.warn('twitter-scraper failed, falling back to xcancel:', (e as Error).message)
+    }
   }
 
+  // Fallback: xcancel.com HTML scraping
   return fetchViaXcancelAll(handles, lookbackMs, limit)
-}
-
-async function fetchViaScraperAll(
-  config: ConfigSettings,
-  handles: string[],
-  lookbackMs: number,
-  perAccountLimit: number,
-  limit: number,
-): Promise<IntelItem[]> {
-  const scraper = await initScraper(config.twitter_auth_token!, config.twitter_ct0!)
-
-  const results = await Promise.allSettled(
-    handles.map(h => fetchViaScraper(scraper, h.replace(/^@/, ''), lookbackMs, perAccountLimit)),
-  )
-
-  return collectItems(results, limit)
 }
 
 async function fetchViaXcancelAll(

@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 import { api } from '@/api/client'
 import { TagInput } from '@/components/TagInput'
-import { SectionHeader } from '@/components/SectionHeader'
+
 import { useToast } from '@/lib/toast-context'
 
 const OUTPUT_SECTIONS = [
@@ -119,17 +119,16 @@ export function Pipeline() {
   }
 
   return (
-    <section id="pipeline" style={{
-      display: 'grid',
-      gridTemplateColumns: '240px 1fr',
-      gap: '4.5rem',
-      padding: '4.5rem 0 6rem',
-    }}>
-      <SectionHeader
-        num="02"
-        title="Pipeline"
-        description="Scheduling, ranking filters, and output limits for the generated briefing."
-      />
+    <section id="pipeline" style={{ padding: '4.5rem 0' }}>
+
+      <div className="page-header" style={{ marginBottom: '2rem' }}>
+        <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.375rem' }}>
+          Pipeline
+        </h2>
+        <p style={{ fontSize: '0.875rem', color: 'var(--ink-muted)', lineHeight: 1.6 }}>
+          Scheduling, ranking filters, and output limits for the generated briefing.
+        </p>
+      </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
 

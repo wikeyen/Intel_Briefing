@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 import { api } from '@/api/client'
 import { TagInput } from '@/components/TagInput'
-import { SectionHeader } from '@/components/SectionHeader'
+
 import { useToast } from '@/lib/toast-context'
 
 interface SensorDef {
@@ -23,14 +23,9 @@ const SENSOR_GROUPS: { label: string; sensors: SensorDef[] }[] = [
       { key: 'product_hunt', label: 'Product Hunt',     desc: 'Top products of the day' },
       { key: 'hn_blogs',     label: 'HN Blogs',         desc: 'Curated blog posts from Hacker News' },
       { key: 'chrome_radar', label: 'Chrome Radar',     desc: 'Chrome Web Store surveillance' },
-    ],
-  },
-  {
-    label: 'Chinese / 中文',
-    sensors: [
-      { key: 'v2ex',         label: 'V2EX',          desc: 'Chinese tech community hot posts' },
-      { key: 'sources_36kr', label: '36Kr',           desc: 'Chinese startup and tech news' },
-      { key: 'wallstreetcn', label: 'WallStreetCN',   desc: 'Chinese financial and macro news' },
+      { key: 'v2ex',         label: 'V2EX',             desc: 'Chinese tech community hot posts' },
+      { key: 'sources_36kr', label: '36Kr',              desc: 'Chinese startup and tech news' },
+      { key: 'wallstreetcn', label: 'WallStreetCN',      desc: 'Chinese financial and macro news' },
     ],
   },
   {
@@ -304,19 +299,17 @@ export function Sensors() {
     !enabled[key] ? 'disabled' : statuses[key]
 
   return (
-    <section id="sensors" style={{
-      display: 'grid',
-      gridTemplateColumns: '240px 1fr',
-      gap: '4.5rem',
-      padding: '4.5rem 0 6rem',
-    }}>
+    <section id="sensors" style={{ padding: '4.5rem 0' }}>
       <style dangerouslySetInnerHTML={{ __html: HIDE_SPINNERS_CSS }} />
 
-      <SectionHeader
-        num="01"
-        title="Sources"
-        description="Active data sources for your pipeline, grouped by language and provider."
-      />
+      <div className="page-header" style={{ marginBottom: '2rem' }}>
+        <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.375rem' }}>
+          Sources
+        </h2>
+        <p style={{ fontSize: '0.875rem', color: 'var(--ink-muted)', lineHeight: 1.6 }}>
+          Active data sources for your pipeline, grouped by language and provider.
+        </p>
+      </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 

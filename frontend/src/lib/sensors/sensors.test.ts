@@ -169,52 +169,52 @@ describe('V2EXSensor', () => {
 })
 
 describe('ChromeRadarSensor', () => {
-  it('returns items with source chrome_radar', async () => {
-    const categoryHtml = `
-      <div class="webstore-test-wall-tile">
-        <a href="https://chromewebstore.google.com/detail/test-ext/abc123">
-          <span>Bad Extension</span>
-        </a>
-        <span class="Y30PE">3.2</span>
-      </div>
-      <div class="webstore-test-wall-tile">
-        <a href="https://chromewebstore.google.com/detail/good-ext/def456">
-          <span>Good Extension</span>
-        </a>
-        <span class="Y30PE">4.5</span>
-      </div>
-    `
-    const detailHtml = `<span class="F9iKBc">10,000+ users</span>`
+  // Helper to build a CWS category page with AF_initDataCallback data
+  function makeCategoryHtml(extensions: Array<[string, string, number, number]>): string {
+    // Each extension: [id, name, rating, users]
+    const extList = extensions.map(([id, name, rating, users]) => {
+      const ext = new Array(20).fill(null)
+      ext[0] = id
+      ext[2] = name
+      ext[3] = rating
+      ext[4] = 100 // rating count (unused by sensor)
+      ext[6] = `Description of ${name}`
+      ext[14] = users
+      return [ext]
+    })
+    // Wrap in the nested structure: data[0][0][0][13][0][0] = extList
+    const inner = new Array(14).fill(null)
+    inner[13] = [[extList]]
+    const data = [[[[...inner]]]]
+    return `AF_initDataCallback({key: 'ds:1', hash: '2', data:${JSON.stringify(data)}, sideChannel: {}})`
+  }
 
-    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
-      if (url.includes('/category/')) {
-        return Promise.resolve({ ok: true, text: () => Promise.resolve(categoryHtml) })
-      }
-      if (url.includes('/detail/')) {
-        return Promise.resolve({ ok: true, text: () => Promise.resolve(detailHtml) })
-      }
-      return Promise.resolve({ ok: false, status: 404 })
+  it('returns items with source chrome_radar', async () => {
+    const html = makeCategoryHtml([
+      ['abc123', 'Bad Extension', 3.2, 10000],
+      ['def456', 'Good Extension', 4.5, 50000],
+    ])
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true, text: () => Promise.resolve(html),
     })
 
     const { fetchChromeRadar } = await import('./chrome_radar')
     const items = await fetchChromeRadar(makeConfig(), 10)
-    for (const item of items) {
-      expect(item.source).toBe('chrome_radar')
-      expect(item.id).toMatch(/^chrome-/)
-    }
+    // Only the low-rated one should appear
+    expect(items).toHaveLength(1)
+    expect(items[0].source).toBe('chrome_radar')
+    expect(items[0].id).toBe('chrome-abc123')
+    expect(items[0].title).toBe('Bad Extension')
+    expect(items[0].heat).toContain('3.2 stars')
   })
 
   it('filters out extensions with rating >= 3.8', async () => {
-    const categoryHtml = `
-      <div class="webstore-test-wall-tile">
-        <a href="https://chromewebstore.google.com/detail/good-ext/abc123">
-          <span>High Rated</span>
-        </a>
-        <span class="Y30PE">4.2</span>
-      </div>
-    `
+    const html = makeCategoryHtml([
+      ['abc123', 'High Rated', 4.2, 50000],
+    ])
     globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true, text: () => Promise.resolve(categoryHtml),
+      ok: true, text: () => Promise.resolve(html),
     })
 
     const { fetchChromeRadar } = await import('./chrome_radar')
@@ -223,26 +223,36 @@ describe('ChromeRadarSensor', () => {
   })
 
   it('filters out extensions with fewer than 5000 users', async () => {
-    const categoryHtml = `
-      <div class="webstore-test-wall-tile">
-        <a href="https://chromewebstore.google.com/detail/small-ext/abc123">
-          <span>Small Extension</span>
-        </a>
-        <span class="Y30PE">2.0</span>
-      </div>
-    `
-    const detailHtml = `<span class="F9iKBc">100 users</span>`
-
-    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
-      if (url.includes('/category/')) {
-        return Promise.resolve({ ok: true, text: () => Promise.resolve(categoryHtml) })
-      }
-      return Promise.resolve({ ok: true, text: () => Promise.resolve(detailHtml) })
+    const html = makeCategoryHtml([
+      ['abc123', 'Small Extension', 2.0, 100],
+    ])
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true, text: () => Promise.resolve(html),
     })
 
     const { fetchChromeRadar } = await import('./chrome_radar')
     const items = await fetchChromeRadar(makeConfig(), 10)
     expect(items).toHaveLength(0)
+  })
+
+  it('parseExtensionsFromHtml returns empty array for invalid HTML', async () => {
+    const { parseExtensionsFromHtml } = await import('./chrome_radar')
+    expect(parseExtensionsFromHtml('<html>no data here</html>')).toEqual([])
+    expect(parseExtensionsFromHtml('')).toEqual([])
+  })
+
+  it('deduplicates extensions across categories', async () => {
+    const html = makeCategoryHtml([
+      ['abc123', 'Duplicate Ext', 2.5, 20000],
+      ['abc123', 'Duplicate Ext', 2.5, 20000],
+    ])
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true, text: () => Promise.resolve(html),
+    })
+
+    const { fetchChromeRadar } = await import('./chrome_radar')
+    const items = await fetchChromeRadar(makeConfig(), 10)
+    expect(items).toHaveLength(1)
   })
 })
 

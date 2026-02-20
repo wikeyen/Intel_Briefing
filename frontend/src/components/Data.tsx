@@ -1,7 +1,7 @@
 // ABOUTME: Intel feed page — shows fetched items grouped by section with section tabs.
 // ABOUTME: Briefing tab shows AI-generated summary; other tabs show card-per-item news reader with source filtering and pagination.
 'use client'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { api } from '@/api/client'
 import type { IntelReport, IntelItem, ConfigSettings, BriefingSummary, SummaryProgress, PipelineStatus, OverallBriefing } from '@/api/client'
@@ -547,17 +547,16 @@ function isStructuredOverall(overall: OverallBriefing | string): overall is Over
   return typeof overall === 'object' && overall !== null && 'quick_scan' in overall
 }
 
-function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, hasContent, onTrigger }: {
+function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, hasContent, onTrigger, onStop }: {
   summary: BriefingSummary | null
   summaryProgress: SummaryProgress | null
   pipelineStatus: PipelineStatus | null
   config: ConfigSettings | null
   hasContent: boolean
   onTrigger: () => void
+  onStop: () => void
 }) {
-  const isSummarizing = !!(summaryProgress?.running && summaryProgress.started_at
-    // eslint-disable-next-line react-hooks/purity
-    && (Date.now() - new Date(summaryProgress.started_at).getTime()) < 5 * 60 * 1000)
+  const isSummarizing = !!(summaryProgress?.running)
 
   const hasProvider = config?.summary_provider !== null && config?.summary_provider !== undefined
 
@@ -584,13 +583,57 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
               }} />
             )}
           </div>
-          {hasProvider && hasContent && !isSummarizing && (
+          {hasProvider && hasContent && (
+            isSummarizing ? (
+              <button
+                onClick={onStop}
+                style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 500,
+                  color: '#ef4444',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.25rem 0',
+                  textDecoration: 'underline',
+                  textUnderlineOffset: '2px',
+                }}
+              >
+                Stop
+              </button>
+            ) : (
+              <button
+                onClick={onTrigger}
+                style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 500,
+                  color: 'var(--accent)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.25rem 0',
+                  textDecoration: 'underline',
+                  textUnderlineOffset: '2px',
+                }}
+              >
+                Regenerate
+              </button>
+            )
+          )}
+        </div>
+      )}
+
+      {isSummarizing && summaryProgress && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <SummaryProgressBanner progress={summaryProgress} pipelineStatus={pipelineStatus} />
+          {!summary && (
             <button
-              onClick={onTrigger}
+              onClick={onStop}
               style={{
+                alignSelf: 'flex-end',
                 fontSize: '0.75rem',
                 fontWeight: 500,
-                color: 'var(--accent)',
+                color: '#ef4444',
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
@@ -599,14 +642,10 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
                 textUnderlineOffset: '2px',
               }}
             >
-              Regenerate
+              Stop
             </button>
           )}
         </div>
-      )}
-
-      {isSummarizing && summaryProgress && (
-        <SummaryProgressBanner progress={summaryProgress} pipelineStatus={pipelineStatus} />
       )}
 
       {summary && !isSummarizing ? (
@@ -1079,6 +1118,10 @@ export function Data() {
     api.getLatest().then(setReport).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
+  // Track last-seen timestamps so we can detect new completions from any source
+  const lastSummaryAt = useRef<string | null>(null)
+  const lastPipelineCompletedAt = useRef<string | null>(null)
+
   // Poll summary and pipeline status for live progress
   useEffect(() => {
     const check = () => {
@@ -1088,7 +1131,20 @@ export function Data() {
           api.getSummary().then(r => setSummary(r.summary)).catch(() => {})
         }
       }).catch(() => {})
-      api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
+      api.getPipelineStatus().then(ps => {
+        setPipelineStatus(ps)
+        // When the pipeline completes (from any page), refresh report + summary
+        if (!ps.running && ps.completed_at && ps.completed_at !== lastPipelineCompletedAt.current) {
+          lastPipelineCompletedAt.current = ps.completed_at
+          api.getLatest().then(setReport).catch(() => {})
+          api.getSummary().then(r => {
+            if (r.summary?.generated_at !== lastSummaryAt.current) {
+              lastSummaryAt.current = r.summary?.generated_at ?? null
+              setSummary(r.summary)
+            }
+          }).catch(() => {})
+        }
+      }).catch(() => {})
     }
     check()
     const iv = setInterval(check, 2_000)
@@ -1104,6 +1160,19 @@ export function Data() {
       setSummaryProgress(s)
     } catch (e) {
       showToast('Failed: ' + (e as Error).message)
+    }
+  }
+
+  const handleStopSummary = async () => {
+    try {
+      await api.stopSummary()
+      showToast('Summary generation stopped')
+      const s = await api.getSummaryStatus()
+      setSummaryProgress(s)
+    } catch {
+      // 404 = nothing running, just refresh status
+      const s = await api.getSummaryStatus()
+      setSummaryProgress(s)
     }
   }
 
@@ -1290,6 +1359,7 @@ export function Data() {
               config={config}
               hasContent={hasContent}
               onTrigger={handleTriggerSummary}
+              onStop={handleStopSummary}
             />
           ) : !loading && !report ? (
             <div style={{

@@ -1,11 +1,22 @@
 // ABOUTME: Standalone summary trigger — POST /api/summary/trigger.
-// ABOUTME: Runs LLM summarization on the existing cached report without a full pipeline run.
+// ABOUTME: Runs LLM summarization in the background with AbortController support for cancellation.
 import { NextResponse, after } from 'next/server'
 import { loadConfig } from '@/lib/config'
 import { readReport } from '@/lib/pipeline/cache'
 import { summarizeReport } from '@/lib/summary/summarizer'
 import { writeSummary, writeSummaryProgress } from '@/lib/summary/cache'
 import type { SummaryProgress, SummarySensorProgress } from '@/lib/models'
+
+// Module-level singleton for abort support
+let activeAbortController: AbortController | null = null
+
+/** Cancel the running standalone summary, if any. Returns true if cancelled. */
+export function cancelSummary(): boolean {
+  if (!activeAbortController) return false
+  activeAbortController.abort()
+  activeAbortController = null
+  return true
+}
 
 export async function POST(): Promise<NextResponse> {
   const config = await loadConfig()
@@ -46,6 +57,10 @@ export async function POST(): Promise<NextResponse> {
   }
   await writeSummaryProgress(summaryStatus).catch(() => {})
 
+  // Create abort controller for this run
+  const abortController = new AbortController()
+  activeAbortController = abortController
+
   // Run summarization in the background via after() — survives response delivery
   after(async () => {
     const onProgress = async (
@@ -70,21 +85,26 @@ export async function POST(): Promise<NextResponse> {
         base_url: config.summary_base_url,
         api_key: config.summary_api_key,
         model: config.summary_model,
-      }, onProgress)
+      }, onProgress, abortController.signal)
       await writeSummary(summary)
     } catch (err) {
       console.error('Manual summarization failed:', err)
-      // Mark all still-pending sensors as failed so the UI shows the error
+      const isCancelled = abortController.signal.aborted
+      // Mark all still-pending sensors as failed/cancelled so the UI shows the state
       for (const sp of summaryStatus.sensors) {
         if (sp.state === 'pending' || sp.state === 'running') {
           sp.state = 'failed'
-          sp.error = (err as Error).message
+          sp.error = isCancelled ? 'Cancelled' : (err as Error).message
         }
       }
     } finally {
       summaryStatus.running = false
       summaryStatus.completed_at = new Date().toISOString().replace(/\.\d+Z$/, 'Z')
       await writeSummaryProgress(summaryStatus).catch(() => {})
+      // Clear singleton
+      if (activeAbortController === abortController) {
+        activeAbortController = null
+      }
     }
   })
 

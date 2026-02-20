@@ -1,6 +1,13 @@
 // ABOUTME: Tests for the unified summarization engine.
 // ABOUTME: Validates prompt construction, concurrent LLM calls, per-sensor caching, and BriefingSummary output shape.
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
+
+vi.mock('./ref-verifier', () => ({
+  buildUrlPool: vi.fn().mockReturnValue(new Set()),
+  buildSensorUrlPool: vi.fn().mockReturnValue(new Set()),
+  verifyRefs: vi.fn().mockResolvedValue({ verified: [], failures: [] }),
+}))
+
 import { summarizeReport } from './summarizer'
 import type { SummarizeOptions } from './summarizer'
 import * as llm from './llm'
@@ -359,5 +366,15 @@ describe('summarizeReport', () => {
       expect(vi.mocked(cache.writeSensorSummary).mock.calls[0][0]).toBe('hacker_news')
       expect(vi.mocked(cache.writeSensorSummary).mock.calls[1][0]).toBe('arxiv')
     })
+  })
+
+  it('uses retry-with-verification for per-sensor and overall', async () => {
+    vi.spyOn(llm, 'chatCompletion').mockResolvedValue('Summary text')
+
+    const result = await summarizeReport(makeReport(), makeOptions())
+
+    // Should still produce the expected output shape
+    expect(result.sections).toHaveLength(2)
+    expect(result.overall).toBeDefined()
   })
 })

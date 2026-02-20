@@ -9,9 +9,12 @@ export async function GET(): Promise<NextResponse<PipelineStatus>> {
   if (!status) {
     return NextResponse.json({
       running: false,
+      mode: 'fetch_summarize',
+      concurrency: 4,
       started_at: null,
       completed_at: null,
       sensors: [],
+      overall_summary: 'skipped',
       total_items: 0,
     })
   }

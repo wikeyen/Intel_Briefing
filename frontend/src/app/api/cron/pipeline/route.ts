@@ -1,12 +1,8 @@
 // ABOUTME: Cron pipeline trigger — GET /api/cron/pipeline.
-// ABOUTME: Protected by CRON_SECRET; used by Vercel Cron Jobs and Docker cron sidecar.
+// ABOUTME: Protected by CRON_SECRET; delegates to the pipeline orchestrator.
 import { NextRequest, NextResponse } from 'next/server'
 import { loadConfig } from '@/lib/config'
-import { collect } from '@/lib/pipeline/collector'
-import { writePipelineStatus } from '@/lib/pipeline/cache'
-import { summarizeReport } from '@/lib/summary/summarizer'
-import { writeSummary, writeSummaryProgress } from '@/lib/summary/cache'
-import type { PipelineStatus, SensorProgress, SummaryProgress, SummarySensorProgress } from '@/lib/models'
+import { runPipeline } from '@/lib/pipeline/orchestrator'
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   // Verify cron secret
@@ -20,121 +16,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const config = await loadConfig()
 
-  const enabledSensors = Object.keys(config.sensors_enabled).filter(
-    (k) => config.sensors_enabled[k],
-  )
-  const status: PipelineStatus = {
-    running: true,
-    started_at: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
-    completed_at: null,
-    sensors: enabledSensors.map((name): SensorProgress => ({
-      name,
-      state: 'pending',
-      item_count: 0,
-      error: null,
-    })),
-    total_items: 0,
-  }
-  await writePipelineStatus(status).catch(() => {})
-
-  const onProgress = async (
-    sensorName: string,
-    state: string,
-    itemCount: number,
-    error: string | null,
-    errorKind: 'config' | 'api' | null,
-  ) => {
-    for (const sp of status.sensors) {
-      if (sp.name === sensorName) {
-        sp.state = state as SensorProgress['state']
-        sp.item_count = itemCount
-        sp.error = error
-        sp.error_kind = errorKind
-        break
-      }
-    }
-    status.total_items = status.sensors
-      .filter((sp) => sp.state === 'ok')
-      .reduce((sum, sp) => sum + sp.item_count, 0)
-    await writePipelineStatus(status).catch(() => {})
-  }
-
   try {
-    const report = await collect(config, onProgress)
-    status.running = false
-    status.completed_at = new Date().toISOString().replace(/\.\d+Z$/, 'Z')
-    status.total_items = Object.values(report.items)
-      .flat()
-      .length
-    await writePipelineStatus(status).catch(() => {})
-
-    // Auto-summarize if LLM provider is configured
-    if (config.summary_provider) {
-      // Build initial summary progress from report sensors
-      const sensorGroups = new Map<string, string>()
-      for (const section of Object.values(report.items)) {
-        for (const item of section) {
-          if (!sensorGroups.has(item.source)) sensorGroups.set(item.source, item.source)
-        }
-      }
-
-      const summaryStatus: SummaryProgress = {
-        running: true,
-        started_at: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
-        completed_at: null,
-        sensors: [...sensorGroups.keys(), '__overall__'].map((name): SummarySensorProgress => ({
-          sensor_name: name,
-          label: name === '__overall__' ? 'Overall' : name,
-          state: 'pending',
-          error: null,
-        })),
-      }
-      await writeSummaryProgress(summaryStatus).catch(() => {})
-
-      const onSummaryProgress = async (
-        sensorName: string,
-        label: string,
-        state: 'pending' | 'running' | 'ok' | 'failed',
-        error: string | null,
-      ) => {
-        for (const sp of summaryStatus.sensors) {
-          if (sp.sensor_name === sensorName) {
-            sp.state = state
-            sp.label = label
-            sp.error = error
-            break
-          }
-        }
-        await writeSummaryProgress(summaryStatus).catch(() => {})
-      }
-
-      try {
-        const summary = await summarizeReport(report, {
-          base_url: config.summary_base_url,
-          api_key: config.summary_api_key,
-          model: config.summary_model,
-        }, onSummaryProgress)
-        await writeSummary(summary)
-      } catch (err) {
-        console.error('Auto-summarization failed:', err)
-      } finally {
-        summaryStatus.running = false
-        summaryStatus.completed_at = new Date().toISOString().replace(/\.\d+Z$/, 'Z')
-        await writeSummaryProgress(summaryStatus).catch(() => {})
-      }
-    }
+    const mode = config.summary_provider ? 'fetch_summarize' : 'fetch'
+    const result = await runPipeline(config, mode as 'fetch' | 'fetch_summarize')
 
     return NextResponse.json({
       status: 'ok',
-      sources_ok: report.sources_ok.length,
-      sources_failed: report.sources_failed.length,
-      total_items: status.total_items,
+      mode,
+      sources_ok: result.report?.sources_ok.length ?? 0,
+      sources_failed: result.report?.sources_failed.length ?? 0,
+      total_items: Object.values(result.report?.items ?? {}).flat().length,
+      summarized: !!result.summary,
     })
   } catch (err) {
-    status.running = false
-    status.completed_at = new Date().toISOString().replace(/\.\d+Z$/, 'Z')
-    await writePipelineStatus(status).catch(() => {})
-
     return NextResponse.json(
       { detail: `Pipeline failed: ${err}` },
       { status: 500 },

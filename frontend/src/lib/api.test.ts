@@ -14,7 +14,7 @@ const mockWritePipelineStatus = vi.fn()
 const mockLoadConfig = vi.fn()
 const mockSaveConfig = vi.fn()
 const mockMaskConfig = vi.fn()
-const mockCollect = vi.fn()
+const mockRunPipeline = vi.fn()
 
 vi.mock('./pipeline/cache', () => ({
   readReport: (...args: unknown[]) => mockReadReport(...args),
@@ -30,8 +30,8 @@ vi.mock('./config', () => ({
   maskConfig: (...args: unknown[]) => mockMaskConfig(...args),
 }))
 
-vi.mock('./pipeline/collector', () => ({
-  collect: (...args: unknown[]) => mockCollect(...args),
+vi.mock('./pipeline/orchestrator', () => ({
+  runPipeline: (...args: unknown[]) => mockRunPipeline(...args),
 }))
 
 function makeReport(overrides: Partial<IntelReport> = {}): IntelReport {
@@ -86,14 +86,33 @@ describe('GET /api/health', () => {
 })
 
 describe('POST /api/fetch', () => {
-  it('returns 202 accepted', async () => {
-    mockCollect.mockResolvedValue(makeReport())
-    mockWritePipelineStatus.mockResolvedValue(undefined)
+  it('returns 202 accepted with default mode', async () => {
+    mockRunPipeline.mockResolvedValue({ report: makeReport(), summary: null })
     const { POST } = await import('@/app/api/fetch/route')
-    const resp = await POST()
+    const req = new NextRequest('http://localhost/api/fetch', {
+      method: 'POST',
+      body: JSON.stringify({}),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const resp = await POST(req)
     expect(resp.status).toBe(202)
     const data = await resp.json()
     expect(data.status).toBe('accepted')
+    expect(data.mode).toBe('fetch_summarize')
+  })
+
+  it('accepts explicit mode in body', async () => {
+    mockRunPipeline.mockResolvedValue({ report: makeReport(), summary: null })
+    const { POST } = await import('@/app/api/fetch/route')
+    const req = new NextRequest('http://localhost/api/fetch', {
+      method: 'POST',
+      body: JSON.stringify({ mode: 'fetch' }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const resp = await POST(req)
+    expect(resp.status).toBe(202)
+    const data = await resp.json()
+    expect(data.mode).toBe('fetch')
   })
 })
 
@@ -104,15 +123,29 @@ describe('GET /api/fetch/status', () => {
     const resp = await GET()
     const data = await resp.json()
     expect(data.running).toBe(false)
+    expect(data.mode).toBe('fetch_summarize')
+    expect(data.concurrency).toBe(4)
+    expect(data.overall_summary).toBe('skipped')
     expect(data.sensors).toEqual([])
   })
 
   it('returns pipeline status when available', async () => {
     const status: PipelineStatus = {
       running: true,
+      mode: 'fetch_summarize',
+      concurrency: 4,
       started_at: '2026-01-01T07:00:00Z',
       completed_at: null,
-      sensors: [{ name: 'hn', state: 'running', item_count: 0, error: null }],
+      sensors: [{
+        name: 'hn',
+        fetch: 'running',
+        fetch_error: null,
+        fetch_error_kind: null,
+        summary: 'queued',
+        summary_error: null,
+        item_count: 0,
+      }],
+      overall_summary: 'queued',
       total_items: 0,
     }
     mockReadPipelineStatus.mockResolvedValue(status)
@@ -121,6 +154,7 @@ describe('GET /api/fetch/status', () => {
     const data = await resp.json()
     expect(data.running).toBe(true)
     expect(data.sensors).toHaveLength(1)
+    expect(data.mode).toBe('fetch_summarize')
   })
 })
 

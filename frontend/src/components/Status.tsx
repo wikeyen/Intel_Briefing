@@ -3,7 +3,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { api } from '@/api/client'
-import type { HealthResponse, IntelReport, ConfigSettings, PipelineStatus, SensorProgress, SummaryProgress } from '@/api/client'
+import type { HealthResponse, IntelReport, ConfigSettings, PipelineStatus, SensorJobProgress, RunMode, StageState } from '@/api/client'
 import { useToast } from '@/lib/toast-context'
 
 function timeAgo(isoString: string): string {
@@ -97,9 +97,9 @@ function KindBadge({ kind }: { kind: 'config' | 'api' | null | undefined }) {
   )
 }
 
-function ErrorRow({ sensor }: { sensor: SensorProgress }) {
-  const label = SENSOR_LABEL_MAP[sensor.name] ?? sensor.name
-  const msg = sensor.error ?? ''
+function ErrorRow({ entry }: { entry: { name: string; error: string; kind: 'config' | 'api' | null } }) {
+  const label = SENSOR_LABEL_MAP[entry.name] ?? entry.name
+  const msg = entry.error
   const isLong = msg.length > ERROR_TRUNCATE_LENGTH
   const [expanded, setExpanded] = useState(false)
 
@@ -120,7 +120,7 @@ function ErrorRow({ sensor }: { sensor: SensorProgress }) {
       }}>
         {label}
       </span>
-      <KindBadge kind={sensor.error_kind} />
+      <KindBadge kind={entry.kind} />
       <span style={{
         fontSize: '0.75rem',
         fontFamily: 'ui-monospace, monospace',
@@ -155,6 +155,34 @@ function ErrorRow({ sensor }: { sensor: SensorProgress }) {
   )
 }
 
+function StageBadge({ state, label }: { state: StageState; label: string }) {
+  const colors: Record<StageState, { dot: string; text: string }> = {
+    queued: { dot: 'var(--border)', text: 'var(--ink-faint)' },
+    running: { dot: 'var(--accent)', text: 'var(--ink-muted)' },
+    ok: { dot: 'var(--ok)', text: 'var(--ok)' },
+    failed: { dot: 'var(--err)', text: 'var(--err)' },
+    skipped: { dot: 'var(--border)', text: 'var(--ink-faint)' },
+  }
+  const c = colors[state]
+
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.6875rem' }}>
+      <span style={{
+        width: 6,
+        height: 6,
+        borderRadius: '50%',
+        background: state === 'skipped' ? 'none' : c.dot,
+        border: state === 'skipped' ? '1px solid var(--border)' : 'none',
+        flexShrink: 0,
+        animation: state === 'running' ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
+      }} />
+      <span style={{ color: c.text, fontWeight: state === 'ok' || state === 'failed' ? 500 : 400 }}>
+        {state === 'skipped' ? '\u2014' : label}
+      </span>
+    </span>
+  )
+}
+
 export function Status() {
   const showToast = useToast()
   const [health, setHealth]           = useState<HealthResponse | null>(null)
@@ -164,7 +192,6 @@ export function Status() {
   const [running, setRunning]         = useState(false)
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null)
   const [, setTick]                   = useState(0)
-  const [summaryProgress, setSummaryProgress] = useState<SummaryProgress | null>(null)
   const lastFetchedAtRef              = useRef<string | null>(null)
 
   const loadAll = () => {
@@ -216,22 +243,13 @@ export function Status() {
     return () => clearInterval(iv)
   }, [])
 
-  // Poll /summary/status every 3s for live summarization progress
-  useEffect(() => {
-    const check = () => {
-      api.getSummaryStatus().then(setSummaryProgress).catch(() => {})
-    }
-    check()
-    const iv = setInterval(check, 3_000)
-    return () => clearInterval(iv)
-  }, [])
-
-  const handleRunNow = async () => {
+  const handleRun = async (mode: RunMode) => {
     setFetching(true)
     try {
-      await api.triggerFetch()
+      await api.triggerFetch(mode)
       setRunning(true)
-      showToast('Pipeline triggered — results will appear shortly')
+      const labels = { fetch: 'Fetch', summarize: 'Summarize', fetch_summarize: 'Fetch + Summarize' }
+      showToast(`${labels[mode]} triggered — results will appear shortly`)
     } catch (e) {
       showToast('Trigger failed: ' + (e as Error).message)
     } finally {
@@ -261,28 +279,49 @@ export function Status() {
     && (Date.now() - new Date(pipelineStatus.started_at).getTime()) < 5 * 60 * 1000)
 
   // Build live-sensor lookup once (used across all sections when running)
-  const liveSensors: Record<string, SensorProgress> = {}
+  const liveSensors: Record<string, SensorJobProgress> = {}
   if (isRunning && pipelineStatus) {
     for (const sp of pipelineStatus.sensors) {
       liveSensors[sp.name] = sp
     }
   }
 
-  const doneSensors = pipelineStatus
-    ? pipelineStatus.sensors.filter(s => s.state === 'ok' || s.state === 'failed').length
-    : 0
-  const totalSensors = pipelineStatus?.sensors.length ?? 0
+  // Stage-based progress calculation
+  const totalStages = (() => {
+    if (!pipelineStatus) return 0
+    const n = pipelineStatus.sensors.length
+    switch (pipelineStatus.mode) {
+      case 'fetch': return n
+      case 'summarize': return n + 1
+      case 'fetch_summarize': return n * 2 + 1
+    }
+  })()
 
-  // Summarization progress — stale threshold mirrors pipeline (5 min)
-  const isSummarizing = !!(summaryProgress?.running && summaryProgress.started_at
-    && (Date.now() - new Date(summaryProgress.started_at).getTime()) < 5 * 60 * 1000)
-  const summaryDoneSensors = summaryProgress
-    ? summaryProgress.sensors.filter(s => s.state === 'ok' || s.state === 'failed').length
-    : 0
-  const summaryTotalSensors = summaryProgress?.sensors.length ?? 0
+  const doneStages = (() => {
+    if (!pipelineStatus) return 0
+    let done = 0
+    for (const s of pipelineStatus.sensors) {
+      if (['ok', 'failed', 'skipped'].includes(s.fetch)) done++
+      if (['ok', 'failed', 'skipped'].includes(s.summary)) done++
+    }
+    if (['ok', 'failed', 'skipped'].includes(pipelineStatus.overall_summary)) done++
+    return done
+  })()
 
-  // Hero banner background: running or summarizing overrides to amber, otherwise reflects health
-  const heroBg = (isRunning || isSummarizing) ? 'var(--warn-bg)' : meta.bg
+  // Derive hero state from pipeline progress
+  const heroState = (() => {
+    if (!isRunning) return 'idle'
+    if (!pipelineStatus) return 'running'
+    const anySummaryRunning = pipelineStatus.sensors.some(s => s.summary === 'running')
+      || pipelineStatus.overall_summary === 'running'
+    const anyFetchRunning = pipelineStatus.sensors.some(s => s.fetch === 'running')
+    if (anySummaryRunning) return 'summarizing'
+    if (anyFetchRunning) return 'fetching'
+    return 'running'
+  })()
+
+  // Hero banner background: running overrides to amber, otherwise reflects health
+  const heroBg = isRunning ? 'var(--warn-bg)' : meta.bg
 
   return (
     <section id="status" style={{ padding: '4.5rem 0' }}>
@@ -319,9 +358,9 @@ export function Status() {
               width: 14,
               height: 14,
               borderRadius: '50%',
-              background: (isRunning || isSummarizing) ? 'var(--accent)' : meta.color,
+              background: isRunning ? 'var(--accent)' : meta.color,
               flexShrink: 0,
-              animation: (isRunning || isSummarizing) ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
+              animation: isRunning ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
             }} />
             <div style={{ minWidth: 0 }}>
               <div style={{
@@ -330,7 +369,10 @@ export function Status() {
                 color: 'var(--ink)',
                 lineHeight: 1.3,
               }}>
-                {isRunning ? 'Pipeline Running' : isSummarizing ? 'Summarizing' : meta.label}
+                {heroState === 'fetching' ? 'Fetching'
+                  : heroState === 'summarizing' ? 'Summarizing'
+                  : isRunning ? 'Pipeline Running'
+                  : meta.label}
               </div>
               <div style={{
                 fontSize: '0.8125rem',
@@ -338,15 +380,13 @@ export function Status() {
                 marginTop: '0.125rem',
               }}>
                 {isRunning && pipelineStatus
-                  ? `${doneSensors}/${totalSensors} sensors complete · ${pipelineStatus.total_items} items`
-                  : isSummarizing
-                    ? `${summaryDoneSensors}/${summaryTotalSensors} sources summarized`
-                    : meta.desc}
+                  ? `${doneStages}/${totalStages} stages complete \u00b7 ${pipelineStatus.total_items} items`
+                  : meta.desc}
               </div>
             </div>
           </div>
 
-          {/* Right side: last run timestamp + Run Now button */}
+          {/* Right side: last run timestamp + run mode buttons */}
           <div className="hero-actions" style={{
             display: 'flex',
             alignItems: 'center',
@@ -372,26 +412,62 @@ export function Status() {
                 </div>
               </div>
             )}
-            <button
-              onClick={handleRunNow}
-              disabled={fetching || running || isRunning}
-              style={{
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                padding: '0.625rem 1.5rem',
-                borderRadius: 6,
-                border: 'none',
-                color: (fetching || running || isRunning) ? 'var(--ink-faint)' : '#FFFFFF',
-                background: (fetching || running || isRunning) ? 'var(--border)' : 'var(--ink)',
-                cursor: (fetching || running || isRunning) ? 'not-allowed' : 'pointer',
-                transition: 'background 120ms',
-                whiteSpace: 'nowrap',
-              }}
-              onMouseEnter={e => { if (!fetching && !running && !isRunning) (e.currentTarget as HTMLElement).style.background = '#000000' }}
-              onMouseLeave={e => { if (!fetching && !running && !isRunning) (e.currentTarget as HTMLElement).style.background = 'var(--ink)' }}
-            >
-              {fetching ? 'Triggering…' : 'Run Now'}
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={() => handleRun('fetch')}
+                disabled={fetching || running || isRunning}
+                style={{
+                  fontSize: '0.8125rem',
+                  fontWeight: 500,
+                  padding: '0.5rem 1rem',
+                  borderRadius: 6,
+                  border: 'none',
+                  color: (fetching || running || isRunning) ? 'var(--ink-faint)' : '#FFFFFF',
+                  background: (fetching || running || isRunning) ? 'var(--border)' : 'var(--ink)',
+                  cursor: (fetching || running || isRunning) ? 'not-allowed' : 'pointer',
+                  transition: 'background 120ms',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Fetch
+              </button>
+              <button
+                onClick={() => handleRun('summarize')}
+                disabled={fetching || running || isRunning || !report}
+                style={{
+                  fontSize: '0.8125rem',
+                  fontWeight: 500,
+                  padding: '0.5rem 1rem',
+                  borderRadius: 6,
+                  border: 'none',
+                  color: (fetching || running || isRunning || !report) ? 'var(--ink-faint)' : '#FFFFFF',
+                  background: (fetching || running || isRunning || !report) ? 'var(--border)' : 'var(--ink)',
+                  cursor: (fetching || running || isRunning || !report) ? 'not-allowed' : 'pointer',
+                  transition: 'background 120ms',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Summarize
+              </button>
+              <button
+                onClick={() => handleRun('fetch_summarize')}
+                disabled={fetching || running || isRunning}
+                style={{
+                  fontSize: '0.8125rem',
+                  fontWeight: 500,
+                  padding: '0.5rem 1rem',
+                  borderRadius: 6,
+                  border: 'none',
+                  color: (fetching || running || isRunning) ? 'var(--ink-faint)' : '#FFFFFF',
+                  background: (fetching || running || isRunning) ? 'var(--border)' : 'var(--ink)',
+                  cursor: (fetching || running || isRunning) ? 'not-allowed' : 'pointer',
+                  transition: 'background 120ms',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Fetch + Summarize
+              </button>
+            </div>
           </div>
         </div>
 
@@ -407,7 +483,7 @@ export function Status() {
           }}>
             <div style={{
               height: '100%',
-              width: totalSensors > 0 ? `${Math.round((doneSensors / totalSensors) * 100)}%` : '0%',
+              width: totalStages > 0 ? `${Math.round((doneStages / totalStages) * 100)}%` : '0%',
               background: 'var(--accent)',
               borderRadius: '0 2px 2px 0',
               transition: 'width 400ms ease',
@@ -559,7 +635,7 @@ export function Status() {
           const sectionTotal = isRunning
             ? section.sensors.reduce((sum, sk) => {
                 const sp = liveSensors[sk]
-                return sum + (sp?.state === 'ok' ? sp.item_count : 0)
+                return sum + (sp?.fetch === 'ok' ? sp.item_count : 0)
               }, 0)
             : section.key === 'social'
               ? (report?.items['social']?.length ?? 0)
@@ -602,42 +678,27 @@ export function Status() {
               {section.sensors.map((sensorKey) => {
                 const label = SENSOR_LABEL_MAP[sensorKey] ?? sensorKey
 
-                // When pipeline is actively running, derive status from live progress
+                // When pipeline is actively running, derive status from live two-stage progress
                 if (isRunning) {
                   const sp = liveSensors[sensorKey]
-                  const state = sp?.state ?? 'pending'
+                  const fetchState = sp?.fetch ?? 'queued'
 
-                  const isConfigErr = state === 'failed' && sp?.error_kind === 'config'
-                  const isOkZero = state === 'ok' && sp!.item_count === 0
+                  const isConfigErr = fetchState === 'failed' && sp?.fetch_error_kind === 'config'
+                  const isOkZero = fetchState === 'ok' && sp!.item_count === 0
 
+                  // Derive a composite state for the dot color: fetch drives the primary indicator
                   const dotColor =
-                    isOkZero            ? 'var(--warn)'   :
-                    state === 'ok'      ? 'var(--ok)'     :
-                    isConfigErr         ? 'var(--warn)'   :
-                    state === 'failed'  ? 'var(--err)'    :
-                    state === 'running' ? 'var(--accent)' :
+                    isOkZero                  ? 'var(--warn)'   :
+                    fetchState === 'ok'       ? 'var(--ok)'     :
+                    isConfigErr               ? 'var(--warn)'   :
+                    fetchState === 'failed'   ? 'var(--err)'    :
+                    fetchState === 'running'  ? 'var(--accent)' :
                     'var(--border)'
 
                   const labelColor =
-                    state === 'failed' && !isConfigErr ? 'var(--err)'      :
-                    state === 'pending'                ? 'var(--ink-faint)' :
+                    fetchState === 'failed' && !isConfigErr ? 'var(--err)'      :
+                    fetchState === 'queued'                 ? 'var(--ink-faint)' :
                     'var(--ink)'
-
-                  const rightText =
-                    isOkZero            ? '0'                                  :
-                    state === 'ok'      ? String(sp!.item_count)               :
-                    isConfigErr         ? (sp?.error ?? 'Missing config').slice(0, 30) :
-                    state === 'failed'  ? (sp?.error ?? 'Failed')              :
-                    state === 'running' ? 'Running…'                           :
-                    '—'
-
-                  const rightColor =
-                    isOkZero            ? 'var(--warn)'    :
-                    isConfigErr         ? 'var(--warn)'    :
-                    state === 'failed'  ? 'var(--err)'     :
-                    state === 'ok'      ? 'var(--accent)'  :
-                    state === 'running' ? 'var(--ink-muted)' :
-                    'var(--ink-faint)'
 
                   return (
                     <div key={sensorKey} style={{
@@ -653,20 +714,20 @@ export function Status() {
                           borderRadius: '50%',
                           background: dotColor,
                           flexShrink: 0,
-                          animation: state === 'running' ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
+                          animation: fetchState === 'running' ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
                         }} />
                         <span style={{ fontSize: '0.8125rem', color: labelColor }}>
                           {label}
                         </span>
                       </div>
-                      <span style={{
-                        fontSize: '0.75rem',
-                        color: rightColor,
-                        fontWeight: state === 'ok' ? 600 : 400,
-                        fontFamily: state === 'ok' ? 'ui-monospace, monospace' : 'inherit',
-                      }}>
-                        {rightText}
-                      </span>
+                      {sp ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <StageBadge state={sp.fetch} label="Fetch" />
+                          <StageBadge state={sp.summary} label="Summary" />
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--ink-faint)' }}>{'\u2014'}</span>
+                      )}
                     </div>
                   )
                 }
@@ -677,9 +738,9 @@ export function Status() {
                 const isFailed   = !isDisabled && report?.sources_failed.includes(sensorKey)
                 const count      = sensorCounts[sensorKey] ?? 0
 
-                // Use pipeline status error_kind as source of truth for failure classification
+                // Use pipeline status fetch_error_kind as source of truth for failure classification
                 const lastSp = pipelineStatus?.sensors.find(s => s.name === sensorKey)
-                const idleConfigErr = isFailed && lastSp?.error_kind === 'config'
+                const idleConfigErr = isFailed && lastSp?.fetch_error_kind === 'config'
                 const idleOkZero = isOk && count === 0
 
                 const dotColor = isDisabled    ? 'var(--border)'
@@ -692,7 +753,7 @@ export function Status() {
                 const rightText = isDisabled     ? 'Off'
                   : idleOkZero   ? '0'
                   : isOk         ? `${count}`
-                  : idleConfigErr ? (lastSp?.error ?? 'Missing config').slice(0, 30)
+                  : idleConfigErr ? (lastSp?.fetch_error ?? 'Missing config').slice(0, 30)
                   : isFailed     ? 'Failed'
                   : report       ? '—' : '…'
 
@@ -744,6 +805,30 @@ export function Status() {
         })}
       </div>
 
+      {/* ── Overall Summary row (when mode includes summarization) ── */}
+      {pipelineStatus && pipelineStatus.mode !== 'fetch' && (
+        <div style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 8,
+          padding: '0.75rem 1.25rem',
+          marginBottom: '1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ink)' }}>
+            Overall Summary
+          </span>
+          <StageBadge state={pipelineStatus.overall_summary} label={
+            pipelineStatus.overall_summary === 'running' ? 'Generating\u2026' :
+            pipelineStatus.overall_summary === 'ok' ? 'Complete' :
+            pipelineStatus.overall_summary === 'failed' ? 'Failed' :
+            pipelineStatus.overall_summary === 'queued' ? 'Waiting' : '\u2014'
+          } />
+        </div>
+      )}
+
       {/* ── Total summary ───────────────────────────────────── */}
       {(report || isRunning) && (
         <div style={{
@@ -767,10 +852,15 @@ export function Status() {
 
       {/* ── Console — sensor errors from last run ─────────── */}
       {(() => {
-        const allErrors = pipelineStatus?.sensors.filter(s => s.error !== null) ?? []
+        // Build errors from both fetch and summary stages
+        const allErrors: Array<{ name: string; error: string; kind: 'config' | 'api' | null }> = []
+        for (const s of (pipelineStatus?.sensors ?? [])) {
+          if (s.fetch_error) allErrors.push({ name: s.name, error: s.fetch_error, kind: s.fetch_error_kind })
+          if (s.summary_error) allErrors.push({ name: s.name, error: s.summary_error, kind: null })
+        }
         const errors = allErrors.slice(0, 100)
-        const configErrors = errors.filter(s => s.error_kind === 'config')
-        const apiErrors = errors.filter(s => s.error_kind !== 'config')
+        const configErrors = errors.filter(e => e.kind === 'config')
+        const apiErrors = errors.filter(e => e.kind !== 'config')
 
         return (
           <div style={{ marginTop: '2rem' }}>
@@ -795,7 +885,7 @@ export function Status() {
                 color: 'var(--ink-faint)',
                 fontSize: '0.8125rem',
               }}>
-                {pipelineStatus ? 'No errors — all sensors reporting clean.' : 'Loading pipeline status\u2026'}
+                {pipelineStatus ? 'No errors \u2014 all sensors reporting clean.' : 'Loading pipeline status\u2026'}
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -817,7 +907,7 @@ export function Status() {
                     }}>
                       Configuration ({configErrors.length})
                     </div>
-                    {configErrors.map(s => <ErrorRow key={s.name} sensor={s} />)}
+                    {configErrors.map((e, i) => <ErrorRow key={`${e.name}-cfg-${i}`} entry={e} />)}
                   </div>
                 )}
 
@@ -839,7 +929,7 @@ export function Status() {
                     }}>
                       API Errors ({apiErrors.length})
                     </div>
-                    {apiErrors.map(s => <ErrorRow key={s.name} sensor={s} />)}
+                    {apiErrors.map((e, i) => <ErrorRow key={`${e.name}-api-${i}`} entry={e} />)}
                   </div>
                 )}
               </div>

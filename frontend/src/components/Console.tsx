@@ -3,7 +3,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { api } from '@/api/client'
-import type { PipelineStatus, SensorProgress } from '@/api/client'
+import type { PipelineStatus } from '@/api/client'
 import { Pagination } from './Pagination'
 
 const MAX_ERRORS = 100
@@ -49,9 +49,9 @@ function KindBadge({ kind }: { kind: 'config' | 'api' | null | undefined }) {
   )
 }
 
-function ErrorRow({ sensor }: { sensor: SensorProgress }) {
-  const label = SENSOR_LABELS[sensor.name] ?? sensor.name
-  const msg = sensor.error ?? ''
+function ErrorRow({ entry }: { entry: { name: string; error: string; kind: 'config' | 'api' | null } }) {
+  const label = SENSOR_LABELS[entry.name] ?? entry.name
+  const msg = entry.error
   const isLong = msg.length > TRUNCATE_LENGTH
   const [expanded, setExpanded] = useState(false)
 
@@ -75,7 +75,7 @@ function ErrorRow({ sensor }: { sensor: SensorProgress }) {
       </span>
 
       {/* Error kind badge */}
-      <KindBadge kind={sensor.error_kind} />
+      <KindBadge kind={entry.kind} />
 
       {/* Error message with optional expand toggle */}
       <span style={{
@@ -86,7 +86,7 @@ function ErrorRow({ sensor }: { sensor: SensorProgress }) {
         wordBreak: 'break-word',
         minWidth: 0,
       }}>
-        {isLong && !expanded ? msg.slice(0, TRUNCATE_LENGTH) + '…' : msg}
+        {isLong && !expanded ? msg.slice(0, TRUNCATE_LENGTH) + '\u2026' : msg}
         {isLong && (
           <button
             onClick={() => setExpanded(!expanded)}
@@ -125,24 +125,24 @@ export function Console() {
     return () => clearInterval(iv)
   }, [])
 
-  // Cap errors at MAX_ERRORS as a safety limit
-  const allErrors = status?.sensors.filter(s => s.error !== null) ?? []
+  // Build errors from both fetch and summary stages, capped at MAX_ERRORS
+  const allErrors: Array<{ name: string; error: string; kind: 'config' | 'api' | null }> = []
+  for (const s of (status?.sensors ?? [])) {
+    if (s.fetch_error) allErrors.push({ name: s.name, error: s.fetch_error, kind: s.fetch_error_kind })
+    if (s.summary_error) allErrors.push({ name: s.name, error: s.summary_error, kind: null })
+  }
   const errors = allErrors.slice(0, MAX_ERRORS)
-  const configErrors = errors.filter(s => s.error_kind === 'config')
-  const apiErrors = errors.filter(s => s.error_kind !== 'config')
+  const configErrors = errors.filter(e => e.kind === 'config')
+  const apiErrors = errors.filter(e => e.kind !== 'config')
 
   // Paginate the combined error list
   const totalPages = Math.ceil(errors.length / PAGE_SIZE)
   const currentPage = Math.min(page, totalPages || 1)
   const pageStart = (currentPage - 1) * PAGE_SIZE
-  const pagedConfig = configErrors.slice(
-    Math.max(0, pageStart - 0),
-    Math.min(configErrors.length, pageStart + PAGE_SIZE)
-  )
   // For a flat pagination across both groups: compute which items fall on the current page
   const pagedErrors = errors.slice(pageStart, pageStart + PAGE_SIZE)
-  const pagedConfigErrors = pagedErrors.filter(s => s.error_kind === 'config')
-  const pagedApiErrors = pagedErrors.filter(s => s.error_kind !== 'config')
+  const pagedConfigErrors = pagedErrors.filter(e => e.kind === 'config')
+  const pagedApiErrors = pagedErrors.filter(e => e.kind !== 'config')
 
   const runTime = status?.completed_at
     ? new Date(status.completed_at).toLocaleString()
@@ -209,7 +209,7 @@ export function Console() {
               }}>
                 Configuration ({configErrors.length})
               </div>
-              {pagedConfigErrors.map(s => <ErrorRow key={s.name} sensor={s} />)}
+              {pagedConfigErrors.map((e, i) => <ErrorRow key={`${e.name}-cfg-${i}`} entry={e} />)}
             </div>
           )}
 
@@ -232,7 +232,7 @@ export function Console() {
               }}>
                 API Errors ({apiErrors.length})
               </div>
-              {pagedApiErrors.map(s => <ErrorRow key={s.name} sensor={s} />)}
+              {pagedApiErrors.map((e, i) => <ErrorRow key={`${e.name}-api-${i}`} entry={e} />)}
             </div>
           )}
 

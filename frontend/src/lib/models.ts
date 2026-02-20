@@ -255,6 +255,10 @@ export interface ConfigSettings {
   // Mastodon credentials
   mastodon_token: string | null
 
+  // Twitter/X authentication cookies (for @the-convocation/twitter-scraper)
+  twitter_auth_token: string | null
+  twitter_ct0: string | null
+
   // Social sensor account lists (per platform)
   social_accounts_x: string[]
   social_accounts_bluesky: string[]
@@ -324,6 +328,8 @@ export function defaultConfig(): ConfigSettings {
     bluesky_handle: null,
     bluesky_app_password: null,
     mastodon_token: null,
+    twitter_auth_token: null,
+    twitter_ct0: null,
     social_accounts_x: [],
     social_accounts_bluesky: [],
     social_accounts_mastodon: [],

@@ -1,5 +1,5 @@
-// ABOUTME: Tests for x_posts sensor — xcancel.com HTML scraping.
-// ABOUTME: Mocks fetch to return sample xcancel HTML and verifies IntelItem mapping.
+// ABOUTME: Tests for x_posts sensor — twitter-scraper primary path + xcancel fallback.
+// ABOUTME: Mocks @the-convocation/twitter-scraper and fetch to verify both code paths.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { ConfigSettings } from '../models'
 import { defaultConfig } from '../models'
@@ -9,6 +9,7 @@ let fetchXPosts: (config: ConfigSettings, limit: number) => Promise<import('../m
 // Use a recent fixed date so lookback filtering doesn't discard items
 const NOW = new Date('2026-02-20T17:00:00Z').getTime()
 
+// ── Xcancel sample HTML ──────────────────────────────────────────────────────
 const SAMPLE_HTML = `
 <html><body><div class="container">
 <div class="timeline">
@@ -60,19 +61,21 @@ const SAMPLE_HTML = `
 </div>
 </div></body></html>`
 
-beforeEach(async () => {
-  vi.resetModules()
-  vi.stubGlobal('fetch', vi.fn())
-  vi.spyOn(Date, 'now').mockReturnValue(NOW)
-  const mod = await import('./x_posts')
-  fetchXPosts = mod.fetchXPosts
-})
-
 function makeConfig(overrides?: Partial<ConfigSettings>): ConfigSettings {
   return { ...defaultConfig(), social_accounts_x: ['testuser'], ...overrides }
 }
 
-describe('fetchXPosts', () => {
+// ── Xcancel fallback tests (no Twitter cookies) ─────────────────────────────
+
+describe('fetchXPosts (xcancel fallback)', () => {
+  beforeEach(async () => {
+    vi.resetModules()
+    vi.stubGlobal('fetch', vi.fn())
+    vi.spyOn(Date, 'now').mockReturnValue(NOW)
+    const mod = await import('./x_posts')
+    fetchXPosts = mod.fetchXPosts
+  })
+
   it('returns empty array when no X accounts configured', async () => {
     const items = await fetchXPosts(makeConfig({ social_accounts_x: [] }), 10)
     expect(items).toEqual([])
@@ -151,5 +154,109 @@ describe('fetchXPosts', () => {
     const items = await fetchXPosts(makeConfig(), 10)
     expect(items).toHaveLength(1)
     expect(callCount).toBe(2)
+  })
+})
+
+// ── Twitter-scraper (authenticated) tests ────────────────────────────────────
+
+const mockTweets = [
+  {
+    id: '111',
+    text: 'Latest tweet from test user',
+    timeParsed: new Date('2026-02-20T15:00:00Z'),
+    timestamp: Math.floor(new Date('2026-02-20T15:00:00Z').getTime() / 1000),
+    name: 'Test User',
+    username: 'testuser',
+    permanentUrl: 'https://x.com/testuser/status/111',
+    likes: 5000,
+    retweets: 200,
+    views: 100000,
+    isRetweet: false,
+    isReply: false,
+    hashtags: [],
+    mentions: [],
+    photos: [],
+    videos: [],
+    urls: [],
+    thread: [],
+  },
+  {
+    id: '222',
+    text: 'Retweeted someone',
+    timeParsed: new Date('2026-02-20T14:00:00Z'),
+    timestamp: Math.floor(new Date('2026-02-20T14:00:00Z').getTime() / 1000),
+    name: 'Test User',
+    username: 'testuser',
+    permanentUrl: 'https://x.com/testuser/status/222',
+    likes: 0,
+    retweets: 0,
+    views: 0,
+    isRetweet: true,
+    isReply: false,
+    hashtags: [],
+    mentions: [],
+    photos: [],
+    videos: [],
+    urls: [],
+    thread: [],
+  },
+]
+
+function makeMockScraper(tweets = mockTweets) {
+  return {
+    isLoggedIn: vi.fn().mockResolvedValue(false),
+    setCookies: vi.fn().mockResolvedValue(undefined),
+    getTweets: vi.fn().mockImplementation(async function* () {
+      for (const t of tweets) yield t
+    }),
+  }
+}
+
+describe('fetchXPosts (twitter-scraper)', () => {
+  let mockScraper: ReturnType<typeof makeMockScraper>
+
+  beforeEach(async () => {
+    vi.resetModules()
+    vi.spyOn(Date, 'now').mockReturnValue(NOW)
+    mockScraper = makeMockScraper()
+    vi.doMock('@the-convocation/twitter-scraper', () => ({
+      Scraper: vi.fn().mockImplementation(() => mockScraper),
+    }))
+    const mod = await import('./x_posts')
+    fetchXPosts = mod.fetchXPosts
+  })
+
+  function authConfig(overrides?: Partial<ConfigSettings>): ConfigSettings {
+    return makeConfig({
+      twitter_auth_token: 'test-token',
+      twitter_ct0: 'test-ct0',
+      ...overrides,
+    })
+  }
+
+  it('uses scraper when auth cookies are configured', async () => {
+    const items = await fetchXPosts(authConfig(), 10)
+    expect(mockScraper.setCookies).toHaveBeenCalled()
+    expect(mockScraper.getTweets).toHaveBeenCalledWith('testuser', expect.any(Number))
+    expect(items).toHaveLength(1) // retweet excluded
+    expect(items[0].id).toBe('x-111')
+    expect(items[0].title).toBe('Latest tweet from test user')
+    expect(items[0].heat).toContain('5.0K likes')
+    expect(items[0].heat).toContain('100.0K views')
+  })
+
+  it('skips retweets and replies', async () => {
+    const items = await fetchXPosts(authConfig(), 10)
+    expect(items.every(i => i.id !== 'x-222')).toBe(true)
+  })
+
+  it('respects limit', async () => {
+    const items = await fetchXPosts(authConfig(), 1)
+    expect(items.length).toBeLessThanOrEqual(1)
+  })
+
+  it('strips @ from handles before calling getTweets', async () => {
+    await fetchXPosts(authConfig({ social_accounts_x: ['@testuser'] }), 10)
+    expect(mockScraper.getTweets).toHaveBeenCalledWith('testuser', expect.any(Number))
   })
 })

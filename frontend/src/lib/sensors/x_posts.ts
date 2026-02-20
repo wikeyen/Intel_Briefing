@@ -1,7 +1,84 @@
-// ABOUTME: X posts sensor — scrapes recent tweets from xcancel.com profile pages.
-// ABOUTME: Parses HTML with node-html-parser, skips retweets, filters by lookback hours.
+// ABOUTME: X posts sensor — fetches recent tweets via @the-convocation/twitter-scraper.
+// ABOUTME: Uses cookie-based auth (auth_token + ct0). Falls back to xcancel.com HTML scraping.
+import { Scraper, type Tweet } from '@the-convocation/twitter-scraper'
 import { parse as parseHTML } from 'node-html-parser'
 import type { ConfigSettings, IntelItem } from '../models'
+
+// ── Scraper singleton (reuse across calls to keep auth session) ──────────────
+let _scraper: Scraper | null = null
+let _scraperCookiesKey: string | null = null
+
+function getScraper(authToken: string, ct0: string): Scraper {
+  const key = `${authToken}:${ct0}`
+  if (_scraper && _scraperCookiesKey === key) return _scraper
+  _scraper = new Scraper()
+  _scraperCookiesKey = key
+  // setCookies is async — callers must await initScraper() instead of using this directly
+  return _scraper
+}
+
+async function initScraper(authToken: string, ct0: string): Promise<Scraper> {
+  const scraper = getScraper(authToken, ct0)
+  if (await scraper.isLoggedIn()) return scraper
+  await scraper.setCookies([
+    `auth_token=${authToken}; Domain=.x.com; Path=/; Secure; HttpOnly`,
+    `ct0=${ct0}; Domain=.x.com; Path=/; Secure`,
+  ])
+  return scraper
+}
+
+// ── Primary: twitter-scraper (authenticated) ─────────────────────────────────
+
+async function fetchViaScraper(
+  scraper: Scraper,
+  handle: string,
+  lookbackMs: number,
+  perAccountLimit: number,
+): Promise<IntelItem[]> {
+  const cutoff = Date.now() - lookbackMs
+  const items: IntelItem[] = []
+
+  for await (const tweet of scraper.getTweets(handle, perAccountLimit * 3)) {
+    if (items.length >= perAccountLimit) break
+    if (tweet.isRetweet) continue
+    if (tweet.isReply) continue
+
+    const pubDate = tweet.timeParsed ?? (tweet.timestamp ? new Date(tweet.timestamp * 1000) : null)
+    if (pubDate && pubDate.getTime() < cutoff) break // tweets are chronological, stop early
+
+    const text = tweet.text ?? ''
+    if (!text.trim()) continue
+
+    const likes = tweet.likes ?? 0
+    const retweets = tweet.retweets ?? 0
+    const views = tweet.views ?? 0
+    const heatParts: string[] = []
+    if (likes > 0) heatParts.push(`${formatCount(likes)} likes`)
+    if (retweets > 0) heatParts.push(`${formatCount(retweets)} retweets`)
+    if (views > 0) heatParts.push(`${formatCount(views)} views`)
+
+    items.push({
+      id: `x-${tweet.id}`,
+      source: 'x_posts',
+      title: text.slice(0, 280),
+      url: tweet.permanentUrl ?? `https://x.com/${handle}/status/${tweet.id}`,
+      heat: heatParts.join(' \u00b7 ') || null,
+      account: tweet.name ?? handle,
+      handle: tweet.username ?? handle,
+      published_at: pubDate?.toISOString() ?? null,
+    })
+  }
+
+  return items
+}
+
+function formatCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
+  return String(n)
+}
+
+// ── Fallback: xcancel.com HTML scraping ──────────────────────────────────────
 
 const XCANCEL_BASE = 'https://xcancel.com'
 const FETCH_TIMEOUT = 15_000
@@ -9,7 +86,6 @@ const MAX_RETRIES = 2
 const BASE_DELAY_MS = 800
 const JITTER_MS = 1200
 
-/** Pool of realistic browser User-Agents to rotate through */
 const USER_AGENTS = [
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
@@ -30,7 +106,6 @@ function jitteredDelay(): Promise<void> {
   return delay(BASE_DELAY_MS + Math.random() * JITTER_MS)
 }
 
-/** Parse the date from xcancel's tweet-date title attribute, e.g. "Feb 20, 2026 · 10:33 AM UTC" */
 function parseXDate(title: string): Date | null {
   const cleaned = title.replace(' · ', ' ')
   const d = new Date(cleaned)
@@ -66,7 +141,7 @@ async function fetchWithRetry(url: string): Promise<string> {
   throw lastError ?? new Error('fetchWithRetry exhausted')
 }
 
-async function fetchAccountPosts(handle: string, lookbackMs: number): Promise<IntelItem[]> {
+async function fetchAccountPostsXcancel(handle: string, lookbackMs: number): Promise<IntelItem[]> {
   const html = await fetchWithRetry(`${XCANCEL_BASE}/${handle}`)
   const root = parseHTML(html)
   const now = Date.now()
@@ -118,20 +193,60 @@ async function fetchAccountPosts(handle: string, lookbackMs: number): Promise<In
   return items
 }
 
+// ── Public API ───────────────────────────────────────────────────────────────
+
 export async function fetchXPosts(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
   const handles = config.social_accounts_x
   if (!handles || handles.length === 0) return []
 
   const lookbackHours = config.sensor_lookback_hours?.x_posts ?? 48
   const lookbackMs = lookbackHours * 60 * 60 * 1000
+  const perAccountLimit = Math.max(10, Math.ceil(limit / handles.length) * 2)
 
+  const hasAuth = !!(config.twitter_auth_token && config.twitter_ct0)
+
+  if (hasAuth) {
+    return fetchViaScraperAll(config, handles, lookbackMs, perAccountLimit, limit)
+  }
+
+  return fetchViaXcancelAll(handles, lookbackMs, limit)
+}
+
+async function fetchViaScraperAll(
+  config: ConfigSettings,
+  handles: string[],
+  lookbackMs: number,
+  perAccountLimit: number,
+  limit: number,
+): Promise<IntelItem[]> {
+  const scraper = await initScraper(config.twitter_auth_token!, config.twitter_ct0!)
+
+  const results = await Promise.allSettled(
+    handles.map(h => fetchViaScraper(scraper, h.replace(/^@/, ''), lookbackMs, perAccountLimit)),
+  )
+
+  return collectItems(results, limit)
+}
+
+async function fetchViaXcancelAll(
+  handles: string[],
+  lookbackMs: number,
+  limit: number,
+): Promise<IntelItem[]> {
   // Stagger requests to avoid burst traffic patterns
   const results: PromiseSettledResult<IntelItem[]>[] = []
   for (const h of handles) {
     if (results.length > 0) await jitteredDelay()
-    results.push(await Promise.allSettled([fetchAccountPosts(h.replace(/^@/, ''), lookbackMs)]).then(r => r[0]))
+    results.push(
+      await Promise.allSettled([fetchAccountPostsXcancel(h.replace(/^@/, ''), lookbackMs)])
+        .then(r => r[0]),
+    )
   }
 
+  return collectItems(results, limit)
+}
+
+function collectItems(results: PromiseSettledResult<IntelItem[]>[], limit: number): IntelItem[] {
   const items: IntelItem[] = []
   const seenIds = new Set<string>()
   for (const r of results) {
@@ -140,10 +255,8 @@ export async function fetchXPosts(config: ConfigSettings, limit: number): Promis
       if (seenIds.has(item.id)) continue
       seenIds.add(item.id)
       items.push(item)
-      if (items.length >= limit) break
+      if (items.length >= limit) return items
     }
-    if (items.length >= limit) break
   }
-
   return items
 }

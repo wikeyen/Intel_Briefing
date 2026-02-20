@@ -31,6 +31,8 @@ const KEY_GROUPS: FieldGroup[] = [
   {
     title: 'Social Platforms',
     secrets: [
+      { field: 'twitter_auth_token',    label: 'Twitter auth_token Cookie', hint: 'Cookie from a logged-in x.com session. Open DevTools > Application > Cookies > x.com and copy the auth_token value.' },
+      { field: 'twitter_ct0',           label: 'Twitter ct0 Cookie',        hint: 'CSRF token cookie from x.com. Same steps as above — copy the ct0 value.' },
       { field: 'bluesky_app_password',  label: 'Bluesky App Password',     hint: 'App password for Bluesky social sensors. Generate at bsky.app/settings/app-passwords.' },
       { field: 'mastodon_token',        label: 'Mastodon Access Token',    hint: 'Access token for Mastodon account monitoring.' },
     ],

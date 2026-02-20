@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { loadConfig, saveConfig, maskConfig } from '@/lib/config'
 
 const MASKED = '***'
-const KEY_FIELDS = new Set(['github_token', 'producthunt_token', 'bluesky_app_password', 'mastodon_token', 'summary_api_key'])
+const KEY_FIELDS = new Set(['github_token', 'producthunt_token', 'bluesky_app_password', 'mastodon_token', 'summary_api_key', 'twitter_auth_token', 'twitter_ct0'])
 
 export async function GET(): Promise<NextResponse> {
   const config = await loadConfig()

@@ -9,9 +9,30 @@ const SAMPLE: BriefingSummary = {
   generated_at: '2026-02-19T10:00:00Z',
   report_fetched_at: '2026-02-19T09:00:00Z',
   sections: [
-    { sensor_name: 'hacker_news', label: 'Hacker News', summary: 'Top stories about AI.', item_count: 10 },
+    {
+      sensor_name: 'hacker_news',
+      label: 'Hacker News',
+      source_url: 'https://news.ycombinator.com',
+      summary: 'Top stories about AI.',
+      item_count: 10,
+      items: [
+        { title: 'AI breakthrough', url: 'https://example.com/1', brief: 'Major advance in AI.' },
+      ],
+    },
   ],
-  overall: 'Tech world focused on AI breakthroughs today.',
+  overall: {
+    quick_scan: [
+      { text: 'AI breakthroughs dominated today.', source: 'hacker_news' },
+    ],
+    sections: [
+      {
+        title: 'Tech Highlights',
+        entries: [
+          { text: 'Tech world focused on AI breakthroughs today.', source: 'hacker_news' },
+        ],
+      },
+    ],
+  },
 }
 
 describe('summary cache', () => {
@@ -30,10 +51,14 @@ describe('summary cache', () => {
   })
 
   it('overwrites previous summary', async () => {
-    const updated = { ...SAMPLE, overall: 'Updated briefing.' }
+    const updatedOverall = {
+      quick_scan: [{ text: 'Updated scan.', source: 'arxiv' }],
+      sections: [{ title: 'Updated', entries: [{ text: 'Updated briefing.', source: 'arxiv' }] }],
+    }
+    const updated = { ...SAMPLE, overall: updatedOverall }
     await writeSummary(updated)
     const result = await readSummary()
-    expect(result!.overall).toBe('Updated briefing.')
+    expect(result!.overall).toEqual(updatedOverall)
   })
 })
 

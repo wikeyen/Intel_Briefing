@@ -9,7 +9,7 @@ import type {
   BriefingSummary,
   SensorSummary,
 } from '../models'
-import { sensorResultSucceeded, sensorLimit } from '../models'
+import { sensorResultSucceeded, sensorLimit, SOURCE_URLS } from '../models'
 import { Semaphore } from './semaphore'
 import { PipelineProgressTracker } from './progress'
 import { readReport, writePipelineStatus } from './cache'
@@ -20,6 +20,7 @@ import { SensorConfigError } from '../sensors/errors'
 import { SENSOR_LABELS } from './sensor-map'
 import { assembleReport } from './report-builder'
 import { getSensorPrompt, getOverallPrompt, CHUNK_SIZE, CHUNK_EXTRACT_PROMPT } from '../summary/prompts'
+import { parseSensorJson, parseOverallJson } from '../summary/parse-json'
 
 export interface PipelineResult {
   report: IntelReport | null
@@ -143,7 +144,15 @@ async function summarizeSensor(
     ], llmConfig)
   }
 
-  return { sensor_name: sensorName, label, summary: summaryText, item_count: items.length }
+  const parsed = parseSensorJson(summaryText)
+  return {
+    sensor_name: sensorName,
+    label,
+    source_url: SOURCE_URLS[sensorName] ?? '',
+    summary: parsed.summary,
+    item_count: items.length,
+    items: parsed.items,
+  }
 }
 
 /**
@@ -282,11 +291,12 @@ export async function runPipeline(
 
       const overallMessages: ChatMessage[] = [
         { role: 'system', content: getOverallPrompt(config.summary_overall_prompt) },
-        { role: 'user', content: `Write an executive briefing based on these source summaries:\n\n${overallContext}` },
+        { role: 'user', content: `请根据以下各信息源摘要生成简报：\n\n${overallContext}` },
       ]
 
       try {
-        const overall = await chatCompletion(overallMessages, llmConfig)
+        const overallRaw = await chatCompletion(overallMessages, llmConfig)
+        const overall = parseOverallJson(overallRaw)
         tracker.setOverallSummary('ok')
 
         summary = {

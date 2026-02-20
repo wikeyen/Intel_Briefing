@@ -135,18 +135,58 @@ export interface PipelineStatus {
   total_items: number
 }
 
+export interface SensorSummaryItem {
+  title: string
+  url: string
+  brief: string
+}
+
 export interface SensorSummary {
   sensor_name: string
   label: string
+  source_url: string
   summary: string
   item_count: number
+  items: SensorSummaryItem[]
+}
+
+export interface BriefingEntry {
+  text: string
+  source: string
+}
+
+export interface BriefingSection {
+  title: string
+  entries: BriefingEntry[]
+}
+
+/** Canonical URLs for each sensor source, used in summary cards and export. */
+export const SOURCE_URLS: Record<string, string> = {
+  hacker_news:      'https://news.ycombinator.com',
+  arxiv:            'https://arxiv.org/list/cs.AI/recent',
+  github:           'https://github.com/trending',
+  product_hunt:     'https://www.producthunt.com',
+  v2ex:             'https://www.v2ex.com',
+  hn_blogs:         'https://news.ycombinator.com/best',
+  sources_36kr:     'https://36kr.com',
+  wallstreetcn:     'https://wallstreetcn.com',
+  chrome_radar:     'https://chromewebstore.google.com',
+  rss_feeds:        '',
+  social_accounts:  '',
+  social_topics:    '',
+  social_trends:    '',
+}
+
+export interface OverallBriefing {
+  quick_scan: BriefingEntry[]
+  sections: BriefingSection[]
 }
 
 export interface BriefingSummary {
   generated_at: string
   report_fetched_at: string
   sections: SensorSummary[]
-  overall: string
+  overall: OverallBriefing
 }
 
 export interface SummarySensorProgress {

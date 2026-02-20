@@ -1,5 +1,5 @@
-// ABOUTME: Tests for the collapsible AI Summary section within the Data (Feed) component.
-// ABOUTME: Covers summary rendering, empty states, executive summary, and per-source section cards.
+// ABOUTME: Tests for the collapsible Daily Report section within the Data (Feed) component.
+// ABOUTME: Covers summary rendering, empty states, quick scan, themed sections, and per-source cards.
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
@@ -40,7 +40,7 @@ const EMPTY_REPORT = {
   items: { tech_trends: [{ id: 'hn-1', source: 'hacker_news', title: 'Test', url: 'https://example.com' }] },
 }
 
-describe('AI Summary section in Data', () => {
+describe('Daily Report section in Data', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetLatest.mockResolvedValue(EMPTY_REPORT)
@@ -63,11 +63,11 @@ describe('AI Summary section in Data', () => {
     })
   })
 
-  it('shows the AI Summary collapsible header', async () => {
+  it('shows the Daily Report collapsible header', async () => {
     mockGetSummary.mockResolvedValue({ summary: null })
     render(<Data />)
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /ai summary/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /daily report/i })).toBeInTheDocument()
     })
   })
 
@@ -76,20 +76,25 @@ describe('AI Summary section in Data', () => {
     mockGetConfig.mockResolvedValue({ sensors_enabled: {}, summary_provider: null })
     render(<Data />)
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /ai summary/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /daily report/i })).toBeInTheDocument()
     })
-    fireEvent.click(screen.getByRole('button', { name: /ai summary/i }))
+    fireEvent.click(screen.getByRole('button', { name: /daily report/i }))
     await waitFor(() => {
       expect(screen.getByText(/ai summary settings/i)).toBeInTheDocument()
     })
   })
 
-  it('renders the executive summary when summary exists (auto-expanded)', async () => {
+  it('renders quick scan entries when summary exists (auto-expanded)', async () => {
     mockGetSummary.mockResolvedValue({
       summary: {
         generated_at: '2026-02-19T08:00:00Z',
         report_fetched_at: '2026-02-19T07:55:00Z',
-        overall: 'Major AI developments this week including new model releases.',
+        overall: {
+          quick_scan: [
+            { text: 'Major AI developments this week including new model releases.', source: 'Hacker News' },
+          ],
+          sections: [],
+        },
         sections: [],
       },
     })
@@ -99,26 +104,43 @@ describe('AI Summary section in Data', () => {
     })
   })
 
-  it('renders per-source section cards (auto-expanded)', async () => {
+  it('renders per-source section cards with summary and items (auto-expanded)', async () => {
     mockGetSummary.mockResolvedValue({
       summary: {
         generated_at: '2026-02-19T08:00:00Z',
         report_fetched_at: '2026-02-19T07:55:00Z',
-        overall: 'Executive overview text here.',
+        overall: { quick_scan: [], sections: [] },
         sections: [
-          { sensor_name: 'hacker_news', label: 'Hacker News', summary: 'HN had lots of AI discussion.', item_count: 10 },
-          { sensor_name: 'arxiv', label: 'ArXiv AI', summary: 'New transformer papers published.', item_count: 5 },
+          {
+            sensor_name: 'hacker_news',
+            label: 'Hacker News',
+            source_url: 'https://news.ycombinator.com',
+            summary: 'HN had lots of AI discussion.',
+            item_count: 10,
+            items: [{ title: 'GPT-5 released', url: 'https://example.com/gpt5', brief: 'Major release' }],
+          },
+          {
+            sensor_name: 'arxiv',
+            label: 'ArXiv AI',
+            source_url: 'https://arxiv.org/list/cs.AI/recent',
+            summary: 'New transformer papers published.',
+            item_count: 5,
+            items: [],
+          },
         ],
       },
     })
     render(<Data />)
     await waitFor(() => {
-      expect(screen.getByText('Hacker News')).toBeInTheDocument()
       expect(screen.getByText('HN had lots of AI discussion.')).toBeInTheDocument()
-      expect(screen.getByText('ArXiv AI')).toBeInTheDocument()
       expect(screen.getByText('New transformer papers published.')).toBeInTheDocument()
       expect(screen.getByText('10 items')).toBeInTheDocument()
       expect(screen.getByText('5 items')).toBeInTheDocument()
+      // Source labels are now links
+      expect(screen.getByText('Hacker News')).toBeInTheDocument()
+      expect(screen.getByText('ArXiv AI')).toBeInTheDocument()
+      // Notable item link
+      expect(screen.getByText('GPT-5 released')).toBeInTheDocument()
     })
   })
 
@@ -127,13 +149,13 @@ describe('AI Summary section in Data', () => {
       summary: {
         generated_at: '2026-02-19T08:00:00Z',
         report_fetched_at: '2026-02-19T07:55:00Z',
-        overall: 'Summary text.',
+        overall: { quick_scan: [], sections: [] },
         sections: [],
       },
     })
     render(<Data />)
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /ai summary/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /daily report/i })).toBeInTheDocument()
     })
     await waitFor(() => {
       expect(screen.getByText(/2026-02-19 08:00/)).toBeInTheDocument()

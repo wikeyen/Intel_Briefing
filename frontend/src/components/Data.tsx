@@ -4,10 +4,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { api } from '@/api/client'
-import type { IntelReport, IntelItem, ConfigSettings, BriefingSummary, SummaryProgress, PipelineStatus } from '@/api/client'
+import type { IntelReport, IntelItem, ConfigSettings, BriefingSummary, SummaryProgress, PipelineStatus, OverallBriefing } from '@/api/client'
 import { SENSOR_TOKEN_FIELD } from '@/lib/sensors/constants'
 import { useToast } from '@/lib/toast-context'
-import ReactMarkdown from 'react-markdown'
 import { Pagination } from './Pagination'
 
 const PAGE_SIZE = 20
@@ -572,6 +571,11 @@ function SummaryProgressBanner({ progress, pipelineStatus }: {
   )
 }
 
+/** Check if overall briefing has structured data (new format) vs legacy plain text fallback. */
+function isStructuredOverall(overall: OverallBriefing | string): overall is OverallBriefing {
+  return typeof overall === 'object' && overall !== null && 'quick_scan' in overall
+}
+
 function SummarySection({ summary, summaryProgress, pipelineStatus, config, hasContent, onTrigger }: {
   summary: BriefingSummary | null
   summaryProgress: SummaryProgress | null
@@ -618,7 +622,7 @@ function SummarySection({ summary, summaryProgress, pipelineStatus, config, hasC
             ▶
           </span>
           <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)' }}>
-            AI Summary
+            Daily Report
           </span>
           {isSummarizing && (
             <span style={{
@@ -655,56 +659,231 @@ function SummarySection({ summary, summaryProgress, pipelineStatus, config, hasC
           )}
 
           {summary ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {/* Executive Summary */}
-              <div className="markdown-summary" style={{
-                fontSize: '0.9375rem',
-                color: 'var(--ink)',
-                lineHeight: 1.8,
-              }}>
-                <ReactMarkdown>{summary.overall}</ReactMarkdown>
-              </div>
-
-              {/* Source Summaries Grid */}
-              {summary.sections.length > 0 && (
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                  gap: '0.75rem',
-                }}>
-                  {summary.sections.map(s => (
-                    <div key={s.sensor_name} style={{
-                      background: 'var(--canvas)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 6,
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {/* Structured overall briefing */}
+              {isStructuredOverall(summary.overall) ? (
+                <>
+                  {/* Quick Scan */}
+                  {summary.overall.quick_scan.length > 0 && (
+                    <div style={{
+                      background: 'var(--accent-wash, var(--surface-alt))',
+                      border: '1px solid var(--accent-dim, var(--border))',
+                      borderRadius: 8,
                       padding: '1rem 1.25rem',
                     }}>
                       <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        marginBottom: '0.5rem',
+                        fontSize: '0.6875rem',
+                        fontWeight: 600,
+                        color: 'var(--accent)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.06em',
+                        marginBottom: '0.625rem',
                       }}>
-                        <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)' }}>
-                          {s.label}
-                        </span>
-                        <span style={{
-                          fontSize: '0.625rem',
-                          color: 'var(--ink-faint)',
-                          fontFamily: 'ui-monospace, monospace',
-                        }}>
-                          {s.item_count} items
-                        </span>
+                        Quick Scan
                       </div>
-                      <div className="markdown-summary markdown-summary-sm" style={{
-                        fontSize: '0.8125rem',
-                        color: 'var(--ink-muted)',
-                        lineHeight: 1.65,
-                      }}>
-                        <ReactMarkdown>{s.summary}</ReactMarkdown>
-                      </div>
+                      <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                        {summary.overall.quick_scan.map((entry, i) => (
+                          <li key={i} style={{
+                            padding: '0.375rem 0',
+                            borderBottom: i < summary.overall.quick_scan.length - 1 ? '1px solid var(--border-soft, var(--border))' : 'none',
+                            fontSize: '0.875rem',
+                            color: 'var(--ink)',
+                            lineHeight: 1.6,
+                          }}>
+                            {entry.text}
+                            {entry.source && (
+                              <span style={{
+                                marginLeft: '0.5rem',
+                                fontSize: '0.6875rem',
+                                color: 'var(--ink-faint)',
+                              }}>
+                                — {entry.source}
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                  ))}
+                  )}
+
+                  {/* Themed sections */}
+                  {summary.overall.sections.length > 0 && (
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                      gap: '0.75rem',
+                    }}>
+                      {summary.overall.sections.map((section, i) => (
+                        <div key={i} style={{
+                          background: 'var(--canvas)',
+                          border: '1px solid var(--border)',
+                          borderRadius: 6,
+                          padding: '1rem 1.25rem',
+                        }}>
+                          <div style={{
+                            fontSize: '0.8125rem',
+                            fontWeight: 600,
+                            color: 'var(--ink)',
+                            marginBottom: '0.5rem',
+                            paddingBottom: '0.375rem',
+                            borderBottom: '1px solid var(--border-soft, var(--border))',
+                          }}>
+                            {section.title}
+                          </div>
+                          <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                            {section.entries.map((entry, j) => (
+                              <li key={j} style={{
+                                padding: '0.3rem 0',
+                                fontSize: '0.8125rem',
+                                color: 'var(--ink-muted)',
+                                lineHeight: 1.6,
+                              }}>
+                                {entry.text}
+                                {entry.source && (
+                                  <span style={{
+                                    marginLeft: '0.375rem',
+                                    fontSize: '0.625rem',
+                                    color: 'var(--ink-faint)',
+                                  }}>
+                                    [{entry.source}]
+                                  </span>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* Legacy plain-text fallback */
+                <div style={{
+                  fontSize: '0.9375rem',
+                  color: 'var(--ink)',
+                  lineHeight: 1.8,
+                  whiteSpace: 'pre-wrap',
+                }}>
+                  {String(summary.overall)}
+                </div>
+              )}
+
+              {/* Source Summaries */}
+              {summary.sections.length > 0 && (
+                <div>
+                  <div style={{
+                    fontSize: '0.6875rem',
+                    fontWeight: 600,
+                    color: 'var(--ink-faint)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    marginBottom: '0.625rem',
+                  }}>
+                    Sources
+                  </div>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                    gap: '0.75rem',
+                  }}>
+                    {summary.sections.map(s => (
+                      <div key={s.sensor_name} style={{
+                        background: 'var(--canvas)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 6,
+                        padding: '1rem 1.25rem',
+                      }}>
+                        {/* Source header with link */}
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          marginBottom: '0.5rem',
+                        }}>
+                          {s.source_url ? (
+                            <a
+                              href={s.source_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                fontSize: '0.8125rem',
+                                fontWeight: 600,
+                                color: 'var(--accent)',
+                                textDecoration: 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                              }}
+                            >
+                              {s.label}
+                              <span style={{ fontSize: '0.625rem' }}>↗</span>
+                            </a>
+                          ) : (
+                            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)' }}>
+                              {s.label}
+                            </span>
+                          )}
+                          <span style={{
+                            fontSize: '0.625rem',
+                            color: 'var(--ink-faint)',
+                            fontFamily: 'ui-monospace, monospace',
+                          }}>
+                            {s.item_count} items
+                          </span>
+                        </div>
+
+                        {/* Summary text */}
+                        <p style={{
+                          fontSize: '0.8125rem',
+                          color: 'var(--ink-muted)',
+                          lineHeight: 1.65,
+                          margin: 0,
+                        }}>
+                          {s.summary}
+                        </p>
+
+                        {/* Notable items list */}
+                        {s.items && s.items.length > 0 && (
+                          <ul style={{
+                            margin: '0.5rem 0 0',
+                            padding: 0,
+                            listStyle: 'none',
+                            borderTop: '1px solid var(--border-soft, var(--border))',
+                            paddingTop: '0.5rem',
+                          }}>
+                            {s.items.map((item, idx) => (
+                              <li key={idx} style={{
+                                fontSize: '0.75rem',
+                                lineHeight: 1.5,
+                                padding: '0.2rem 0',
+                              }}>
+                                {item.url ? (
+                                  <a
+                                    href={item.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                      color: 'var(--accent)',
+                                      textDecoration: 'none',
+                                    }}
+                                  >
+                                    {item.title}
+                                  </a>
+                                ) : (
+                                  <span style={{ color: 'var(--ink)' }}>{item.title}</span>
+                                )}
+                                {item.brief && (
+                                  <span style={{ color: 'var(--ink-faint)', marginLeft: '0.375rem' }}>
+                                    — {item.brief}
+                                  </span>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -905,6 +1084,20 @@ export function Data() {
         </div>
       </div>
 
+      {/* Daily Report — above the tabs, summarizes all sources */}
+      {report && (
+        <div style={{ maxWidth: 1024, margin: '0 auto', width: '100%', paddingLeft: '3rem', paddingRight: '3rem', paddingBottom: '0.5rem' }}>
+          <SummarySection
+            summary={summary}
+            summaryProgress={summaryProgress}
+            pipelineStatus={pipelineStatus}
+            config={config}
+            hasContent={hasContent}
+            onTrigger={handleTriggerSummary}
+          />
+        </div>
+      )}
+
       {/* Sticky navigation — tabs + source filters */}
       {report && (
         <div style={{
@@ -1015,18 +1208,6 @@ export function Data() {
       {/* Scrollable content */}
       <div style={{ flex: 1 }}>
         <div className="data-content" style={{ maxWidth: 1024, margin: '0 auto', padding: '1.5rem 3rem 4rem' }}>
-          {/* Collapsible AI Summary section */}
-          {report && (
-            <SummarySection
-              summary={summary}
-              summaryProgress={summaryProgress}
-              pipelineStatus={pipelineStatus}
-              config={config}
-              hasContent={hasContent}
-              onTrigger={handleTriggerSummary}
-            />
-          )}
-
           {!loading && !report ? (
             <div style={{
               padding: '4rem 1.5rem',

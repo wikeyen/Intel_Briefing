@@ -108,16 +108,39 @@ export interface SummaryProgress {
   sensors: SummarySensorProgress[]
 }
 
+export interface SensorSummaryItem {
+  title: string
+  url: string
+  brief: string
+}
+
+export interface BriefingEntry {
+  text: string
+  source: string
+}
+
+export interface BriefingSection {
+  title: string
+  entries: BriefingEntry[]
+}
+
+export interface OverallBriefing {
+  quick_scan: BriefingEntry[]
+  sections: BriefingSection[]
+}
+
 export interface BriefingSummary {
   generated_at: string
   report_fetched_at: string
   sections: {
     sensor_name: string
     label: string
+    source_url: string
     summary: string
     item_count: number
+    items: SensorSummaryItem[]
   }[]
-  overall: string
+  overall: OverallBriefing
 }
 
 export interface RssDiscoveryResult {

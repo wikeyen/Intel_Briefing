@@ -2,6 +2,9 @@
 // ABOUTME: Takes an IntelReport and LLM config, calls LLM sequentially for each sensor.
 import { chatCompletion, type LlmConfig, type ChatMessage } from './llm'
 import type { IntelReport, IntelItem, BriefingSummary, SensorSummary } from '../models'
+import { SOURCE_URLS } from '../models'
+import { getSensorPrompt, getOverallPrompt } from './prompts'
+import { parseSensorJson, parseOverallJson } from './parse-json'
 
 /** Human-readable sensor labels for prompts and output. */
 const SENSOR_LABELS: Record<string, string> = {
@@ -19,10 +22,6 @@ const SENSOR_LABELS: Record<string, string> = {
   chrome_radar: 'Chrome Radar',
   rss_feeds: 'RSS Feeds',
 }
-
-const SYSTEM_PROMPT = 'You are an intel analyst writing concise briefings. Summarize the key themes, notable items, and emerging trends. Be specific — cite names, numbers, and links where relevant. Keep each summary to 2-4 sentences.'
-
-const OVERALL_SYSTEM_PROMPT = 'You are an intel analyst writing an executive briefing. Synthesize the per-source summaries into a coherent overview of the most important developments. Highlight cross-cutting themes. Keep it to 3-6 sentences.'
 
 /** Format an IntelItem into a text block for the LLM prompt. */
 function formatItem(item: IntelItem): string {
@@ -73,18 +72,27 @@ export async function summarizeReport(
     if (items.length === 0) continue
 
     const label = SENSOR_LABELS[sensorName] ?? sensorName
+    const sensorPrompt = getSensorPrompt(sensorName)
     const itemsText = items.map(formatItem).join('\n\n')
 
     const messages: ChatMessage[] = [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: `Summarize these ${items.length} items from ${label}:\n\n${itemsText}` },
+      { role: 'system', content: sensorPrompt },
+      { role: 'user', content: `综合分析以下 ${label} 的 ${items.length} 条内容：\n\n${itemsText}` },
     ]
 
     await onProgress?.(sensorName, label, 'running', null)
 
     try {
-      const summary = await chatCompletion(messages, llmConfig)
-      sections.push({ sensor_name: sensorName, label, summary, item_count: items.length })
+      const raw = await chatCompletion(messages, llmConfig)
+      const parsed = parseSensorJson(raw)
+      sections.push({
+        sensor_name: sensorName,
+        label,
+        source_url: SOURCE_URLS[sensorName] ?? '',
+        summary: parsed.summary,
+        item_count: items.length,
+        items: parsed.items,
+      })
       await onProgress?.(sensorName, label, 'ok', null)
     } catch (err) {
       if (onProgress) {
@@ -101,13 +109,14 @@ export async function summarizeReport(
     : 'No data was collected in this run.'
 
   const overallMessages: ChatMessage[] = [
-    { role: 'system', content: OVERALL_SYSTEM_PROMPT },
-    { role: 'user', content: `Write an executive briefing based on these source summaries:\n\n${overallContext}` },
+    { role: 'system', content: getOverallPrompt() },
+    { role: 'user', content: `请根据以下各信息源摘要生成简报：\n\n${overallContext}` },
   ]
 
   await onProgress?.('__overall__', 'Overall', 'running', null)
 
-  const overall = await chatCompletion(overallMessages, llmConfig)
+  const overallRaw = await chatCompletion(overallMessages, llmConfig)
+  const overall = parseOverallJson(overallRaw)
 
   await onProgress?.('__overall__', 'Overall', 'ok', null)
 

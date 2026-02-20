@@ -24,6 +24,7 @@ function makeReport(overrides?: Partial<IntelReport>): IntelReport {
       community: [],
       social: [],
       insights: [],
+      feeds: [],
     },
     ...overrides,
   })
@@ -37,7 +38,7 @@ describe('summarizeReport', () => {
     vi.spyOn(llm, 'chatCompletion').mockImplementation(async (messages) => {
       const userMsg = messages.find(m => m.role === 'user')!.content
       // Check for overall prompt first — it also contains sensor labels
-      if (userMsg.includes('executive briefing')) {
+      if (userMsg.includes('各信息源摘要')) {
         calls.push('overall')
         return 'Overall briefing'
       }
@@ -59,10 +60,18 @@ describe('summarizeReport', () => {
     expect(result.sections).toHaveLength(2)
     expect(result.sections[0].sensor_name).toBe('hacker_news')
     expect(result.sections[0].summary).toBe('HN summary here')
+    expect(result.sections[0].source_url).toBe('https://news.ycombinator.com')
+    expect(result.sections[0].items).toEqual([])
     expect(result.sections[0].item_count).toBe(2)
     expect(result.sections[1].sensor_name).toBe('arxiv')
     expect(result.sections[1].summary).toBe('ArXiv summary here')
-    expect(result.overall).toBe('Overall briefing')
+    expect(result.sections[1].source_url).toBe('https://arxiv.org/list/cs.AI/recent')
+    expect(result.sections[1].items).toEqual([])
+    // Overall is OverallBriefing fallback shape (raw text not valid JSON)
+    expect(result.overall).toEqual({
+      quick_scan: [],
+      sections: [{ title: '简报', entries: [{ text: 'Overall briefing', source: '' }] }],
+    })
     expect(result.report_fetched_at).toBe('2026-02-19T09:00:00Z')
     // Verify sequential order
     expect(calls).toEqual(['hacker_news', 'arxiv', 'overall'])
@@ -83,6 +92,7 @@ describe('summarizeReport', () => {
         community: [],
         social: [],
         insights: [],
+        feeds: [],
       },
     })
 
@@ -108,6 +118,7 @@ describe('summarizeReport', () => {
         community: [],
         social: [],
         insights: [],
+        feeds: [],
       },
     })
 
@@ -117,7 +128,11 @@ describe('summarizeReport', () => {
     expect(result.sections).toHaveLength(0)
     // Still gets one overall call
     expect(llm.chatCompletion).toHaveBeenCalledTimes(1)
-    expect(result.overall).toBe('Nothing to report')
+    // Overall is OverallBriefing fallback shape (raw text not valid JSON)
+    expect(result.overall).toEqual({
+      quick_scan: [],
+      sections: [{ title: '简报', entries: [{ text: 'Nothing to report', source: '' }] }],
+    })
   })
 
   it('includes item details in the per-sensor prompt', async () => {

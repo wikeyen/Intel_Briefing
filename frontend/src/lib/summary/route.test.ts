@@ -9,9 +9,30 @@ const SAMPLE: BriefingSummary = {
   generated_at: '2026-02-19T10:00:00Z',
   report_fetched_at: '2026-02-19T09:00:00Z',
   sections: [
-    { sensor_name: 'hacker_news', label: 'Hacker News', summary: 'AI news dominated.', item_count: 10 },
+    {
+      sensor_name: 'hacker_news',
+      label: 'Hacker News',
+      source_url: 'https://news.ycombinator.com',
+      summary: 'AI news dominated.',
+      item_count: 10,
+      items: [
+        { title: 'AI story', url: 'https://example.com/1', brief: 'AI is big.' },
+      ],
+    },
   ],
-  overall: 'AI continues to dominate tech news.',
+  overall: {
+    quick_scan: [
+      { text: 'AI continues to dominate tech news.', source: 'hacker_news' },
+    ],
+    sections: [
+      {
+        title: 'Key Developments',
+        entries: [
+          { text: 'AI continues to dominate tech news.', source: 'hacker_news' },
+        ],
+      },
+    ],
+  },
 }
 
 describe('/api/summary route logic', () => {
@@ -28,13 +49,14 @@ describe('/api/summary route logic', () => {
     await writeSummary(SAMPLE)
     const result = await readSummary()
     expect(result).toEqual(SAMPLE)
-    expect(result!.overall).toBe('AI continues to dominate tech news.')
+    expect(result!.overall.quick_scan[0].text).toBe('AI continues to dominate tech news.')
   })
 
   it('validates BriefingSummary has required fields', () => {
     expect(SAMPLE.generated_at).toBeDefined()
     expect(SAMPLE.report_fetched_at).toBeDefined()
     expect(SAMPLE.sections).toBeInstanceOf(Array)
-    expect(typeof SAMPLE.overall).toBe('string')
+    expect(typeof SAMPLE.overall).toBe('object')
+    expect(SAMPLE.overall.quick_scan).toBeInstanceOf(Array)
   })
 })

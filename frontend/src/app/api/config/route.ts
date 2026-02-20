@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { loadConfig, saveConfig, maskConfig } from '@/lib/config'
 
 const MASKED = '***'
-const KEY_FIELDS = new Set(['xai_api_key', 'github_token', 'producthunt_token'])
+const KEY_FIELDS = new Set(['xai_api_key', 'github_token', 'producthunt_token', 'bluesky_app_password', 'mastodon_token', 'summary_api_key'])
 
 export async function GET(): Promise<NextResponse> {
   const config = await loadConfig()
@@ -29,10 +29,10 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
     )
   }
 
-  // Strip masked key values — caller sent *** meaning "don't change"
+  // Strip masked or null key values — caller sent *** or null meaning "don't change"
   const update: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(body)) {
-    if (KEY_FIELDS.has(k) && v === MASKED) continue
+    if (KEY_FIELDS.has(k) && (v === MASKED || v == null)) continue
     update[k] = v
   }
 

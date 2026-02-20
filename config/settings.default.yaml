@@ -1,0 +1,63 @@
+# ABOUTME: Default configuration — committed to the repo as a reference.
+# ABOUTME: Copy to settings.local.yaml and fill in secrets to get started.
+
+# --- API Keys & Tokens (fill these in settings.local.yaml) ---
+# xai_api_key: null
+# github_token: null
+# producthunt_token: null
+# bluesky_handle: null
+# bluesky_app_password: null
+# mastodon_token: null
+
+# --- Grok / xAI ---
+xai_base_url: https://api.x.ai/v1/chat/completions
+xai_model: grok-3
+
+# --- Sensors ---
+sensors_enabled:
+  hacker_news: true
+  github: true
+  arxiv: true
+  v2ex: true
+  hn_blogs: true
+  product_hunt: true
+  sources_36kr: true
+  wallstreetcn: true
+  social_accounts: true
+  social_topics: true
+  social_trends: true
+  chrome_radar: false
+  rss_feeds: false
+  weibo: true
+  zhihu: true
+  xiaohongshu: true
+
+# --- Fetch Settings ---
+fetch_time: "07:51"
+fetch_timezone: Asia/Shanghai
+default_limit: 10
+sensor_limits: {}
+sensor_lookback_hours: {}
+boost_keywords: []
+suppress_keywords: []
+cache_ttl_hours: 6
+fetch_concurrency: 4
+post_expiry_days: 30
+
+# --- Social ---
+social_accounts_x: []
+social_accounts_bluesky: []
+social_accounts_mastodon: []
+social_topics_keywords: []
+social_following_bluesky: false
+social_following_mastodon: false
+rss_feed_urls: []
+
+# --- AI Summary ---
+# summary_provider: null       # "openrouter" or "custom" (Ollama)
+# summary_api_key: null
+summary_base_url: https://openrouter.ai/api/v1
+summary_model: anthropic/claude-sonnet-4
+summary_concurrency: 4
+summary_sensor_prompts: {}
+summary_overall_prompt: ""

@@ -1,5 +1,8 @@
-// ABOUTME: Application configuration backed by SQLite with env-var fallback for tokens.
-// ABOUTME: DB key 'intel:config' is the primary source — env vars fill in missing token fields.
+// ABOUTME: Application configuration with layered priority: env > YAML file > DB > defaults.
+// ABOUTME: UI saves write to both SQLite and the YAML config file.
+import { readFile, writeFile, mkdir } from 'fs/promises'
+import path from 'path'
+import yaml from 'js-yaml'
 import { kvSet, kvGet } from '../db'
 import { type ConfigSettings, defaultConfig } from '../models'
 
@@ -20,26 +23,66 @@ export const MAX_ARTICLES_PER_BLOG = 2
 
 const KEY_FIELDS = new Set(['xai_api_key', 'github_token', 'producthunt_token', 'bluesky_app_password', 'mastodon_token', 'summary_api_key'])
 
-/** Overlay process env vars for token fields when the config value is null/empty. */
-function applyEnvFallback(config: ConfigSettings): ConfigSettings {
+/** Resolve the path to the local YAML config file (lazy — reads env at call time). */
+function configFilePath(): string {
+  return process.env.CONFIG_FILE_PATH
+    ?? path.resolve(process.cwd(), '..', 'config', 'settings.local.yaml')
+}
+
+/** Read config from the local YAML file. Returns null if file missing or invalid. */
+async function readFileConfig(): Promise<Record<string, unknown> | null> {
+  try {
+    const raw = await readFile(configFilePath(), 'utf-8')
+    const data = yaml.load(raw)
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+      return data as Record<string, unknown>
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+/** Write a partial config update to the YAML file, merging with existing content. */
+async function writeFileConfig(partial: Record<string, unknown>): Promise<void> {
+  const filePath = configFilePath()
+  const existing = await readFileConfig() ?? {}
+  const merged = { ...existing, ...partial }
+  await mkdir(path.dirname(filePath), { recursive: true })
+  const header = [
+    '# ABOUTME: Local config overrides — secrets and per-environment settings.',
+    '# ABOUTME: Priority: env vars > this file > database > defaults.',
+    '',
+  ].join('\n')
+  const content = header + yaml.dump(merged, { lineWidth: 120, noRefs: true, sortKeys: false })
+  await writeFile(filePath, content, 'utf-8')
+}
+
+/** Apply environment variable overrides — env vars take highest priority. */
+function applyEnvOverrides(config: ConfigSettings): ConfigSettings {
+  const env = process.env
   return {
     ...config,
-    xai_api_key:          config.xai_api_key         ?? process.env.XAI_API_KEY          ?? null,
-    xai_base_url:         config.xai_base_url         || process.env.XAI_BASE_URL         || 'https://api.x.ai/v1/chat/completions',
-    xai_model:            config.xai_model            || process.env.XAI_MODEL            || 'grok-3',
-    github_token:         config.github_token         ?? process.env.GITHUB_TOKEN         ?? null,
-    producthunt_token:    config.producthunt_token     ?? process.env.PRODUCTHUNT_TOKEN    ?? null,
-    bluesky_handle:       config.bluesky_handle        ?? process.env.BLUESKY_HANDLE       ?? null,
-    bluesky_app_password: config.bluesky_app_password  ?? process.env.BLUESKY_APP_PASSWORD ?? null,
-    mastodon_token:       config.mastodon_token        ?? process.env.MASTODON_TOKEN       ?? null,
-    social_following_bluesky:  config.social_following_bluesky  || process.env.SOCIAL_FOLLOWING_BLUESKY === 'true',
-    social_following_mastodon: config.social_following_mastodon || process.env.SOCIAL_FOLLOWING_MASTODON === 'true',
-    rss_feed_urls:            config.rss_feed_urls?.length
-                                ? config.rss_feed_urls
-                                : (process.env.RSS_FEED_URLS ? process.env.RSS_FEED_URLS.split(',').map(u => u.trim()).filter(Boolean) : []),
-    summary_api_key: config.summary_api_key ?? process.env.SUMMARY_API_KEY ?? null,
-    summary_base_url: config.summary_base_url || process.env.SUMMARY_BASE_URL || 'https://openrouter.ai/api/v1',
-    summary_model: config.summary_model || process.env.SUMMARY_MODEL || 'anthropic/claude-sonnet-4',
+    xai_api_key:          env.XAI_API_KEY          ?? config.xai_api_key,
+    xai_base_url:         env.XAI_BASE_URL         || config.xai_base_url,
+    xai_model:            env.XAI_MODEL            || config.xai_model,
+    github_token:         env.GITHUB_TOKEN         ?? config.github_token,
+    producthunt_token:    env.PRODUCTHUNT_TOKEN    ?? config.producthunt_token,
+    bluesky_handle:       env.BLUESKY_HANDLE       ?? config.bluesky_handle,
+    bluesky_app_password: env.BLUESKY_APP_PASSWORD ?? config.bluesky_app_password,
+    mastodon_token:       env.MASTODON_TOKEN       ?? config.mastodon_token,
+    social_following_bluesky:  env.SOCIAL_FOLLOWING_BLUESKY !== undefined
+      ? env.SOCIAL_FOLLOWING_BLUESKY === 'true'
+      : config.social_following_bluesky,
+    social_following_mastodon: env.SOCIAL_FOLLOWING_MASTODON !== undefined
+      ? env.SOCIAL_FOLLOWING_MASTODON === 'true'
+      : config.social_following_mastodon,
+    rss_feed_urls: env.RSS_FEED_URLS
+      ? env.RSS_FEED_URLS.split(',').map(u => u.trim()).filter(Boolean)
+      : config.rss_feed_urls,
+    summary_api_key:  env.SUMMARY_API_KEY  ?? config.summary_api_key,
+    summary_base_url: env.SUMMARY_BASE_URL || config.summary_base_url,
+    summary_model:    env.SUMMARY_MODEL    || config.summary_model,
   }
 }
 
@@ -66,29 +109,55 @@ function migrateConfig(data: Record<string, unknown>): Record<string, unknown> {
   return migrated
 }
 
-/** Load config from the database, falling back to defaults if key does not exist. */
+/**
+ * Load config with priority: env vars > YAML file > database > defaults.
+ * Each layer overrides the previous one via shallow merge.
+ */
 export async function loadConfig(): Promise<ConfigSettings> {
+  let config = defaultConfig()
+
+  // Layer 1 (lowest): Database
   try {
-    const data = await kvGet<ConfigSettings>(DB_KEY)
-    if (!data) {
-      return applyEnvFallback(defaultConfig())
+    const dbData = await kvGet<ConfigSettings>(DB_KEY)
+    if (dbData) {
+      const migrated = migrateConfig(dbData as unknown as Record<string, unknown>)
+      config = { ...config, ...migrated } as ConfigSettings
     }
-    // Migrate legacy keys, then merge on top of defaults so new fields get default values
-    const migrated = migrateConfig(data as unknown as Record<string, unknown>)
-    return applyEnvFallback({ ...defaultConfig(), ...migrated } as ConfigSettings)
-  } catch {
-    return applyEnvFallback(defaultConfig())
+  } catch { /* continue with defaults */ }
+
+  // Layer 2: YAML config file (overrides DB)
+  const fileData = await readFileConfig()
+  if (fileData) {
+    const migrated = migrateConfig(fileData)
+    config = { ...config, ...migrated } as ConfigSettings
   }
+
+  // Layer 3 (highest): Environment variables
+  config = applyEnvOverrides(config)
+
+  return config
 }
 
-/** Merge a partial config update into the database and return the full updated config. */
+/**
+ * Merge a partial config update into both the database and the YAML file.
+ * Returns the full updated config after re-loading with the priority chain.
+ */
 export async function saveConfig(
   partial: Partial<ConfigSettings>,
 ): Promise<ConfigSettings> {
-  const current = await loadConfig()
-  const merged = { ...current, ...partial }
+  // Write to DB
+  const dbData = await kvGet<ConfigSettings>(DB_KEY).catch(() => null)
+  const dbBase = dbData ? { ...defaultConfig(), ...dbData } : defaultConfig()
+  const merged = { ...dbBase, ...partial }
   await kvSet(DB_KEY, merged)
-  return merged
+
+  // Also write to YAML file (merge only the changed fields)
+  await writeFileConfig(partial as Record<string, unknown>).catch((err) => {
+    console.error('Failed to write config file:', err)
+  })
+
+  // Return the full config with priority chain applied
+  return loadConfig()
 }
 
 /** Return a copy of the config with API key values replaced by '***'. */

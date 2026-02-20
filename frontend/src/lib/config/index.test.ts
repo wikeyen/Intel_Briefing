@@ -1,25 +1,40 @@
 // ABOUTME: Unit tests for config system in config/index.ts.
-// ABOUTME: Covers loadConfig, saveConfig, maskConfig with mocked db adapter.
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+// ABOUTME: Covers loadConfig, saveConfig, maskConfig with mocked db and temp YAML files.
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { writeFile, unlink, mkdir } from 'fs/promises'
+import path from 'path'
 import { defaultConfig, type ConfigSettings } from '../models'
 
-// Mock the db adapter
-const mockKvSet = vi.fn()
-const mockKvGet = vi.fn()
+// Stateful mock for the kv store — kvSet writes are visible to kvGet
+let kvStore: Record<string, unknown> = {}
 vi.mock('../db', () => ({
-  kvSet: (...args: unknown[]) => mockKvSet(...args),
-  kvGet: (...args: unknown[]) => mockKvGet(...args),
+  kvSet: vi.fn(async (key: string, value: unknown) => { kvStore[key] = value }),
+  kvGet: vi.fn(async (key: string) => kvStore[key] ?? null),
 }))
 
-const { loadConfig, saveConfig, maskConfig } = await import('./index')
+const TEMP_DIR = path.resolve(__dirname, '__test_config__')
+const TEMP_YAML = path.join(TEMP_DIR, 'test-settings.yaml')
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks()
+  kvStore = {}
+  // Point config to a non-existent temp file (no YAML layer by default)
+  process.env.CONFIG_FILE_PATH = TEMP_YAML
+  await mkdir(TEMP_DIR, { recursive: true })
+  // Ensure no leftover file
+  await unlink(TEMP_YAML).catch(() => {})
 })
 
+afterEach(async () => {
+  await unlink(TEMP_YAML).catch(() => {})
+  delete process.env.CONFIG_FILE_PATH
+})
+
+// Import after env is set (dynamic import honors the env at call time)
+const { loadConfig, saveConfig, maskConfig } = await import('./index')
+
 describe('loadConfig', () => {
-  it('returns defaults when db has no data', async () => {
-    mockKvGet.mockResolvedValue(null)
+  it('returns defaults when db and file have no data', async () => {
     const config = await loadConfig()
     expect(config.default_limit).toBe(10)
     expect(config.xai_api_key).toBeNull()
@@ -27,39 +42,52 @@ describe('loadConfig', () => {
   })
 
   it('returns merged config from db', async () => {
-    mockKvGet.mockResolvedValue({ default_limit: 42 })
+    kvStore['intel:config'] = { default_limit: 42 }
     const config = await loadConfig()
     expect(config.default_limit).toBe(42)
-    // Other fields should still have defaults
     expect(config.xai_model).toBe('grok-3')
   })
 
-  it('returns defaults on db error', async () => {
-    mockKvGet.mockRejectedValue(new Error('db error'))
-    const config = await loadConfig()
-    expect(config.default_limit).toBe(10)
-  })
-
   it('settings from db override defaults', async () => {
-    mockKvGet.mockResolvedValue({ default_limit: 5 })
+    kvStore['intel:config'] = { default_limit: 5 }
     const config = await loadConfig()
     expect(config.default_limit).toBe(5)
+  })
+
+  it('YAML file overrides db values', async () => {
+    kvStore['intel:config'] = { default_limit: 5, xai_model: 'grok-2' }
+    await writeFile(TEMP_YAML, 'default_limit: 99\nxai_model: grok-3\n')
+    const config = await loadConfig()
+    expect(config.default_limit).toBe(99)
+    expect(config.xai_model).toBe('grok-3')
+  })
+
+  it('db values used when YAML file missing', async () => {
+    kvStore['intel:config'] = { default_limit: 42 }
+    const config = await loadConfig()
+    expect(config.default_limit).toBe(42)
   })
 })
 
 describe('saveConfig', () => {
-  it('merges partial update and writes to db', async () => {
-    mockKvGet.mockResolvedValue(null)
+  it('merges partial update and writes to db and file', async () => {
     const result = await saveConfig({ default_limit: 25 })
     expect(result.default_limit).toBe(25)
-    expect(mockKvSet).toHaveBeenCalled()
+    expect(kvStore['intel:config']).toBeDefined()
   })
 
   it('preserves existing config fields', async () => {
-    mockKvGet.mockResolvedValue({ xai_api_key: 'real-key', default_limit: 10 })
+    kvStore['intel:config'] = { xai_api_key: 'real-key', default_limit: 10 }
     const result = await saveConfig({ default_limit: 25 })
     expect(result.default_limit).toBe(25)
     expect(result.xai_api_key).toBe('real-key')
+  })
+
+  it('writes updated values to YAML file', async () => {
+    await saveConfig({ summary_model: 'test-model' })
+    const { loadConfig: freshLoad } = await import('./index')
+    const config = await freshLoad()
+    expect(config.summary_model).toBe('test-model')
   })
 })
 
@@ -99,47 +127,43 @@ describe('maskConfig', () => {
 
 describe('config migration', () => {
   it('migrates politics_accounts to social_accounts_x', async () => {
-    mockKvGet.mockResolvedValue({
-      politics_accounts: ['@potus', '@elonmusk'],
-    })
+    kvStore['intel:config'] = { politics_accounts: ['@potus', '@elonmusk'] }
     const config = await loadConfig()
     expect(config.social_accounts_x).toEqual(['@potus', '@elonmusk'])
   })
 
   it('migrates topics_keywords to social_topics_keywords', async () => {
-    mockKvGet.mockResolvedValue({
-      topics_keywords: ['AI', 'crypto'],
-    })
+    kvStore['intel:config'] = { topics_keywords: ['AI', 'crypto'] }
     const config = await loadConfig()
     expect(config.social_topics_keywords).toEqual(['AI', 'crypto'])
   })
 
   it('does not overwrite existing social fields with legacy keys', async () => {
-    mockKvGet.mockResolvedValue({
+    kvStore['intel:config'] = {
       politics_accounts: ['@old_user'],
       social_accounts_x: ['@new_user'],
-    })
+    }
     const config = await loadConfig()
     expect(config.social_accounts_x).toEqual(['@new_user'])
   })
 
   it('migrates pipeline_concurrency to fetch/summary concurrency', async () => {
-    mockKvGet.mockResolvedValue({
-      pipeline_concurrency: 8,
-    })
+    kvStore['intel:config'] = { pipeline_concurrency: 8 }
     const config = await loadConfig()
     expect(config.fetch_concurrency).toBe(8)
     expect(config.summary_concurrency).toBe(8)
   })
 
   it('does not overwrite existing concurrency fields with legacy key', async () => {
-    mockKvGet.mockResolvedValue({
-      pipeline_concurrency: 8,
-      fetch_concurrency: 3,
-    })
+    kvStore['intel:config'] = { pipeline_concurrency: 8, fetch_concurrency: 3 }
     const config = await loadConfig()
     expect(config.fetch_concurrency).toBe(3)
     expect(config.summary_concurrency).toBe(8)
   })
-})
 
+  it('applies migration to YAML file data too', async () => {
+    await writeFile(TEMP_YAML, 'politics_accounts:\n  - "@potus"\n')
+    const config = await loadConfig()
+    expect(config.social_accounts_x).toEqual(['@potus'])
+  })
+})

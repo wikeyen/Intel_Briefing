@@ -82,4 +82,4 @@ data/
 .worktrees/
 
 # Local settings — contains API keys, never commit
-config/settings.local.json
+config/settings.local.yaml

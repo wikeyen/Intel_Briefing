@@ -19,7 +19,7 @@ import { SENSOR_REGISTRY } from '../sensors'
 import { SensorConfigError } from '../sensors/errors'
 import { SENSOR_LABELS } from './sensor-map'
 import { assembleReport } from './report-builder'
-import { getSensorPrompt, getOverallPrompt, SUMMARY_ITEM_CAP } from '../summary/prompts'
+import { getSensorPrompt, getOverallPrompt, CHUNK_SIZE, CHUNK_EXTRACT_PROMPT } from '../summary/prompts'
 
 export interface PipelineResult {
   report: IntelReport | null
@@ -73,9 +73,21 @@ function groupBySensor(report: IntelReport): Map<string, IntelItem[]> {
   return groups
 }
 
+/** Split an array into chunks of at most `size` elements. */
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const chunks: T[][] = []
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size))
+  }
+  return chunks
+}
+
 /**
- * Summarize items from a single sensor via LLM.
- * Returns null if there are no items or the LLM call fails.
+ * Summarize items from a single sensor via LLM using map-reduce.
+ *
+ * - Small batches (<= CHUNK_SIZE): single LLM call with synthesis prompt.
+ * - Large batches: map phase extracts signals from each chunk concurrently,
+ *   then reduce phase synthesizes all extractions with the per-sensor prompt.
  */
 async function summarizeSensor(
   sensorName: string,
@@ -86,16 +98,42 @@ async function summarizeSensor(
   if (items.length === 0) return null
 
   const label = SENSOR_LABELS[sensorName] ?? sensorName
-  const capped = items.slice(0, SUMMARY_ITEM_CAP)
-  const itemsText = capped.map(formatItem).join('\n\n')
+  const sensorPrompt = getSensorPrompt(sensorName, promptOverrides)
 
-  const messages: ChatMessage[] = [
-    { role: 'system', content: getSensorPrompt(sensorName, promptOverrides) },
-    { role: 'user', content: `综合分析以下 ${label} 的 ${capped.length} 条内容：\n\n${itemsText}` },
-  ]
+  let summaryText: string
 
-  const summary = await chatCompletion(messages, llmConfig)
-  return { sensor_name: sensorName, label, summary, item_count: items.length }
+  if (items.length <= CHUNK_SIZE) {
+    // Single-pass: small enough for one LLM call
+    const itemsText = items.map(formatItem).join('\n\n')
+    summaryText = await chatCompletion([
+      { role: 'system', content: sensorPrompt },
+      { role: 'user', content: `综合分析以下 ${label} 的 ${items.length} 条内容：\n\n${itemsText}` },
+    ], llmConfig)
+  } else {
+    // Map-reduce: chunk → extract signals → merge
+    const chunks = chunkArray(items, CHUNK_SIZE)
+
+    // Map phase: extract key signals from each chunk concurrently
+    const extractionPromises = chunks.map((chunk, i) => {
+      const chunkText = chunk.map(formatItem).join('\n\n')
+      return chatCompletion([
+        { role: 'system', content: CHUNK_EXTRACT_PROMPT },
+        { role: 'user', content: `以下是 ${label} 的第 ${i + 1}/${chunks.length} 批内容（${chunk.length} 条）：\n\n${chunkText}` },
+      ], llmConfig)
+    })
+    const extractions = await Promise.all(extractionPromises)
+
+    // Reduce phase: synthesize all extractions with the per-sensor prompt
+    const mergedExtractions = extractions
+      .map((ext, i) => `[批次 ${i + 1}] ${ext}`)
+      .join('\n\n')
+    summaryText = await chatCompletion([
+      { role: 'system', content: sensorPrompt },
+      { role: 'user', content: `以下是从 ${items.length} 条 ${label} 内容中提取的关键信号（分 ${chunks.length} 批提取）。请综合分析：\n\n${mergedExtractions}` },
+    ], llmConfig)
+  }
+
+  return { sensor_name: sensorName, label, summary: summaryText, item_count: items.length }
 }
 
 /**

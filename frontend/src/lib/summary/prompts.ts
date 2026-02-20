@@ -1,8 +1,8 @@
 // ABOUTME: Default per-sensor and overall summary prompts for the LLM summarizer.
 // ABOUTME: Prompts are optimized for AI industry VC professional briefings; user-overridable via config.
 
-/** Max items to send per sensor to the LLM. Prevents prompt bloat and listing behavior. */
-export const SUMMARY_ITEM_CAP = 15
+/** Max items per chunk in the map-reduce summarization pipeline. */
+export const CHUNK_SIZE = 12
 
 /**
  * Shared anti-listing instruction appended to every per-sensor prompt.
@@ -15,6 +15,19 @@ const SYNTHESIS_RULE = `
 - 将所有内容综合为2-4句连贯的趋势分析段落
 - 可提及1-2个最重要的具体名称作为例证，但不要罗列
 - 输出纯文本，不要使用 Markdown 格式`
+
+/**
+ * Map-phase prompt: extracts key signals from a chunk of items.
+ * Produces a short extraction that feeds into the reduce (merge) phase.
+ */
+export const CHUNK_EXTRACT_PROMPT = `你是一名情报提取助手。请从以下内容中提取关键信号。
+
+要求：
+- 提取最重要的事实、趋势信号和值得关注的动向
+- 保留具体名称、数字、金额等关键细节
+- 区分事实与观点
+- 忽略无关紧要的噪音内容
+- 输出3-5句话，纯文本，不要使用 Markdown 格式或编号列表`
 
 /** Per-sensor default system prompts, keyed by sensor name. */
 export const DEFAULT_SENSOR_PROMPTS: Record<string, string> = {

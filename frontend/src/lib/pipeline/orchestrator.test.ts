@@ -189,6 +189,45 @@ describe('runPipeline', () => {
     expect(sensor?.fetch_error_kind).toBe('config')
   })
 
+  it('uses map-reduce when sensor has more items than CHUNK_SIZE', async () => {
+    // Create 25 items — should trigger map-reduce (CHUNK_SIZE=12 → 3 chunks)
+    const items = Array.from({ length: 25 }, (_, i) => makeItem(`hn${i}`, 'hacker_news'))
+    mockSensorFns['hacker_news'] = vi.fn().mockResolvedValue(items)
+
+    const config = makeConfig({
+      sensors_enabled: { hacker_news: true },
+      pipeline_concurrency: 4,
+      summary_provider: 'openrouter',
+      summary_api_key: 'key',
+      summary_base_url: 'https://openrouter.ai/api/v1',
+      summary_model: 'model',
+    })
+
+    const result = await runPipeline(config, 'fetch_summarize')
+    expect(result.summary).toBeDefined()
+    // Map phase: 3 chunk extraction calls + reduce phase: 1 merge call + overall: 1 = 5
+    expect(mockChatCompletion.mock.calls.length).toBe(5)
+  })
+
+  it('uses single-pass when items fit in one chunk', async () => {
+    const items = Array.from({ length: 5 }, (_, i) => makeItem(`hn${i}`, 'hacker_news'))
+    mockSensorFns['hacker_news'] = vi.fn().mockResolvedValue(items)
+
+    const config = makeConfig({
+      sensors_enabled: { hacker_news: true },
+      pipeline_concurrency: 4,
+      summary_provider: 'openrouter',
+      summary_api_key: 'key',
+      summary_base_url: 'https://openrouter.ai/api/v1',
+      summary_model: 'model',
+    })
+
+    const result = await runPipeline(config, 'fetch_summarize')
+    expect(result.summary).toBeDefined()
+    // Single-pass: 1 sensor summary + 1 overall = 2
+    expect(mockChatCompletion.mock.calls.length).toBe(2)
+  })
+
   it('writes pipeline status on progress changes', async () => {
     mockSensorFns['hacker_news'] = vi.fn().mockResolvedValue([makeItem('hn1', 'hacker_news')])
 

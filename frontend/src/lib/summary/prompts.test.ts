@@ -1,7 +1,7 @@
 // ABOUTME: Tests for configurable summary prompt resolution.
 // ABOUTME: Validates default prompts, user overrides, and fallback behavior.
 import { describe, it, expect } from 'vitest'
-import { getSensorPrompt, getOverallPrompt, DEFAULT_SENSOR_PROMPTS, DEFAULT_OVERALL_PROMPT, SUMMARY_ITEM_CAP } from './prompts'
+import { getSensorPrompt, getOverallPrompt, DEFAULT_SENSOR_PROMPTS, DEFAULT_OVERALL_PROMPT, CHUNK_SIZE, CHUNK_EXTRACT_PROMPT } from './prompts'
 
 describe('getSensorPrompt', () => {
   it('returns default prompt for known sensor', () => {
@@ -45,10 +45,17 @@ describe('getSensorPrompt', () => {
   })
 })
 
-describe('SUMMARY_ITEM_CAP', () => {
-  it('is a positive number', () => {
-    expect(SUMMARY_ITEM_CAP).toBeGreaterThan(0)
-    expect(SUMMARY_ITEM_CAP).toBe(15)
+describe('CHUNK_SIZE', () => {
+  it('is a reasonable chunk size for map-reduce', () => {
+    expect(CHUNK_SIZE).toBeGreaterThan(0)
+    expect(CHUNK_SIZE).toBe(12)
+  })
+})
+
+describe('CHUNK_EXTRACT_PROMPT', () => {
+  it('contains extraction instructions', () => {
+    expect(CHUNK_EXTRACT_PROMPT).toContain('提取关键信号')
+    expect(CHUNK_EXTRACT_PROMPT).toContain('3-5句')
   })
 })
 

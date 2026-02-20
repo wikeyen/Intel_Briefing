@@ -8,45 +8,67 @@ import { DEFAULT_SENSOR_PROMPTS, DEFAULT_OVERALL_PROMPT } from '@/lib/summary/pr
 
 import { useToast } from '@/lib/toast-context'
 
+/* ─── Shared form primitives (matches Pipeline.tsx) ─────────────────── */
+
 const inputBase: React.CSSProperties = {
   background: 'var(--surface)',
   border: '1px solid var(--border)',
-  borderRadius: 6,
-  padding: '0.625rem 0.875rem',
-  fontSize: '0.875rem',
+  borderRadius: 4,
+  padding: '0.75rem 1rem',
+  fontSize: '0.9375rem',
   color: 'var(--ink)',
   outline: 'none',
   transition: 'border-color 120ms, box-shadow 120ms',
   fontFamily: 'inherit',
 }
 
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: '0.6875rem',
-  fontWeight: 600,
-  color: 'var(--ink-muted)',
-  textTransform: 'uppercase',
-  letterSpacing: '0.06em',
-  marginBottom: '0.375rem',
-}
-
-const cardStyle: React.CSSProperties = {
-  background: 'var(--surface)',
-  border: '1px solid var(--border)',
-  borderRadius: 8,
-  padding: '1.25rem',
-}
-
 function focus(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
   e.currentTarget.style.borderColor = 'var(--accent)'
-  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(29,107,79,0.08)'
+  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(29,107,79,0.1)'
 }
 function blur(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
   e.currentTarget.style.borderColor = 'var(--border)'
   e.currentTarget.style.boxShadow = 'none'
 }
 
-// ── Ollama Model Picker ────────────────────────────────────────────────
+function SubLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      fontSize: '0.6875rem',
+      fontWeight: 700,
+      letterSpacing: '0.09em',
+      textTransform: 'uppercase',
+      color: 'var(--ink-faint)',
+      marginBottom: '1rem',
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function FieldLabel({ children, hint }: { children: React.ReactNode; hint?: string }) {
+  return (
+    <label style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '0.5rem' }}>
+      {children}
+      {hint && (
+        <span style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--ink-faint)' }}>
+          {hint}
+        </span>
+      )}
+    </label>
+  )
+}
+
+function HelpText({ children }: { children: React.ReactNode }) {
+  return (
+    <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, marginTop: '0.5rem' }}>
+      {children}
+    </p>
+  )
+}
+
+/* ─── Ollama Model Combobox ─────────────────────────────────────────── */
+
 function OllamaModelPicker({
   value,
   onChange,
@@ -62,19 +84,15 @@ function OllamaModelPicker({
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const wrapperRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
 
   const fetchModels = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      // Strip /v1 suffix to get Ollama base
       const ollamaBase = baseUrl.replace(/\/v1\/?$/, '')
       const result = await api.getOllamaModels(ollamaBase)
       setModels(result.models ?? [])
-      if (result.models.length === 0) {
-        setError('No models found')
-      }
+      if (result.models.length === 0) setError('No models found')
     } catch {
       setError('Cannot connect to Ollama')
       setModels([])
@@ -83,9 +101,7 @@ function OllamaModelPicker({
     }
   }, [baseUrl])
 
-  useEffect(() => {
-    fetchModels()
-  }, [fetchModels])
+  useEffect(() => { fetchModels() }, [fetchModels])
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -102,151 +118,153 @@ function OllamaModelPicker({
     m.name.toLowerCase().includes(search.toLowerCase()),
   )
 
+  const statusLine = loading
+    ? 'Scanning local models…'
+    : error
+      ? error
+      : `${models.length} model${models.length !== 1 ? 's' : ''} available`
+
   return (
     <div ref={wrapperRef} style={{ position: 'relative' }}>
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
-        <div style={{ position: 'relative', flex: 1 }}>
-          <input
-            ref={inputRef}
-            type="text"
-            value={open ? search : value}
-            onChange={(e) => {
-              setSearch(e.target.value)
-              if (!open) setOpen(true)
-            }}
-            onFocus={(e) => {
-              setOpen(true)
-              setSearch('')
-              focus(e)
-            }}
-            onBlur={blur}
-            placeholder={loading ? 'Loading models…' : 'Search or type model name…'}
-            style={{ ...inputBase, width: '100%', paddingRight: '2rem' }}
-          />
-          <span
-            style={{
-              position: 'absolute',
-              right: '0.75rem',
-              top: '50%',
-              transform: `translateY(-50%) rotate(${open ? '180deg' : '0deg'})`,
-              pointerEvents: 'none',
-              color: 'var(--ink-faint)',
-              fontSize: '0.5625rem',
-              transition: 'transform 150ms',
-            }}
-          >
-            ▾
-          </span>
-        </div>
+      {/* Combobox input — matches inputBase */}
+      <div style={{ position: 'relative' }}>
+        <input
+          type="text"
+          value={open ? search : value}
+          onChange={(e) => {
+            setSearch(e.target.value)
+            if (!open) setOpen(true)
+          }}
+          onFocus={(e) => {
+            setOpen(true)
+            setSearch('')
+            focus(e)
+          }}
+          onBlur={blur}
+          placeholder="Type to search models…"
+          style={{ ...inputBase, width: '100%', paddingRight: '2.25rem' }}
+        />
+        <span style={{
+          position: 'absolute',
+          right: '0.875rem',
+          top: '50%',
+          transform: `translateY(-50%) rotate(${open ? '180deg' : '0deg'})`,
+          pointerEvents: 'none',
+          color: 'var(--ink-faint)',
+          fontSize: '0.625rem',
+          transition: 'transform 150ms',
+          userSelect: 'none',
+        }}>
+          ▾
+        </span>
+      </div>
+
+      {/* Status line */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: '0.375rem',
+      }}>
+        <span style={{ fontSize: '0.75rem', color: error ? 'var(--warn)' : 'var(--ink-faint)' }}>
+          {statusLine}
+        </span>
         <button
-          onClick={fetchModels}
+          onClick={(e) => { e.preventDefault(); fetchModels() }}
           disabled={loading}
-          title="Refresh model list"
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 36,
-            height: 36,
-            borderRadius: 6,
-            border: '1px solid var(--border)',
-            background: 'var(--surface)',
-            color: loading ? 'var(--ink-faint)' : 'var(--ink-muted)',
+            fontSize: '0.75rem',
+            fontWeight: 500,
+            color: loading ? 'var(--ink-faint)' : 'var(--accent)',
+            background: 'none',
+            border: 'none',
             cursor: loading ? 'not-allowed' : 'pointer',
-            fontSize: '0.875rem',
-            flexShrink: 0,
+            padding: 0,
           }}
         >
-          {loading ? '…' : '↻'}
+          {loading ? 'Scanning…' : 'Rescan'}
         </button>
       </div>
 
-      {/* Dropdown */}
-      {open && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 4px)',
-            left: 0,
-            right: 0,
-            maxHeight: 240,
-            overflowY: 'auto',
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: 6,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
-            zIndex: 50,
-          }}
-        >
-          {error && (
-            <div style={{ padding: '0.75rem 1rem', color: 'var(--ink-faint)', fontSize: '0.8125rem' }}>
-              {error}
-              <button
-                onClick={fetchModels}
-                style={{
-                  marginLeft: '0.5rem',
-                  color: 'var(--accent)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '0.8125rem',
-                  textDecoration: 'underline',
-                  textUnderlineOffset: '2px',
-                }}
-              >
-                Retry
-              </button>
-            </div>
-          )}
-          {!error && filtered.length === 0 && !loading && (
-            <div style={{ padding: '0.75rem 1rem', color: 'var(--ink-faint)', fontSize: '0.8125rem' }}>
+      {/* Dropdown list */}
+      {open && !loading && (
+        <div style={{
+          position: 'absolute',
+          top: 'calc(2.75rem + 2px)',
+          left: 0,
+          right: 0,
+          maxHeight: 260,
+          overflowY: 'auto',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 4,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04)',
+          zIndex: 50,
+        }}>
+          {filtered.length === 0 && (
+            <div style={{ padding: '0.875rem 1rem', color: 'var(--ink-faint)', fontSize: '0.8125rem' }}>
               {search ? `No models matching "${search}"` : 'No models available'}
             </div>
           )}
-          {filtered.map((m) => (
-            <button
-              key={m.name}
-              onMouseDown={(e) => {
-                e.preventDefault()
-                onChange(m.name)
-                setOpen(false)
-                setSearch('')
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                width: '100%',
-                padding: '0.5rem 1rem',
-                background: m.name === value ? 'rgba(29,107,79,0.06)' : 'none',
-                border: 'none',
-                cursor: 'pointer',
-                textAlign: 'left',
-                color: 'var(--ink)',
-                transition: 'background 80ms',
-              }}
-              onMouseEnter={(e) => {
-                if (m.name !== value) e.currentTarget.style.background = 'var(--surface-alt)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = m.name === value ? 'rgba(29,107,79,0.06)' : 'transparent'
-              }}
-            >
-              <span style={{ fontSize: '0.8125rem', fontWeight: m.name === value ? 600 : 400 }}>
-                {m.name}
-              </span>
-              <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)', whiteSpace: 'nowrap' }}>
-                {[m.size, m.family, m.quantization].filter(Boolean).join(' · ')}
-              </span>
-            </button>
-          ))}
+          {filtered.map((m, idx) => {
+            const selected = m.name === value
+            return (
+              <button
+                key={m.name}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  onChange(m.name)
+                  setOpen(false)
+                  setSearch('')
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '1rem',
+                  width: '100%',
+                  padding: '0.625rem 1rem',
+                  background: selected ? 'var(--accent-wash)' : 'transparent',
+                  borderBottom: idx < filtered.length - 1 ? '1px solid var(--border-soft)' : 'none',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  color: 'var(--ink)',
+                  transition: 'background 60ms',
+                }}
+                onMouseEnter={(e) => {
+                  if (!selected) e.currentTarget.style.background = 'var(--surface-alt)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = selected ? 'var(--accent-wash)' : 'transparent'
+                }}
+              >
+                <span style={{
+                  fontSize: '0.8125rem',
+                  fontWeight: selected ? 600 : 400,
+                  color: selected ? 'var(--accent)' : 'var(--ink)',
+                }}>
+                  {m.name}
+                </span>
+                <span style={{
+                  fontSize: '0.6875rem',
+                  color: 'var(--ink-faint)',
+                  fontFamily: 'ui-monospace, monospace',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                }}>
+                  {[m.size, m.quantization].filter(Boolean).join(' / ')}
+                </span>
+              </button>
+            )
+          })}
         </div>
       )}
     </div>
   )
 }
 
-// ── Prompt Sensors ─────────────────────────────────────────────────────
+/* ─── Prompt Customization Sub-components ───────────────────────────── */
+
 const PROMPT_SENSORS: Array<{ key: string; label: string }> = [
   { key: 'hacker_news', label: 'Hacker News' },
   { key: 'arxiv', label: 'ArXiv AI' },
@@ -263,26 +281,27 @@ const PROMPT_SENSORS: Array<{ key: string; label: string }> = [
   { key: 'rss_feeds', label: 'RSS Feeds' },
 ]
 
-function PromptBadge({ isCustom }: { isCustom: boolean }) {
+function StatusBadge({ isCustom }: { isCustom: boolean }) {
+  if (!isCustom) return null
   return (
     <span style={{
-      fontSize: '0.5625rem',
-      fontWeight: 700,
-      letterSpacing: '0.08em',
+      fontSize: '0.625rem',
+      fontWeight: 600,
+      letterSpacing: '0.05em',
       textTransform: 'uppercase',
-      padding: '0.125rem 0.5rem',
+      padding: '0.125rem 0.375rem',
       borderRadius: 3,
-      color: isCustom ? 'var(--accent)' : 'var(--ink-faint)',
-      background: isCustom ? 'rgba(29,107,79,0.08)' : 'var(--surface-alt)',
-      border: `1px solid ${isCustom ? 'var(--accent)' : 'var(--border)'}`,
+      color: 'var(--accent)',
+      background: 'var(--accent-wash)',
       flexShrink: 0,
     }}>
-      {isCustom ? 'Custom' : 'Default'}
+      Customized
     </span>
   )
 }
 
-// ── Main Component ─────────────────────────────────────────────────────
+/* ─── Main Component ────────────────────────────────────────────────── */
+
 export function AiSummary() {
   const showToast = useToast()
 
@@ -293,7 +312,6 @@ export function AiSummary() {
   const [testingLlm, setTestingLlm] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  // Prompt customization state
   const [sensorPrompts, setSensorPrompts] = useState<Record<string, string>>({})
   const [overallPrompt, setOverallPrompt] = useState('')
   const [promptsExpanded, setPromptsExpanded] = useState(false)
@@ -318,9 +336,10 @@ export function AiSummary() {
     setSummaryProvider(provider)
     if (provider === 'openrouter') {
       setSummaryBaseUrl(OPENROUTER_BASE_URL)
+      setSummaryModel('anthropic/claude-sonnet-4')
     } else if (provider === 'custom') {
       setSummaryBaseUrl(OLLAMA_BASE_URL)
-      setSummaryModel('llama3.2')
+      setSummaryModel('')
     }
   }
 
@@ -346,7 +365,6 @@ export function AiSummary() {
   const testLlm = async () => {
     setTestingLlm(true)
     try {
-      // Save current config first so the endpoint uses the latest values
       await save()
       const result = await api.testSummary()
       if (result.ok) {
@@ -374,62 +392,66 @@ export function AiSummary() {
   }
 
   const isOllama = summaryProvider === 'custom'
+  const isEnabled = summaryProvider !== null
 
   return (
     <section id="ai-summary" style={{ padding: '4.5rem 0' }}>
+
       <div className="page-header" style={{ marginBottom: '2rem' }}>
         <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.375rem' }}>
           AI Summary
         </h2>
-        <p style={{ fontSize: '0.8125rem', color: 'var(--ink-muted)', lineHeight: 1.6 }}>
-          Generate per-source summaries and an executive briefing after each fetch.
+        <p style={{ fontSize: '0.875rem', color: 'var(--ink-muted)', lineHeight: 1.6 }}>
+          Generate per-source summaries and an executive briefing after each fetch using an LLM.
         </p>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
 
-        {/* ── Provider Card ────────────────────────────────── */}
-        <div style={cardStyle}>
-          <label style={labelStyle}>Provider</label>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            {[
-              { value: '', label: 'Off' },
-              { value: 'openrouter', label: 'OpenRouter' },
-              { value: 'custom', label: 'Ollama' },
-            ].map((opt) => {
-              const selected = (summaryProvider ?? '') === opt.value
-              return (
-                <button
-                  key={opt.value}
-                  onClick={() => handleProviderChange(opt.value)}
-                  style={{
-                    flex: 1,
-                    padding: '0.5rem 0.75rem',
-                    fontSize: '0.8125rem',
-                    fontWeight: selected ? 600 : 400,
-                    borderRadius: 6,
-                    border: `1.5px solid ${selected ? 'var(--accent)' : 'var(--border)'}`,
-                    background: selected ? 'rgba(29,107,79,0.06)' : 'transparent',
-                    color: selected ? 'var(--accent)' : 'var(--ink-muted)',
-                    cursor: 'pointer',
-                    transition: 'all 120ms',
-                  }}
-                >
-                  {opt.label}
-                </button>
-              )
-            })}
-          </div>
-        </div>
+        {/* ── Connection ─────────────────────────────────────── */}
+        <div>
+          <SubLabel>Connection</SubLabel>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
-        {/* ── Connection Card ──────────────────────────────── */}
-        {summaryProvider !== null && (
-          <div style={cardStyle}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-
-              {/* Model */}
+            {/* Provider + Model — side by side */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }} className="settings-grid-2col">
               <div>
-                <label style={labelStyle}>Model</label>
+                <FieldLabel>Provider</FieldLabel>
+                <div style={{ position: 'relative' }}>
+                  <select
+                    value={summaryProvider ?? ''}
+                    onChange={(e) => handleProviderChange(e.target.value)}
+                    style={{
+                      ...inputBase,
+                      width: '100%',
+                      appearance: 'none',
+                      WebkitAppearance: 'none',
+                      paddingRight: '2.25rem',
+                      cursor: 'pointer',
+                    }}
+                    onFocus={focus}
+                    onBlur={blur}
+                  >
+                    <option value="">Disabled</option>
+                    <option value="openrouter">OpenRouter</option>
+                    <option value="custom">Ollama (Local)</option>
+                  </select>
+                  <span style={{
+                    position: 'absolute',
+                    right: '0.875rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    pointerEvents: 'none',
+                    color: 'var(--ink-faint)',
+                    fontSize: '0.625rem',
+                    userSelect: 'none',
+                  }}>
+                    ▾
+                  </span>
+                </div>
+              </div>
+              <div>
+                <FieldLabel>Model</FieldLabel>
                 {isOllama ? (
                   <OllamaModelPicker
                     value={summaryModel}
@@ -440,39 +462,45 @@ export function AiSummary() {
                   <input
                     type="text"
                     value={summaryModel}
+                    disabled={!isEnabled}
                     onChange={(e) => setSummaryModel(e.target.value)}
                     placeholder="anthropic/claude-sonnet-4"
-                    style={{ ...inputBase, width: '100%' }}
+                    style={{
+                      ...inputBase,
+                      width: '100%',
+                      opacity: !isEnabled ? 0.5 : 1,
+                      cursor: !isEnabled ? 'not-allowed' : 'text',
+                    }}
                     onFocus={focus}
                     onBlur={blur}
                   />
                 )}
               </div>
+            </div>
 
-              {/* API Key — not needed for Ollama typically, but still available */}
+            {/* API Key */}
+            {isEnabled && (
               <div>
-                <label style={labelStyle}>
-                  API Key
-                  {isOllama && (
-                    <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, marginLeft: '0.5rem', color: 'var(--ink-faint)' }}>
-                      optional for Ollama
-                    </span>
-                  )}
-                </label>
+                <FieldLabel hint={isOllama ? 'optional' : undefined}>API Key</FieldLabel>
                 <input
                   type="password"
                   value={summaryApiKey}
                   onChange={(e) => setSummaryApiKey(e.target.value)}
-                  placeholder={isOllama ? 'Usually not needed' : 'sk-...'}
+                  placeholder={isOllama ? 'Leave blank for local Ollama' : 'sk-or-v1-...'}
                   style={{ ...inputBase, width: '100%' }}
                   onFocus={focus}
                   onBlur={blur}
                 />
+                {!isOllama && (
+                  <HelpText>Your OpenRouter API key. Get one at openrouter.ai/keys.</HelpText>
+                )}
               </div>
+            )}
 
-              {/* Base URL */}
+            {/* Base URL */}
+            {isEnabled && (
               <div>
-                <label style={labelStyle}>Base URL</label>
+                <FieldLabel>Base URL</FieldLabel>
                 <input
                   type="text"
                   value={summaryBaseUrl}
@@ -482,116 +510,83 @@ export function AiSummary() {
                   onFocus={focus}
                   onBlur={blur}
                 />
+                <HelpText>
+                  {isOllama
+                    ? 'Points to your local Ollama instance. Change if running on a different host or port.'
+                    : 'OpenAI-compatible endpoint. Only change if using a custom proxy.'}
+                </HelpText>
               </div>
+            )}
 
-              {/* Action buttons */}
-              <div style={{ display: 'flex', gap: '0.5rem', paddingTop: '0.25rem' }}>
-                <button
-                  onClick={save}
-                  disabled={saving}
-                  style={{
-                    fontSize: '0.8125rem',
-                    fontWeight: 500,
-                    padding: '0.5rem 1.25rem',
-                    borderRadius: 6,
-                    border: 'none',
-                    color: saving ? 'var(--ink-faint)' : '#FFFFFF',
-                    background: saving ? 'var(--border)' : 'var(--ink)',
-                    cursor: saving ? 'not-allowed' : 'pointer',
-                    transition: 'background 120ms',
-                  }}
-                  onMouseEnter={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = '#000000' }}
-                  onMouseLeave={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = 'var(--ink)' }}
-                >
-                  {saving ? 'Saving…' : 'Save'}
-                </button>
+            {/* Test Connection */}
+            {isEnabled && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0.75rem 1rem',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: 6,
+              }}>
+                <div>
+                  <span style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
+                    Connection Test
+                  </span>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', margin: '0.125rem 0 0' }}>
+                    Saves settings, then sends a test prompt to verify the LLM responds.
+                  </p>
+                </div>
                 <button
                   onClick={testLlm}
                   disabled={testingLlm || saving}
                   style={{
-                    fontSize: '0.8125rem',
+                    fontSize: '0.75rem',
                     fontWeight: 500,
-                    padding: '0.5rem 1.25rem',
-                    borderRadius: 6,
+                    padding: '0.375rem 0.875rem',
+                    borderRadius: 4,
                     border: '1px solid var(--border)',
-                    color: (testingLlm || saving) ? 'var(--ink-faint)' : 'var(--ink)',
-                    background: 'transparent',
+                    color: (testingLlm || saving) ? 'var(--ink-faint)' : 'var(--ink-muted)',
+                    background: 'var(--surface)',
                     cursor: (testingLlm || saving) ? 'not-allowed' : 'pointer',
-                    transition: 'background 120ms',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    marginLeft: '1.5rem',
+                    transition: 'color 120ms, border-color 120ms',
                   }}
                 >
-                  {testingLlm ? 'Testing…' : 'Test'}
+                  {testingLlm ? 'Testing…' : 'Test Now'}
                 </button>
               </div>
-            </div>
+            )}
           </div>
-        )}
+        </div>
 
-        {/* ── Prompt Customization (collapsible) ──────────── */}
-        {summaryProvider !== null && (
-          <div style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            overflow: 'hidden',
-          }}>
-            <button
-              onClick={() => setPromptsExpanded(!promptsExpanded)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                width: '100%',
-                padding: '1rem 1.25rem',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: 'var(--ink)',
-              }}
-            >
-              <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>
-                Prompt Customization
-              </span>
-              <span style={{
-                fontSize: '0.625rem',
-                color: 'var(--ink-faint)',
-                transition: 'transform 200ms',
-                transform: promptsExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-              }}>
-                ▾
-              </span>
-            </button>
+        {/* ── Prompt Customization ──────────────────────────── */}
+        {isEnabled && (
+          <>
+            <div style={{ height: 1, background: 'var(--border-soft)' }} />
 
-            {promptsExpanded && (
-              <div style={{ padding: '0 1.25rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div>
+              <SubLabel>Prompts</SubLabel>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
-                {/* Overall Summary Prompt */}
+                {/* Overall Prompt */}
                 <div>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: '0.5rem',
-                  }}>
-                    <label style={{
-                      ...labelStyle,
-                      marginBottom: 0,
-                    }}>
-                      Overall Summary Prompt
-                    </label>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <FieldLabel>Executive Summary Prompt</FieldLabel>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <PromptBadge isCustom={!!overallPrompt} />
+                      <StatusBadge isCustom={!!overallPrompt} />
                       {overallPrompt && (
                         <button
                           onClick={() => setOverallPrompt('')}
                           style={{
-                            fontSize: '0.6875rem',
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
                             color: 'var(--accent)',
                             background: 'none',
                             border: 'none',
                             cursor: 'pointer',
-                            textDecoration: 'underline',
-                            textUnderlineOffset: '2px',
                             padding: 0,
                           }}
                         >
@@ -603,118 +598,169 @@ export function AiSummary() {
                   <textarea
                     value={overallPrompt}
                     onChange={(e) => setOverallPrompt(e.target.value)}
-                    placeholder={DEFAULT_OVERALL_PROMPT.slice(0, 120) + '…'}
-                    rows={6}
+                    placeholder={DEFAULT_OVERALL_PROMPT.slice(0, 200) + '…'}
+                    rows={5}
                     style={{
                       ...inputBase,
                       width: '100%',
                       resize: 'vertical',
                       lineHeight: 1.6,
-                      fontSize: '0.8125rem',
                     }}
                     onFocus={focus}
                     onBlur={blur}
                   />
+                  <HelpText>
+                    System prompt for the final executive summary that synthesizes all sensor summaries.
+                  </HelpText>
                 </div>
 
-                {/* Per-Sensor Prompts */}
+                {/* Per-Sensor Prompts — collapsible list */}
                 <div>
-                  <label style={{
-                    ...labelStyle,
-                    marginBottom: '0.5rem',
-                  }}>
-                    Per-Sensor Prompts
-                  </label>
-                  <div style={{
-                    border: '1px solid var(--border)',
-                    borderRadius: 6,
-                    overflow: 'hidden',
-                  }}>
-                    {PROMPT_SENSORS.map((sensor, idx) => {
-                      const isExpanded = expandedSensor === sensor.key
-                      const isCustom = !!sensorPrompts[sensor.key]
-                      const defaultPrompt = DEFAULT_SENSOR_PROMPTS[sensor.key] ?? ''
+                  <button
+                    onClick={() => setPromptsExpanded(!promptsExpanded)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      width: '100%',
+                      padding: 0,
+                      marginBottom: promptsExpanded ? '0.75rem' : 0,
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: 'var(--ink)',
+                    }}
+                  >
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>
+                      Per-Sensor Prompts
+                    </span>
+                    <span style={{
+                      fontSize: '0.625rem',
+                      color: 'var(--ink-faint)',
+                      transition: 'transform 200ms',
+                      transform: promptsExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                    }}>
+                      ▾
+                    </span>
+                  </button>
 
-                      return (
-                        <div key={sensor.key} style={{
-                          borderBottom: idx < PROMPT_SENSORS.length - 1 ? '1px solid var(--border)' : 'none',
-                        }}>
-                          <button
-                            onClick={() => setExpandedSensor(isExpanded ? null : sensor.key)}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              width: '100%',
-                              padding: '0.5rem 1rem',
-                              background: 'none',
-                              border: 'none',
-                              cursor: 'pointer',
-                              color: 'var(--ink)',
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <span style={{
-                                fontSize: '0.6875rem',
-                                color: 'var(--ink-faint)',
-                                transition: 'transform 200ms',
-                                transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-                              }}>
-                                ▸
-                              </span>
-                              <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>
-                                {sensor.label}
-                              </span>
-                            </div>
-                            <PromptBadge isCustom={isCustom} />
-                          </button>
+                  {promptsExpanded && (
+                    <div style={{
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 6,
+                      overflow: 'hidden',
+                    }}>
+                      {PROMPT_SENSORS.map((sensor, idx) => {
+                        const isExpanded = expandedSensor === sensor.key
+                        const isCustom = !!sensorPrompts[sensor.key]
+                        const defaultPrompt = DEFAULT_SENSOR_PROMPTS[sensor.key] ?? ''
 
-                          {isExpanded && (
-                            <div style={{ padding: '0 1rem 0.75rem' }}>
-                              <textarea
-                                value={sensorPrompts[sensor.key] ?? ''}
-                                onChange={(e) => updateSensorPrompt(sensor.key, e.target.value)}
-                                placeholder={defaultPrompt.slice(0, 80) + '…'}
-                                rows={5}
-                                style={{
-                                  ...inputBase,
-                                  width: '100%',
-                                  resize: 'vertical',
-                                  lineHeight: 1.6,
-                                  fontSize: '0.8125rem',
-                                }}
-                                onFocus={focus}
-                                onBlur={blur}
-                              />
-                              {isCustom && (
-                                <button
-                                  onClick={() => updateSensorPrompt(sensor.key, '')}
+                        return (
+                          <div key={sensor.key} style={{
+                            borderBottom: idx < PROMPT_SENSORS.length - 1 ? '1px solid var(--border-soft)' : 'none',
+                          }}>
+                            <button
+                              onClick={() => setExpandedSensor(isExpanded ? null : sensor.key)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                width: '100%',
+                                padding: '0.625rem 1rem',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: 'var(--ink)',
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span style={{
+                                  fontSize: '0.625rem',
+                                  color: 'var(--ink-faint)',
+                                  transition: 'transform 200ms',
+                                  transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                                }}>
+                                  ▸
+                                </span>
+                                <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>
+                                  {sensor.label}
+                                </span>
+                              </div>
+                              <StatusBadge isCustom={isCustom} />
+                            </button>
+
+                            {isExpanded && (
+                              <div style={{ padding: '0 1rem 0.875rem' }}>
+                                <textarea
+                                  value={sensorPrompts[sensor.key] ?? ''}
+                                  onChange={(e) => updateSensorPrompt(sensor.key, e.target.value)}
+                                  placeholder={defaultPrompt.slice(0, 120) + '…'}
+                                  rows={4}
                                   style={{
-                                    fontSize: '0.6875rem',
-                                    color: 'var(--accent)',
-                                    background: 'none',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    textDecoration: 'underline',
-                                    textUnderlineOffset: '2px',
-                                    padding: 0,
-                                    marginTop: '0.375rem',
+                                    ...inputBase,
+                                    width: '100%',
+                                    resize: 'vertical',
+                                    lineHeight: 1.6,
+                                    fontSize: '0.875rem',
                                   }}
-                                >
-                                  Reset to default
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
+                                  onFocus={focus}
+                                  onBlur={blur}
+                                />
+                                {isCustom && (
+                                  <button
+                                    onClick={() => updateSensorPrompt(sensor.key, '')}
+                                    style={{
+                                      fontSize: '0.75rem',
+                                      fontWeight: 500,
+                                      color: 'var(--accent)',
+                                      background: 'none',
+                                      border: 'none',
+                                      cursor: 'pointer',
+                                      padding: 0,
+                                      marginTop: '0.375rem',
+                                    }}
+                                  >
+                                    Reset to default
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          </>
         )}
+
+        {/* ── Save ──────────────────────────────────────────── */}
+        <div>
+          <button
+            onClick={save}
+            disabled={saving}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              padding: '0.625rem 1.5rem',
+              borderRadius: 4,
+              border: 'none',
+              color: saving ? 'var(--ink-faint)' : '#FFFFFF',
+              background: saving ? 'var(--border)' : 'var(--ink)',
+              cursor: saving ? 'not-allowed' : 'pointer',
+              transition: 'background 120ms',
+            }}
+            onMouseEnter={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = '#000000' }}
+            onMouseLeave={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = 'var(--ink)' }}
+          >
+            {saving ? 'Saving…' : 'Save changes'}
+          </button>
+        </div>
       </div>
     </section>
   )

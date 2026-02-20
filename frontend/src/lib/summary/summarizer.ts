@@ -99,10 +99,16 @@ export async function summarizeReport(
 
   await onProgress?.('__overall__', 'Overall', 'running', null)
 
-  const overallRaw = await chatCompletion(overallMessages, llmConfig)
-  const overall = parseOverallJson(overallRaw)
-
-  await onProgress?.('__overall__', 'Overall', 'ok', null)
+  let overall: ReturnType<typeof parseOverallJson>
+  try {
+    const overallRaw = await chatCompletion(overallMessages, llmConfig)
+    overall = parseOverallJson(overallRaw)
+    await onProgress?.('__overall__', 'Overall', 'ok', null)
+  } catch (err) {
+    await onProgress?.('__overall__', 'Overall', 'failed', (err as Error).message)
+    // Return partial result with available per-sensor sections
+    overall = { quick_scan: [], sections: [] }
+  }
 
   return {
     generated_at: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),

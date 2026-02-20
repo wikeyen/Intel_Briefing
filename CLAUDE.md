@@ -36,6 +36,10 @@ make test                          # frontend (vitest)
 - API client (`src/api/client.ts`) uses `BASE = '/api'` so all calls go through the gateway
 - CSS uses inline styles with CSS custom properties (`--ink`, `--accent`, `--border`, etc.)
 
+## Shortcuts
+
+- **"lgtm"** — When the user says "lgtm", immediately: commit all staged/unstaged changes on the feature branch, merge to main, push to remote, and clean up the worktree. No confirmation needed.
+
 ## Testing
 
 - **Frontend**: `cd frontend && npx vitest run` — uses jsdom environment for component tests

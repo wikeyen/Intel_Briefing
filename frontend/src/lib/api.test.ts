@@ -37,6 +37,12 @@ vi.mock('./pipeline/orchestrator', () => ({
   cancelPipeline: vi.fn().mockReturnValue(false),
 }))
 
+// Mock next/server's after() — execute callback immediately in tests
+vi.mock('next/server', async (importOriginal) => {
+  const original = await importOriginal<typeof import('next/server')>()
+  return { ...original, after: (cb: () => void) => cb() }
+})
+
 function makeReport(overrides: Partial<IntelReport> = {}): IntelReport {
   return createReport({
     date: '2026-01-01',

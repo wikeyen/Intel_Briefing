@@ -1,0 +1,185 @@
+// ABOUTME: Stale process detection banner — shows when a process was interrupted mid-run.
+// ABOUTME: Offers Dismiss (clear stale state) and Restart (re-trigger the process) actions.
+'use client'
+import type { SummaryProgress, PipelineStatus } from '@/api/client'
+
+export type StaleProcess = 'summary' | 'pipeline'
+
+export interface StaleInfo {
+  type: StaleProcess
+  startedAt: string
+  completedSensors: number
+  totalSensors: number
+  failedSensors: string[]
+}
+
+/**
+ * Detect stale processes from status responses.
+ * A process is stale when the DB says running=true but the server has no
+ * in-memory controller (alive=false), meaning the process died (e.g. app restart).
+ */
+export function detectStale(
+  summaryProgress: SummaryProgress | null,
+  pipelineStatus: PipelineStatus | null,
+): StaleInfo | null {
+  // Check pipeline first (higher priority — it drives both fetch and summary)
+  if (pipelineStatus?.running && !pipelineStatus.alive) {
+    const completed = pipelineStatus.sensors.filter(
+      s => s.fetch === 'ok' || s.fetch === 'failed' || s.fetch === 'skipped',
+    ).length
+    const failed = pipelineStatus.sensors
+      .filter(s => s.fetch === 'failed')
+      .map(s => s.name)
+    return {
+      type: 'pipeline',
+      startedAt: pipelineStatus.started_at ?? '',
+      completedSensors: completed,
+      totalSensors: pipelineStatus.sensors.length,
+      failedSensors: failed,
+    }
+  }
+
+  // Check standalone summary
+  if (summaryProgress?.running && !summaryProgress.alive) {
+    const completed = summaryProgress.sensors.filter(
+      s => s.state === 'ok' || s.state === 'failed',
+    ).length
+    const failed = summaryProgress.sensors
+      .filter(s => s.state === 'failed')
+      .map(s => s.sensor_name)
+    return {
+      type: 'summary',
+      startedAt: summaryProgress.started_at ?? '',
+      completedSensors: completed,
+      totalSensors: summaryProgress.sensors.length,
+      failedSensors: failed,
+    }
+  }
+
+  return null
+}
+
+function timeAgo(isoString: string): string {
+  if (!isoString) return ''
+  const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000)
+  if (diff < 60) return `${diff}s ago`
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+  return `${Math.floor(diff / 86400)}d ago`
+}
+
+export function StaleProcessBanner({ stale, onDismiss, onRestart }: {
+  stale: StaleInfo
+  onDismiss: () => void
+  onRestart: () => void
+}) {
+  const label = stale.type === 'pipeline' ? 'Pipeline' : 'Summary'
+  const pct = stale.totalSensors > 0
+    ? Math.round((stale.completedSensors / stale.totalSensors) * 100)
+    : 0
+
+  return (
+    <div style={{
+      background: 'rgba(234,179,8,0.06)',
+      border: '1px solid rgba(234,179,8,0.3)',
+      borderRadius: 8,
+      padding: '1rem 1.25rem',
+      marginBottom: '1.25rem',
+    }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        gap: '1rem',
+      }}>
+        <div style={{ flex: 1 }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            marginBottom: '0.375rem',
+          }}>
+            <span style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: '#eab308',
+              flexShrink: 0,
+            }} />
+            <span style={{
+              fontSize: '0.8125rem',
+              fontWeight: 600,
+              color: 'var(--ink)',
+            }}>
+              {label} interrupted
+            </span>
+            {stale.startedAt && (
+              <span style={{
+                fontSize: '0.6875rem',
+                color: 'var(--ink-faint)',
+                fontFamily: 'ui-monospace, monospace',
+              }}>
+                started {timeAgo(stale.startedAt)}
+              </span>
+            )}
+          </div>
+          <p style={{
+            fontSize: '0.75rem',
+            color: 'var(--ink-muted)',
+            margin: 0,
+            lineHeight: 1.5,
+          }}>
+            {pct}% complete ({stale.completedSensors}/{stale.totalSensors} sensors)
+            {stale.failedSensors.length > 0 && (
+              <> · {stale.failedSensors.length} failed</>
+            )}
+            {' '}— the process was lost, likely due to an app restart.
+          </p>
+        </div>
+        <div style={{
+          display: 'flex',
+          gap: '0.5rem',
+          flexShrink: 0,
+          alignItems: 'center',
+        }}>
+          <button
+            onClick={onDismiss}
+            style={{
+              fontSize: '0.75rem',
+              fontWeight: 500,
+              color: 'var(--ink-muted)',
+              background: 'none',
+              border: '1px solid var(--border)',
+              borderRadius: 4,
+              padding: '0.375rem 0.75rem',
+              cursor: 'pointer',
+              transition: 'border-color 100ms',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--ink-faint)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)' }}
+          >
+            Dismiss
+          </button>
+          <button
+            onClick={onRestart}
+            style={{
+              fontSize: '0.75rem',
+              fontWeight: 500,
+              color: '#fff',
+              background: 'var(--ink)',
+              border: 'none',
+              borderRadius: 4,
+              padding: '0.375rem 0.75rem',
+              cursor: 'pointer',
+              transition: 'background 100ms',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#000' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--ink)' }}
+          >
+            Restart
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}

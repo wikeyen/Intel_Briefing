@@ -18,6 +18,11 @@ export function cancelSummary(): boolean {
   return true
 }
 
+/** Check whether a standalone summary is currently running. */
+export function isSummaryRunning(): boolean {
+  return activeAbortController !== null
+}
+
 export async function POST(): Promise<NextResponse> {
   const config = await loadConfig()
 

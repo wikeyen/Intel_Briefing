@@ -86,6 +86,7 @@ export interface PipelineStatus {
   sensors: SensorJobProgress[]
   overall_summary: StageState
   total_items: number
+  alive: boolean
 }
 
 export interface IntelReport {
@@ -109,6 +110,7 @@ export interface SummaryProgress {
   started_at: string | null
   completed_at: string | null
   sensors: SummarySensorProgress[]
+  alive: boolean
 }
 
 export interface SensorSummaryItem {

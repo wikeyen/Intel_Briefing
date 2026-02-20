@@ -9,6 +9,7 @@ import { SENSOR_TOKEN_FIELD } from '@/lib/sensors/constants'
 import { ALL_CATEGORIES, CATEGORY_META, SENSOR_LABELS, sensorsForCategory } from '@/lib/sensors/taxonomy'
 import { useToast } from '@/lib/toast-context'
 import { Pagination } from './Pagination'
+import { StaleProcessBanner, detectStale } from './StaleProcessBanner'
 
 const PAGE_SIZE = 20
 
@@ -1204,6 +1205,40 @@ export function Data() {
     }
   }
 
+  // Detect stale processes (running in DB but no in-memory controller)
+  const staleInfo = detectStale(summaryProgress, pipelineStatus)
+
+  const handleDismissStale = async () => {
+    try {
+      if (staleInfo?.type === 'summary') {
+        await api.stopSummary()
+      } else if (staleInfo?.type === 'pipeline') {
+        await api.stopPipeline()
+      }
+    } catch {
+      // 404 = already cleared, that's fine
+    }
+    // Refresh both statuses
+    api.getSummaryStatus().then(setSummaryProgress).catch(() => {})
+    api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
+  }
+
+  const handleRestartStale = async () => {
+    // First dismiss the stale state
+    await handleDismissStale()
+    // Then trigger a fresh run
+    if (staleInfo?.type === 'summary') {
+      handleTriggerSummary()
+    } else if (staleInfo?.type === 'pipeline') {
+      try {
+        await api.triggerFetch(pipelineStatus?.mode ?? 'fetch_summarize')
+        showToast('Pipeline restarted')
+      } catch (e) {
+        showToast('Failed: ' + (e as Error).message)
+      }
+    }
+  }
+
   const hasContent = Object.values(report?.items ?? {}).some(arr => arr.length > 0)
 
   // Derive the unique filter keys present in the current section
@@ -1390,6 +1425,13 @@ export function Data() {
       {/* Scrollable content */}
       <div style={{ flex: 1 }}>
         <div className="data-content" style={{ maxWidth: 1024, margin: '0 auto', padding: '1.5rem 3rem 4rem' }}>
+          {staleInfo && (
+            <StaleProcessBanner
+              stale={staleInfo}
+              onDismiss={handleDismissStale}
+              onRestart={handleRestartStale}
+            />
+          )}
           {activeSection === 'briefing' ? (
             <BriefingTabContent
               summary={summary}

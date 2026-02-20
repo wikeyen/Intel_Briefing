@@ -88,6 +88,7 @@ function makeConfig(overrides: Partial<ConfigSettings> = {}): ConfigSettings {
 function makePipelineStatus(overrides: Partial<PipelineStatus> = {}): PipelineStatus {
   return {
     running: false,
+    cancelled: false,
     mode: 'fetch_summarize',
     default_concurrency: 4,
     local_summary_concurrency: 4,
@@ -96,6 +97,7 @@ function makePipelineStatus(overrides: Partial<PipelineStatus> = {}): PipelineSt
     sensors: [],
     overall_summary: 'ok',
     total_items: 5,
+    alive: false,
     ...overrides,
   }
 }

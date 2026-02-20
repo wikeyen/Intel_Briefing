@@ -2,11 +2,13 @@
 // ABOUTME: Returns the live status of the current or most recent summarization run from SQLite.
 import { NextResponse } from 'next/server'
 import { readSummaryProgress } from '@/lib/summary/cache'
+import { isSummaryRunning } from '../trigger/route'
+import { isPipelineRunning } from '@/lib/pipeline/orchestrator'
 import type { SummaryProgress } from '@/lib/models'
 
 const STALE_THRESHOLD_MS = 10 * 60 * 1000 // 10 minutes
 
-export async function GET(): Promise<NextResponse<SummaryProgress>> {
+export async function GET(): Promise<NextResponse<SummaryProgress & { alive: boolean }>> {
   const progress = await readSummaryProgress()
   if (!progress) {
     return NextResponse.json({
@@ -14,8 +16,12 @@ export async function GET(): Promise<NextResponse<SummaryProgress>> {
       started_at: null,
       completed_at: null,
       sensors: [],
+      alive: false,
     })
   }
+
+  // alive = there's actually an in-memory controller driving this run
+  const alive = isSummaryRunning() || isPipelineRunning()
 
   // Detect stale runs — if still "running" but started > 10 min ago, report as failed
   // to the client. Read-side only: doesn't write to DB so it can't race with after().
@@ -31,9 +37,9 @@ export async function GET(): Promise<NextResponse<SummaryProgress>> {
           s.error = s.error ?? 'Timed out — background task did not complete'
         }
       }
-      return NextResponse.json(staleView)
+      return NextResponse.json({ ...staleView, alive: false })
     }
   }
 
-  return NextResponse.json(progress)
+  return NextResponse.json({ ...progress, alive })
 }

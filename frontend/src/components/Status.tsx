@@ -9,6 +9,7 @@ import { ActionBar } from './status/ActionBar'
 import type { Phase } from './status/ActionBar'
 import { SensorTable } from './status/SensorTable'
 import { ScheduleFooter } from './status/ScheduleFooter'
+import { StaleProcessBanner, detectStale } from './StaleProcessBanner'
 
 export function Status() {
   const showToast = useToast()
@@ -99,6 +100,23 @@ export function Status() {
     }
   }
 
+  // Detect stale processes (running in DB but no in-memory controller)
+  const staleInfo = detectStale(null, pipelineStatus)
+
+  const handleDismissStale = async () => {
+    try {
+      await api.stopPipeline()
+    } catch {
+      // 404 = already cleared
+    }
+    api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
+  }
+
+  const handleRestartStale = async () => {
+    await handleDismissStale()
+    handleRun(pipelineStatus?.mode ?? 'fetch_summarize')
+  }
+
   // Consider pipeline stale if started_at is more than 5 minutes ago
   const isRunning = !!(pipelineStatus?.running && pipelineStatus.started_at
     && (Date.now() - new Date(pipelineStatus.started_at).getTime()) < 5 * 60 * 1000)
@@ -138,6 +156,14 @@ export function Status() {
 
   return (
     <section id="status" style={{ padding: '4.5rem 0' }}>
+      {staleInfo && !isRunning && (
+        <StaleProcessBanner
+          stale={staleInfo}
+          onDismiss={handleDismissStale}
+          onRestart={handleRestartStale}
+        />
+      )}
+
       <ActionBar
         health={health}
         isRunning={isRunning}

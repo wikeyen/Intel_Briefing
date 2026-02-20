@@ -169,4 +169,13 @@ export const api = {
 
   testSummary: () =>
     apiFetch<{ ok: boolean; latency_ms?: number; error?: string }>('/summary/test', { method: 'POST' }),
+
+  triggerSummary: () =>
+    apiFetch<{ ok: boolean; status?: string; error?: string }>('/summary/trigger', { method: 'POST' }),
+
+  invalidateCache: () =>
+    apiFetch<{ ok: boolean }>('/cache/invalidate', { method: 'POST' }),
+
+  cleanupExpired: () =>
+    apiFetch<{ ok: boolean; removed: number; expiry_days: number }>('/cache/cleanup', { method: 'POST' }),
 }

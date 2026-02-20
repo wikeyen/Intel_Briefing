@@ -14,14 +14,26 @@ interface SensorDef {
   desc: string
 }
 
-const SENSOR_GROUPS: { label: string; sensors: SensorDef[] }[] = sensorsByLanguageAndCategory().flatMap(lang =>
-  lang.categories.map(cat => ({
-    label: `${lang.label} — ${cat.label}`,
+type Language = 'row' | 'cn'
+
+const LANGUAGE_GROUPS: Record<Language, { label: string; sensors: SensorDef[] }[]> = {
+  row: [],
+  cn: [],
+}
+
+for (const lang of sensorsByLanguageAndCategory()) {
+  LANGUAGE_GROUPS[lang.language] = lang.categories.map(cat => ({
+    label: cat.label,
     sensors: cat.sensors.map(s => ({ key: s.key, label: s.label, desc: s.desc })),
   }))
-)
+}
 
-const ALL_SENSORS = SENSOR_GROUPS.flatMap((g) => g.sensors)
+const ALL_SENSORS = Object.values(LANGUAGE_GROUPS).flat().flatMap(g => g.sensors)
+
+const LANGUAGE_TABS: { key: Language; label: string; desc: string }[] = [
+  { key: 'row', label: 'Global', desc: 'English-language sources' },
+  { key: 'cn', label: 'China', desc: 'Chinese-language sources' },
+]
 
 /** Maps sensor names to their default lookback hours. Sensors not listed have no lookback support. */
 const SENSOR_LOOKBACK_SUPPORT: Record<string, number> = {
@@ -214,6 +226,7 @@ export function Sensors() {
   const [sensorLookback, setSensorLookback] = useState<Record<string, number>>({})
   const [defaultLimit, setDefaultLimit] = useState(10)
   const [saving, setSaving] = useState(false)
+  const [activeLanguage, setActiveLanguage] = useState<Language>('row')
 
   useEffect(() => {
     api.getConfig().then((cfg) => {
@@ -279,18 +292,58 @@ export function Sensors() {
     <section id="sensors" style={{ padding: '4.5rem 0' }}>
       <style dangerouslySetInnerHTML={{ __html: HIDE_SPINNERS_CSS }} />
 
-      <div className="page-header" style={{ marginBottom: '2rem' }}>
+      <div className="page-header" style={{ marginBottom: '1.5rem' }}>
         <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.375rem' }}>
           Sources
         </h2>
         <p style={{ fontSize: '0.875rem', color: 'var(--ink-muted)', lineHeight: 1.6 }}>
-          Active data sources for your pipeline, grouped by language and provider.
+          Active data sources for your pipeline.
         </p>
+      </div>
+
+      {/* Language tabs */}
+      <div style={{
+        display: 'flex',
+        gap: '0.25rem',
+        marginBottom: '1.5rem',
+        borderBottom: '1px solid var(--border)',
+      }}>
+        {LANGUAGE_TABS.map(tab => {
+          const active = activeLanguage === tab.key
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setActiveLanguage(tab.key)}
+              style={{
+                padding: '0.625rem 1.25rem',
+                fontSize: '0.8125rem',
+                fontWeight: active ? 600 : 400,
+                color: active ? 'var(--ink)' : 'var(--ink-muted)',
+                background: 'transparent',
+                border: 'none',
+                borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
+                cursor: 'pointer',
+                transition: 'color 120ms, border-color 120ms',
+                marginBottom: -1,
+              }}
+            >
+              {tab.label}
+              <span style={{
+                fontSize: '0.6875rem',
+                fontWeight: 400,
+                color: 'var(--ink-faint)',
+                marginLeft: '0.5rem',
+              }}>
+                {tab.desc}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
-        {SENSOR_GROUPS.map((group) => (
+        {LANGUAGE_GROUPS[activeLanguage].map((group) => (
           <div key={group.label}>
             {/* Group label */}
             <div style={{

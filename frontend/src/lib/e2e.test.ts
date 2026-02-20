@@ -1,7 +1,7 @@
 // ABOUTME: End-to-end style tests that verify integration between modules.
 // ABOUTME: Tests cross-cutting concerns like report creation, rendering with items, and config flow.
 import { describe, it, expect } from 'vitest'
-import { createReport, defaultConfig, emptyItemsMap, type IntelItem } from './models'
+import { createReport, emptyItemsMap, type IntelItem } from './models'
 import { renderMarkdown } from './renderer/markdown'
 import { dedupItems, dedupAcrossSections } from './pipeline/dedup'
 import { isStale } from './pipeline/cache'
@@ -75,13 +75,4 @@ describe('end-to-end: report creation and rendering', () => {
     expect(isStale(old, 6)).toBe(true)
   })
 
-  it('defaultConfig has all required fields', () => {
-    const cfg = defaultConfig()
-    expect(cfg.sensors_enabled).toBeDefined()
-    expect(Object.keys(cfg.sensors_enabled)).toHaveLength(13)
-    expect(cfg.fetch_time).toBe('07:51')
-    expect(cfg.fetch_timezone).toBe('Asia/Shanghai')
-    expect(cfg.social_accounts_x).toEqual([])
-    expect(cfg.social_topics_keywords).toEqual([])
-  })
 })

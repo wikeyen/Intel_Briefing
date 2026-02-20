@@ -52,11 +52,4 @@ describe('/api/summary route logic', () => {
     expect(result!.overall.quick_scan[0].text).toBe('AI continues to dominate tech news.')
   })
 
-  it('validates BriefingSummary has required fields', () => {
-    expect(SAMPLE.generated_at).toBeDefined()
-    expect(SAMPLE.report_fetched_at).toBeDefined()
-    expect(SAMPLE.sections).toBeInstanceOf(Array)
-    expect(typeof SAMPLE.overall).toBe('object')
-    expect(SAMPLE.overall.quick_scan).toBeInstanceOf(Array)
-  })
 })

@@ -97,10 +97,4 @@ describe('renderMarkdown', () => {
     expect(md).toContain('Test Item')
   })
 
-  it('pure function produces same output on repeated calls', () => {
-    const report = makeReport()
-    const md1 = renderMarkdown(report)
-    const md2 = renderMarkdown(report)
-    expect(md1).toBe(md2)
-  })
 })

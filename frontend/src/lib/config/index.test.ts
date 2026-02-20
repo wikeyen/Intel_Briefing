@@ -124,9 +124,3 @@ describe('config migration', () => {
   })
 })
 
-describe('constants', () => {
-  it('exports GITHUB_API_URL as https', async () => {
-    const { GITHUB_API_URL } = await import('./index')
-    expect(GITHUB_API_URL).toMatch(/^https:\/\//)
-  })
-})

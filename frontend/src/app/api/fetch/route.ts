@@ -1,6 +1,6 @@
 // ABOUTME: Manual pipeline trigger — POST /api/fetch.
 // ABOUTME: Accepts optional { mode } body; delegates to the pipeline orchestrator.
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { loadConfig } from '@/lib/config'
 import { runPipeline, isPipelineRunning } from '@/lib/pipeline/orchestrator'
 import type { RunMode } from '@/lib/models'
@@ -28,8 +28,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const config = await loadConfig()
 
-  // Fire and forget — don't await
-  runPipeline(config, mode)
+  // Run pipeline in background via after() — survives response delivery
+  after(async () => {
+    try {
+      await runPipeline(config, mode)
+    } catch (err) {
+      console.error('Pipeline run failed:', err)
+    }
+  })
 
   return NextResponse.json({ status: 'accepted', mode }, { status: 202 })
 }

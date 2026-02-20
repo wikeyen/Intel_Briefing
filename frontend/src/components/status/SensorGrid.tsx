@@ -116,7 +116,14 @@ export function SensorGrid({ isRunning, liveSensors, report, config, pipelineSta
                     {sp ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                         <StageBadge state={sp.fetch} label="Fetch" />
-                        <StageBadge state={sp.summary} label="Summary" />
+                        <StageBadge
+                          state={sp.summary}
+                          label={
+                            sp.summary === 'running' && sp.summary_chunks_total > 0
+                              ? `${sp.summary_chunks_done}/${sp.summary_chunks_total}`
+                              : 'Summary'
+                          }
+                        />
                       </div>
                     ) : (
                       <span style={{ fontSize: '0.75rem', color: 'var(--ink-faint)' }}>{'\u2014'}</span>

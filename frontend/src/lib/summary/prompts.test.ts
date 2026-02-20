@@ -43,6 +43,12 @@ describe('getSensorPrompt', () => {
       expect(prompt).toContain('2-4句')
     }
   })
+
+  it('all prompts contain anti-hallucination instruction', () => {
+    for (const prompt of Object.values(DEFAULT_SENSOR_PROMPTS)) {
+      expect(prompt).toContain('严禁编造')
+    }
+  })
 })
 
 describe('CHUNK_SIZE', () => {
@@ -57,6 +63,10 @@ describe('CHUNK_EXTRACT_PROMPT', () => {
     expect(CHUNK_EXTRACT_PROMPT).toContain('提取关键信号')
     expect(CHUNK_EXTRACT_PROMPT).toContain('3-5句')
   })
+
+  it('contains anti-hallucination instruction', () => {
+    expect(CHUNK_EXTRACT_PROMPT).toContain('严禁编造')
+  })
 })
 
 describe('getOverallPrompt', () => {
@@ -68,5 +78,9 @@ describe('getOverallPrompt', () => {
   it('returns user override when provided', () => {
     const custom = 'Custom overall prompt'
     expect(getOverallPrompt(custom)).toBe(custom)
+  })
+
+  it('default overall prompt contains anti-hallucination instruction', () => {
+    expect(DEFAULT_OVERALL_PROMPT).toContain('严禁编造')
   })
 })

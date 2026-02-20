@@ -70,6 +70,8 @@ export interface SensorJobProgress {
   summary: StageState
   summary_error: string | null
   item_count: number
+  summary_chunks_total: number
+  summary_chunks_done: number
 }
 
 export interface PipelineStatus {

@@ -40,6 +40,8 @@ export class PipelineProgressTracker {
       summary: skipSummary ? 'skipped' : 'queued',
       summary_error: null,
       item_count: 0,
+      summary_chunks_total: 0,
+      summary_chunks_done: 0,
     }))
 
     this.overallSummary = skipSummary ? 'skipped' : 'queued'
@@ -78,6 +80,13 @@ export class PipelineProgressTracker {
     const s = this.find(name)
     s.summary = state
     if (error !== undefined) s.summary_error = error
+    this.notify()
+  }
+
+  setSummaryChunks(name: string, total: number, done: number): void {
+    const s = this.find(name)
+    s.summary_chunks_total = total
+    s.summary_chunks_done = done
     this.notify()
   }
 

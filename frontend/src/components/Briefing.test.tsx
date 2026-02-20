@@ -11,6 +11,7 @@ vi.mock('@/api/client', () => ({
     getSummary: vi.fn(),
     getSummaryStatus: vi.fn(),
     triggerSummary: vi.fn(),
+    getPipelineStatus: vi.fn(),
   },
 }))
 
@@ -28,6 +29,7 @@ const mockGetLatest = api.getLatest as ReturnType<typeof vi.fn>
 const mockGetConfig = api.getConfig as ReturnType<typeof vi.fn>
 const mockGetSummary = api.getSummary as ReturnType<typeof vi.fn>
 const mockGetSummaryStatus = api.getSummaryStatus as ReturnType<typeof vi.fn>
+const mockGetPipelineStatus = api.getPipelineStatus as ReturnType<typeof vi.fn>
 
 const EMPTY_REPORT = {
   date: '2026-02-19',
@@ -48,6 +50,16 @@ describe('AI Summary section in Data', () => {
       started_at: null,
       completed_at: null,
       sensors: [],
+    })
+    mockGetPipelineStatus.mockResolvedValue({
+      running: false,
+      mode: 'fetch',
+      concurrency: 4,
+      started_at: null,
+      completed_at: null,
+      sensors: [],
+      overall_summary: 'skipped',
+      total_items: 0,
     })
   })
 

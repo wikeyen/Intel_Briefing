@@ -1,5 +1,7 @@
 // ABOUTME: Hero banner for the Status dashboard showing pipeline health state and run controls.
-// ABOUTME: Displays health status dot, label, description, timestamps, run mode buttons, and progress bar.
+// ABOUTME: Displays health status, segmented run mode selector, and live progress during runs.
+'use client'
+import { useState } from 'react'
 import type { HealthResponse, IntelReport, PipelineStatus, RunMode } from '@/api/client'
 import { timeAgo } from './time-helpers'
 import { StageBadge } from './StageBadge'
@@ -18,6 +20,12 @@ export interface HeroBannerProps {
   onRun: (mode: RunMode) => void
 }
 
+const MODES: { value: RunMode; label: string }[] = [
+  { value: 'fetch', label: 'Fetch' },
+  { value: 'fetch_summarize', label: 'Fetch + Summarize' },
+  { value: 'summarize', label: 'Summarize' },
+]
+
 export function HeroBanner({
   isRunning,
   meta,
@@ -31,6 +39,10 @@ export function HeroBanner({
   pipelineStatus,
   onRun,
 }: HeroBannerProps) {
+  const [selectedMode, setSelectedMode] = useState<RunMode>('fetch_summarize')
+  const disabled = fetching || running || isRunning
+  const summarizeDisabled = !report && selectedMode === 'summarize'
+
   // Hero banner background: running overrides to amber, otherwise reflects health
   const heroBg = isRunning ? 'var(--warn-bg)' : meta.bg
 
@@ -85,11 +97,11 @@ export function HeroBanner({
             </div>
           </div>
 
-          {/* Right side: last run timestamp + run mode buttons */}
+          {/* Right side: last run timestamp + segmented control + run button */}
           <div className="hero-actions" style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '1.25rem',
+            gap: '1rem',
             flexShrink: 0,
           }}>
             {health?.last_fetch && !isRunning && (
@@ -111,62 +123,73 @@ export function HeroBanner({
                 </div>
               </div>
             )}
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button
-                onClick={() => onRun('fetch')}
-                disabled={fetching || running || isRunning}
-                style={{
-                  fontSize: '0.8125rem',
-                  fontWeight: 500,
-                  padding: '0.5rem 1rem',
-                  borderRadius: 6,
-                  border: 'none',
-                  color: (fetching || running || isRunning) ? 'var(--ink-faint)' : '#FFFFFF',
-                  background: (fetching || running || isRunning) ? 'var(--border)' : 'var(--ink)',
-                  cursor: (fetching || running || isRunning) ? 'not-allowed' : 'pointer',
-                  transition: 'background 120ms',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                Fetch
-              </button>
-              <button
-                onClick={() => onRun('summarize')}
-                disabled={fetching || running || isRunning || !report}
-                style={{
-                  fontSize: '0.8125rem',
-                  fontWeight: 500,
-                  padding: '0.5rem 1rem',
-                  borderRadius: 6,
-                  border: 'none',
-                  color: (fetching || running || isRunning || !report) ? 'var(--ink-faint)' : '#FFFFFF',
-                  background: (fetching || running || isRunning || !report) ? 'var(--border)' : 'var(--ink)',
-                  cursor: (fetching || running || isRunning || !report) ? 'not-allowed' : 'pointer',
-                  transition: 'background 120ms',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                Summarize
-              </button>
-              <button
-                onClick={() => onRun('fetch_summarize')}
-                disabled={fetching || running || isRunning}
-                style={{
-                  fontSize: '0.8125rem',
-                  fontWeight: 500,
-                  padding: '0.5rem 1rem',
-                  borderRadius: 6,
-                  border: 'none',
-                  color: (fetching || running || isRunning) ? 'var(--ink-faint)' : '#FFFFFF',
-                  background: (fetching || running || isRunning) ? 'var(--border)' : 'var(--ink)',
-                  cursor: (fetching || running || isRunning) ? 'not-allowed' : 'pointer',
-                  transition: 'background 120ms',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                Fetch + Summarize
-              </button>
+
+            {/* Segmented mode selector */}
+            <div style={{
+              display: 'flex',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              padding: 3,
+              gap: 2,
+            }}>
+              {MODES.map(m => {
+                const active = selectedMode === m.value
+                const modeDisabled = m.value === 'summarize' && !report
+                return (
+                  <button
+                    key={m.value}
+                    onClick={() => !modeDisabled && setSelectedMode(m.value)}
+                    disabled={disabled || modeDisabled}
+                    style={{
+                      fontSize: '0.75rem',
+                      fontWeight: active ? 600 : 400,
+                      padding: '0.375rem 0.75rem',
+                      borderRadius: 6,
+                      border: 'none',
+                      color: modeDisabled
+                        ? 'var(--ink-faint)'
+                        : active ? 'var(--ink)' : 'var(--ink-muted)',
+                      background: active ? 'var(--canvas)' : 'transparent',
+                      boxShadow: active ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                      cursor: (disabled || modeDisabled) ? 'default' : 'pointer',
+                      transition: 'all 150ms',
+                      whiteSpace: 'nowrap',
+                      opacity: modeDisabled ? 0.5 : 1,
+                    }}
+                  >
+                    {m.label}
+                  </button>
+                )
+              })}
             </div>
+
+            {/* Run button */}
+            <button
+              onClick={() => onRun(selectedMode)}
+              disabled={disabled || summarizeDisabled}
+              style={{
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                padding: '0.5rem 1.25rem',
+                borderRadius: 8,
+                border: 'none',
+                color: (disabled || summarizeDisabled) ? 'var(--ink-faint)' : '#FFFFFF',
+                background: (disabled || summarizeDisabled) ? 'var(--border)' : 'var(--accent)',
+                cursor: (disabled || summarizeDisabled) ? 'not-allowed' : 'pointer',
+                transition: 'background 120ms, transform 80ms',
+                whiteSpace: 'nowrap',
+                letterSpacing: '0.02em',
+              }}
+              onMouseDown={e => {
+                if (!disabled && !summarizeDisabled)
+                  (e.currentTarget as HTMLElement).style.transform = 'scale(0.97)'
+              }}
+              onMouseUp={e => (e.currentTarget as HTMLElement).style.transform = 'scale(1)'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.transform = 'scale(1)'}
+            >
+              {isRunning ? 'Running\u2026' : 'Run'}
+            </button>
           </div>
         </div>
 

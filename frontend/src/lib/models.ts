@@ -119,6 +119,9 @@ export interface SensorJobProgress {
   summary: StageState
   summary_error: string | null
   item_count: number
+  // Map-reduce chunk progress for summary stage
+  summary_chunks_total: number
+  summary_chunks_done: number
 }
 
 export interface PipelineStatus {

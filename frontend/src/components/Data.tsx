@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { api } from '@/api/client'
-import type { IntelReport, IntelItem, ConfigSettings, BriefingSummary, SummaryProgress } from '@/api/client'
+import type { IntelReport, IntelItem, ConfigSettings, BriefingSummary, SummaryProgress, PipelineStatus } from '@/api/client'
 import { SENSOR_TOKEN_FIELD } from '@/lib/sensors/constants'
 import { useToast } from '@/lib/toast-context'
 import { Pagination } from './Pagination'
@@ -354,44 +354,214 @@ const PULSE_CSS = `
 }
 `
 
-function SummaryProgressBanner({ progress }: { progress: SummaryProgress }) {
+/** Sensor label lookup for progress display. */
+const SENSOR_LABELS: Record<string, string> = {
+  hacker_news: 'HN', arxiv: 'ArXiv', github: 'GitHub', product_hunt: 'PH',
+  v2ex: 'V2EX', hn_blogs: 'Blogs', sources_36kr: '36Kr', wallstreetcn: 'WSJ',
+  social_accounts: 'Social', social_topics: 'Topics', social_trends: 'Trends',
+  chrome_radar: 'Chrome', rss_feeds: 'RSS', mastodon: 'Mast', bluesky: 'Bsky',
+}
+
+function SummaryProgressBanner({ progress, pipelineStatus }: {
+  progress: SummaryProgress
+  pipelineStatus: PipelineStatus | null
+}) {
   const done = progress.sensors.filter(s => s.state === 'ok' || s.state === 'failed').length
   const total = progress.sensors.length
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0
+
+  // Derive workflow phase from pipeline status
+  const hasFetch = pipelineStatus?.mode === 'fetch' || pipelineStatus?.mode === 'fetch_summarize'
+  const fetchDone = pipelineStatus
+    ? pipelineStatus.sensors.filter(s => s.fetch === 'ok' || s.fetch === 'failed' || s.fetch === 'skipped').length
+    : 0
+  const fetchTotal = pipelineStatus?.sensors.length ?? 0
+  const allFetchDone = fetchDone >= fetchTotal
+  const overallState = pipelineStatus?.overall_summary ?? 'queued'
+
+  // Determine current phase for the step indicator
+  type Phase = 'fetching' | 'extracting' | 'synthesizing' | 'overall'
+  let currentPhase: Phase = 'extracting'
+  if (hasFetch && !allFetchDone) {
+    currentPhase = 'fetching'
+  } else if (done < total) {
+    // Check if any sensor is in map-reduce chunk extraction
+    const hasChunks = pipelineStatus?.sensors.some(
+      s => s.summary === 'running' && s.summary_chunks_total > 0 && s.summary_chunks_done < s.summary_chunks_total,
+    )
+    currentPhase = hasChunks ? 'extracting' : 'synthesizing'
+  } else if (overallState === 'running') {
+    currentPhase = 'overall'
+  }
+
+  const phases: { key: Phase; label: string }[] = hasFetch
+    ? [
+        { key: 'fetching', label: 'Fetch' },
+        { key: 'extracting', label: 'Extract' },
+        { key: 'synthesizing', label: 'Synthesize' },
+        { key: 'overall', label: 'Briefing' },
+      ]
+    : [
+        { key: 'extracting', label: 'Extract' },
+        { key: 'synthesizing', label: 'Synthesize' },
+        { key: 'overall', label: 'Briefing' },
+      ]
+
+  const phaseIdx = phases.findIndex(p => p.key === currentPhase)
+
   return (
     <div style={{
-      background: 'var(--warn-bg)',
+      background: 'var(--surface)',
       border: '1px solid var(--border)',
       borderRadius: 8,
-      padding: '1rem 1.5rem',
-      marginBottom: '1.5rem',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.75rem',
-      position: 'relative',
+      marginBottom: '1.25rem',
       overflow: 'hidden',
     }}>
-      <span style={{
-        width: 10,
-        height: 10,
-        borderRadius: '50%',
-        background: 'var(--accent)',
-        flexShrink: 0,
-        animation: 'pulseDot 1.6s ease-in-out infinite',
-      }} />
-      <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--ink)' }}>
-        Summarizing — {done}/{total} sources complete
-      </span>
+      {/* Step indicator bar */}
       <div style={{
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 3,
-        background: 'var(--border)',
+        display: 'flex',
+        alignItems: 'center',
+        padding: '0.75rem 1.25rem',
+        gap: '0.25rem',
+        borderBottom: '1px solid var(--border)',
       }}>
+        {phases.map((phase, i) => {
+          const isActive = i === phaseIdx
+          const isDone = i < phaseIdx
+          return (
+            <div key={phase.key} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              {i > 0 && (
+                <div style={{
+                  width: 16,
+                  height: 1,
+                  background: isDone ? 'var(--accent)' : 'var(--border)',
+                  margin: '0 0.125rem',
+                }} />
+              )}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.375rem',
+                padding: '0.25rem 0.5rem',
+                borderRadius: 4,
+                background: isActive ? 'rgba(29,107,79,0.08)' : 'transparent',
+              }}>
+                <span style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: isDone ? 'var(--accent)' : isActive ? 'var(--accent)' : 'var(--border)',
+                  flexShrink: 0,
+                  animation: isActive ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
+                }} />
+                <span style={{
+                  fontSize: '0.6875rem',
+                  fontWeight: isActive ? 600 : 400,
+                  color: isDone ? 'var(--accent)' : isActive ? 'var(--ink)' : 'var(--ink-faint)',
+                  whiteSpace: 'nowrap',
+                  letterSpacing: '0.02em',
+                }}>
+                  {phase.label}
+                </span>
+              </div>
+            </div>
+          )
+        })}
+        <div style={{ flex: 1 }} />
+        <span style={{
+          fontSize: '0.6875rem',
+          fontWeight: 600,
+          color: 'var(--ink-muted)',
+          fontFamily: 'ui-monospace, monospace',
+        }}>
+          {pct}%
+        </span>
+      </div>
+
+      {/* Per-sensor progress rows */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+        gap: 1,
+        padding: '0.5rem 0.75rem',
+      }}>
+        {progress.sensors.map(s => {
+          const pSensor = pipelineStatus?.sensors.find(ps => ps.name === s.sensor_name)
+          const chunksTotal = pSensor?.summary_chunks_total ?? 0
+          const chunksDone = pSensor?.summary_chunks_done ?? 0
+          const isChunking = chunksTotal > 0 && chunksDone < chunksTotal && s.state === 'running'
+          const chunkPct = chunksTotal > 0 ? Math.round((chunksDone / chunksTotal) * 100) : 0
+
+          const color = s.state === 'ok' ? 'var(--accent)'
+            : s.state === 'failed' ? 'var(--error, #c33)'
+            : s.state === 'running' ? 'var(--accent)'
+            : 'var(--ink-faint)'
+
+          return (
+            <div key={s.sensor_name} style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.375rem 0.5rem',
+              borderRadius: 4,
+            }}>
+              {/* Status indicator */}
+              <span style={{
+                width: 5,
+                height: 5,
+                borderRadius: '50%',
+                background: color,
+                flexShrink: 0,
+                animation: s.state === 'running' ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
+              }} />
+              <span style={{
+                fontSize: '0.6875rem',
+                fontWeight: 500,
+                color: s.state === 'ok' ? 'var(--accent)'
+                  : s.state === 'failed' ? 'var(--error, #c33)'
+                  : 'var(--ink-muted)',
+                flex: 1,
+                minWidth: 0,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}>
+                {SENSOR_LABELS[s.sensor_name] ?? s.label}
+              </span>
+              {/* Chunk progress micro-bar */}
+              {isChunking && (
+                <div style={{
+                  width: 32,
+                  height: 3,
+                  background: 'var(--border)',
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                  flexShrink: 0,
+                }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${chunkPct}%`,
+                    background: 'var(--accent)',
+                    transition: 'width 300ms ease',
+                  }} />
+                </div>
+              )}
+              {s.state === 'ok' && (
+                <span style={{ fontSize: '0.5625rem', color: 'var(--accent)' }}>&#10003;</span>
+              )}
+              {s.state === 'failed' && (
+                <span style={{ fontSize: '0.5625rem', color: 'var(--error, #c33)' }}>&#10007;</span>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Overall progress bar */}
+      <div style={{ height: 3, background: 'var(--border)' }}>
         <div style={{
           height: '100%',
-          width: total > 0 ? `${Math.round((done / total) * 100)}%` : '0%',
+          width: `${pct}%`,
           background: 'var(--accent)',
           borderRadius: '0 2px 2px 0',
           transition: 'width 400ms ease',
@@ -401,9 +571,10 @@ function SummaryProgressBanner({ progress }: { progress: SummaryProgress }) {
   )
 }
 
-function SummarySection({ summary, summaryProgress, config, hasContent, onTrigger }: {
+function SummarySection({ summary, summaryProgress, pipelineStatus, config, hasContent, onTrigger }: {
   summary: BriefingSummary | null
   summaryProgress: SummaryProgress | null
+  pipelineStatus: PipelineStatus | null
   config: ConfigSettings | null
   hasContent: boolean
   onTrigger: () => void
@@ -478,7 +649,7 @@ function SummarySection({ summary, summaryProgress, config, hasContent, onTrigge
           padding: '1.25rem 1.5rem',
         }}>
           {isSummarizing && summaryProgress && (
-            <SummaryProgressBanner progress={summaryProgress} />
+            <SummaryProgressBanner progress={summaryProgress} pipelineStatus={pipelineStatus} />
           )}
 
           {summary ? (
@@ -634,6 +805,7 @@ export function Data() {
   const [page, setPage] = useState(1)
   const [summary, setSummary] = useState<BriefingSummary | null>(null)
   const [summaryProgress, setSummaryProgress] = useState<SummaryProgress | null>(null)
+  const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null)
 
   useEffect(() => {
     api.getConfig().then(setConfig).catch(() => {})
@@ -645,7 +817,7 @@ export function Data() {
     }).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
-  // Poll summary status for live progress
+  // Poll summary and pipeline status for live progress
   useEffect(() => {
     const check = () => {
       api.getSummaryStatus().then(s => {
@@ -654,9 +826,10 @@ export function Data() {
           api.getSummary().then(r => setSummary(r.summary)).catch(() => {})
         }
       }).catch(() => {})
+      api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
     }
     check()
-    const iv = setInterval(check, 3_000)
+    const iv = setInterval(check, 2_000)
     return () => clearInterval(iv)
   }, [])
 
@@ -847,6 +1020,7 @@ export function Data() {
             <SummarySection
               summary={summary}
               summaryProgress={summaryProgress}
+              pipelineStatus={pipelineStatus}
               config={config}
               hasContent={hasContent}
               onTrigger={handleTriggerSummary}

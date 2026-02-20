@@ -82,6 +82,9 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
   return chunks
 }
 
+/** Callback to report map-reduce chunk progress. */
+type ChunkProgressFn = (total: number, done: number) => void
+
 /**
  * Summarize items from a single sensor via LLM using map-reduce.
  *
@@ -94,6 +97,7 @@ async function summarizeSensor(
   items: IntelItem[],
   llmConfig: LlmConfig,
   promptOverrides?: Record<string, string>,
+  onChunkProgress?: ChunkProgressFn,
 ): Promise<SensorSummary | null> {
   if (items.length === 0) return null
 
@@ -112,14 +116,20 @@ async function summarizeSensor(
   } else {
     // Map-reduce: chunk → extract signals → merge
     const chunks = chunkArray(items, CHUNK_SIZE)
+    onChunkProgress?.(chunks.length, 0)
 
     // Map phase: extract key signals from each chunk concurrently
+    let chunksCompleted = 0
     const extractionPromises = chunks.map((chunk, i) => {
       const chunkText = chunk.map(formatItem).join('\n\n')
       return chatCompletion([
         { role: 'system', content: CHUNK_EXTRACT_PROMPT },
         { role: 'user', content: `以下是 ${label} 的第 ${i + 1}/${chunks.length} 批内容（${chunk.length} 条）：\n\n${chunkText}` },
-      ], llmConfig)
+      ], llmConfig).then(result => {
+        chunksCompleted++
+        onChunkProgress?.(chunks.length, chunksCompleted)
+        return result
+      })
     })
     const extractions = await Promise.all(extractionPromises)
 
@@ -245,7 +255,10 @@ export async function runPipeline(
           if (items.length === 0) return null
           tracker.setSummaryState(sensorName, 'running')
           try {
-            const result = await summarizeSensor(sensorName, items, llmConfig, config.summary_sensor_prompts)
+            const result = await summarizeSensor(
+              sensorName, items, llmConfig, config.summary_sensor_prompts,
+              (total, done) => tracker.setSummaryChunks(sensorName, total, done),
+            )
             tracker.setSummaryState(sensorName, 'ok')
             return result
           } catch (err) {

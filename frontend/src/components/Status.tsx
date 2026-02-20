@@ -120,15 +120,6 @@ export function Status() {
 
   return (
     <section id="status" style={{ padding: '4.5rem 0' }}>
-      <div className="page-header" style={{ marginBottom: '2rem' }}>
-        <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.375rem' }}>
-          Status
-        </h2>
-        <p style={{ fontSize: '0.875rem', color: 'var(--ink-muted)', lineHeight: 1.6 }}>
-          Pipeline health, last run outcomes, and scheduled activity.
-        </p>
-      </div>
-
       <ActionBar
         health={health}
         isRunning={isRunning}

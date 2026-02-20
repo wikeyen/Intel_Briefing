@@ -262,8 +262,8 @@ export function SensorTable({ isRunning, liveSensors, report, config, pipelineSt
                 rightText = '\u2014'
                 rightColor = 'var(--ink-faint)'
               } else if (isApiErr) {
-                rightText = 'Failed'
-                rightColor = 'var(--err)'
+                rightText = '\u2014'
+                rightColor = 'var(--ink-faint)'
               } else if (isOk) {
                 rightText = String(count)
                 rightColor = count > 0 ? 'var(--accent)' : 'var(--warn)'
@@ -298,6 +298,18 @@ export function SensorTable({ isRunning, liveSensors, report, config, pipelineSt
                         marginLeft: '0.25rem',
                       }}>
                         {lastSp.fetch_error}
+                      </span>
+                    )}
+                    {isApiErr && lastSp?.fetch_error && (
+                      <span style={{
+                        color: 'var(--err)',
+                        fontSize: '0.75rem',
+                        marginLeft: '0.25rem',
+                        opacity: 0.8,
+                      }}>
+                        {lastSp.fetch_error.length > 60
+                          ? lastSp.fetch_error.slice(0, 60) + '\u2026'
+                          : lastSp.fetch_error}
                       </span>
                     )}
                   </div>

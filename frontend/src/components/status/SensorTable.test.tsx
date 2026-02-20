@@ -346,8 +346,8 @@ describe('SensorTable', () => {
     expect(within(detail).getByText(/Summary/)).toBeInTheDocument()
   })
 
-  // Additional: Shows "Failed" in red for API errors
-  it('shows "Failed" for API errors', () => {
+  // Additional: Shows inline error text for API errors
+  it('shows inline error text for API errors', () => {
     const report = makeReport({
       sources_ok: [],
       sources_failed: ['hacker_news'],
@@ -369,7 +369,7 @@ describe('SensorTable', () => {
     })
     render(<SensorTable {...props} />)
     const hnRow = screen.getByTestId('sensor-row-hacker_news')
-    expect(within(hnRow).getByText('Failed')).toBeInTheDocument()
+    expect(within(hnRow).getByText('Connection timeout')).toBeInTheDocument()
   })
 
   // Section total should display the sum of items in that section

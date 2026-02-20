@@ -53,20 +53,20 @@ export function ActionBar({
   const pct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0
 
   return (
-    <div style={{
+    <div className="page-header" style={{
       position: 'relative',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      height: 56,
-      padding: '0 1rem',
+      padding: '0.875rem 1.25rem',
       background: 'var(--surface)',
       border: '1px solid var(--border)',
-      borderRadius: 8,
+      borderRadius: 10,
       overflow: 'hidden',
+      marginBottom: '1.25rem',
     }}>
-      {/* ── Left: health dot + label + timestamp ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+      {/* ── Left: title + health info ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
         {/* Health / pulse dot */}
         <span
           aria-hidden="true"
@@ -80,25 +80,24 @@ export function ActionBar({
           }}
         />
 
-        {isRunning ? (
-          <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)' }}>
-            {phaseLabel(phase, progress)}
-          </span>
-        ) : (
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)' }}>
-              {meta.label}
-            </span>
-            {health?.last_fetch && (
-              <span
-                title={health.last_fetch}
-                style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}
-              >
-                &middot; {timeAgo(health.last_fetch)}
-              </span>
-            )}
-          </span>
-        )}
+        <div style={{ minWidth: 0 }}>
+          {isRunning ? (
+            <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)' }}>
+              {phaseLabel(phase, progress)}
+            </div>
+          ) : (
+            <>
+              <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--ink)', lineHeight: 1.3 }}>
+                {meta.label}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.0625rem' }}>
+                {health?.last_fetch
+                  ? <span title={health.last_fetch}>{meta.desc} · {timeAgo(health.last_fetch)}</span>
+                  : meta.desc}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* ── Right: mode dropdown + Run button ── */}

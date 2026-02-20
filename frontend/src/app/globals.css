@@ -230,11 +230,6 @@ input[type="range"]::-moz-range-thumb {
     display: none !important;
   }
 
-  /* Fetch Now button — no safe-area bottom in dropdown */
-  .sidebar-fetch {
-    padding-bottom: 1.25rem !important;
-  }
-
   /* Backdrop — frosted glass effect, below top bar */
   .sidebar-backdrop {
     display: block;

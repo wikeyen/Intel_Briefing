@@ -9,7 +9,7 @@ import { ToastContext } from '@/lib/toast-context'
 
 const PAGE_TITLES: Record<string, string> = {
   '/status': 'Status',
-  '/api-keys': 'Connections',
+  '/api-keys': 'Credentials',
   '/settings': 'Settings',
   '/pipeline': 'Pipeline',
   '/sensors': 'Sensors',
@@ -89,7 +89,7 @@ export default function UiLayout({ children }: { children: React.ReactNode }) {
             {/* Backdrop — visible only on mobile when sidebar is open */}
             <div className="sidebar-backdrop" onClick={closeSidebar} />
 
-            <Sidebar showToast={showToast} onNavigate={closeSidebar} />
+            <Sidebar onNavigate={closeSidebar} />
             <main className="main-content" style={{
               flex: 1,
               height: '100vh',

@@ -246,7 +246,7 @@ export function ApiKeys() {
         <h2 style={{
           fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink)',
           marginBottom: '0.25rem',
-        }}>Connections</h2>
+        }}>Credentials</h2>
         <p style={{
           fontSize: '0.8125rem', color: 'var(--ink-muted)',
         }}>

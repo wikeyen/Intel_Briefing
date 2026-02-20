@@ -1,4 +1,4 @@
-// ABOUTME: Connections page — API keys and credentials for external services.
+// ABOUTME: Credentials page — API keys and credentials for external services.
 // ABOUTME: Wraps the ApiKeys component in the standard config padding layout.
 import { ApiKeys } from '@/components/ApiKeys'
 

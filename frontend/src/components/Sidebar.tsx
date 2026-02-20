@@ -2,7 +2,7 @@
 // ABOUTME: Uses Next.js Link and usePathname for client-side routing.
 'use client'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect, type ReactNode } from 'react'
 import { api } from '@/api/client'
 import type { HealthResponse, PipelineStatus } from '@/api/client'
@@ -11,7 +11,7 @@ const CONFIG_NAV = [
   { href: '/sources',     label: 'Sources' },
   { href: '/pipeline',    label: 'Pipeline' },
   { href: '/ai',          label: 'AI Summary' },
-  { href: '/connections', label: 'Connections' },
+  { href: '/connections', label: 'Credentials' },
 ]
 
 function NavLink({ href, active, onClick, children }: { href: string; active: boolean; onClick?: () => void; children: ReactNode }) {
@@ -60,14 +60,13 @@ function SideDivider() {
 
 
 interface Props {
-  showToast: (msg: string) => void
   onNavigate?: () => void
 }
 
-export function Sidebar({ showToast, onNavigate }: Props) {
+export function Sidebar({ onNavigate }: Props) {
   const pathname = usePathname()
+  const router = useRouter()
   const [health, setHealth] = useState<HealthResponse | null>(null)
-  const [fetching, setFetching] = useState(false)
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null)
 
   useEffect(() => {
@@ -102,18 +101,6 @@ export function Sidebar({ showToast, onNavigate }: Props) {
 
   const showBadge = hasErrors && !!runId && runId !== seenRun
 
-  const handleFetchNow = async () => {
-    setFetching(true)
-    try {
-      await api.triggerFetch()
-      showToast('Pipeline triggered — data will update shortly')
-    } catch (e) {
-      showToast('Fetch failed: ' + (e as Error).message)
-    } finally {
-      setFetching(false)
-    }
-  }
-
   const statusColor =
     !health                      ? 'var(--ink-faint)' :
     health.status === 'ok'       ? 'var(--ok)'        :
@@ -136,7 +123,7 @@ export function Sidebar({ showToast, onNavigate }: Props) {
       flexShrink: 0,
       borderRight: '1px solid var(--sb-border)',
     }}>
-      {/* Brand */}
+      {/* Brand — status row links to /status */}
       <div className="sidebar-brand" style={{ padding: '2rem 1.75rem 1.5rem' }}>
         <div style={{
           fontSize: '0.625rem',
@@ -148,7 +135,13 @@ export function Sidebar({ showToast, onNavigate }: Props) {
         }}>
           Intel Briefing
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div
+          role="link"
+          tabIndex={0}
+          onClick={() => { router.push('/status'); onNavigate?.() }}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { router.push('/status'); onNavigate?.() } }}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
+        >
           <span style={{
             width: 5,
             height: 5,
@@ -201,31 +194,6 @@ export function Sidebar({ showToast, onNavigate }: Props) {
           </NavLink>
         ))}
 
-      </div>
-
-      <div style={{ height: 1, background: 'var(--sb-border)', margin: '0 1.75rem' }} />
-
-      {/* Fetch Now */}
-      <div className="sidebar-fetch" style={{ padding: '1.25rem 1.75rem', paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0))' }}>
-        <button
-          onClick={handleFetchNow}
-          disabled={fetching}
-          style={{
-            width: '100%',
-            padding: '0.625rem 1rem',
-            background: fetching ? 'var(--sb-faint)' : 'var(--sb-accent)',
-            color: fetching ? 'var(--sb-muted)' : '#FFFFFF',
-            border: 'none',
-            borderRadius: 4,
-            fontSize: '0.8125rem',
-            fontWeight: 500,
-            cursor: fetching ? 'not-allowed' : 'pointer',
-            transition: 'background 120ms',
-            letterSpacing: '0.01em',
-          }}
-        >
-          {fetching ? 'Fetching…' : 'Fetch Now'}
-        </button>
       </div>
     </nav>
   )

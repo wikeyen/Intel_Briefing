@@ -901,7 +901,7 @@ function EmptySection({ needsKey }: { needsKey?: boolean }) {
       borderRadius: 8,
     }}>
       {needsKey
-        ? 'No items — the sensors for this section need an API key. Configure them on the Connections page.'
+        ? 'No items — the sensors for this section need an API key. Configure them on the Credentials page.'
         : 'No items in this section yet — run the pipeline to fetch data.'}
     </div>
   )

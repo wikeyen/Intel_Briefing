@@ -5,11 +5,10 @@ import { useState, useEffect, useRef } from 'react'
 import { api } from '@/api/client'
 import type { HealthResponse, IntelReport, ConfigSettings, PipelineStatus, SensorJobProgress, RunMode } from '@/api/client'
 import { useToast } from '@/lib/toast-context'
-import { STATUS_META } from './status/constants'
-import { HeroBanner } from './status/HeroBanner'
-import { StatCards } from './status/StatCards'
-import { SensorGrid } from './status/SensorGrid'
-import { Console } from './status/Console'
+import { ActionBar } from './status/ActionBar'
+import type { Phase } from './status/ActionBar'
+import { SensorTable } from './status/SensorTable'
+import { ScheduleFooter } from './status/ScheduleFooter'
 
 export function Status() {
   const showToast = useToast()
@@ -85,23 +84,6 @@ export function Status() {
     }
   }
 
-  const statusKey = health === null ? 'no_data' : (health.status ?? 'error')
-  const meta = STATUS_META[statusKey]
-
-  // Count items per sensor source
-  const sensorCounts: Record<string, number> = {}
-  if (report) {
-    for (const items of Object.values(report.items)) {
-      for (const item of items) {
-        sensorCounts[item.source] = (sensorCounts[item.source] ?? 0) + 1
-      }
-    }
-  }
-
-  const totalItems  = Object.values(report?.items ?? {}).reduce((s, arr) => s + arr.length, 0)
-  const okCount     = report?.sources_ok.length ?? 0
-  const failedCount = report?.sources_failed.length ?? 0
-
   // Consider pipeline stale if started_at is more than 5 minutes ago
   const isRunning = !!(pipelineStatus?.running && pipelineStatus.started_at
     && (Date.now() - new Date(pipelineStatus.started_at).getTime()) < 5 * 60 * 1000)
@@ -114,44 +96,30 @@ export function Status() {
     }
   }
 
-  // Stage-based progress calculation
-  const totalStages = (() => {
-    if (!pipelineStatus) return 0
-    const n = pipelineStatus.sensors.length
-    switch (pipelineStatus.mode) {
-      case 'fetch': return n
-      case 'summarize': return n + 1
-      case 'fetch_summarize': return n * 2 + 1
-    }
-  })()
-
-  const doneStages = (() => {
-    if (!pipelineStatus) return 0
-    let done = 0
-    for (const s of pipelineStatus.sensors) {
-      if (['ok', 'failed', 'skipped'].includes(s.fetch)) done++
-      if (['ok', 'failed', 'skipped'].includes(s.summary)) done++
-    }
-    if (['ok', 'failed', 'skipped'].includes(pipelineStatus.overall_summary)) done++
-    return done
-  })()
-
-  // Derive hero state from pipeline progress
-  const heroState = (() => {
+  // Pipeline phase — determines ActionBar label and progress tracking
+  const phase: Phase = (() => {
     if (!isRunning) return 'idle'
-    if (!pipelineStatus) return 'running'
-    const anySummaryRunning = pipelineStatus.sensors.some(s => s.summary === 'running')
-      || pipelineStatus.overall_summary === 'running'
-    const anyFetchRunning = pipelineStatus.sensors.some(s => s.fetch === 'running')
-    if (anySummaryRunning) return 'summarizing'
-    if (anyFetchRunning) return 'fetching'
-    return 'running'
+    if (!pipelineStatus) return 'fetching'
+    if (pipelineStatus.overall_summary === 'running') return 'briefing'
+    const anySummary = pipelineStatus.sensors.some(s => s.summary === 'running')
+    if (anySummary) return 'summarizing'
+    return 'fetching'
+  })()
+
+  // Progress counters — done/total for the current phase
+  const progress = (() => {
+    if (!pipelineStatus) return { done: 0, total: 0 }
+    const total = pipelineStatus.sensors.length
+    if (phase === 'summarizing' || phase === 'briefing') {
+      const done = pipelineStatus.sensors.filter(s => ['ok', 'failed', 'skipped'].includes(s.summary)).length
+      return { done, total }
+    }
+    const done = pipelineStatus.sensors.filter(s => ['ok', 'failed', 'skipped'].includes(s.fetch)).length
+    return { done, total }
   })()
 
   return (
     <section id="status" style={{ padding: '4.5rem 0' }}>
-
-      {/* ── Page header (hidden on mobile — shown in top bar) ─────── */}
       <div className="page-header" style={{ marginBottom: '2rem' }}>
         <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.375rem' }}>
           Status
@@ -161,64 +129,24 @@ export function Status() {
         </p>
       </div>
 
-      {/* ── Hero Status Banner ──────────────────────────────── */}
-      <HeroBanner
-        isRunning={isRunning}
-        meta={meta}
-        heroState={heroState}
+      <ActionBar
         health={health}
+        isRunning={isRunning}
+        phase={phase}
+        progress={progress}
         fetching={fetching}
-        running={running}
-        report={report}
-        doneStages={doneStages}
-        totalStages={totalStages}
-        pipelineStatus={pipelineStatus}
         onRun={handleRun}
       />
 
-      {/* ── Stat Cards (3-column) ───────────────────────────── */}
-      <StatCards
-        health={health}
-        report={report}
-        config={config}
-        totalItems={totalItems}
-        okCount={okCount}
-        failedCount={failedCount}
-      />
-
-      {/* ── Sources — 2-column grid of section cards ─────────── */}
-      <SensorGrid
+      <SensorTable
         isRunning={isRunning}
         liveSensors={liveSensors}
         report={report}
         config={config}
         pipelineStatus={pipelineStatus}
-        sensorCounts={sensorCounts}
       />
 
-      {/* ── Total summary ───────────────────────────────────── */}
-      {(report || isRunning) && (
-        <div style={{
-          textAlign: 'center',
-          fontSize: '0.8125rem',
-          color: 'var(--ink-muted)',
-          paddingTop: '0.25rem',
-        }}>
-          <span style={{
-            fontWeight: 700,
-            color: 'var(--ink)',
-            fontFamily: 'ui-monospace, monospace',
-          }}>
-            {isRunning && pipelineStatus
-              ? pipelineStatus.total_items
-              : totalItems}
-          </span>
-          {' '}items total
-        </div>
-      )}
-
-      {/* ── Console — sensor errors from last run ─────────── */}
-      <Console pipelineStatus={pipelineStatus} />
+      <ScheduleFooter config={config} />
     </section>
   )
 }

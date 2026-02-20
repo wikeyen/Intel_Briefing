@@ -276,30 +276,6 @@ input[type="range"]::-moz-range-thumb {
     padding-top: 1.5rem !important;
   }
 
-  /* ── Grids ── */
-  .stat-grid {
-    grid-template-columns: 1fr !important;
-    gap: 0.75rem !important;
-  }
-
-  .source-grid {
-    grid-template-columns: 1fr !important;
-    gap: 0.75rem !important;
-  }
-
-  /* ── Hero banner ── */
-  .hero-row {
-    flex-direction: column;
-    align-items: flex-start !important;
-    gap: 1rem !important;
-  }
-  .hero-actions {
-    flex-direction: row;
-    width: 100%;
-    justify-content: space-between;
-    gap: 0.75rem !important;
-  }
-
   /* ── Data page ── */
   .data-content {
     padding-left: 1.25rem !important;
@@ -352,20 +328,6 @@ input[type="range"]::-moz-range-thumb {
     font-size: 0.8125rem !important;
     padding: 0.875rem 1.25rem !important;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.08) !important;
-  }
-
-  /* ── Cards — elevated on mobile ── */
-  .stat-grid > div,
-  .source-grid > div {
-    border-radius: 10px !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  }
-
-  /* ── Hero banner refinement ── */
-  .hero-banner {
-    border-radius: 12px !important;
-    padding: 1.25rem 1.25rem !important;
-    margin-bottom: 1.25rem !important;
   }
 
   /* ── Status section top padding ── */

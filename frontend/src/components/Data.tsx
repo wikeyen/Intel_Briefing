@@ -457,7 +457,10 @@ function SummaryProgressBanner({ progress, pipelineStatus, config }: {
             const c = config?.summary_provider === 'local'
               ? (pipelineStatus?.local_summary_concurrency ?? config?.local_summary_concurrency)
               : (pipelineStatus?.default_concurrency ?? config?.default_concurrency)
-            const running = pipelineStatus?.sensors.filter(s => s.summary === 'running').length ?? 0
+            // Count running workers from whichever progress source is active
+            const pipelineRunning = pipelineStatus?.sensors.filter(s => s.summary === 'running').length ?? 0
+            const summaryRunning = summaryProgress?.sensors.filter(s => s.state === 'running').length ?? 0
+            const running = Math.max(pipelineRunning, summaryRunning)
             return c != null ? (
               <span style={{ whiteSpace: 'nowrap' }}>
                 {running}/{c} workers

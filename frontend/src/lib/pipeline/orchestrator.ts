@@ -6,15 +6,18 @@ import type {
   SensorResult,
   RunMode,
   BriefingSummary,
+  SummaryProgress,
+  SummarySensorProgress,
 } from '../models'
 import { sensorResultSucceeded, sensorLimit } from '../models'
 import { Semaphore } from './semaphore'
 import { PipelineProgressTracker } from './progress'
 import { readReport, writePipelineStatus } from './cache'
-import { writeSummary, invalidateAllSensorSummaries } from '../summary/cache'
+import { writeSummary, writeSummaryProgress, invalidateAllSensorSummaries } from '../summary/cache'
 import { summarizeReport, type SummaryProgressCallback } from '../summary/summarizer'
 import type { LlmConfig } from '../summary/llm'
 import { SENSOR_REGISTRY } from '../sensors'
+import { SENSOR_LABELS } from '../sensors/taxonomy'
 import { SensorConfigError } from '../sensors/errors'
 import { assembleReport } from './report-builder'
 
@@ -89,6 +92,7 @@ function buildLlmConfig(config: ConfigSettings): LlmConfig | null {
  * The summarize stage delegates to the unified summarization engine.
  * Failed sensors in the fetch stage are excluded from the summary stage.
  * Progress is tracked via PipelineProgressTracker and persisted to the database.
+ * Summary progress is also written to intel:summary_status for cross-page awareness.
  */
 export async function runPipeline(
   config: ConfigSettings,
@@ -153,6 +157,10 @@ export async function runPipeline(
   // Build enabled sensor set for the unified engine
   const enabledSensors = new Set(registrySensorNames)
 
+  // SummaryProgress for cross-page awareness — Feed page polls intel:summary_status.
+  // Initialized lazily when summarize stage begins.
+  let summaryStatus: SummaryProgress | null = null
+
   try {
     // Track sensors that failed fetch — for progress tracker skip marking
     const failedSensors = new Set<string>()
@@ -210,6 +218,21 @@ export async function runPipeline(
         return { report: null, summary: null }
       }
 
+      // Build SummaryProgress for cross-page awareness (Feed page polls intel:summary_status)
+      const eligibleSensors = trackerSensorNames.filter(n => !failedSensors.has(n))
+      summaryStatus = {
+        running: true,
+        started_at: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
+        completed_at: null,
+        sensors: [...eligibleSensors, '__overall__'].map((name): SummarySensorProgress => ({
+          sensor_name: name,
+          label: name === '__overall__' ? 'Overall' : (SENSOR_LABELS[name] ?? name),
+          state: 'pending',
+          error: null,
+        })),
+      }
+      await writeSummaryProgress(summaryStatus).catch(() => {})
+
       if (llmConfig) {
         // Bridge between tracker and the unified engine's progress callback
         const onProgress: SummaryProgressCallback = (sensorName, _label, state, error, chunks) => {
@@ -217,15 +240,29 @@ export async function runPipeline(
             if (state === 'running') tracker.setOverallSummary('running')
             else if (state === 'ok') tracker.setOverallSummary('ok')
             else if (state === 'failed') tracker.setOverallSummary('failed')
-            return
+          } else {
+            if (state === 'running') {
+              tracker.setSummaryState(sensorName, 'running')
+              if (chunks) tracker.setSummaryChunks(sensorName, chunks.total, chunks.done)
+            } else if (state === 'ok' || state === 'cached') {
+              tracker.setSummaryState(sensorName, 'ok')
+            } else if (state === 'failed') {
+              tracker.setSummaryState(sensorName, 'failed', error ?? undefined)
+            }
           }
-          if (state === 'running') {
-            tracker.setSummaryState(sensorName, 'running')
-            if (chunks) tracker.setSummaryChunks(sensorName, chunks.total, chunks.done)
-          } else if (state === 'ok' || state === 'cached') {
-            tracker.setSummaryState(sensorName, 'ok')
-          } else if (state === 'failed') {
-            tracker.setSummaryState(sensorName, 'failed', error ?? undefined)
+
+          // Also update SummaryProgress for cross-page awareness
+          if (summaryStatus) {
+            const displayState = state === 'cached' ? 'ok' as const : state
+            for (const sp of summaryStatus.sensors) {
+              if (sp.sensor_name === sensorName) {
+                sp.state = displayState
+                sp.label = _label
+                sp.error = error
+                break
+              }
+            }
+            writeSummaryProgress(summaryStatus).catch(() => {})
           }
         }
 
@@ -258,6 +295,12 @@ export async function runPipeline(
     }
     return { report, summary }
   } finally {
+    // Mark SummaryProgress complete for cross-page awareness
+    if (summaryStatus) {
+      summaryStatus.running = false
+      summaryStatus.completed_at = new Date().toISOString().replace(/\.\d+Z$/, 'Z')
+      writeSummaryProgress(summaryStatus).catch(() => {})
+    }
     // Clear singletons so a new run can start
     if (activeAbortController === abortController) {
       activeAbortController = null

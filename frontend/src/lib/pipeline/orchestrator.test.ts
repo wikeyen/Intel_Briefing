@@ -21,7 +21,7 @@ const mockWriteSummary = vi.fn().mockResolvedValue(undefined)
 const mockInvalidateAllSensorSummaries = vi.fn().mockResolvedValue(undefined)
 vi.mock('../summary/cache', () => ({
   writeSummary: (...args: unknown[]) => mockWriteSummary(...args),
-  writeSummaryProgress: vi.fn(),
+  writeSummaryProgress: vi.fn().mockResolvedValue(undefined),
   readSummary: vi.fn(),
   readSummaryProgress: vi.fn(),
   readSensorSummary: vi.fn().mockResolvedValue(null),

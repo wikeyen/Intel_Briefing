@@ -259,3 +259,26 @@ describe('parseOverallJson', () => {
     expect(result.sentiment.opinion_shifts).toEqual([])
   })
 })
+
+  it('repairs JSON with unescaped double quotes in string values', () => {
+    // Simulates LLM output where source titles contain unescaped quotes
+    const input = `{
+  "quick_scan": [
+    {"text": "港股科技股分化："AI新贵"受追捧", "source": "WSJ", "refs": []}
+  ],
+  "executive_summary": "A summary with "quoted words" inside.",
+  "sections": [],
+  "sentiment": {"overall_mood": "mixed", "mood_summary": "Test", "controversies": [], "opinion_shifts": [], "risk_flags": []}
+}`
+    const result = parseOverallJson(input)
+    expect(result.quick_scan.length).toBeGreaterThanOrEqual(1)
+    expect(result.executive_summary.length).toBeGreaterThan(0)
+    expect(result.sentiment.overall_mood).toBe('mixed')
+  })
+
+  it('repairs sensor JSON with unescaped double quotes', () => {
+    const input = `{"summary": "港股科技股分化：\"AI新贵\"受追捧", "items": [{"title": "Test article", "url": "https://example.com", "brief": "OK"}]}`
+    const result = parseSensorJson(input)
+    expect(result.summary).toContain('港股')
+    expect(result.items).toHaveLength(1)
+  })

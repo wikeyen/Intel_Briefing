@@ -2,6 +2,7 @@
 // ABOUTME: Per-sensor cache enables skipping unchanged sources on regenerate.
 import { kvSet, kvGet, kvDelete, getDb } from '../db'
 import type { BriefingSummary, SummaryProgress, SensorSummary } from '../models'
+import { parseOverallJson } from './parse-json'
 
 const SUMMARY_KEY = 'intel:summary'
 const SUMMARY_TTL_SECONDS = 48 * 60 * 60 // 48 hours
@@ -11,14 +12,41 @@ export async function writeSummary(summary: BriefingSummary): Promise<void> {
   await kvSet(SUMMARY_KEY, summary, SUMMARY_TTL_SECONDS)
 }
 
-/** Read a cached BriefingSummary. Returns null if missing or expired. */
+/** Read a cached BriefingSummary. Repairs broken fallback data on the fly. */
 export async function readSummary(): Promise<BriefingSummary | null> {
   try {
     const data = await kvGet<BriefingSummary>(SUMMARY_KEY)
-    return data ?? null
+    if (!data) return null
+    return repairIfNeeded(data)
   } catch {
     return null
   }
+}
+
+/**
+ * Detect and repair broken summary where parseOverallJson fell back
+ * to stuffing the raw JSON into sections[0].entries[0].text.
+ * Re-parses the embedded JSON through the improved parser.
+ */
+function repairIfNeeded(summary: BriefingSummary): BriefingSummary {
+  const overall = summary.overall
+  if (
+    overall &&
+    typeof overall === 'object' &&
+    'quick_scan' in overall &&
+    Array.isArray(overall.quick_scan) &&
+    overall.quick_scan.length === 0 &&
+    Array.isArray(overall.sections) &&
+    overall.sections.length === 1 &&
+    overall.sections[0].entries.length === 1 &&
+    overall.sections[0].entries[0].text.trimStart().startsWith('{')
+  ) {
+    const reparsed = parseOverallJson(overall.sections[0].entries[0].text)
+    if (reparsed.quick_scan.length > 0 || reparsed.executive_summary) {
+      return { ...summary, overall: reparsed }
+    }
+  }
+  return summary
 }
 
 const SUMMARY_STATUS_KEY = 'intel:summary_status'

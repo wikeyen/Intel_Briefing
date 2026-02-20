@@ -1,8 +1,9 @@
 // ABOUTME: JSON parsing utilities for LLM summary responses.
-// ABOUTME: Handles code fence stripping and fallback for malformed output.
+// ABOUTME: Handles code fence stripping, JSON repair, and fallback for malformed output.
 
 import type { SensorSummaryItem, OverallBriefing, BriefingEntry, BriefingSection, BriefingRef, SentimentAnalysis, SentimentEntry } from '../models'
 import { EMPTY_SENTIMENT } from '../models'
+import { jsonrepair } from 'jsonrepair'
 
 /** Strip markdown code fences (```json ... ```) that LLMs sometimes add. */
 function stripCodeFences(text: string): string {
@@ -11,18 +12,35 @@ function stripCodeFences(text: string): string {
 }
 
 /**
- * Try to extract a JSON object from text that may contain preamble/postamble.
- * Finds the outermost { ... } and attempts to parse it.
+ * Robustly parse JSON from LLM output.
+ * Tries: direct parse → extract outermost braces → jsonrepair (handles unescaped quotes, etc.)
  */
-function extractJsonObject(text: string): unknown | null {
+function robustJsonParse(text: string): Record<string, unknown> | null {
+  // 1. Direct parse
+  try {
+    const result = JSON.parse(text)
+    if (result && typeof result === 'object') return result
+  } catch { /* continue */ }
+
+  // 2. Extract outermost { ... } and try again
   const start = text.indexOf('{')
   const end = text.lastIndexOf('}')
-  if (start < 0 || end <= start) return null
-  try {
-    return JSON.parse(text.slice(start, end + 1))
-  } catch {
-    return null
+  if (start >= 0 && end > start) {
+    const slice = text.slice(start, end + 1)
+    try {
+      const result = JSON.parse(slice)
+      if (result && typeof result === 'object') return result
+    } catch { /* continue */ }
+
+    // 3. Repair broken JSON (unescaped quotes, trailing commas, etc.)
+    try {
+      const repaired = jsonrepair(slice)
+      const result = JSON.parse(repaired)
+      if (result && typeof result === 'object') return result
+    } catch { /* give up */ }
   }
+
+  return null
 }
 
 /** Parsed sensor summary JSON from the LLM. */
@@ -37,15 +55,9 @@ export interface ParsedSensorJson {
  */
 export function parseSensorJson(raw: string): ParsedSensorJson {
   const cleaned = stripCodeFences(raw)
+  const parsed = robustJsonParse(cleaned)
 
-  let parsed: Record<string, unknown> | null = null
-  try {
-    parsed = JSON.parse(cleaned)
-  } catch {
-    parsed = extractJsonObject(cleaned) as Record<string, unknown> | null
-  }
-
-  if (parsed && typeof parsed === 'object') {
+  if (parsed) {
     const summary = typeof parsed.summary === 'string' ? parsed.summary : cleaned
     const items: SensorSummaryItem[] = Array.isArray(parsed.items)
       ? parsed.items
@@ -128,16 +140,9 @@ function parseSentiment(parsed: Record<string, unknown>): SentimentAnalysis {
  */
 export function parseOverallJson(raw: string): OverallBriefing {
   const cleaned = stripCodeFences(raw)
+  const parsed = robustJsonParse(cleaned)
 
-  // Try direct parse first, then extract JSON object from surrounding text
-  let parsed: Record<string, unknown> | null = null
-  try {
-    parsed = JSON.parse(cleaned)
-  } catch {
-    parsed = extractJsonObject(cleaned) as Record<string, unknown> | null
-  }
-
-  if (parsed && typeof parsed === 'object') {
+  if (parsed) {
     const quick_scan: BriefingEntry[] = Array.isArray(parsed.quick_scan)
       ? parsed.quick_scan
           .filter((e: unknown) => e && typeof e === 'object' && 'text' in e)

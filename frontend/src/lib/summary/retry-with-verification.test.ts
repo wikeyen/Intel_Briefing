@@ -64,7 +64,7 @@ describe('summarizeWithVerification', () => {
         ],
       })
 
-    const result = await summarizeWithVerification({
+    await summarizeWithVerification({
       messages: [{ role: 'user', content: 'test' }],
       llmConfig,
       parseFn,

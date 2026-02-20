@@ -6,50 +6,26 @@ import Link from 'next/link'
 import { api } from '@/api/client'
 import type { IntelReport, IntelItem, ConfigSettings, BriefingSummary, SummaryProgress, PipelineStatus, OverallBriefing } from '@/api/client'
 import { SENSOR_TOKEN_FIELD } from '@/lib/sensors/constants'
+import { ALL_CATEGORIES, CATEGORY_META, SENSOR_LABELS, sensorsForCategory } from '@/lib/sensors/taxonomy'
 import { useToast } from '@/lib/toast-context'
 import { Pagination } from './Pagination'
 
 const PAGE_SIZE = 20
 
 const SECTIONS: { key: string; label: string }[] = [
-  { key: 'briefing',     label: 'Briefing' },
-  { key: 'tech_trends',  label: 'Tech Trends' },
-  { key: 'research',     label: 'Research' },
-  { key: 'capital_flow', label: 'Capital Flow' },
-  { key: 'products',     label: 'Products' },
-  { key: 'community',    label: 'Community' },
-  { key: 'social',       label: 'Social' },
-  { key: 'insights',     label: 'Insights' },
-  { key: 'feeds',        label: 'Feeds' },
+  { key: 'briefing', label: 'Briefing' },
+  ...ALL_CATEGORIES.map(cat => ({
+    key: cat,
+    label: CATEGORY_META[cat].label,
+  })),
 ]
 
-const SOURCE_LABELS: Record<string, string> = {
-  hacker_news:  'HN',
-  github:       'GitHub',
-  arxiv:        'ArXiv',
-  product_hunt: 'PH',
-  chrome_radar: 'Chrome',
-  v2ex:         'V2EX',
-  hn_blogs:     'HN Blogs',
-  sources_36kr: '36Kr',
-  wallstreetcn: 'WSCN',
-  x:            'X',
-  bluesky:      'Bluesky',
-  mastodon:     'Mastodon',
-  rss_feeds:    'RSS',
-}
+const SOURCE_LABELS: Record<string, string> = { ...SENSOR_LABELS }
 
 /** Maps each section to the sensors that feed it. */
-const SECTION_SENSORS: Record<string, string[]> = {
-  tech_trends:  ['hacker_news', 'github'],
-  research:     ['arxiv'],
-  insights:     ['hn_blogs'],
-  products:     ['product_hunt', 'chrome_radar'],
-  community:    ['v2ex'],
-  capital_flow: ['sources_36kr', 'wallstreetcn'],
-  social:       ['social_accounts', 'social_topics', 'social_trends'],
-  feeds:        ['rss_feeds'],
-}
+const SECTION_SENSORS: Record<string, string[]> = Object.fromEntries(
+  ALL_CATEGORIES.map(cat => [cat, sensorsForCategory(cat)])
+)
 
 /** Check if a section is empty because every sensor feeding it lacks a required token. */
 function sectionNeedsKey(sectionKey: string, config: ConfigSettings | null): boolean {
@@ -355,13 +331,7 @@ const PULSE_CSS = `
 }
 `
 
-/** Sensor label lookup for progress display. */
-const SENSOR_LABELS: Record<string, string> = {
-  hacker_news: 'HN', arxiv: 'ArXiv', github: 'GitHub', product_hunt: 'PH',
-  v2ex: 'V2EX', hn_blogs: 'Blogs', sources_36kr: '36Kr', wallstreetcn: 'WSJ',
-  social_accounts: 'Social', social_topics: 'Topics', social_trends: 'Trends',
-  chrome_radar: 'Chrome', rss_feeds: 'RSS', mastodon: 'Mast', bluesky: 'Bsky',
-}
+/** Sensor label lookup for progress display — imported from taxonomy. */
 
 function SummaryProgressBanner({ progress, pipelineStatus }: {
   progress: SummaryProgress

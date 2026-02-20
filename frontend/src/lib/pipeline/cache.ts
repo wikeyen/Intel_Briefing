@@ -1,7 +1,7 @@
 // ABOUTME: SQLite-backed cache for IntelReport and PipelineStatus.
 // ABOUTME: Uses the kv adapter from db.ts for persistence with TTL support.
 import { kvSet, kvGet, kvDelete } from '../db'
-import type { IntelReport, PipelineStatus } from '../models'
+import type { IntelItem, IntelReport, PipelineStatus } from '../models'
 
 const REPORT_KEY = 'intel:latest'
 const STATUS_KEY = 'intel:pipeline_status'
@@ -13,11 +13,29 @@ export async function writeReport(report: IntelReport): Promise<void> {
   await kvSet(REPORT_KEY, report, REPORT_TTL_SECONDS)
 }
 
+/** Migrate old section keys to new category keys in a cached report. */
+function migrateReportKeys(report: IntelReport): IntelReport {
+  const items = report.items as Record<string, IntelItem[]>
+  const RENAMES: Record<string, string> = {
+    tech_trends: 'tech',
+    capital_flow: 'finance',
+  }
+  let changed = false
+  for (const [oldKey, newKey] of Object.entries(RENAMES)) {
+    if (items[oldKey] && !items[newKey]) {
+      items[newKey] = items[oldKey]
+      delete items[oldKey]
+      changed = true
+    }
+  }
+  return changed ? { ...report, items: items as IntelReport['items'] } : report
+}
+
 /** Read and deserialize an IntelReport from the database. Returns null if missing or expired. */
 export async function readReport(): Promise<IntelReport | null> {
   try {
     const data = await kvGet<IntelReport>(REPORT_KEY)
-    return data ?? null
+    return data ? migrateReportKeys(data) : null
   } catch {
     return null
   }

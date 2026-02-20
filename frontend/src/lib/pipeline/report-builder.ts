@@ -48,7 +48,7 @@ export async function assembleReport(
   for (const result of results) {
     if (sensorResultSucceeded(result)) {
       sourcesOk.push(result.sensor_name)
-      const section = SENSOR_SECTION_MAP[result.sensor_name] ?? 'tech_trends'
+      const section = SENSOR_SECTION_MAP[result.sensor_name] ?? 'tech'
       sections[section].push(...result.items)
     } else {
       sourcesFailed.push(result.sensor_name)

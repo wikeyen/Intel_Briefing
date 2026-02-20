@@ -123,6 +123,7 @@ export interface SensorSummaryItem {
   title: string
   url: string
   brief: string
+  verified?: boolean | null
 }
 
 export interface SensorSummary {
@@ -137,6 +138,7 @@ export interface SensorSummary {
 export interface BriefingRef {
   title: string
   url: string
+  verified?: boolean | null
 }
 
 export interface BriefingEntry {

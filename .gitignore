@@ -63,7 +63,7 @@ debug_*.py
 htmlcov/
 
 # Cache and runtime data
-cache/
+/cache/
 
 # Git worktrees
 .worktrees/

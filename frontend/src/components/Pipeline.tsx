@@ -126,8 +126,10 @@ export function Pipeline() {
   const handleInvalidate = async () => {
     setInvalidating(true)
     try {
-      await api.invalidateCache()
-      showToast('Cache marked as stale')
+      const result = await api.invalidateCache()
+      showToast(result.invalidated > 0
+        ? `Marked ${result.invalidated} cached items as stale`
+        : 'No cached items to invalidate')
     } catch (e) {
       showToast('Failed: ' + (e as Error).message)
     } finally {

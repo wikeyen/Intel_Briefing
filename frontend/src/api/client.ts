@@ -221,7 +221,7 @@ export const api = {
     apiFetch<{ ok: boolean; status?: string; error?: string }>('/summary/trigger', { method: 'POST' }),
 
   invalidateCache: () =>
-    apiFetch<{ ok: boolean }>('/cache/invalidate', { method: 'POST' }),
+    apiFetch<{ ok: boolean; invalidated: number }>('/cache/invalidate', { method: 'POST' }),
 
   cleanupExpired: () =>
     apiFetch<{ ok: boolean; removed: number; expiry_days: number }>('/cache/cleanup', { method: 'POST' }),

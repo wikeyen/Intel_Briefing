@@ -49,6 +49,12 @@ export async function kvSet<T>(
   })
 }
 
+/** Delete a key from the store. */
+export async function kvDelete(key: string): Promise<void> {
+  const db = await getDb()
+  await db.execute({ sql: `DELETE FROM kv WHERE key = ?`, args: [key] })
+}
+
 /**
  * Get a value by key. Returns null if missing or expired.
  * Expired rows are not deleted — they get overwritten on the next kvSet.

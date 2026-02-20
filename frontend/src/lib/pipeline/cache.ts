@@ -1,6 +1,6 @@
 // ABOUTME: SQLite-backed cache for IntelReport and PipelineStatus.
 // ABOUTME: Uses the kv adapter from db.ts for persistence with TTL support.
-import { kvSet, kvGet } from '../db'
+import { kvSet, kvGet, kvDelete } from '../db'
 import type { IntelReport, PipelineStatus } from '../models'
 
 const REPORT_KEY = 'intel:latest'
@@ -39,6 +39,11 @@ export function isStale(report: IntelReport, ttlHours: number = 6): boolean {
   } catch {
     return true
   }
+}
+
+/** Delete the cached report, forcing the next fetch to run fresh. */
+export async function invalidateReport(): Promise<void> {
+  await kvDelete(REPORT_KEY)
 }
 
 /** Write PipelineStatus to the database with a 1-hour TTL. */

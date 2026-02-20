@@ -44,6 +44,8 @@ export interface SummarizeOptions {
    * are automatically excluded by the engine.
    */
   enabledSensors?: Set<string>
+  /** Token callback for streaming visual feedback. Called with (sensorName, token). */
+  onToken?: (sensorName: string, token: string) => void
 }
 
 /**
@@ -61,6 +63,7 @@ async function summarizeSensor(
   onChunkProgress?: (total: number, done: number) => void,
   signal?: AbortSignal,
   onVerifyRetry?: (attempt: number, maxRetries: number, failures: number) => void | Promise<void>,
+  onToken?: (token: string) => void,
 ): Promise<SensorSummary | null> {
   if (items.length === 0) return null
 
@@ -124,6 +127,7 @@ async function summarizeSensor(
     },
     signal,
     onRetry: onVerifyRetry,
+    onToken,
   })
 
   return {
@@ -164,6 +168,7 @@ export async function summarizeReport(
     onProgress,
     skipCache = false,
     enabledSensors,
+    onToken,
   } = options
 
   const semaphore = new Semaphore(concurrency)
@@ -208,6 +213,7 @@ export async function summarizeReport(
             (total, done) => onProgress?.(sensorName, label, 'running', null, { total, done }),
             signal,
             (attempt, maxRetries, failures) => onProgress?.(sensorName, label, 'running', null, undefined, { attempt, maxRetries, failures }),
+            onToken ? (token) => onToken(sensorName, token) : undefined,
           )
           if (signal?.aborted) return null
           if (result) {
@@ -297,6 +303,7 @@ export async function summarizeReport(
       signal,
       onRetry: (attempt, maxRetries, failures) =>
         onProgress?.('__overall__', 'Overall', 'running', null, undefined, { attempt, maxRetries, failures }),
+      onToken: onToken ? (token) => onToken('__overall__', token) : undefined,
     })
     await onProgress?.('__overall__', 'Overall', 'ok', null)
   } catch (err) {

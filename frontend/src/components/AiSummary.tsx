@@ -557,6 +557,7 @@ export function AiSummary() {
   const [overallPrompt, setOverallPrompt] = useState('')
   const [promptsExpanded, setPromptsExpanded] = useState(false)
   const [expandedSensor, setExpandedSensor] = useState<string | null>(null)
+  const [localConcurrency, setLocalConcurrency] = useState(1)
 
   const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
   const OLLAMA_BASE_URL = 'http://localhost:11434/v1'
@@ -568,6 +569,7 @@ export function AiSummary() {
       setSummaryModel(cfg.summary_model || 'anthropic/claude-sonnet-4')
       setSensorPrompts(cfg.summary_sensor_prompts ?? {})
       setOverallPrompt(cfg.summary_overall_prompt ?? '')
+      setLocalConcurrency(cfg.local_summary_concurrency ?? 1)
     })
   }, [])
 
@@ -592,6 +594,7 @@ export function AiSummary() {
         summary_model: summaryModel,
         summary_sensor_prompts: sensorPrompts,
         summary_overall_prompt: overallPrompt,
+        ...(summaryProvider === 'local' ? { local_summary_concurrency: localConcurrency } : {}),
       })
       showToast('AI summary settings saved')
     } catch (e) {
@@ -738,6 +741,26 @@ export function AiSummary() {
                   {isOllama
                     ? 'Points to your local Ollama instance. Change if running on a different host or port.'
                     : 'OpenAI-compatible endpoint. Only change if using a custom proxy.'}
+                </HelpText>
+              </div>
+            )}
+
+            {/* Concurrency — local models only */}
+            {isOllama && (
+              <div>
+                <FieldLabel hint="1–8">Summary Concurrency</FieldLabel>
+                <input
+                  type="number"
+                  min={1}
+                  max={8}
+                  value={localConcurrency}
+                  onChange={(e) => setLocalConcurrency(Math.max(1, Math.min(8, Number(e.target.value) || 1)))}
+                  style={{ ...inputBase, width: 100 }}
+                  onFocus={focus}
+                  onBlur={blur}
+                />
+                <HelpText>
+                  Number of per-sensor LLM calls to run in parallel. Keep low for local models to avoid OOM.
                 </HelpText>
               </div>
             )}

@@ -73,6 +73,7 @@ export function Pipeline() {
   const showToast = useToast()
   const [fetchTime, setFetchTime] = useState('07:00')
   const [timezone, setTimezone] = useState('UTC')
+  const [concurrency, setConcurrency] = useState(4)
   const [cacheTtl, setCacheTtl] = useState(25)
   const [postExpiryDays, setPostExpiryDays] = useState(30)
   const [boost, setBoost] = useState<string[]>([])
@@ -87,6 +88,7 @@ export function Pipeline() {
     api.getConfig().then((cfg) => {
       setFetchTime(cfg.fetch_time)
       setTimezone(cfg.fetch_timezone)
+      setConcurrency(cfg.pipeline_concurrency ?? 4)
       setCacheTtl(cfg.cache_ttl_hours)
       setPostExpiryDays(cfg.post_expiry_days ?? 30)
       setBoost(cfg.boost_keywords)
@@ -105,6 +107,7 @@ export function Pipeline() {
       await api.updateConfig({
         fetch_time: fetchTime,
         fetch_timezone: timezone,
+        pipeline_concurrency: concurrency,
         cache_ttl_hours: cacheTtl,
         post_expiry_days: postExpiryDays,
         boost_keywords: boost,
@@ -215,6 +218,27 @@ export function Pipeline() {
                   </span>
                 </div>
               </div>
+            </div>
+
+            <div>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
+                <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
+                  Concurrency
+                </label>
+                <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--ink)', fontFamily: 'ui-monospace, monospace' }}>
+                  {concurrency}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={1}
+                max={13}
+                value={concurrency}
+                onChange={(e) => setConcurrency(Number(e.target.value))}
+              />
+              <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, marginTop: '0.5rem' }}>
+                Maximum number of sensors fetching in parallel.
+              </p>
             </div>
 
             <div>

@@ -31,6 +31,7 @@ export interface ConfigSettings {
   social_following_mastodon: boolean
   rss_feed_urls: string[]
   cache_ttl_hours: number
+  pipeline_concurrency: number
   post_expiry_days: number
   summary_provider: 'openrouter' | 'custom' | null
   summary_api_key: string | null
@@ -55,6 +56,7 @@ export interface IntelItem {
   verified?: boolean | null
 }
 
+/** @deprecated Use SensorJobProgress instead — kept for Status.tsx compatibility */
 export interface SensorProgress {
   name: string
   state: 'pending' | 'running' | 'ok' | 'failed'
@@ -63,11 +65,27 @@ export interface SensorProgress {
   error_kind?: 'config' | 'api' | null
 }
 
+export type RunMode = 'fetch' | 'summarize' | 'fetch_summarize'
+export type StageState = 'queued' | 'running' | 'ok' | 'failed' | 'skipped'
+
+export interface SensorJobProgress {
+  name: string
+  fetch: StageState
+  fetch_error: string | null
+  fetch_error_kind: 'config' | 'api' | null
+  summary: StageState
+  summary_error: string | null
+  item_count: number
+}
+
 export interface PipelineStatus {
   running: boolean
+  mode: RunMode
+  concurrency: number
   started_at: string | null
   completed_at: string | null
-  sensors: SensorProgress[]
+  sensors: SensorJobProgress[]
+  overall_summary: StageState
   total_items: number
 }
 
@@ -143,8 +161,11 @@ export const api = {
   getLatest: () =>
     apiFetch<IntelReport>('/intel/latest'),
 
-  triggerFetch: () =>
-    apiFetch<{ status: string }>('/fetch', { method: 'POST' }),
+  triggerFetch: (mode?: RunMode) =>
+    apiFetch<{ status: string; mode: string }>('/fetch', {
+      method: 'POST',
+      body: JSON.stringify({ mode: mode ?? 'fetch_summarize' }),
+    }),
 
   getPipelineStatus: () =>
     apiFetch<PipelineStatus>('/fetch/status'),

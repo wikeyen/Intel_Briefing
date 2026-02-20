@@ -1,9 +1,9 @@
 // ABOUTME: Standalone summary trigger — POST /api/summary/trigger.
-// ABOUTME: Runs LLM summarization in the background with AbortController support for cancellation.
+// ABOUTME: Uses the unified summarization engine with per-sensor caching and concurrency from config.
 import { NextResponse, after } from 'next/server'
 import { loadConfig } from '@/lib/config'
 import { readReport } from '@/lib/pipeline/cache'
-import { summarizeReport } from '@/lib/summary/summarizer'
+import { summarizeReport, type SummaryProgressCallback } from '@/lib/summary/summarizer'
 import { writeSummary, writeSummaryProgress } from '@/lib/summary/cache'
 import type { SummaryProgress, SummarySensorProgress } from '@/lib/models'
 
@@ -36,11 +36,23 @@ export async function POST(): Promise<NextResponse> {
     )
   }
 
-  // Build initial summary progress from report sensors
-  const sensorGroups = new Map<string, string>()
+  // Build enabled sensor set from config — the engine handles filtering
+  const enabledSensors = new Set(
+    Object.entries(config.sensors_enabled)
+      .filter(([, enabled]) => enabled !== false)
+      .map(([name]) => name),
+  )
+
+  // Build initial progress list: sensors with data that are enabled and not failed
+  const failedSet = new Set(report.sources_failed)
+  const eligibleSensors: string[] = []
+  const seen = new Set<string>()
   for (const section of Object.values(report.items)) {
     for (const item of section) {
-      if (!sensorGroups.has(item.source)) sensorGroups.set(item.source, item.source)
+      if (!seen.has(item.source) && enabledSensors.has(item.source) && !failedSet.has(item.source)) {
+        eligibleSensors.push(item.source)
+        seen.add(item.source)
+      }
     }
   }
 
@@ -48,7 +60,7 @@ export async function POST(): Promise<NextResponse> {
     running: true,
     started_at: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
     completed_at: null,
-    sensors: [...sensorGroups.keys(), '__overall__'].map((name): SummarySensorProgress => ({
+    sensors: [...eligibleSensors, '__overall__'].map((name): SummarySensorProgress => ({
       sensor_name: name,
       label: name === '__overall__' ? 'Overall' : name,
       state: 'pending',
@@ -61,17 +73,23 @@ export async function POST(): Promise<NextResponse> {
   const abortController = new AbortController()
   activeAbortController = abortController
 
+  // Derive concurrency from config (same logic as pipeline orchestrator)
+  const isLocalModel = config.summary_provider === 'local'
+  const effectiveConcurrency = isLocalModel
+    ? (config.local_summary_concurrency ?? 1)
+    : (config.default_concurrency ?? 4)
+
   // Run summarization in the background via after() — survives response delivery
   after(async () => {
-    const onProgress = async (
-      sensorName: string,
-      label: string,
-      state: 'pending' | 'running' | 'ok' | 'failed',
-      error: string | null,
+    // Bridge the unified engine's progress callback to the SummaryProgress persistence
+    const onProgress: SummaryProgressCallback = async (
+      sensorName, label, state, error,
     ) => {
+      // Map 'cached' to 'ok' for the progress UI
+      const displayState = state === 'cached' ? 'ok' as const : state
       for (const sp of summaryStatus.sensors) {
         if (sp.sensor_name === sensorName) {
-          sp.state = state
+          sp.state = displayState
           sp.label = label
           sp.error = error
           break
@@ -82,10 +100,19 @@ export async function POST(): Promise<NextResponse> {
 
     try {
       const summary = await summarizeReport(report, {
-        base_url: config.summary_base_url,
-        api_key: config.summary_api_key,
-        model: config.summary_model,
-      }, onProgress, abortController.signal)
+        llmConfig: {
+          base_url: config.summary_base_url,
+          api_key: config.summary_api_key,
+          model: config.summary_model,
+        },
+        concurrency: effectiveConcurrency,
+        promptOverrides: config.summary_sensor_prompts,
+        overallPromptOverride: config.summary_overall_prompt,
+        signal: abortController.signal,
+        onProgress,
+        skipCache: false, // Standalone regenerate uses cache — skip unchanged sensors
+        enabledSensors,
+      })
       await writeSummary(summary)
     } catch (err) {
       console.error('Manual summarization failed:', err)

@@ -1,10 +1,21 @@
-// ABOUTME: Tests for the summarizer orchestrator.
-// ABOUTME: Validates prompt construction, sequential LLM calls, and BriefingSummary output shape.
-import { describe, it, expect, vi, afterEach } from 'vitest'
+// ABOUTME: Tests for the unified summarization engine.
+// ABOUTME: Validates prompt construction, concurrent LLM calls, per-sensor caching, and BriefingSummary output shape.
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { summarizeReport } from './summarizer'
+import type { SummarizeOptions } from './summarizer'
 import * as llm from './llm'
+import * as cache from './cache'
 import type { IntelReport } from '../models'
 import { createReport } from '../models'
+
+vi.mock('./cache', async (importOriginal) => {
+  const actual = await importOriginal<typeof cache>()
+  return {
+    ...actual,
+    readSensorSummary: vi.fn().mockResolvedValue(null),
+    writeSensorSummary: vi.fn().mockResolvedValue(undefined),
+  }
+})
 
 function makeReport(overrides?: Partial<IntelReport>): IntelReport {
   return createReport({
@@ -30,7 +41,20 @@ function makeReport(overrides?: Partial<IntelReport>): IntelReport {
   })
 }
 
+function makeOptions(overrides?: Partial<SummarizeOptions>): SummarizeOptions {
+  return {
+    llmConfig: { base_url: 'https://openrouter.ai/api/v1', api_key: 'k', model: 'm' },
+    skipCache: true,
+    ...overrides,
+  }
+}
+
 describe('summarizeReport', () => {
+  beforeEach(() => {
+    // Reset cache mocks to defaults before each test (restoreAllMocks clears them)
+    vi.mocked(cache.readSensorSummary).mockResolvedValue(null)
+    vi.mocked(cache.writeSensorSummary).mockResolvedValue(undefined)
+  })
   afterEach(() => { vi.restoreAllMocks() })
 
   it('produces per-sensor summaries and overall briefing', async () => {
@@ -54,8 +78,7 @@ describe('summarizeReport', () => {
       return 'Unknown'
     })
 
-    const config = { base_url: 'https://openrouter.ai/api/v1', api_key: 'k', model: 'm' }
-    const result = await summarizeReport(makeReport(), config)
+    const result = await summarizeReport(makeReport(), makeOptions())
 
     expect(result.sections).toHaveLength(2)
     expect(result.sections[0].sensor_name).toBe('hacker_news')
@@ -75,7 +98,7 @@ describe('summarizeReport', () => {
       sentiment: { overall_mood: 'neutral', mood_summary: '', controversies: [], opinion_shifts: [], risk_flags: [] },
     })
     expect(result.report_fetched_at).toBe('2026-02-19T09:00:00Z')
-    // Verify sequential order
+    // Verify sequential order with concurrency=1 (default)
     expect(calls).toEqual(['hacker_news', 'arxiv', 'overall'])
   })
 
@@ -98,8 +121,9 @@ describe('summarizeReport', () => {
       },
     })
 
-    const config = { base_url: 'http://localhost:11434/v1', api_key: null, model: 'llama3' }
-    const result = await summarizeReport(report, config)
+    const result = await summarizeReport(report, makeOptions({
+      llmConfig: { base_url: 'http://localhost:11434/v1', api_key: null, model: 'llama3' },
+    }))
 
     // Only hacker_news + overall = 2 calls
     expect(llm.chatCompletion).toHaveBeenCalledTimes(2)
@@ -124,8 +148,7 @@ describe('summarizeReport', () => {
       },
     })
 
-    const config = { base_url: 'https://openrouter.ai/api/v1', api_key: 'k', model: 'm' }
-    const result = await summarizeReport(report, config)
+    const result = await summarizeReport(report, makeOptions())
 
     expect(result.sections).toHaveLength(0)
     // Still gets one overall call
@@ -146,8 +169,7 @@ describe('summarizeReport', () => {
       return 'Summary'
     })
 
-    const config = { base_url: 'https://openrouter.ai/api/v1', api_key: 'k', model: 'm' }
-    await summarizeReport(makeReport(), config)
+    await summarizeReport(makeReport(), makeOptions())
 
     // First prompt should contain the HN item titles
     expect(promptCapture[0]).toContain('AI breakthrough')
@@ -160,8 +182,9 @@ describe('summarizeReport', () => {
   it('propagates LLM errors when no onProgress callback', async () => {
     vi.spyOn(llm, 'chatCompletion').mockRejectedValue(new Error('LLM timeout'))
 
-    const config = { base_url: 'https://openrouter.ai/api/v1', api_key: 'k', model: 'm' }
-    await expect(summarizeReport(makeReport(), config)).rejects.toThrow('LLM timeout')
+    await expect(
+      summarizeReport(makeReport(), makeOptions()),
+    ).rejects.toThrow('LLM timeout')
   })
 
   it('calls onProgress with running/ok for each sensor', async () => {
@@ -172,8 +195,7 @@ describe('summarizeReport', () => {
       progressCalls.push({ sensor, label, state, error })
     }
 
-    const config = { base_url: 'https://openrouter.ai/api/v1', api_key: 'k', model: 'm' }
-    await summarizeReport(makeReport(), config, onProgress)
+    await summarizeReport(makeReport(), makeOptions({ onProgress }))
 
     // hacker_news: running, ok; arxiv: running, ok; __overall__: running, ok
     expect(progressCalls).toEqual([
@@ -199,8 +221,7 @@ describe('summarizeReport', () => {
       progressCalls.push({ sensor, state, error })
     }
 
-    const config = { base_url: 'https://openrouter.ai/api/v1', api_key: 'k', model: 'm' }
-    const result = await summarizeReport(makeReport(), config, onProgress)
+    const result = await summarizeReport(makeReport(), makeOptions({ onProgress }))
 
     // hacker_news fails, arxiv succeeds, overall succeeds
     expect(progressCalls).toEqual([
@@ -215,5 +236,128 @@ describe('summarizeReport', () => {
     // Only arxiv in sections since hacker_news failed
     expect(result.sections).toHaveLength(1)
     expect(result.sections[0].sensor_name).toBe('arxiv')
+  })
+
+  it('only summarizes sensors in enabledSensors set', async () => {
+    vi.spyOn(llm, 'chatCompletion').mockResolvedValue('Summary text')
+
+    const result = await summarizeReport(makeReport(), makeOptions({
+      enabledSensors: new Set(['arxiv']),
+    }))
+
+    // Only arxiv should be summarized (hacker_news not in enabled set)
+    expect(result.sections).toHaveLength(1)
+    expect(result.sections[0].sensor_name).toBe('arxiv')
+    // 1 sensor + 1 overall = 2 LLM calls
+    expect(llm.chatCompletion).toHaveBeenCalledTimes(2)
+  })
+
+  it('automatically excludes sensors from sources_failed', async () => {
+    vi.spyOn(llm, 'chatCompletion').mockResolvedValue('Summary text')
+
+    const report = makeReport({ sources_failed: ['hacker_news'] })
+
+    const result = await summarizeReport(report, makeOptions())
+
+    // hacker_news is in sources_failed — only arxiv should be summarized
+    expect(result.sections).toHaveLength(1)
+    expect(result.sections[0].sensor_name).toBe('arxiv')
+    // 1 sensor + 1 overall = 2 LLM calls
+    expect(llm.chatCompletion).toHaveBeenCalledTimes(2)
+  })
+
+  describe('per-sensor caching', () => {
+    it('skips LLM call when cache matches content hash', async () => {
+      const chatSpy = vi.spyOn(llm, 'chatCompletion').mockResolvedValue('Summary text')
+
+      const cachedSummary = {
+        sensor_name: 'hacker_news',
+        label: 'Hacker News',
+        source_url: 'https://news.ycombinator.com',
+        summary: 'Cached HN summary',
+        item_count: 2,
+        items: [{ title: 'AI breakthrough', url: 'https://example.com/1', brief: 'Notable' }],
+      }
+
+      // Mock cache to return a matching entry for hacker_news
+      vi.mocked(cache.readSensorSummary).mockImplementation(async (name) => {
+        if (name === 'hacker_news') {
+          // The hash is computed from sorted item IDs: 'hn-1\nhn-2'
+          const crypto = await import('crypto')
+          const hash = crypto.createHash('sha256').update('hn-1\nhn-2').digest('hex').slice(0, 16)
+          return { content_hash: hash, sensor_summary: cachedSummary, generated_at: '2026-02-19T09:00:00Z' }
+        }
+        return null
+      })
+
+      const progressCalls: { sensor: string; state: string }[] = []
+      const onProgress = (sensor: string, _label: string, state: string) => {
+        progressCalls.push({ sensor, state })
+      }
+
+      const result = await summarizeReport(makeReport(), makeOptions({
+        skipCache: false,
+        onProgress,
+      }))
+
+      // hacker_news should use cache (no LLM call), arxiv should call LLM
+      expect(result.sections).toHaveLength(2)
+      expect(result.sections[0].sensor_name).toBe('hacker_news')
+      expect(result.sections[0].summary).toBe('Cached HN summary')
+      expect(result.sections[1].sensor_name).toBe('arxiv')
+
+      // 1 LLM call for arxiv + 1 for overall = 2 (no call for hacker_news)
+      expect(chatSpy).toHaveBeenCalledTimes(2)
+
+      // hacker_news reports 'cached', not 'running'
+      expect(progressCalls.find(c => c.sensor === 'hacker_news' && c.state === 'cached')).toBeTruthy()
+      expect(progressCalls.find(c => c.sensor === 'hacker_news' && c.state === 'running')).toBeFalsy()
+    })
+
+    it('calls LLM when cache hash does not match', async () => {
+      const chatSpy = vi.spyOn(llm, 'chatCompletion').mockResolvedValue('Fresh summary')
+
+      // Return a cached entry with a different hash
+      vi.mocked(cache.readSensorSummary).mockResolvedValue({
+        content_hash: 'stale_hash',
+        sensor_summary: {
+          sensor_name: 'hacker_news',
+          label: 'Hacker News',
+          source_url: 'https://news.ycombinator.com',
+          summary: 'Old summary',
+          item_count: 1,
+          items: [],
+        },
+        generated_at: '2026-02-18T09:00:00Z',
+      })
+
+      const result = await summarizeReport(makeReport(), makeOptions({ skipCache: false }))
+
+      // Both sensors should get fresh LLM calls since hash doesn't match
+      expect(result.sections).toHaveLength(2)
+      expect(result.sections[0].summary).toBe('Fresh summary')
+      // 2 sensors + 1 overall = 3 LLM calls
+      expect(chatSpy).toHaveBeenCalledTimes(3)
+    })
+
+    it('skips cache check when skipCache is true', async () => {
+      vi.spyOn(llm, 'chatCompletion').mockResolvedValue('Summary text')
+
+      await summarizeReport(makeReport(), makeOptions({ skipCache: true }))
+
+      // readSensorSummary should never be called when skipCache is true
+      expect(cache.readSensorSummary).not.toHaveBeenCalled()
+    })
+
+    it('writes to cache after successful LLM summarization', async () => {
+      vi.spyOn(llm, 'chatCompletion').mockResolvedValue('Summary text')
+
+      await summarizeReport(makeReport(), makeOptions({ skipCache: false }))
+
+      // Should write cache for both hacker_news and arxiv
+      expect(cache.writeSensorSummary).toHaveBeenCalledTimes(2)
+      expect(vi.mocked(cache.writeSensorSummary).mock.calls[0][0]).toBe('hacker_news')
+      expect(vi.mocked(cache.writeSensorSummary).mock.calls[1][0]).toBe('arxiv')
+    })
   })
 })

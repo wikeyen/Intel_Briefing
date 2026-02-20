@@ -625,7 +625,6 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
 
       {isSummarizing && summaryProgress && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <SummaryProgressBanner progress={summaryProgress} pipelineStatus={pipelineStatus} />
           {!summary && (
             <button
               onClick={onStop}
@@ -645,6 +644,7 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
               Stop
             </button>
           )}
+          <SummaryProgressBanner progress={summaryProgress} pipelineStatus={pipelineStatus} />
         </div>
       )}
 

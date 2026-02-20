@@ -1,9 +1,14 @@
-// ABOUTME: Tests for the summary cache — read/write BriefingSummary to SQLite KV.
+// ABOUTME: Tests for the summary cache — BriefingSummary, SummaryProgress, and per-sensor summary caching.
 // ABOUTME: Uses in-memory SQLite for isolation.
 import { describe, it, expect, beforeAll } from 'vitest'
 import { initDb } from '../db'
-import { writeSummary, readSummary, writeSummaryProgress, readSummaryProgress } from './cache'
-import type { BriefingSummary, SummaryProgress } from '../models'
+import {
+  writeSummary, readSummary,
+  writeSummaryProgress, readSummaryProgress,
+  writeSensorSummary, readSensorSummary,
+  invalidateSensorSummary, invalidateAllSensorSummaries,
+} from './cache'
+import type { BriefingSummary, SummaryProgress, SensorSummary } from '../models'
 
 const SAMPLE: BriefingSummary = {
   generated_at: '2026-02-19T10:00:00Z',
@@ -101,5 +106,69 @@ describe('summary progress cache', () => {
     const result = await readSummaryProgress()
     expect(result!.running).toBe(false)
     expect(result!.completed_at).toBe('2026-02-19T10:05:00Z')
+  })
+})
+
+const SAMPLE_SENSOR_SUMMARY: SensorSummary = {
+  sensor_name: 'hacker_news',
+  label: 'Hacker News',
+  source_url: 'https://news.ycombinator.com',
+  summary: 'Top stories about AI.',
+  item_count: 5,
+  items: [{ title: 'AI breakthrough', url: 'https://example.com/1', brief: 'Notable' }],
+}
+
+describe('per-sensor summary cache', () => {
+  beforeAll(async () => {
+    await initDb(':memory:')
+  })
+
+  it('returns null when no sensor summary cached', async () => {
+    expect(await readSensorSummary('nonexistent')).toBeNull()
+  })
+
+  it('writes and reads a sensor summary with content hash', async () => {
+    await writeSensorSummary('hacker_news', 'abc123', SAMPLE_SENSOR_SUMMARY)
+    const result = await readSensorSummary('hacker_news')
+    expect(result).not.toBeNull()
+    expect(result!.content_hash).toBe('abc123')
+    expect(result!.sensor_summary).toEqual(SAMPLE_SENSOR_SUMMARY)
+    expect(result!.generated_at).toBeTruthy()
+  })
+
+  it('overwrites previous sensor summary', async () => {
+    const updated = { ...SAMPLE_SENSOR_SUMMARY, summary: 'Updated summary' }
+    await writeSensorSummary('hacker_news', 'def456', updated)
+    const result = await readSensorSummary('hacker_news')
+    expect(result!.content_hash).toBe('def456')
+    expect(result!.sensor_summary.summary).toBe('Updated summary')
+  })
+
+  it('stores sensors independently', async () => {
+    const arxivSummary = { ...SAMPLE_SENSOR_SUMMARY, sensor_name: 'arxiv', label: 'ArXiv AI' }
+    await writeSensorSummary('arxiv', 'hash789', arxivSummary)
+
+    const hn = await readSensorSummary('hacker_news')
+    const ax = await readSensorSummary('arxiv')
+    expect(hn!.content_hash).toBe('def456') // from previous test
+    expect(ax!.content_hash).toBe('hash789')
+  })
+
+  it('invalidates a single sensor summary', async () => {
+    await invalidateSensorSummary('hacker_news')
+    expect(await readSensorSummary('hacker_news')).toBeNull()
+    // arxiv should still exist
+    expect(await readSensorSummary('arxiv')).not.toBeNull()
+  })
+
+  it('invalidates all sensor summaries', async () => {
+    // Re-add hacker_news
+    await writeSensorSummary('hacker_news', 'new_hash', SAMPLE_SENSOR_SUMMARY)
+    expect(await readSensorSummary('hacker_news')).not.toBeNull()
+    expect(await readSensorSummary('arxiv')).not.toBeNull()
+
+    await invalidateAllSensorSummaries()
+    expect(await readSensorSummary('hacker_news')).toBeNull()
+    expect(await readSensorSummary('arxiv')).toBeNull()
   })
 })

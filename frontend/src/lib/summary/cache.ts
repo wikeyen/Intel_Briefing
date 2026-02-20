@@ -1,7 +1,7 @@
-// ABOUTME: SQLite-backed cache for BriefingSummary and SummaryProgress.
-// ABOUTME: Uses the kv adapter from db.ts, keyed as 'intel:summary' and 'intel:summary_status'.
-import { kvSet, kvGet } from '../db'
-import type { BriefingSummary, SummaryProgress } from '../models'
+// ABOUTME: SQLite-backed cache for BriefingSummary, SummaryProgress, and per-sensor summaries.
+// ABOUTME: Per-sensor cache enables skipping unchanged sources on regenerate.
+import { kvSet, kvGet, kvDelete, getDb } from '../db'
+import type { BriefingSummary, SummaryProgress, SensorSummary } from '../models'
 
 const SUMMARY_KEY = 'intel:summary'
 const SUMMARY_TTL_SECONDS = 48 * 60 * 60 // 48 hours
@@ -37,4 +37,54 @@ export async function readSummaryProgress(): Promise<SummaryProgress | null> {
   } catch {
     return null
   }
+}
+
+// ── Per-sensor summary cache ──────────────────────────────────────────────────
+// Keyed as 'summary:sensor:{name}', stores content hash + SensorSummary.
+// Used to skip unchanged sensors on regenerate.
+
+const SENSOR_SUMMARY_PREFIX = 'summary:sensor:'
+const SENSOR_SUMMARY_TTL_SECONDS = 48 * 60 * 60 // 48 hours
+
+export interface CachedSensorSummary {
+  content_hash: string
+  sensor_summary: SensorSummary
+  generated_at: string
+}
+
+/** Write a per-sensor summary with its content hash. */
+export async function writeSensorSummary(
+  sensorName: string,
+  contentHash: string,
+  sensorSummary: SensorSummary,
+): Promise<void> {
+  const entry: CachedSensorSummary = {
+    content_hash: contentHash,
+    sensor_summary: sensorSummary,
+    generated_at: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
+  }
+  await kvSet(SENSOR_SUMMARY_PREFIX + sensorName, entry, SENSOR_SUMMARY_TTL_SECONDS)
+}
+
+/** Read a cached per-sensor summary. Returns null if missing or expired. */
+export async function readSensorSummary(sensorName: string): Promise<CachedSensorSummary | null> {
+  try {
+    return await kvGet<CachedSensorSummary>(SENSOR_SUMMARY_PREFIX + sensorName)
+  } catch {
+    return null
+  }
+}
+
+/** Invalidate a single sensor's cached summary. */
+export async function invalidateSensorSummary(sensorName: string): Promise<void> {
+  await kvDelete(SENSOR_SUMMARY_PREFIX + sensorName)
+}
+
+/** Invalidate all cached per-sensor summaries. Uses SQL LIKE for prefix match. */
+export async function invalidateAllSensorSummaries(): Promise<void> {
+  const db = await getDb()
+  await db.execute({
+    sql: `DELETE FROM kv WHERE key LIKE ?`,
+    args: [SENSOR_SUMMARY_PREFIX + '%'],
+  })
 }

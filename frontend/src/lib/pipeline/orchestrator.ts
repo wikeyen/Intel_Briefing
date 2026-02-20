@@ -20,6 +20,7 @@ import { SENSOR_REGISTRY } from '../sensors'
 import { SENSOR_LABELS } from '../sensors/taxonomy'
 import { SensorConfigError } from '../sensors/errors'
 import { assembleReport } from './report-builder'
+import { createBus } from '../summary/events'
 
 export interface PipelineResult {
   report: IntelReport | null
@@ -161,6 +162,9 @@ export async function runPipeline(
   // Initialized lazily when summarize stage begins.
   let summaryStatus: SummaryProgress | null = null
 
+  // Event bus for streaming tokens — created lazily when summarize stage begins
+  let summaryBus: ReturnType<typeof createBus> | null = null
+
   try {
     // Track sensors that failed fetch — for progress tracker skip marking
     const failedSensors = new Set<string>()
@@ -233,9 +237,12 @@ export async function runPipeline(
       }
       await writeSummaryProgress(summaryStatus).catch(() => {})
 
+      summaryBus = createBus()
+
       if (llmConfig) {
         // Bridge between tracker and the unified engine's progress callback
         const onProgress: SummaryProgressCallback = (sensorName, _label, state, error, chunks, verify) => {
+          summaryBus!.emitState(sensorName, state, _label, error)
           if (sensorName === '__overall__') {
             if (state === 'running') tracker.setOverallSummary('running')
             else if (state === 'ok') tracker.setOverallSummary('ok')
@@ -281,6 +288,7 @@ export async function runPipeline(
           onProgress,
           skipCache: shouldFetch,
           enabledSensors,
+          onToken: (sensorName, token) => summaryBus!.emitToken(sensorName, token),
         })
 
         if (summary && !signal.aborted) {
@@ -304,6 +312,7 @@ export async function runPipeline(
       summaryStatus.completed_at = new Date().toISOString().replace(/\.\d+Z$/, 'Z')
       writeSummaryProgress(summaryStatus).catch(() => {})
     }
+    summaryBus?.emitDone()
     // Clear singletons so a new run can start
     if (activeAbortController === abortController) {
       activeAbortController = null

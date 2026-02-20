@@ -2,7 +2,7 @@
 // ABOUTME: Uses pool match + HTTP fallback, feeds failures back to LLM, max 3 retries.
 import type { BriefingRef } from '../models'
 import type { ChatMessage, LlmConfig } from './llm'
-import { chatCompletion } from './llm'
+import { chatCompletion, chatCompletionStream } from './llm'
 import { verifyRefs } from './ref-verifier'
 
 const DEFAULT_MAX_RETRIES = 3
@@ -24,6 +24,8 @@ export interface SummarizeWithVerificationOptions<T> {
   signal?: AbortSignal
   /** Called on each retry with attempt number, max retries, and failure count. */
   onRetry?: (attempt: number, maxRetries: number, failureCount: number) => void | Promise<void>
+  /** Token callback for streaming visual feedback during LLM generation. */
+  onToken?: (token: string) => void
 }
 
 /** Build a correction message telling the LLM which refs failed and what URLs are available. */
@@ -63,6 +65,7 @@ export async function summarizeWithVerification<T>(
     maxRetries = DEFAULT_MAX_RETRIES,
     signal,
     onRetry,
+    onToken,
   } = options
 
   // Clone messages so we can append without mutating the caller's array
@@ -72,7 +75,11 @@ export async function summarizeWithVerification<T>(
   let lastRaw = ''
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    lastRaw = await chatCompletion(messages, llmConfig, signal)
+    if (onToken) {
+      lastRaw = await chatCompletionStream(messages, llmConfig, { onToken, signal }).fullText
+    } else {
+      lastRaw = await chatCompletion(messages, llmConfig, signal)
+    }
     lastParsed = parseFn(lastRaw)
 
     const refs = extractRefs(lastParsed)

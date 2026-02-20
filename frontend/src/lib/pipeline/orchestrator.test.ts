@@ -31,8 +31,13 @@ vi.mock('../summary/cache', () => ({
 }))
 
 const mockChatCompletion = vi.fn().mockResolvedValue('Summary text')
+const mockChatCompletionStream = vi.fn().mockReturnValue({
+  tokens: (async function* () { yield 'Summary text' })(),
+  fullText: Promise.resolve('Summary text'),
+})
 vi.mock('../summary/llm', () => ({
   chatCompletion: (...args: unknown[]) => mockChatCompletion(...args),
+  chatCompletionStream: (...args: unknown[]) => mockChatCompletionStream(...args),
 }))
 
 vi.mock('../utils/verifier', () => ({
@@ -118,7 +123,8 @@ describe('runPipeline', () => {
     const result = await runPipeline(config, 'summarize')
     expect(result.report).toBeNull()
     expect(result.summary).toBeDefined()
-    expect(mockChatCompletion).toHaveBeenCalled()
+    // With onToken wired, the orchestrator uses chatCompletionStream via summarizeWithVerification
+    expect(mockChatCompletionStream).toHaveBeenCalled()
   })
 
   it('fetch_summarize mode: fetches then summarizes', async () => {
@@ -137,7 +143,8 @@ describe('runPipeline', () => {
     const result = await runPipeline(config, 'fetch_summarize')
     expect(result.report).toBeDefined()
     expect(result.summary).toBeDefined()
-    expect(mockChatCompletion).toHaveBeenCalled()
+    // With onToken wired, the orchestrator uses chatCompletionStream via summarizeWithVerification
+    expect(mockChatCompletionStream).toHaveBeenCalled()
   })
 
   it('respects concurrency limit', async () => {
@@ -217,8 +224,10 @@ describe('runPipeline', () => {
 
     const result = await runPipeline(config, 'fetch_summarize')
     expect(result.summary).toBeDefined()
-    // Map phase: 3 chunk extraction calls + reduce phase: 1 merge call + overall: 1 = 5
-    expect(mockChatCompletion.mock.calls.length).toBe(5)
+    // Map phase: 3 chunk extraction calls use chatCompletion directly
+    expect(mockChatCompletion.mock.calls.length).toBe(3)
+    // Reduce phase (sensor synthesis) + overall = 2 calls via chatCompletionStream
+    expect(mockChatCompletionStream.mock.calls.length).toBe(2)
   })
 
   it('uses single-pass when items fit in one chunk', async () => {
@@ -237,8 +246,10 @@ describe('runPipeline', () => {
 
     const result = await runPipeline(config, 'fetch_summarize')
     expect(result.summary).toBeDefined()
-    // Single-pass: 1 sensor summary + 1 overall = 2
-    expect(mockChatCompletion.mock.calls.length).toBe(2)
+    // Single-pass: no chunk extractions via chatCompletion
+    expect(mockChatCompletion.mock.calls.length).toBe(0)
+    // Sensor synthesis + overall = 2 calls via chatCompletionStream
+    expect(mockChatCompletionStream.mock.calls.length).toBe(2)
   })
 
   it('writes pipeline status on progress changes', async () => {
@@ -271,8 +282,8 @@ describe('runPipeline', () => {
     const result = await runPipeline(config, 'fetch_summarize')
     expect(result.report!.sources_failed).toContain('bad')
 
-    // Only "good" sensor should be summarized (1 sensor + 1 overall = 2 LLM calls)
-    expect(mockChatCompletion.mock.calls.length).toBe(2)
+    // Only "good" sensor should be summarized (1 sensor + 1 overall = 2 LLM calls via streaming)
+    expect(mockChatCompletionStream.mock.calls.length).toBe(2)
 
     // Verify failed sensor is marked as 'skipped' in summary progress
     const lastStatus = mockWritePipelineStatus.mock.calls.at(-1)?.[0]

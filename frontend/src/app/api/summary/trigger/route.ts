@@ -6,6 +6,7 @@ import { readReport } from '@/lib/pipeline/cache'
 import { summarizeReport, type SummaryProgressCallback } from '@/lib/summary/summarizer'
 import { writeSummary, writeSummaryProgress } from '@/lib/summary/cache'
 import type { SummaryProgress, SummarySensorProgress } from '@/lib/models'
+import { createBus } from '@/lib/summary/events'
 
 // Module-level singleton for abort support
 let activeAbortController: AbortController | null = null
@@ -86,10 +87,13 @@ export async function POST(): Promise<NextResponse> {
 
   // Run summarization in the background via after() — survives response delivery
   after(async () => {
+    const bus = createBus()
+
     // Bridge the unified engine's progress callback to the SummaryProgress persistence
     const onProgress: SummaryProgressCallback = async (
       sensorName, label, state, error,
     ) => {
+      bus.emitState(sensorName, state, label, error)
       // Map 'cached' to 'ok' for the progress UI
       const displayState = state === 'cached' ? 'ok' as const : state
       for (const sp of summaryStatus.sensors) {
@@ -117,6 +121,7 @@ export async function POST(): Promise<NextResponse> {
         onProgress,
         skipCache: false, // Standalone regenerate uses cache — skip unchanged sensors
         enabledSensors,
+        onToken: (sensorName, token) => bus.emitToken(sensorName, token),
       })
       await writeSummary(summary)
     } catch (err) {
@@ -133,6 +138,7 @@ export async function POST(): Promise<NextResponse> {
       summaryStatus.running = false
       summaryStatus.completed_at = new Date().toISOString().replace(/\.\d+Z$/, 'Z')
       await writeSummaryProgress(summaryStatus).catch(() => {})
+      bus.emitDone()
       // Clear singleton
       if (activeAbortController === abortController) {
         activeAbortController = null

@@ -338,10 +338,48 @@ const PULSE_CSS = `
 
 /** Sensor label lookup for progress display — imported from taxonomy. */
 
-function SummaryProgressBanner({ progress, pipelineStatus, config }: {
+function StreamTokenPreview({ text }: { text: string }) {
+  const tail = text.length > 400 ? text.slice(-400) : text
+  return (
+    <div style={{
+      position: 'relative',
+      maxHeight: 60,
+      overflow: 'hidden',
+      marginTop: '0.25rem',
+      padding: '0.25rem 0.5rem',
+      borderRadius: 3,
+      background: 'var(--surface-alt, rgba(0,0,0,0.02))',
+    }}>
+      <pre style={{
+        fontFamily: 'ui-monospace, monospace',
+        fontSize: '0.5625rem',
+        lineHeight: 1.5,
+        color: 'var(--ink-faint)',
+        margin: 0,
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-word',
+      }}>
+        {tail}
+      </pre>
+      {/* Fade gradient at top */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 16,
+        background: 'linear-gradient(to bottom, var(--surface-alt, rgba(255,255,255,0.9)), transparent)',
+        pointerEvents: 'none',
+      }} />
+    </div>
+  )
+}
+
+function SummaryProgressBanner({ progress, pipelineStatus, config, streamTokens }: {
   progress: SummaryProgress
   pipelineStatus: PipelineStatus | null
   config: ConfigSettings | null
+  streamTokens?: Record<string, string>
 }) {
   const sourceSensors = progress.sensors.filter(s => s.sensor_name !== '__overall__')
   const overallSensor = progress.sensors.find(s => s.sensor_name === '__overall__')
@@ -576,41 +614,70 @@ function SummaryProgressBanner({ progress, pipelineStatus, config }: {
         })}
       </div>
 
+      {/* Streaming token previews for running sensors */}
+      {streamTokens && (() => {
+        const sensorEntries = sourceSensors
+          .filter(s => s.state === 'running' && streamTokens[s.sensor_name])
+          .map(s => ({ name: s.sensor_name, label: SENSOR_LABELS[s.sensor_name] ?? s.label, text: streamTokens[s.sensor_name] }))
+        if (sensorEntries.length === 0) return null
+        return (
+          <div style={{ padding: '0 0.75rem 0.5rem' }}>
+            {sensorEntries.map(entry => (
+              <div key={entry.name}>
+                <span style={{ fontSize: '0.5625rem', color: 'var(--ink-faint)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                  {entry.label}
+                </span>
+                <StreamTokenPreview text={entry.text} />
+              </div>
+            ))}
+          </div>
+        )
+      })()}
+
       {/* Overall briefing — separate from per-source sensors */}
       {overallSensor && (
         <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          padding: '0.5rem 1.25rem',
           borderTop: '1px solid var(--border)',
         }}>
-          <span style={{
-            width: 5,
-            height: 5,
-            borderRadius: '50%',
-            background: overallSensor.state === 'ok' ? 'var(--accent)'
-              : overallSensor.state === 'failed' ? 'var(--error, #c33)'
-              : overallSensor.state === 'running' ? 'var(--accent)'
-              : 'var(--ink-faint)',
-            flexShrink: 0,
-
-          }} />
-          <span style={{
-            fontSize: '0.6875rem',
-            fontWeight: 600,
-            color: overallSensor.state === 'ok' ? 'var(--accent)'
-              : overallSensor.state === 'failed' ? 'var(--error, #c33)'
-              : 'var(--ink-muted)',
-            letterSpacing: '0.02em',
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.5rem 1.25rem',
           }}>
-            Overall Briefing
-          </span>
-          {overallSensor.state === 'ok' && (
-            <span style={{ fontSize: '0.5625rem', color: 'var(--accent)' }}>&#10003;</span>
-          )}
-          {overallSensor.state === 'failed' && (
-            <span style={{ fontSize: '0.5625rem', color: 'var(--error, #c33)' }}>&#10007;</span>
+            <span style={{
+              width: 5,
+              height: 5,
+              borderRadius: '50%',
+              background: overallSensor.state === 'ok' ? 'var(--accent)'
+                : overallSensor.state === 'failed' ? 'var(--error, #c33)'
+                : overallSensor.state === 'running' ? 'var(--accent)'
+                : 'var(--ink-faint)',
+              flexShrink: 0,
+
+            }} />
+            <span style={{
+              fontSize: '0.6875rem',
+              fontWeight: 600,
+              color: overallSensor.state === 'ok' ? 'var(--accent)'
+                : overallSensor.state === 'failed' ? 'var(--error, #c33)'
+                : 'var(--ink-muted)',
+              letterSpacing: '0.02em',
+            }}>
+              Overall Briefing
+            </span>
+            {overallSensor.state === 'ok' && (
+              <span style={{ fontSize: '0.5625rem', color: 'var(--accent)' }}>&#10003;</span>
+            )}
+            {overallSensor.state === 'failed' && (
+              <span style={{ fontSize: '0.5625rem', color: 'var(--error, #c33)' }}>&#10007;</span>
+            )}
+          </div>
+          {/* Overall streaming token preview */}
+          {streamTokens?.['__overall__'] && overallSensor.state === 'running' && (
+            <div style={{ padding: '0 1.25rem 0.5rem' }}>
+              <StreamTokenPreview text={streamTokens['__overall__']} />
+            </div>
           )}
         </div>
       )}
@@ -638,7 +705,7 @@ function isStructuredOverall(overall: OverallBriefing | string): overall is Over
   return typeof overall === 'object' && overall !== null && 'quick_scan' in overall
 }
 
-function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, hasContent, onTrigger, onStop }: {
+function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, hasContent, onTrigger, onStop, streamTokens }: {
   summary: BriefingSummary | null
   summaryProgress: SummaryProgress | null
   pipelineStatus: PipelineStatus | null
@@ -646,6 +713,7 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
   hasContent: boolean
   onTrigger: () => void
   onStop: () => void
+  streamTokens?: Record<string, string>
 }) {
   const isSummarizing = !!(summaryProgress?.running)
 
@@ -760,7 +828,7 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
               Stop
             </button>
           )}
-          <SummaryProgressBanner progress={summaryProgress} pipelineStatus={pipelineStatus} config={config} />
+          <SummaryProgressBanner progress={summaryProgress} pipelineStatus={pipelineStatus} config={config} streamTokens={streamTokens} />
         </div>
       )}
 
@@ -1249,6 +1317,7 @@ export function Data() {
   const [summary, setSummary] = useState<BriefingSummary | null>(null)
   const [summaryProgress, setSummaryProgress] = useState<SummaryProgress | null>(null)
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null)
+  const [streamTokens, setStreamTokens] = useState<Record<string, string>>({})
 
   useEffect(() => {
     api.getConfig().then(setConfig).catch(() => {})
@@ -1288,6 +1357,54 @@ export function Data() {
     const iv = setInterval(check, 2_000)
     return () => clearInterval(iv)
   }, [])
+
+  // Connect EventSource for streaming tokens during summarization
+  const isSummarizing = !!(summaryProgress?.running)
+  useEffect(() => {
+    if (!isSummarizing) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setStreamTokens({})
+      return
+    }
+
+    const es = new EventSource('/api/summary/stream')
+    es.addEventListener('token', (e) => {
+      try {
+        const { sensor, token } = JSON.parse(e.data)
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setStreamTokens(prev => ({
+          ...prev,
+          [sensor]: (prev[sensor] ?? '') + token,
+        }))
+      } catch { /* ignore malformed events */ }
+    })
+    es.addEventListener('state', (e) => {
+      try {
+        const { sensor, state } = JSON.parse(e.data)
+        // Clear tokens for this sensor when it completes or fails
+        if (state === 'ok' || state === 'failed' || state === 'cached') {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setStreamTokens(prev => {
+            const next = { ...prev }
+            delete next[sensor]
+            return next
+          })
+        }
+      } catch { /* ignore malformed events */ }
+    })
+    es.addEventListener('done', () => {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setStreamTokens({})
+      es.close()
+    })
+    es.addEventListener('idle', () => {
+      es.close()
+    })
+    es.onerror = () => {
+      es.close()
+    }
+    return () => { es.close() }
+  }, [isSummarizing])
 
   const handleTriggerSummary = async () => {
     try {
@@ -1550,6 +1667,7 @@ export function Data() {
               hasContent={hasContent}
               onTrigger={handleTriggerSummary}
               onStop={handleStopSummary}
+              streamTokens={streamTokens}
             />
           ) : !loading && !report ? (
             <div style={{

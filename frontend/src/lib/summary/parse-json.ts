@@ -10,6 +10,21 @@ function stripCodeFences(text: string): string {
   return fenced ? fenced[1].trim() : text.trim()
 }
 
+/**
+ * Try to extract a JSON object from text that may contain preamble/postamble.
+ * Finds the outermost { ... } and attempts to parse it.
+ */
+function extractJsonObject(text: string): unknown | null {
+  const start = text.indexOf('{')
+  const end = text.lastIndexOf('}')
+  if (start < 0 || end <= start) return null
+  try {
+    return JSON.parse(text.slice(start, end + 1))
+  } catch {
+    return null
+  }
+}
+
 /** Parsed sensor summary JSON from the LLM. */
 export interface ParsedSensorJson {
   summary: string
@@ -22,8 +37,15 @@ export interface ParsedSensorJson {
  */
 export function parseSensorJson(raw: string): ParsedSensorJson {
   const cleaned = stripCodeFences(raw)
+
+  let parsed: Record<string, unknown> | null = null
   try {
-    const parsed = JSON.parse(cleaned)
+    parsed = JSON.parse(cleaned)
+  } catch {
+    parsed = extractJsonObject(cleaned) as Record<string, unknown> | null
+  }
+
+  if (parsed && typeof parsed === 'object') {
     const summary = typeof parsed.summary === 'string' ? parsed.summary : cleaned
     const items: SensorSummaryItem[] = Array.isArray(parsed.items)
       ? parsed.items
@@ -35,9 +57,9 @@ export function parseSensorJson(raw: string): ParsedSensorJson {
           }))
       : []
     return { summary, items }
-  } catch {
-    return { summary: raw.trim(), items: [] }
   }
+
+  return { summary: raw.trim(), items: [] }
 }
 
 /** Parse a single briefing entry, extracting refs if present. */
@@ -106,9 +128,16 @@ function parseSentiment(parsed: Record<string, unknown>): SentimentAnalysis {
  */
 export function parseOverallJson(raw: string): OverallBriefing {
   const cleaned = stripCodeFences(raw)
-  try {
-    const parsed = JSON.parse(cleaned)
 
+  // Try direct parse first, then extract JSON object from surrounding text
+  let parsed: Record<string, unknown> | null = null
+  try {
+    parsed = JSON.parse(cleaned)
+  } catch {
+    parsed = extractJsonObject(cleaned) as Record<string, unknown> | null
+  }
+
+  if (parsed && typeof parsed === 'object') {
     const quick_scan: BriefingEntry[] = Array.isArray(parsed.quick_scan)
       ? parsed.quick_scan
           .filter((e: unknown) => e && typeof e === 'object' && 'text' in e)
@@ -138,12 +167,12 @@ export function parseOverallJson(raw: string): OverallBriefing {
     const sentiment = parseSentiment(parsed)
 
     return { quick_scan, executive_summary, sections, sentiment }
-  } catch {
-    return {
-      quick_scan: [],
-      executive_summary: '',
-      sections: [{ title: '简报', entries: [{ text: raw.trim(), source: '', refs: [] }] }],
-      sentiment: { ...EMPTY_SENTIMENT },
-    }
+  }
+
+  return {
+    quick_scan: [],
+    executive_summary: '',
+    sections: [{ title: '简报', entries: [{ text: raw.trim(), source: '', refs: [] }] }],
+    sentiment: { ...EMPTY_SENTIMENT },
   }
 }

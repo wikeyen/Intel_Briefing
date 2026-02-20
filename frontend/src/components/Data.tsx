@@ -333,9 +333,10 @@ const PULSE_CSS = `
 
 /** Sensor label lookup for progress display — imported from taxonomy. */
 
-function SummaryProgressBanner({ progress, pipelineStatus }: {
+function SummaryProgressBanner({ progress, pipelineStatus, config }: {
   progress: SummaryProgress
   pipelineStatus: PipelineStatus | null
+  config: ConfigSettings | null
 }) {
   const done = progress.sensors.filter(s => s.state === 'ok' || s.state === 'failed').length
   const total = progress.sensors.length
@@ -439,14 +440,38 @@ function SummaryProgressBanner({ progress, pipelineStatus }: {
           )
         })}
         <div style={{ flex: 1 }} />
-        <span style={{
-          fontSize: '0.6875rem',
-          fontWeight: 600,
-          color: 'var(--ink-muted)',
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
           fontFamily: 'ui-monospace, monospace',
+          fontSize: '0.625rem',
+          color: 'var(--ink-faint)',
         }}>
-          {pct}%
-        </span>
+          {config?.summary_model && (
+            <span style={{ whiteSpace: 'nowrap' }}>
+              {config.summary_model}
+            </span>
+          )}
+          {(() => {
+            const c = config?.summary_provider === 'local'
+              ? (pipelineStatus?.local_summary_concurrency ?? config?.local_summary_concurrency)
+              : (pipelineStatus?.default_concurrency ?? config?.default_concurrency)
+            const running = pipelineStatus?.sensors.filter(s => s.summary === 'running').length ?? 0
+            return c != null ? (
+              <span style={{ whiteSpace: 'nowrap' }}>
+                {running}/{c} workers
+              </span>
+            ) : null
+          })()}
+          <span style={{
+            fontSize: '0.6875rem',
+            fontWeight: 600,
+            color: 'var(--ink-muted)',
+          }}>
+            {pct}%
+          </span>
+        </div>
       </div>
 
       {/* Per-sensor progress rows */}
@@ -625,7 +650,7 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
 
       {isSummarizing && summaryProgress && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <SummaryProgressBanner progress={summaryProgress} pipelineStatus={pipelineStatus} />
+          <SummaryProgressBanner progress={summaryProgress} pipelineStatus={pipelineStatus} config={config} />
           {!summary && (
             <button
               onClick={onStop}

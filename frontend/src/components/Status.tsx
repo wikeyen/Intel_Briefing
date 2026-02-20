@@ -2,6 +2,7 @@
 // ABOUTME: Polls health every 10s; when running, polls /fetch/status every 2s for live sensor progress.
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
 import { api } from '@/api/client'
 import type { HealthResponse, IntelReport, ConfigSettings, PipelineStatus, SensorProgress, BriefingSummary, SummaryProgress } from '@/api/client'
 import { useToast } from '@/lib/toast-context'
@@ -82,7 +83,6 @@ export function Status() {
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null)
   const [, setTick]                   = useState(0)
   const [summary, setSummary]         = useState<BriefingSummary | null>(null)
-  const [summaryExpanded, setSummaryExpanded] = useState(false)
   const [summaryProgress, setSummaryProgress] = useState<SummaryProgress | null>(null)
   const lastFetchedAtRef              = useRef<string | null>(null)
 
@@ -472,97 +472,53 @@ export function Status() {
         </div>
       </div>
 
-      {/* ── AI Briefing Card ──────────────────────────────── */}
+      {/* ── AI Briefing Link ──────────────────────────────── */}
       {summary && (
-        <div style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: 8,
-          padding: '1.5rem 2rem',
-          marginBottom: '2rem',
-        }}>
+        <Link href="/briefing" style={{ textDecoration: 'none' }}>
           <div style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            padding: '1rem 1.5rem',
+            marginBottom: '2rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            marginBottom: '1rem',
+            cursor: 'pointer',
+            transition: 'border-color 120ms',
           }}>
-            <div>
-              <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--ink)', marginBottom: '0.125rem' }}>
-                AI Briefing
-              </h3>
-              <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>
-                {timeAgo(summary.generated_at)}
-              </span>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.25rem' }}>
+                <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>
+                  AI Briefing
+                </h3>
+                <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>
+                  {timeAgo(summary.generated_at)}
+                </span>
+              </div>
+              <p style={{
+                fontSize: '0.8125rem',
+                color: 'var(--ink-muted)',
+                lineHeight: 1.5,
+                margin: 0,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}>
+                {summary.overall}
+              </p>
             </div>
+            <span style={{
+              fontSize: '0.8125rem',
+              color: 'var(--accent)',
+              fontWeight: 500,
+              marginLeft: '1rem',
+              flexShrink: 0,
+            }}>
+              View →
+            </span>
           </div>
-
-          <p style={{
-            fontSize: '0.875rem',
-            color: 'var(--ink)',
-            lineHeight: 1.7,
-            marginBottom: summary.sections.length > 0 ? '1rem' : 0,
-          }}>
-            {summary.overall}
-          </p>
-
-          {summary.sections.length > 0 && (
-            <>
-              <button
-                onClick={() => setSummaryExpanded(prev => !prev)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--accent)',
-                  fontSize: '0.75rem',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  padding: 0,
-                }}
-              >
-                {summaryExpanded ? 'Hide details' : `Show ${summary.sections.length} source summaries`}
-              </button>
-
-              {summaryExpanded && (
-                <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {summary.sections.map(s => (
-                    <div key={s.sensor_name} style={{
-                      padding: '0.75rem 1rem',
-                      background: 'var(--surface-alt)',
-                      borderRadius: 6,
-                    }}>
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        marginBottom: '0.375rem',
-                      }}>
-                        <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)' }}>
-                          {s.label}
-                        </span>
-                        <span style={{
-                          fontSize: '0.6875rem',
-                          color: 'var(--ink-faint)',
-                          fontFamily: 'ui-monospace, monospace',
-                        }}>
-                          {s.item_count} items
-                        </span>
-                      </div>
-                      <p style={{
-                        fontSize: '0.8125rem',
-                        color: 'var(--ink-muted)',
-                        lineHeight: 1.6,
-                        margin: 0,
-                      }}>
-                        {s.summary}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </div>
+        </Link>
       )}
 
       {/* ── Summarization Progress ───────────────────────────── */}

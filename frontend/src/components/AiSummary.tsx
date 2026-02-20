@@ -37,14 +37,28 @@ export function AiSummary() {
   const [testingLlm, setTestingLlm] = useState(false)
   const [saving, setSaving] = useState(false)
 
+  const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
+  const OLLAMA_BASE_URL = 'http://localhost:11434/v1'
+
   useEffect(() => {
     api.getConfig().then((cfg) => {
       setSummaryProvider(cfg.summary_provider ?? null)
       setSummaryApiKey(cfg.summary_api_key && cfg.summary_api_key !== '***' ? cfg.summary_api_key : '')
-      setSummaryBaseUrl(cfg.summary_base_url || 'https://openrouter.ai/api/v1')
+      setSummaryBaseUrl(cfg.summary_base_url || OPENROUTER_BASE_URL)
       setSummaryModel(cfg.summary_model || 'anthropic/claude-sonnet-4')
     })
   }, [])
+
+  const handleProviderChange = (v: string) => {
+    const provider = v === '' ? null : v as 'openrouter' | 'custom'
+    setSummaryProvider(provider)
+    if (provider === 'openrouter') {
+      setSummaryBaseUrl(OPENROUTER_BASE_URL)
+    } else if (provider === 'custom') {
+      setSummaryBaseUrl(OLLAMA_BASE_URL)
+      setSummaryModel('llama3.2')
+    }
+  }
 
   const save = async () => {
     setSaving(true)
@@ -104,10 +118,7 @@ export function AiSummary() {
             <div style={{ position: 'relative' }}>
               <select
                 value={summaryProvider ?? ''}
-                onChange={(e) => {
-                  const v = e.target.value
-                  setSummaryProvider(v === '' ? null : v as 'openrouter' | 'custom')
-                }}
+                onChange={(e) => handleProviderChange(e.target.value)}
                 style={{
                   ...inputBase,
                   width: '100%',
@@ -121,7 +132,7 @@ export function AiSummary() {
               >
                 <option value="">Disabled</option>
                 <option value="openrouter">OpenRouter</option>
-                <option value="custom">Custom</option>
+                <option value="custom">Custom (Ollama)</option>
               </select>
               <span style={{
                 position: 'absolute',
@@ -177,8 +188,8 @@ export function AiSummary() {
           </div>
         )}
 
-        {/* Base URL — shown only for custom provider */}
-        {summaryProvider === 'custom' && (
+        {/* Base URL — shown when provider is set */}
+        {summaryProvider !== null && (
           <div>
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
               Base URL
@@ -187,7 +198,7 @@ export function AiSummary() {
               type="text"
               value={summaryBaseUrl}
               onChange={(e) => setSummaryBaseUrl(e.target.value)}
-              placeholder="https://api.example.com/v1"
+              placeholder={summaryProvider === 'custom' ? OLLAMA_BASE_URL : OPENROUTER_BASE_URL}
               style={{ ...inputBase, width: '100%' }}
               onFocus={focus}
               onBlur={blur}

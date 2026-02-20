@@ -80,6 +80,8 @@ export function Pipeline() {
   const [defaultLimit, setDefaultLimit] = useState(10)
   const [sectionLimits, setSectionLimits] = useState<Record<string, number>>({})
   const [saving, setSaving] = useState(false)
+  const [invalidating, setInvalidating] = useState(false)
+  const [cleaning, setCleaning] = useState(false)
 
   useEffect(() => {
     api.getConfig().then((cfg) => {
@@ -115,6 +117,32 @@ export function Pipeline() {
       showToast('Save failed: ' + (e as Error).message)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleInvalidate = async () => {
+    setInvalidating(true)
+    try {
+      await api.invalidateCache()
+      showToast('Cache marked as stale')
+    } catch (e) {
+      showToast('Failed: ' + (e as Error).message)
+    } finally {
+      setInvalidating(false)
+    }
+  }
+
+  const handleCleanup = async () => {
+    setCleaning(true)
+    try {
+      const result = await api.cleanupExpired()
+      showToast(result.removed > 0
+        ? `Removed ${result.removed} expired items`
+        : 'No expired items to remove')
+    } catch (e) {
+      showToast('Failed: ' + (e as Error).message)
+    } finally {
+      setCleaning(false)
     }
   }
 
@@ -205,9 +233,31 @@ export function Pipeline() {
                 value={cacheTtl}
                 onChange={(e) => setCacheTtl(Number(e.target.value))}
               />
-              <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.5rem', lineHeight: 1.5 }}>
-                Data older than this threshold is flagged as stale.
-              </p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, margin: 0 }}>
+                  Data older than this threshold is flagged as stale.
+                </p>
+                <button
+                  onClick={handleInvalidate}
+                  disabled={invalidating}
+                  style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 500,
+                    padding: '0.375rem 0.875rem',
+                    borderRadius: 4,
+                    border: '1px solid var(--border)',
+                    color: invalidating ? 'var(--ink-faint)' : 'var(--ink-muted)',
+                    background: 'var(--surface)',
+                    cursor: invalidating ? 'not-allowed' : 'pointer',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    marginLeft: '1rem',
+                    transition: 'color 120ms, border-color 120ms',
+                  }}
+                >
+                  {invalidating ? 'Marking…' : 'Mark Stale Now'}
+                </button>
+              </div>
             </div>
 
             <div>
@@ -226,9 +276,31 @@ export function Pipeline() {
                 value={postExpiryDays}
                 onChange={(e) => setPostExpiryDays(Number(e.target.value))}
               />
-              <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.5rem', lineHeight: 1.5 }}>
-                Posts older than this are automatically deleted by the cleanup cron job.
-              </p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, margin: 0 }}>
+                  Posts older than this are automatically deleted by the cleanup cron job.
+                </p>
+                <button
+                  onClick={handleCleanup}
+                  disabled={cleaning}
+                  style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 500,
+                    padding: '0.375rem 0.875rem',
+                    borderRadius: 4,
+                    border: '1px solid var(--border)',
+                    color: cleaning ? 'var(--ink-faint)' : 'var(--ink-muted)',
+                    background: 'var(--surface)',
+                    cursor: cleaning ? 'not-allowed' : 'pointer',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    marginLeft: '1rem',
+                    transition: 'color 120ms, border-color 120ms',
+                  }}
+                >
+                  {cleaning ? 'Cleaning…' : 'Delete Expired Now'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -1,17 +1,17 @@
 // ABOUTME: Intel feed page — shows fetched items grouped by section with section tabs.
-// ABOUTME: Includes AI Summary tab plus card-per-item news reader with source filtering and pagination.
+// ABOUTME: Collapsible AI Summary section above feed, plus card-per-item news reader with source filtering and pagination.
 'use client'
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { api } from '@/api/client'
 import type { IntelReport, IntelItem, ConfigSettings, BriefingSummary, SummaryProgress } from '@/api/client'
 import { SENSOR_TOKEN_FIELD } from '@/lib/sensors/constants'
+import { useToast } from '@/lib/toast-context'
 import { Pagination } from './Pagination'
 
 const PAGE_SIZE = 20
 
 const SECTIONS: { key: string; label: string }[] = [
-  { key: 'summary',      label: 'Summary' },
   { key: 'tech_trends',  label: 'Tech Trends' },
   { key: 'research',     label: 'Research' },
   { key: 'capital_flow', label: 'Capital Flow' },
@@ -401,119 +401,206 @@ function SummaryProgressBanner({ progress }: { progress: SummaryProgress }) {
   )
 }
 
-function SummaryView({ summary, summaryProgress }: { summary: BriefingSummary | null; summaryProgress: SummaryProgress | null }) {
+function SummarySection({ summary, summaryProgress, config, hasContent, onTrigger }: {
+  summary: BriefingSummary | null
+  summaryProgress: SummaryProgress | null
+  config: ConfigSettings | null
+  hasContent: boolean
+  onTrigger: () => void
+}) {
+  const [open, setOpen] = useState(!!summary)
   const isSummarizing = !!(summaryProgress?.running && summaryProgress.started_at
     && (Date.now() - new Date(summaryProgress.started_at).getTime()) < 5 * 60 * 1000)
 
-  if (!summary && !isSummarizing) {
-    return (
-      <div style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: 8,
-        padding: '2rem',
-        textAlign: 'center',
-      }}>
-        <p style={{ color: 'var(--ink-muted)', fontSize: '0.875rem', margin: 0, marginBottom: '0.75rem' }}>
-          No briefing available yet.
-        </p>
-        <p style={{ color: 'var(--ink-faint)', fontSize: '0.8125rem', margin: 0 }}>
-          Configure an AI provider in{' '}
-          <Link href="/ai" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
-            AI Summary settings
-          </Link>
-          {' '}and run a fetch to generate your first briefing.
-        </p>
-      </div>
-    )
-  }
+  const hasProvider = config?.summary_provider !== null && config?.summary_provider !== undefined
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      {isSummarizing && summaryProgress && (
-        <SummaryProgressBanner progress={summaryProgress} />
-      )}
-
-      {summary && (
-        <>
-          {/* Executive Summary */}
-          <div style={{
-            background: 'linear-gradient(135deg, var(--surface) 0%, var(--accent-wash, var(--surface)) 100%)',
-            border: '1px solid var(--accent-dim, var(--border))',
-            borderRadius: 10,
-            padding: '2rem 2.5rem',
+    <div style={{ marginBottom: '1rem' }}>
+      {/* Collapsible header */}
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          width: '100%',
+          padding: '0.875rem 1.25rem',
+          background: summary
+            ? 'linear-gradient(135deg, var(--surface) 0%, var(--accent-wash, var(--surface)) 100%)'
+            : 'var(--surface)',
+          border: summary ? '1px solid var(--accent-dim, var(--border))' : '1px solid var(--border)',
+          borderRadius: open ? '8px 8px 0 0' : 8,
+          cursor: 'pointer',
+          transition: 'border-radius 150ms',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+          <span style={{
+            fontSize: '0.625rem',
+            color: 'var(--ink-faint)',
+            transition: 'transform 150ms',
+            transform: open ? 'rotate(90deg)' : 'rotate(0deg)',
+            userSelect: 'none',
           }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '1.25rem',
-            }}>
-              <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>
-                Executive Summary
-              </h3>
-              <span style={{
-                fontSize: '0.6875rem',
-                color: 'var(--ink-faint)',
-                fontFamily: 'ui-monospace, monospace',
-              }}>
-                {summary.generated_at.slice(0, 16).replace('T', ' ')} · {timeAgo(summary.generated_at)}
-              </span>
-            </div>
-            <p style={{
-              fontSize: '0.9375rem',
-              color: 'var(--ink)',
-              lineHeight: 1.8,
-              margin: 0,
-            }}>
-              {summary.overall}
-            </p>
-          </div>
+            ▶
+          </span>
+          <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)' }}>
+            AI Summary
+          </span>
+          {isSummarizing && (
+            <span style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: 'var(--accent)',
+              animation: 'pulseDot 1.6s ease-in-out infinite',
+            }} />
+          )}
+        </div>
+        {summary && (
+          <span style={{
+            fontSize: '0.6875rem',
+            color: 'var(--ink-faint)',
+            fontFamily: 'ui-monospace, monospace',
+          }}>
+            {summary.generated_at.slice(0, 16).replace('T', ' ')} · {timeAgo(summary.generated_at)}
+          </span>
+        )}
+      </button>
 
-          {/* Source Summaries Grid */}
-          {summary.sections.length > 0 && (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
-              gap: '1rem',
-            }}>
-              {summary.sections.map(s => (
-                <div key={s.sensor_name} style={{
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 8,
-                  padding: '1.25rem 1.5rem',
+      {/* Collapsible body */}
+      {open && (
+        <div style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderTop: 'none',
+          borderRadius: '0 0 8px 8px',
+          padding: '1.25rem 1.5rem',
+        }}>
+          {isSummarizing && summaryProgress && (
+            <SummaryProgressBanner progress={summaryProgress} />
+          )}
+
+          {summary ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {/* Executive Summary */}
+              <p style={{
+                fontSize: '0.9375rem',
+                color: 'var(--ink)',
+                lineHeight: 1.8,
+                margin: 0,
+              }}>
+                {summary.overall}
+              </p>
+
+              {/* Source Summaries Grid */}
+              {summary.sections.length > 0 && (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                  gap: '0.75rem',
                 }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: '0.625rem',
-                  }}>
-                    <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)' }}>
-                      {s.label}
-                    </span>
-                    <span style={{
-                      fontSize: '0.6875rem',
-                      color: 'var(--ink-faint)',
-                      fontFamily: 'ui-monospace, monospace',
+                  {summary.sections.map(s => (
+                    <div key={s.sensor_name} style={{
+                      background: 'var(--canvas)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 6,
+                      padding: '1rem 1.25rem',
                     }}>
-                      {s.item_count} items
-                    </span>
-                  </div>
-                  <p style={{
-                    fontSize: '0.8125rem',
-                    color: 'var(--ink-muted)',
-                    lineHeight: 1.7,
-                    margin: 0,
-                  }}>
-                    {s.summary}
-                  </p>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: '0.5rem',
+                      }}>
+                        <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)' }}>
+                          {s.label}
+                        </span>
+                        <span style={{
+                          fontSize: '0.625rem',
+                          color: 'var(--ink-faint)',
+                          fontFamily: 'ui-monospace, monospace',
+                        }}>
+                          {s.item_count} items
+                        </span>
+                      </div>
+                      <p style={{
+                        fontSize: '0.8125rem',
+                        color: 'var(--ink-muted)',
+                        lineHeight: 1.65,
+                        margin: 0,
+                      }}>
+                        {s.summary}
+                      </p>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
+
+              {/* Re-generate button */}
+              {hasProvider && hasContent && !isSummarizing && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onTrigger() }}
+                    style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 500,
+                      color: 'var(--accent)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '0.25rem 0',
+                      textDecoration: 'underline',
+                      textUnderlineOffset: '2px',
+                    }}
+                  >
+                    Regenerate
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : !isSummarizing && (
+            <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+              {!hasProvider ? (
+                <p style={{ color: 'var(--ink-faint)', fontSize: '0.8125rem', margin: 0 }}>
+                  Configure an AI provider in{' '}
+                  <Link href="/ai" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
+                    AI Summary settings
+                  </Link>
+                  {' '}to enable briefings.
+                </p>
+              ) : !hasContent ? (
+                <p style={{ color: 'var(--ink-faint)', fontSize: '0.8125rem', margin: 0 }}>
+                  Run the pipeline first to fetch content for summarization.
+                </p>
+              ) : (
+                <div>
+                  <p style={{ color: 'var(--ink-muted)', fontSize: '0.8125rem', margin: 0, marginBottom: '0.75rem' }}>
+                    AI provider configured. Generate a summary of the current feed.
+                  </p>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onTrigger() }}
+                    style={{
+                      fontSize: '0.8125rem',
+                      fontWeight: 500,
+                      padding: '0.5rem 1.25rem',
+                      borderRadius: 4,
+                      border: 'none',
+                      color: '#FFFFFF',
+                      background: 'var(--ink)',
+                      cursor: 'pointer',
+                      transition: 'background 120ms',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#000000' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--ink)' }}
+                  >
+                    Generate Summary
+                  </button>
+                </div>
+              )}
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   )
@@ -538,6 +625,7 @@ function EmptySection({ needsKey }: { needsKey?: boolean }) {
 }
 
 export function Data() {
+  const showToast = useToast()
   const [report, setReport] = useState<IntelReport | null>(null)
   const [config, setConfig] = useState<ConfigSettings | null>(null)
   const [loading, setLoading] = useState(true)
@@ -552,8 +640,7 @@ export function Data() {
     api.getSummary().then(r => setSummary(r.summary)).catch(() => {})
     api.getLatest().then(r => {
       setReport(r)
-      // Default to first section that has items (skip summary — it's not a report section)
-      const first = SECTIONS.find(s => s.key !== 'summary' && (r.items[s.key]?.length ?? 0) > 0)
+      const first = SECTIONS.find(s => (r.items[s.key]?.length ?? 0) > 0)
       if (first) setActiveSection(first.key)
     }).catch(() => {}).finally(() => setLoading(false))
   }, [])
@@ -572,6 +659,17 @@ export function Data() {
     const iv = setInterval(check, 3_000)
     return () => clearInterval(iv)
   }, [])
+
+  const handleTriggerSummary = async () => {
+    try {
+      await api.triggerSummary()
+      showToast('Summarization started')
+    } catch (e) {
+      showToast('Failed: ' + (e as Error).message)
+    }
+  }
+
+  const hasContent = Object.values(report?.items ?? {}).some(arr => arr.length > 0)
 
   // Derive the unique filter keys present in the current section
   const sectionItems = report?.items[activeSection] ?? []
@@ -653,7 +751,7 @@ export function Data() {
               scrollbarWidth: 'none',
             }}>
               {SECTIONS.map(({ key, label }, idx) => {
-                const count = key === 'summary' ? 0 : (report.items[key]?.length ?? 0)
+                const count = report.items[key]?.length ?? 0
                 const active = activeSection === key
                 return (
                   <button
@@ -693,9 +791,9 @@ export function Data() {
               })}
             </div>
 
-            {/* Source filters — hidden on Summary tab */}
+            {/* Source filters */}
             <div className="source-filters" style={{
-              display: activeSection === 'summary' ? 'none' : 'flex',
+              display: 'flex',
               gap: '0.5rem',
               alignItems: 'center',
               padding: '0.625rem 0',
@@ -744,9 +842,18 @@ export function Data() {
       {/* Scrollable content */}
       <div style={{ flex: 1 }}>
         <div className="data-content" style={{ maxWidth: 1024, margin: '0 auto', padding: '1.5rem 3rem 4rem' }}>
-          {activeSection === 'summary' ? (
-            <SummaryView summary={summary} summaryProgress={summaryProgress} />
-          ) : !loading && !report ? (
+          {/* Collapsible AI Summary section */}
+          {report && (
+            <SummarySection
+              summary={summary}
+              summaryProgress={summaryProgress}
+              config={config}
+              hasContent={hasContent}
+              onTrigger={handleTriggerSummary}
+            />
+          )}
+
+          {!loading && !report ? (
             <div style={{
               padding: '4rem 1.5rem',
               textAlign: 'center',

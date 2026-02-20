@@ -1,5 +1,5 @@
-// ABOUTME: Tests for the Summary tab within the Data (Feed) component.
-// ABOUTME: Covers summary rendering, empty state, executive summary, and per-source section cards.
+// ABOUTME: Tests for the collapsible AI Summary section within the Data (Feed) component.
+// ABOUTME: Covers summary rendering, empty states, executive summary, and per-source section cards.
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
@@ -10,6 +10,7 @@ vi.mock('@/api/client', () => ({
     getConfig: vi.fn(),
     getSummary: vi.fn(),
     getSummaryStatus: vi.fn(),
+    triggerSummary: vi.fn(),
   },
 }))
 
@@ -37,7 +38,7 @@ const EMPTY_REPORT = {
   items: { tech_trends: [{ id: 'hn-1', source: 'hacker_news', title: 'Test', url: 'https://example.com' }] },
 }
 
-describe('Summary tab in Data', () => {
+describe('AI Summary section in Data', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetLatest.mockResolvedValue(EMPTY_REPORT)
@@ -50,27 +51,28 @@ describe('Summary tab in Data', () => {
     })
   })
 
-  it('shows the Summary tab', async () => {
+  it('shows the AI Summary collapsible header', async () => {
     mockGetSummary.mockResolvedValue({ summary: null })
     render(<Data />)
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /summary/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /ai summary/i })).toBeInTheDocument()
     })
   })
 
-  it('shows empty state when no summary and Summary tab is clicked', async () => {
+  it('shows empty state when no provider configured and section is expanded', async () => {
     mockGetSummary.mockResolvedValue({ summary: null })
+    mockGetConfig.mockResolvedValue({ sensors_enabled: {}, summary_provider: null })
     render(<Data />)
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /summary/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /ai summary/i })).toBeInTheDocument()
     })
-    fireEvent.click(screen.getByRole('button', { name: /summary/i }))
+    fireEvent.click(screen.getByRole('button', { name: /ai summary/i }))
     await waitFor(() => {
-      expect(screen.getByText(/no briefing available/i)).toBeInTheDocument()
+      expect(screen.getByText(/ai summary settings/i)).toBeInTheDocument()
     })
   })
 
-  it('renders the executive summary when Summary tab is clicked', async () => {
+  it('renders the executive summary when summary exists (auto-expanded)', async () => {
     mockGetSummary.mockResolvedValue({
       summary: {
         generated_at: '2026-02-19T08:00:00Z',
@@ -81,15 +83,11 @@ describe('Summary tab in Data', () => {
     })
     render(<Data />)
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /summary/i })).toBeInTheDocument()
-    })
-    fireEvent.click(screen.getByRole('button', { name: /summary/i }))
-    await waitFor(() => {
       expect(screen.getByText('Major AI developments this week including new model releases.')).toBeInTheDocument()
     })
   })
 
-  it('renders per-source section cards', async () => {
+  it('renders per-source section cards (auto-expanded)', async () => {
     mockGetSummary.mockResolvedValue({
       summary: {
         generated_at: '2026-02-19T08:00:00Z',
@@ -103,10 +101,6 @@ describe('Summary tab in Data', () => {
     })
     render(<Data />)
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /summary/i })).toBeInTheDocument()
-    })
-    fireEvent.click(screen.getByRole('button', { name: /summary/i }))
-    await waitFor(() => {
       expect(screen.getByText('Hacker News')).toBeInTheDocument()
       expect(screen.getByText('HN had lots of AI discussion.')).toBeInTheDocument()
       expect(screen.getByText('ArXiv AI')).toBeInTheDocument()
@@ -116,7 +110,7 @@ describe('Summary tab in Data', () => {
     })
   })
 
-  it('shows the generated timestamp', async () => {
+  it('shows the generated timestamp in the header', async () => {
     mockGetSummary.mockResolvedValue({
       summary: {
         generated_at: '2026-02-19T08:00:00Z',
@@ -127,9 +121,8 @@ describe('Summary tab in Data', () => {
     })
     render(<Data />)
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /summary/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /ai summary/i })).toBeInTheDocument()
     })
-    fireEvent.click(screen.getByRole('button', { name: /summary/i }))
     await waitFor(() => {
       expect(screen.getByText(/2026-02-19 08:00/)).toBeInTheDocument()
     })

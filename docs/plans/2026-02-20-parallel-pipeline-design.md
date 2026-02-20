@@ -117,10 +117,56 @@ pipeline_concurrency: number  // default: 4, range: 1–13
 
 Separate `/api/summary/trigger` and `/api/summary/status` become redundant but kept for backwards compat. Status page only polls `/api/fetch/status`.
 
+## Customizable Summary Prompts
+
+### Per-Sensor Prompts
+
+Each sensor gets a specialized system prompt that extracts information tailored for the final structured briefing. Per-sensor prompts instruct the LLM to categorize and tag information relevant to the overall summary's sections.
+
+| Sensor | Category Focus | Extraction Emphasis |
+|--------|---------------|-------------------|
+| `hacker_news` | Tech Trends | Product launches vs. incremental updates; community sentiment; founder/researcher appearances |
+| `arxiv` | Research | Technique names, benchmarks, institutional affiliations; industry-backed papers |
+| `github` | Open Source | New vs. trending repos; star velocity; corporate-backed vs. indie |
+| `product_hunt` | Products | Full launches only (skip minor updates); pricing; team; AI-relevance |
+| `social_accounts` | KOL Opinions | Facts vs. opinions; speaker role (founder/researcher/investor/dev); claims and predictions |
+| `social_topics` | Trends | Emerging narratives; cross-reference events; sentiment |
+| `social_trends` | Viral Content | Why trending; factual basis; market impact |
+| `sources_36kr` | Startup/VC | Funding amounts, valuations, investors; company stage; sector |
+| `wallstreetcn` | Markets | AI sector financial news; market-moving events; regulatory; cross-border |
+| `hn_blogs` | Deep Analysis | Core thesis; author credibility; contrarian vs. consensus |
+| `rss_feeds` | General | Adapt to content — extract facts, opinions, notable claims |
+| `chrome_radar` | Tools | New browser extensions/tools; developer utility |
+| `v2ex` | Community | Chinese tech discussions; developer sentiment |
+
+### Overall Summary Prompt
+
+The overall prompt synthesizes per-sensor summaries into a structured intel briefing for an AI industry VC professional:
+
+```
+一、速览 — 3-5 most important items (major launches, breaking news, high-impact VC moves)
+二、AI 产品动态 — Official AI company announcements, developer previews, product launches
+三、行业声音 — Entrepreneur/practitioner statements, opinions, predictions (with sources)
+四、投资动向 — VC activity, funding rounds, investment theses, valuations
+五、投融资分析 — Narrative trends, valuation shifts, global AI startup funding, risk alerts
+```
+
+### Config Storage
+
+```typescript
+// Per-sensor prompt overrides (keyed by sensor name)
+summary_sensor_prompts: Record<string, string>
+
+// Overall summary prompt
+summary_overall_prompt: string
+```
+
+Default values are optimized prompts. Users can override any via the AI Summary settings page. Each sensor shows "Default" or "Custom" badge and a "Reset to default" action.
+
 ## What Stays the Same
 
 - SQLite KV storage (same keys, same TTLs)
 - Polling interval (3s)
 - `IntelReport` and `BriefingSummary` structures
-- Config API (only adds `pipeline_concurrency`)
+- Config API (adds `pipeline_concurrency`, `summary_sensor_prompts`, `summary_overall_prompt`)
 - Individual sensor implementations (unchanged)

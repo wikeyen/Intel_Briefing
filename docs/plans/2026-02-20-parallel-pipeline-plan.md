@@ -1520,7 +1520,367 @@ git commit -m "feat(pipeline): redesign Status UI with three run modes and two-s
 
 ---
 
-## Task 8: Cleanup & Test Migration
+## Task 8: Customizable Summary Prompts
+
+Add per-sensor and overall summary prompts that are configurable via the AI Summary settings page. Default prompts are optimized for an AI industry VC professional's daily briefing.
+
+**Files:**
+- Create: `frontend/src/lib/summary/prompts.ts`
+- Test: `frontend/src/lib/summary/prompts.test.ts`
+- Modify: `frontend/src/lib/models.ts` — add `summary_sensor_prompts` and `summary_overall_prompt` to `ConfigSettings`
+- Modify: `frontend/src/lib/pipeline/orchestrator.ts` — use configurable prompts instead of hardcoded strings
+- Modify: `frontend/src/api/client.ts` — add new config fields
+- Modify: `frontend/src/components/AiSummary.tsx` — add prompt editor UI
+
+**Step 1: Create the prompt defaults module**
+
+Create `frontend/src/lib/summary/prompts.ts` with default per-sensor system prompts and the overall prompt. Each sensor gets a specialized extraction prompt designed to feed into the structured overall summary.
+
+```typescript
+// ABOUTME: Default per-sensor and overall summary prompts for the LLM summarizer.
+// ABOUTME: Prompts are optimized for AI industry VC professional briefings; user-overridable via config.
+
+/** Per-sensor default system prompts, keyed by sensor name. */
+export const DEFAULT_SENSOR_PROMPTS: Record<string, string> = {
+  hacker_news: `你是一名科技情报分析师。请总结以下 Hacker News 内容。
+要求：
+1. 区分重大产品发布（新产品上线）与增量更新（功能微调、测试版本），只重点提及前者
+2. 关注社区热度（点赞数、评论数）作为重要性信号
+3. 标注是否有知名创始人或研究者出现在讨论中
+4. 提取具体的技术趋势和行业动向
+5. 引用具体名称、数字和链接
+保持简洁，2-4句话。`,
+
+  arxiv: `你是一名AI研究情报分析师。请总结以下 ArXiv 论文。
+要求：
+1. 提取核心技术名称、基准测试结果和作者机构
+2. 重点标注有产业界支持的论文（Google、Meta、OpenAI、Anthropic 等）
+3. 评估该研究的潜在产业应用和商业价值
+4. 指出是否有突破性进展或范式转变
+5. 引用具体名称、数字和链接
+保持简洁，2-4句话。`,
+
+  github: `你是一名开源技术分析师。请总结以下 GitHub 热门项目。
+要求：
+1. 区分新发布的仓库与已有项目的热度上升
+2. 关注 star 增速作为趋势信号
+3. 识别企业支持的项目与独立开发者项目
+4. 评估项目的技术价值和实用性
+5. 引用具体名称、数字和链接
+保持简洁，2-4句话。`,
+
+  product_hunt: `你是一名产品分析师。请总结以下 Product Hunt 产品。
+要求：
+1. 只关注完整的新产品发布，忽略功能微调或测试版本
+2. 标注定价模式（免费/付费/开源）
+3. 关注团队背景（是否有知名创始人或知名公司背景）
+4. 标明产品是否与 AI 相关
+5. 引用具体名称、数字和链接
+保持简洁，2-4句话。`,
+
+  social_accounts: `你是一名社交媒体情报分析师。请总结以下社交媒体账号发布的内容。
+要求：
+1. 严格区分事实陈述与个人观点/评论
+2. 标注发言者身份（创始人/研究者/投资人/开发者/媒体人）
+3. 对观点进行提炼，强调其判断、立场与潜在影响，避免简单转述
+4. 提取具体的预测、主张和投资相关信号
+5. 投融资相关动态需注明具体金额、估值、投资方
+6. 引用具体名称、数字和链接，注明来源账号
+保持简洁，2-4句话。`,
+
+  social_topics: `你是一名社交媒体趋势分析师。请总结以下社交媒体热门话题。
+要求：
+1. 识别正在形成的新叙事和趋势
+2. 与已知事件进行交叉参考
+3. 分析舆论情绪（乐观/悲观/争议）
+4. 评估对市场和行业的潜在影响
+5. 引用具体名称、数字和链接
+保持简洁，2-4句话。`,
+
+  social_trends: `你是一名社交媒体分析师。请总结以下社交媒体趋势内容。
+要求：
+1. 分析为什么这些内容正在流行
+2. 验证事实基础，区分信息与噪音
+3. 评估对 AI 行业和投融资市场的潜在影响
+4. 引用具体名称、数字和链接
+保持简洁，2-4句话。`,
+
+  sources_36kr: `你是一名创投领域分析师。请总结以下 36Kr 内容。
+要求：
+1. 重点提取融资金额、估值、投资方等关键信息
+2. 标注公司发展阶段（种子轮/A轮/B轮等）
+3. 标注所属赛道和细分领域
+4. 分析融资背后的行业信号
+5. 注明信息来源
+保持简洁，2-4句话。`,
+
+  wallstreetcn: `你是一名金融市场分析师。请总结以下华尔街见闻内容。
+要求：
+1. 聚焦 AI 赛道相关的金融新闻
+2. 提取市场影响事件和监管动向
+3. 关注跨境和国际影响
+4. 标注对 AI 创投市场的潜在影响
+5. 引用具体名称、数字和链接
+保持简洁，2-4句话。`,
+
+  hn_blogs: `你是一名科技评论分析师。请总结以下 HN 精选博客文章。
+要求：
+1. 提取文章核心论点
+2. 评估作者可信度和影响力
+3. 标注是逆势观点还是共识观点
+4. 提取对行业的深度洞察
+5. 引用具体名称和链接
+保持简洁，2-4句话。`,
+
+  rss_feeds: `你是一名信息分析师。请总结以下 RSS 订阅内容。
+要求：
+1. 提取关键事实、观点和值得注意的主张
+2. 区分新闻事实与评论立场
+3. 标注与 AI 行业和投融资相关的内容
+4. 引用具体名称、数字和链接
+保持简洁，2-4句话。`,
+
+  chrome_radar: `你是一名开发者工具分析师。请总结以下浏览器扩展和工具。
+要求：
+1. 关注新上线的工具和扩展
+2. 评估对开发者的实用价值
+3. 标注是否与 AI 技术相关
+4. 引用具体名称和链接
+保持简洁，2-4句话。`,
+
+  v2ex: `你是一名中文科技社区分析师。请总结以下 V2EX 讨论。
+要求：
+1. 提取开发者群体的关注焦点和情绪
+2. 标注技术趋势信号
+3. 关注与 AI 工具和工作流相关的讨论
+4. 引用具体话题和链接
+保持简洁，2-4句话。`,
+}
+
+/** Default overall summary system prompt. */
+export const DEFAULT_OVERALL_PROMPT = `你是一名专注于AI行业的投融资情报分析师。以下是过去24小时内各信息源的摘要。请将这些信息整理成一份结构化的个性化简报。
+
+要求：
+1. 浏览所有内容，区分新闻事实与评论立场
+2. 对观点进行提炼，强调其判断、立场与潜在影响，避免简单转述
+3. 所有内容都要注明来源
+
+请按以下板块输出：
+
+## 一、速览
+只挑选最重要的3-5条新闻和观点。筛选标准：完整版新产品发布（省去微调或测试内容）、最著名企业家的重要判断、重大融资事件等。
+
+## 二、AI 产品动态
+AI科技企业官方账号和相关开发者的新产品预告和发布。包含产品名称、功能亮点和来源。
+
+## 三、行业声音
+重要企业家与科技从业者发布的事实和观点。提炼其判断和立场，分析潜在影响。注明发言者身份和来源。
+
+## 四、投资动向
+投资者和VC发布的新动向、投融资意向和观点。包含具体金额、估值和投资方（如有）。
+
+## 五、投融资分析
+作为专栏特别总结：
+1. 推理和概括投融资视角的叙事和估值变化趋势
+2. 全球主要市场AI startup的融资新闻（谁投了谁、融资金额、估值）
+3. 提示风险（市场风险、政策风险、技术风险等）
+
+要求总结有条理、可读性强。`
+
+/**
+ * Get the system prompt for a sensor, using user override if available.
+ */
+export function getSensorPrompt(
+  sensorName: string,
+  overrides?: Record<string, string>,
+): string {
+  return overrides?.[sensorName] ?? DEFAULT_SENSOR_PROMPTS[sensorName] ?? DEFAULT_SENSOR_PROMPTS['rss_feeds']
+}
+
+/**
+ * Get the overall summary prompt, using user override if available.
+ */
+export function getOverallPrompt(override?: string): string {
+  return override || DEFAULT_OVERALL_PROMPT
+}
+```
+
+**Step 2: Write tests for the prompts module**
+
+Create `frontend/src/lib/summary/prompts.test.ts`:
+
+```typescript
+// ABOUTME: Tests for configurable summary prompt resolution.
+// ABOUTME: Validates default prompts, user overrides, and fallback behavior.
+import { describe, it, expect } from 'vitest'
+import { getSensorPrompt, getOverallPrompt, DEFAULT_SENSOR_PROMPTS, DEFAULT_OVERALL_PROMPT } from './prompts'
+
+describe('getSensorPrompt', () => {
+  it('returns default prompt for known sensor', () => {
+    const prompt = getSensorPrompt('hacker_news')
+    expect(prompt).toBe(DEFAULT_SENSOR_PROMPTS['hacker_news'])
+    expect(prompt).toContain('Hacker News')
+  })
+
+  it('returns user override when provided', () => {
+    const custom = 'Custom prompt for HN'
+    const prompt = getSensorPrompt('hacker_news', { hacker_news: custom })
+    expect(prompt).toBe(custom)
+  })
+
+  it('returns default when override map exists but sensor not overridden', () => {
+    const prompt = getSensorPrompt('arxiv', { hacker_news: 'custom' })
+    expect(prompt).toBe(DEFAULT_SENSOR_PROMPTS['arxiv'])
+  })
+
+  it('falls back to rss_feeds prompt for unknown sensor', () => {
+    const prompt = getSensorPrompt('unknown_sensor')
+    expect(prompt).toBe(DEFAULT_SENSOR_PROMPTS['rss_feeds'])
+  })
+
+  it('has a default prompt for every standard sensor', () => {
+    const sensors = [
+      'hacker_news', 'arxiv', 'github', 'product_hunt', 'v2ex',
+      'hn_blogs', 'sources_36kr', 'wallstreetcn', 'social_accounts',
+      'social_topics', 'social_trends', 'chrome_radar', 'rss_feeds',
+    ]
+    for (const s of sensors) {
+      expect(DEFAULT_SENSOR_PROMPTS[s]).toBeTruthy()
+    }
+  })
+})
+
+describe('getOverallPrompt', () => {
+  it('returns default when no override', () => {
+    expect(getOverallPrompt()).toBe(DEFAULT_OVERALL_PROMPT)
+    expect(getOverallPrompt('')).toBe(DEFAULT_OVERALL_PROMPT)
+  })
+
+  it('returns user override when provided', () => {
+    const custom = 'Custom overall prompt'
+    expect(getOverallPrompt(custom)).toBe(custom)
+  })
+})
+```
+
+**Step 3: Run tests**
+
+```bash
+cd frontend && npx vitest run src/lib/summary/prompts.test.ts
+```
+
+Expected: PASS (all tests).
+
+**Step 4: Add config fields to models.ts**
+
+In `frontend/src/lib/models.ts`, add to `ConfigSettings`:
+
+```typescript
+// Customizable summary prompts
+summary_sensor_prompts: Record<string, string>
+summary_overall_prompt: string
+```
+
+In `defaultConfig()`, add:
+
+```typescript
+summary_sensor_prompts: {},
+summary_overall_prompt: '',
+```
+
+Empty values mean "use defaults" — the `prompts.ts` module handles the fallback.
+
+**Step 5: Update API client types**
+
+In `frontend/src/api/client.ts`, add to `ConfigSettings`:
+
+```typescript
+summary_sensor_prompts: Record<string, string>
+summary_overall_prompt: string
+```
+
+**Step 6: Update orchestrator to use configurable prompts**
+
+In `frontend/src/lib/pipeline/orchestrator.ts`:
+
+1. Import `getSensorPrompt` and `getOverallPrompt` from `../summary/prompts`
+2. Remove the hardcoded `SUMMARY_SYSTEM` and `OVERALL_SYSTEM` constants
+3. In `summarizeSensor()`, use `getSensorPrompt(sensorName, config.summary_sensor_prompts)` as the system message
+4. In the overall summary section, use `getOverallPrompt(config.summary_overall_prompt)` as the system message
+5. Pass `config` through to `summarizeSensor()` so it can access the prompt overrides
+
+```typescript
+// In summarizeSensor(), change the messages construction:
+import { getSensorPrompt, getOverallPrompt } from '../summary/prompts'
+
+async function summarizeSensor(
+  sensorName: string,
+  items: IntelItem[],
+  llmConfig: LlmConfig,
+  promptOverrides?: Record<string, string>,
+): Promise<SensorSummaryResult | null> {
+  // ...
+  const systemPrompt = getSensorPrompt(sensorName, promptOverrides)
+  const messages: ChatMessage[] = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: `...` },
+  ]
+  // ...
+}
+
+// In the overall summary section:
+const overallSystemPrompt = getOverallPrompt(config.summary_overall_prompt)
+const overallMessages: ChatMessage[] = [
+  { role: 'system', content: overallSystemPrompt },
+  { role: 'user', content: `...` },
+]
+```
+
+**Step 7: Add prompt editor to AiSummary.tsx**
+
+In `frontend/src/components/AiSummary.tsx`, add a collapsible "Prompt Customization" section below the provider/model/key fields:
+
+1. **State**: `sensorPrompts: Record<string, string>` and `overallPrompt: string`
+2. **Load from config**: set from `cfg.summary_sensor_prompts` and `cfg.summary_overall_prompt`
+3. **Save**: include both in the config update call
+4. **UI structure**:
+
+```
+── Prompt Customization (collapsible) ──
+
+Overall Summary Prompt
+[textarea — shows default if empty, "Custom" badge if overridden]
+[Reset to default]
+
+Per-Sensor Prompts (collapsible list)
+  ▸ Hacker News [Default]     ← click to expand textarea
+  ▸ ArXiv AI [Custom]         ← shows "Custom" badge when overridden
+  ▸ GitHub Trending [Default]
+  ...
+```
+
+Each sensor prompt textarea:
+- Placeholder text shows the first 100 chars of the default prompt
+- "Default" gray badge when empty (using built-in prompt)
+- "Custom" accent badge when user has entered text
+- "Reset to default" link clears the override
+
+**Step 8: Run all tests**
+
+```bash
+cd frontend && npx vitest run
+```
+
+**Step 9: Commit**
+
+```bash
+git add frontend/src/lib/summary/prompts.ts frontend/src/lib/summary/prompts.test.ts frontend/src/lib/models.ts frontend/src/api/client.ts frontend/src/lib/pipeline/orchestrator.ts frontend/src/components/AiSummary.tsx
+git commit -m "feat(summary): add configurable per-sensor and overall summary prompts"
+```
+
+---
+
+## Task 9: Cleanup & Test Migration
 
 Remove deprecated code, update existing tests, and add integration tests for the new pipeline flow.
 
@@ -1571,4 +1931,11 @@ After all tasks are complete:
 3. Navigate to Pipeline settings:
    - Concurrency slider visible (1–13 range, default 4)
    - Saves and loads correctly
-4. Console errors section works with new error format (fetch_error, summary_error)
+4. Navigate to AI Summary settings:
+   - Prompt Customization section visible (collapsible)
+   - Overall prompt textarea shows default, editable
+   - Per-sensor prompts expandable, each shows Default/Custom badge
+   - Reset to default clears overrides
+   - Saves and loads correctly
+5. Console errors section works with new error format (fetch_error, summary_error)
+6. Run "Fetch + Summarize" → verify per-sensor summaries use Chinese prompts and overall summary follows the structured format (一、速览 / 二、AI产品动态 / 三、行业声音 / 四、投资动向 / 五、投融资分析)

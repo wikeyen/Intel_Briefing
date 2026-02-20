@@ -2,7 +2,7 @@
 // ABOUTME: Takes an IntelReport and LLM config, calls LLM sequentially for each sensor.
 import { chatCompletion, type LlmConfig, type ChatMessage } from './llm'
 import type { IntelReport, IntelItem, BriefingSummary, SensorSummary } from '../models'
-import { SOURCE_URLS } from '../models'
+import { SOURCE_URLS, EMPTY_SENTIMENT } from '../models'
 import { getSensorPrompt, getOverallPrompt } from './prompts'
 import { parseSensorJson, parseOverallJson } from './parse-json'
 import { SENSOR_LABELS } from '../sensors/taxonomy'
@@ -112,7 +112,7 @@ export async function summarizeReport(
   } catch (err) {
     await onProgress?.('__overall__', 'Overall', 'failed', (err as Error).message)
     // Return partial result with available per-sensor sections
-    overall = { quick_scan: [], executive_summary: '', sections: [] }
+    overall = { quick_scan: [], executive_summary: '', sections: [], sentiment: { ...EMPTY_SENTIMENT } }
   }
 
   return {

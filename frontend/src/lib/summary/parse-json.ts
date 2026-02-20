@@ -1,7 +1,8 @@
 // ABOUTME: JSON parsing utilities for LLM summary responses.
 // ABOUTME: Handles code fence stripping and fallback for malformed output.
 
-import type { SensorSummaryItem, OverallBriefing, BriefingEntry, BriefingSection, BriefingRef } from '../models'
+import type { SensorSummaryItem, OverallBriefing, BriefingEntry, BriefingSection, BriefingRef, SentimentAnalysis, SentimentEntry } from '../models'
+import { EMPTY_SENTIMENT } from '../models'
 
 /** Strip markdown code fences (```json ... ```) that LLMs sometimes add. */
 function stripCodeFences(text: string): string {
@@ -54,6 +55,51 @@ function parseEntry(e: unknown): BriefingEntry {
   return { text: String(entry.text ?? ''), source: String(entry.source ?? ''), refs }
 }
 
+/** Parse a single sentiment entry with topic, analysis, and refs. */
+function parseSentimentEntry(e: unknown): SentimentEntry {
+  const entry = e as Record<string, unknown>
+  const refs: BriefingRef[] = Array.isArray(entry.refs)
+    ? (entry.refs as unknown[])
+        .filter((r: unknown) => r && typeof r === 'object' && 'url' in r)
+        .map((r: unknown) => {
+          const ref = r as Record<string, unknown>
+          return { title: String(ref.title ?? ''), url: String(ref.url ?? '') }
+        })
+        .filter(r => r.url)
+    : []
+  return {
+    topic: String(entry.topic ?? ''),
+    analysis: String(entry.analysis ?? ''),
+    refs,
+  }
+}
+
+/** Parse the sentiment analysis block from parsed JSON. */
+function parseSentiment(parsed: Record<string, unknown>): SentimentAnalysis {
+  const raw = parsed.sentiment as Record<string, unknown> | undefined
+  if (!raw || typeof raw !== 'object') return { ...EMPTY_SENTIMENT }
+
+  const validMoods = ['bullish', 'bearish', 'mixed', 'neutral'] as const
+  const overall_mood = validMoods.includes(raw.overall_mood as typeof validMoods[number])
+    ? (raw.overall_mood as SentimentAnalysis['overall_mood'])
+    : 'neutral'
+
+  const parseSentimentList = (arr: unknown): SentimentEntry[] =>
+    Array.isArray(arr)
+      ? arr
+          .filter((e: unknown) => e && typeof e === 'object' && 'topic' in e)
+          .map(parseSentimentEntry)
+      : []
+
+  return {
+    overall_mood,
+    mood_summary: typeof raw.mood_summary === 'string' ? raw.mood_summary : '',
+    controversies: parseSentimentList(raw.controversies),
+    opinion_shifts: parseSentimentList(raw.opinion_shifts),
+    risk_flags: parseSentimentList(raw.risk_flags),
+  }
+}
+
 /**
  * Parse the overall briefing LLM response as JSON.
  * Falls back to a single-section structure with the raw text if parsing fails.
@@ -89,12 +135,15 @@ export function parseOverallJson(raw: string): OverallBriefing {
       ? parsed.executive_summary
       : ''
 
-    return { quick_scan, executive_summary, sections }
+    const sentiment = parseSentiment(parsed)
+
+    return { quick_scan, executive_summary, sections, sentiment }
   } catch {
     return {
       quick_scan: [],
       executive_summary: '',
       sections: [{ title: '简报', entries: [{ text: raw.trim(), source: '', refs: [] }] }],
+      sentiment: { ...EMPTY_SENTIMENT },
     }
   }
 }

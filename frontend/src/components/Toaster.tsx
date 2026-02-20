@@ -74,7 +74,7 @@ export function Toaster({ children }: Props) {
               key={id}
               style={{
                 overflow: 'hidden',
-                maxHeight: isVisible ? 120 : 0,
+                maxHeight: isVisible ? 200 : 0,
                 transition: outerTransition,
               }}
             >
@@ -88,7 +88,8 @@ export function Toaster({ children }: Props) {
                   padding: '0.75rem 1.125rem',
                   borderRadius: 4,
                   letterSpacing: '0.01em',
-                  maxWidth: 'min(24rem, calc(100vw - 3rem))',
+                  maxWidth: 'min(32rem, calc(100vw - 3rem))',
+                  wordBreak: 'break-word' as const,
                   transform: isVisible ? 'translateX(0)' : 'translateX(calc(100% + 1.5rem))',
                   opacity: isVisible ? 1 : 0,
                   transition: innerTransition,

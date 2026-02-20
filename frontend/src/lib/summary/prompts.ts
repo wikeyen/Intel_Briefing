@@ -119,7 +119,20 @@ export const DEFAULT_OVERALL_PROMPT = `你是一名全球投资情报分析师�
         { "text": "条目内容", "source": "来源名称", "refs": [{ "title": "原文标题", "url": "原文链接" }] }
       ]
     }
-  ]
+  ],
+  "sentiment": {
+    "overall_mood": "bullish | bearish | mixed | neutral",
+    "mood_summary": "一句话概括今日整体舆情基调",
+    "controversies": [
+      { "topic": "争议主题", "analysis": "各方立场和分歧要点", "refs": [{ "title": "原文标题", "url": "原文链接" }] }
+    ],
+    "opinion_shifts": [
+      { "topic": "转向主题", "analysis": "相比近期的舆论方向变化", "refs": [{ "title": "原文标题", "url": "原文链接" }] }
+    ],
+    "risk_flags": [
+      { "topic": "风险信号", "analysis": "具体负面信号及潜在影响", "refs": [{ "title": "原文标题", "url": "原文链接" }] }
+    ]
+  }
 }
 
 引用要求：
@@ -134,6 +147,13 @@ export const DEFAULT_OVERALL_PROMPT = `你是一名全球投资情报分析师�
 - 宏观与政策：宏观经济数据、央行政策、监管动向、地缘政治事件及其对投资市场的影响。
 - 行业声音：重要企业家、投资人和行业从业者发布的事实和观点。提炼其判断和立场，分析潜在影响。注明发言者身份。
 - 投融资动向：投融资事件、并购、估值变化、VC动向。包含具体金额、估值和投资方（如有）。分析对行业格局的影响和投资启示。
+
+舆情分析说明：
+- overall_mood：基于所有来源的综合基调判断（bullish=偏多/乐观, bearish=偏空/悲观, mixed=多空分歧, neutral=中性平淡）
+- controversies：仅列出信息源之间存在真实分歧或各方立场明显对立的话题，不要凑数
+- opinion_shifts：仅列出相比近期有明显方向变化的舆论趋势，需有证据支持
+- risk_flags：仅列出有具体负面信号支撑的风险项目，如政策收紧、市场异动、供应链问题等
+- 如果某个子项没有值得报告的内容，返回空数组，不要编造
 
 注意：
 - 如果内容中包含政治、金融、地缘政治等非科技信息，必须纳入相关板块，不要忽略

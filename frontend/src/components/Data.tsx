@@ -708,6 +708,96 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
                 </div>
               )}
 
+              {/* Sentiment Analysis */}
+              {summary.overall.sentiment && (summary.overall.sentiment.mood_summary || summary.overall.sentiment.controversies.length > 0 || summary.overall.sentiment.opinion_shifts.length > 0 || summary.overall.sentiment.risk_flags.length > 0) && (() => {
+                const s = summary.overall.sentiment
+                const moodConfig: Record<string, { dot: string; label: string }> = {
+                  bullish: { dot: '#22c55e', label: '偏多' },
+                  bearish: { dot: '#ef4444', label: '偏空' },
+                  mixed:   { dot: '#eab308', label: '多空分歧' },
+                  neutral: { dot: '#9ca3af', label: '中性' },
+                }
+                const mood = moodConfig[s.overall_mood] ?? moodConfig.neutral
+
+                const renderSentimentRefs = (refs: { title: string; url: string }[]) =>
+                  refs.map((ref, ri) => (
+                    <a key={ri} href={ref.url} target="_blank" rel="noopener noreferrer"
+                      title={ref.title}
+                      style={{
+                        fontSize: '0.5625rem', fontWeight: 600, color: 'var(--accent)',
+                        textDecoration: 'none', verticalAlign: 'super',
+                        marginLeft: '0.125rem', lineHeight: 1,
+                      }}
+                    >[{ri + 1}]</a>
+                  ))
+
+                const renderSubSection = (icon: string, title: string, entries: typeof s.controversies) => {
+                  if (entries.length === 0) return null
+                  return (
+                    <div style={{ marginTop: '0.75rem' }}>
+                      <div style={{
+                        fontSize: '0.75rem', fontWeight: 600, color: 'var(--ink-muted)',
+                        marginBottom: '0.375rem',
+                      }}>
+                        {icon} {title}
+                      </div>
+                      {entries.map((entry, j) => (
+                        <div key={j} style={{
+                          fontSize: '0.8125rem', color: 'var(--ink)', lineHeight: 1.7,
+                          marginBottom: '0.375rem', paddingLeft: '0.25rem',
+                        }}>
+                          <span style={{ fontWeight: 600 }}>{entry.topic}</span>
+                          {' — '}{entry.analysis}
+                          {renderSentimentRefs(entry.refs)}
+                        </div>
+                      ))}
+                    </div>
+                  )
+                }
+
+                return (
+                  <div style={{
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 8,
+                    padding: '1rem 1.25rem',
+                  }}>
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '0.5rem',
+                      marginBottom: s.mood_summary ? '0.5rem' : 0,
+                    }}>
+                      <div style={{
+                        fontSize: '0.6875rem', fontWeight: 600, color: 'var(--ink-muted)',
+                        textTransform: 'uppercase', letterSpacing: '0.06em',
+                      }}>
+                        舆情风向
+                      </div>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+                        fontSize: '0.75rem', fontWeight: 600,
+                        color: mood.dot,
+                      }}>
+                        <span style={{
+                          width: 8, height: 8, borderRadius: '50%',
+                          background: mood.dot, display: 'inline-block',
+                        }} />
+                        {mood.label}
+                      </span>
+                    </div>
+                    {s.mood_summary && (
+                      <div style={{
+                        fontSize: '0.8125rem', color: 'var(--ink)', lineHeight: 1.7,
+                      }}>
+                        {s.mood_summary}
+                      </div>
+                    )}
+                    {renderSubSection('⚡', '争议焦点', s.controversies)}
+                    {renderSubSection('📐', '舆论转向', s.opinion_shifts)}
+                    {renderSubSection('🚩', '风险信号', s.risk_flags)}
+                  </div>
+                )
+              })()}
+
               {/* Themed sections */}
               {summary.overall.sections.length > 0 && (
                 <div style={{

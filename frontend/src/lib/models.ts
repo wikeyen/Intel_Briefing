@@ -170,10 +170,33 @@ export const SOURCE_URLS: Record<string, string> = {
   xiaohongshu:      'https://www.xiaohongshu.com',
 }
 
+export interface SentimentEntry {
+  topic: string
+  analysis: string
+  refs: BriefingRef[]
+}
+
+export interface SentimentAnalysis {
+  overall_mood: 'bullish' | 'bearish' | 'mixed' | 'neutral'
+  mood_summary: string
+  controversies: SentimentEntry[]
+  opinion_shifts: SentimentEntry[]
+  risk_flags: SentimentEntry[]
+}
+
+export const EMPTY_SENTIMENT: SentimentAnalysis = {
+  overall_mood: 'neutral',
+  mood_summary: '',
+  controversies: [],
+  opinion_shifts: [],
+  risk_flags: [],
+}
+
 export interface OverallBriefing {
   quick_scan: BriefingEntry[]
   executive_summary: string
   sections: BriefingSection[]
+  sentiment: SentimentAnalysis
 }
 
 export interface BriefingSummary {

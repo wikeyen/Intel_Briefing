@@ -53,12 +53,34 @@ describe('chatCompletion', () => {
     expect((opts!.headers as Record<string, string>)['Authorization']).toBeUndefined()
   })
 
-  it('throws on HTTP error', async () => {
+  it('throws on HTTP error with raw text', async () => {
     fetchSpy.mockResolvedValueOnce(new Response('Unauthorized', { status: 401 }))
 
     await expect(
       chatCompletion([{ role: 'user', content: 'Hi' }], CONFIG),
-    ).rejects.toThrow('LLM request failed: 401')
+    ).rejects.toThrow('LLM request failed (401): Unauthorized')
+  })
+
+  it('extracts error message from JSON error body', async () => {
+    fetchSpy.mockResolvedValueOnce(new Response(
+      JSON.stringify({ error: { message: 'Invalid API key', code: 401 } }),
+      { status: 401 },
+    ))
+
+    await expect(
+      chatCompletion([{ role: 'user', content: 'Hi' }], CONFIG),
+    ).rejects.toThrow('LLM request failed (401): Invalid API key')
+  })
+
+  it('extracts string error from JSON error body', async () => {
+    fetchSpy.mockResolvedValueOnce(new Response(
+      JSON.stringify({ error: 'Rate limit exceeded' }),
+      { status: 429 },
+    ))
+
+    await expect(
+      chatCompletion([{ role: 'user', content: 'Hi' }], CONFIG),
+    ).rejects.toThrow('LLM request failed (429): Rate limit exceeded')
   })
 
   it('throws on malformed response', async () => {

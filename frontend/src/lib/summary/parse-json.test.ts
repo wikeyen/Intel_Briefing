@@ -169,4 +169,66 @@ describe('parseOverallJson', () => {
     expect(result.quick_scan).toHaveLength(1)
     expect(result.sections).toHaveLength(1)
   })
+
+  it('parses sentiment analysis block', () => {
+    const input = JSON.stringify({
+      quick_scan: [],
+      executive_summary: '',
+      sections: [],
+      sentiment: {
+        overall_mood: 'bearish',
+        mood_summary: 'Market uncertainty rising',
+        controversies: [
+          { topic: 'AI Regulation', analysis: 'Tech vs regulators', refs: [{ title: 'Article', url: 'https://example.com/1' }] },
+        ],
+        opinion_shifts: [
+          { topic: 'Crypto sentiment', analysis: 'Turning cautious' },
+        ],
+        risk_flags: [],
+      },
+    })
+    const result = parseOverallJson(input)
+    expect(result.sentiment.overall_mood).toBe('bearish')
+    expect(result.sentiment.mood_summary).toBe('Market uncertainty rising')
+    expect(result.sentiment.controversies).toHaveLength(1)
+    expect(result.sentiment.controversies[0].topic).toBe('AI Regulation')
+    expect(result.sentiment.controversies[0].refs).toHaveLength(1)
+    expect(result.sentiment.opinion_shifts).toHaveLength(1)
+    expect(result.sentiment.opinion_shifts[0].refs).toEqual([])
+    expect(result.sentiment.risk_flags).toEqual([])
+  })
+
+  it('defaults sentiment when missing or invalid', () => {
+    const noSentiment = JSON.stringify({ quick_scan: [], sections: [] })
+    const result1 = parseOverallJson(noSentiment)
+    expect(result1.sentiment.overall_mood).toBe('neutral')
+    expect(result1.sentiment.mood_summary).toBe('')
+    expect(result1.sentiment.controversies).toEqual([])
+
+    const badMood = JSON.stringify({ quick_scan: [], sections: [], sentiment: { overall_mood: 'invalid' } })
+    const result2 = parseOverallJson(badMood)
+    expect(result2.sentiment.overall_mood).toBe('neutral')
+  })
+
+  it('filters malformed sentiment entries', () => {
+    const input = JSON.stringify({
+      quick_scan: [],
+      sections: [],
+      sentiment: {
+        overall_mood: 'mixed',
+        mood_summary: 'Test',
+        controversies: [
+          { topic: 'Valid', analysis: 'Analysis' },
+          'not-an-object',
+          null,
+          { no_topic: true },
+        ],
+        opinion_shifts: 'not-array',
+        risk_flags: [],
+      },
+    })
+    const result = parseOverallJson(input)
+    expect(result.sentiment.controversies).toHaveLength(1)
+    expect(result.sentiment.opinion_shifts).toEqual([])
+  })
 })

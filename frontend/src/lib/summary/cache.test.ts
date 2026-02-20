@@ -33,6 +33,7 @@ const SAMPLE: BriefingSummary = {
         ],
       },
     ],
+    sentiment: { overall_mood: 'neutral', mood_summary: '', controversies: [], opinion_shifts: [], risk_flags: [] },
   },
 }
 
@@ -56,6 +57,7 @@ describe('summary cache', () => {
       quick_scan: [{ text: 'Updated scan.', source: 'arxiv', refs: [] }],
       executive_summary: '',
       sections: [{ title: 'Updated', entries: [{ text: 'Updated briefing.', source: 'arxiv', refs: [] }] }],
+      sentiment: { overall_mood: 'neutral' as const, mood_summary: '', controversies: [], opinion_shifts: [], risk_flags: [] },
     }
     const updated = { ...SAMPLE, overall: updatedOverall }
     await writeSummary(updated)

@@ -94,6 +94,7 @@ describe('Briefing tab in Data', () => {
           ],
           executive_summary: '',
           sections: [],
+          sentiment: { overall_mood: 'neutral', mood_summary: '', controversies: [], opinion_shifts: [], risk_flags: [] },
         },
         sections: [],
       },

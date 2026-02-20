@@ -308,13 +308,12 @@ export function Sensors() {
       display: 'grid',
       gridTemplateColumns: '240px 1fr',
       gap: '4.5rem',
-      padding: '4.5rem 0',
-      borderBottom: '1px solid var(--border-soft)',
+      padding: '4.5rem 0 6rem',
     }}>
       <style dangerouslySetInnerHTML={{ __html: HIDE_SPINNERS_CSS }} />
 
       <SectionHeader
-        num="02"
+        num="01"
         title="Sources"
         description="Active data sources for your pipeline, grouped by language and provider."
       />

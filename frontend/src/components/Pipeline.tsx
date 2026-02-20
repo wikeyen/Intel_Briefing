@@ -1,5 +1,5 @@
-// ABOUTME: Pipeline section — schedule, filters, and output settings in one place.
-// ABOUTME: Single save covers fetch timing, boost/suppress keywords, and item count limits.
+// ABOUTME: Pipeline page — schedule, cache, expiry, filters, and output limits.
+// ABOUTME: Single save covers fetch timing, retention, boost/suppress keywords, and item count limits.
 'use client'
 import { useState, useEffect } from 'react'
 import { api } from '@/api/client'
@@ -74,6 +74,7 @@ export function Pipeline() {
   const [fetchTime, setFetchTime] = useState('07:00')
   const [timezone, setTimezone] = useState('UTC')
   const [cacheTtl, setCacheTtl] = useState(25)
+  const [postExpiryDays, setPostExpiryDays] = useState(30)
   const [boost, setBoost] = useState<string[]>([])
   const [suppress, setSuppress] = useState<string[]>([])
   const [defaultLimit, setDefaultLimit] = useState(10)
@@ -85,6 +86,7 @@ export function Pipeline() {
       setFetchTime(cfg.fetch_time)
       setTimezone(cfg.fetch_timezone)
       setCacheTtl(cfg.cache_ttl_hours)
+      setPostExpiryDays(cfg.post_expiry_days ?? 30)
       setBoost(cfg.boost_keywords)
       setSuppress(cfg.suppress_keywords)
       setDefaultLimit(cfg.default_limit)
@@ -102,6 +104,7 @@ export function Pipeline() {
         fetch_time: fetchTime,
         fetch_timezone: timezone,
         cache_ttl_hours: cacheTtl,
+        post_expiry_days: postExpiryDays,
         boost_keywords: boost,
         suppress_keywords: suppress,
         default_limit: defaultLimit,
@@ -123,7 +126,7 @@ export function Pipeline() {
       padding: '4.5rem 0 6rem',
     }}>
       <SectionHeader
-        num="03"
+        num="02"
         title="Pipeline"
         description="Scheduling, ranking filters, and output limits for the generated briefing."
       />
@@ -205,6 +208,27 @@ export function Pipeline() {
               />
               <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.5rem', lineHeight: 1.5 }}>
                 Data older than this threshold is flagged as stale.
+              </p>
+            </div>
+
+            <div>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
+                <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
+                  Post Expiry
+                </label>
+                <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--ink)', fontFamily: 'ui-monospace, monospace' }}>
+                  {postExpiryDays}d
+                </span>
+              </div>
+              <input
+                type="range"
+                min={1}
+                max={90}
+                value={postExpiryDays}
+                onChange={(e) => setPostExpiryDays(Number(e.target.value))}
+              />
+              <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.5rem', lineHeight: 1.5 }}>
+                Posts older than this are automatically deleted by the cleanup cron job.
               </p>
             </div>
           </div>

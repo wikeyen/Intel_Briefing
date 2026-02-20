@@ -8,8 +8,10 @@ import { api } from '@/api/client'
 import type { HealthResponse, PipelineStatus } from '@/api/client'
 
 const CONFIG_NAV = [
-  { href: '/api-keys',  label: 'Connections' },
-  { href: '/settings',  label: 'Settings' },
+  { href: '/sources',     label: 'Sources' },
+  { href: '/pipeline',    label: 'Pipeline' },
+  { href: '/ai',          label: 'AI Summary' },
+  { href: '/connections', label: 'Connections' },
 ]
 
 function NavLink({ href, active, onClick, children }: { href: string; active: boolean; onClick?: () => void; children: ReactNode }) {
@@ -192,6 +194,9 @@ export function Sidebar({ showToast, onNavigate }: Props) {
             </span>
           )}
         </NavLink>
+        <NavLink href="/data" active={pathname === '/data'} onClick={onNavigate}>
+          Raw Feed
+        </NavLink>
 
         <SideDivider />
 
@@ -202,12 +207,6 @@ export function Sidebar({ showToast, onNavigate }: Props) {
           </NavLink>
         ))}
 
-        <SideDivider />
-
-        <SideLabel>Data</SideLabel>
-        <NavLink href="/data" active={pathname === '/data'} onClick={onNavigate}>
-          Raw Feed
-        </NavLink>
       </div>
 
       <div style={{ height: 1, background: 'var(--sb-border)', margin: '0 1.75rem' }} />

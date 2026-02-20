@@ -1,9 +1,7 @@
-// ABOUTME: Sensors / Sources configuration page.
-// ABOUTME: Wraps the Sensors component in the standard config padding layout.
-import { Sensors } from '@/components/Sensors'
+// ABOUTME: Redirect from old /sensors route to /sources.
+// ABOUTME: Kept for backwards compatibility with bookmarks.
+import { redirect } from 'next/navigation'
 
-const CONFIG_PADDING = { maxWidth: 1024, margin: '0 auto', padding: '0 3rem' }
-
-export default function SensorsPage() {
-  return <div className="page-padding" style={CONFIG_PADDING}><Sensors /></div>
+export default function SensorsRedirect() {
+  redirect('/sources')
 }

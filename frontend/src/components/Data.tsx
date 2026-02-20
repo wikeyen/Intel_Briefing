@@ -547,15 +547,16 @@ function isStructuredOverall(overall: OverallBriefing | string): overall is Over
   return typeof overall === 'object' && overall !== null && 'quick_scan' in overall
 }
 
-function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, hasContent, onTrigger }: {
+function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, hasContent, onTrigger, triggered }: {
   summary: BriefingSummary | null
   summaryProgress: SummaryProgress | null
   pipelineStatus: PipelineStatus | null
   config: ConfigSettings | null
   hasContent: boolean
   onTrigger: () => void
+  triggered: boolean
 }) {
-  const isSummarizing = !!(summaryProgress?.running && summaryProgress.started_at
+  const isSummarizing = triggered || !!(summaryProgress?.running && summaryProgress.started_at
     // eslint-disable-next-line react-hooks/purity
     && (Date.now() - new Date(summaryProgress.started_at).getTime()) < 5 * 60 * 1000)
 
@@ -605,7 +606,34 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
         </div>
       )}
 
-      {isSummarizing && summaryProgress && (
+      {isSummarizing && !summaryProgress?.running && triggered && (
+        <div style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 8,
+          padding: '1rem 1.25rem',
+          marginBottom: '1.25rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.625rem',
+        }}>
+          <span style={{
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            background: 'var(--accent)',
+            animation: 'pulseDot 1.6s ease-in-out infinite',
+            flexShrink: 0,
+          }} />
+          <span style={{
+            fontSize: '0.8125rem',
+            color: 'var(--ink-muted)',
+          }}>
+            Preparing summarization&hellip;
+          </span>
+        </div>
+      )}
+      {isSummarizing && summaryProgress?.running && (
         <SummaryProgressBanner progress={summaryProgress} pipelineStatus={pipelineStatus} />
       )}
 
@@ -858,6 +886,19 @@ function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, 
             <p style={{ color: 'var(--ink-faint)', fontSize: '0.8125rem', margin: 0 }}>
               Run the pipeline first to fetch content for summarization.
             </p>
+          ) : isSummarizing ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.625rem' }}>
+              <span style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: 'var(--accent)',
+                animation: 'pulseDot 1.6s ease-in-out infinite',
+              }} />
+              <span style={{ color: 'var(--ink-muted)', fontSize: '0.8125rem' }}>
+                Generating summary&hellip;
+              </span>
+            </div>
           ) : (
             <div>
               <p style={{ color: 'var(--ink-muted)', fontSize: '0.8125rem', margin: 0, marginBottom: '0.75rem' }}>
@@ -941,14 +982,25 @@ export function Data() {
     return () => clearInterval(iv)
   }, [])
 
+  const [summaryTriggered, setSummaryTriggered] = useState(false)
+
   const handleTriggerSummary = async () => {
+    setSummaryTriggered(true)
     try {
       await api.triggerSummary()
-      showToast('Summarization started')
     } catch (e) {
       showToast('Failed: ' + (e as Error).message)
+      setSummaryTriggered(false)
     }
   }
+
+  // Clear the triggered flag once the real progress polling takes over
+  useEffect(() => {
+    if (summaryProgress?.running) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSummaryTriggered(false)
+    }
+  }, [summaryProgress?.running])
 
   const hasContent = Object.values(report?.items ?? {}).some(arr => arr.length > 0)
 
@@ -1133,6 +1185,7 @@ export function Data() {
               config={config}
               hasContent={hasContent}
               onTrigger={handleTriggerSummary}
+              triggered={summaryTriggered}
             />
           ) : !loading && !report ? (
             <div style={{

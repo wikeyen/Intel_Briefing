@@ -122,17 +122,18 @@ export function Status() {
     return 'fetching'
   })()
 
-  // Progress counters — done/total for the current phase
+  // Progress counters — done/total for the current phase.
+  // Skipped sensors are excluded so the bar starts at 0 (e.g. fetch-failed sensors
+  // have summary='skipped' and shouldn't inflate the done count).
   const progress = (() => {
     if (!pipelineStatus) return { done: 0, total: 0 }
-    const total = pipelineStatus.sensors.length
-    const terminal = ['ok', 'failed', 'skipped', 'cancelled']
+    const terminal = ['ok', 'failed', 'cancelled']
     if (phase === 'summarizing' || phase === 'briefing') {
-      const done = pipelineStatus.sensors.filter(s => terminal.includes(s.summary)).length
-      return { done, total }
+      const active = pipelineStatus.sensors.filter(s => s.summary !== 'skipped')
+      return { done: active.filter(s => terminal.includes(s.summary)).length, total: active.length }
     }
-    const done = pipelineStatus.sensors.filter(s => terminal.includes(s.fetch)).length
-    return { done, total }
+    const active = pipelineStatus.sensors.filter(s => s.fetch !== 'skipped')
+    return { done: active.filter(s => terminal.includes(s.fetch)).length, total: active.length }
   })()
 
   return (

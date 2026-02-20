@@ -1,0 +1,414 @@
+// ABOUTME: Pipeline orchestrator — coordinates sensor fetch+summarize jobs through a semaphore.
+// ABOUTME: Supports three run modes via strategy pattern; emits progress via PipelineProgressTracker.
+import type {
+  ConfigSettings,
+  IntelItem,
+  IntelReport,
+  SensorResult,
+  SectionKey,
+  RunMode,
+  BriefingSummary,
+  SensorSummary,
+} from '../models'
+import { createReport, sensorResultSucceeded, emptyItemsMap, sensorLimit } from '../models'
+import { Semaphore } from './semaphore'
+import { PipelineProgressTracker } from './progress'
+import { writeReport, readReport, writePipelineStatus } from './cache'
+import { writeSummary } from '../summary/cache'
+import { chatCompletion, type LlmConfig, type ChatMessage } from '../summary/llm'
+import { SENSOR_REGISTRY } from '../sensors'
+import { SensorConfigError } from '../sensors/errors'
+import { dedupItems, dedupAcrossSections } from './dedup'
+import { verifyLink } from '../utils/verifier'
+import { fetchContent } from '../utils/jina-reader'
+import { decodeItemEntities } from '../utils/decode-entities'
+import { suppressItems, boostItems } from './keyword-filter'
+
+// Section routing: maps sensor_name to report section key
+const SENSOR_SECTION_MAP: Record<string, SectionKey> = {
+  hacker_news: 'tech_trends',
+  github: 'tech_trends',
+  arxiv: 'research',
+  hn_blogs: 'insights',
+  product_hunt: 'products',
+  v2ex: 'community',
+  sources_36kr: 'capital_flow',
+  wallstreetcn: 'capital_flow',
+  social_accounts: 'social',
+  social_topics: 'social',
+  social_trends: 'social',
+  chrome_radar: 'products',
+  rss_feeds: 'feeds',
+}
+
+/** Human-readable sensor labels for prompts and output. */
+const SENSOR_LABELS: Record<string, string> = {
+  hacker_news: 'Hacker News',
+  arxiv: 'ArXiv AI',
+  github: 'GitHub Trending',
+  product_hunt: 'Product Hunt',
+  v2ex: 'V2EX',
+  hn_blogs: 'HN Blogs',
+  sources_36kr: '36Kr',
+  wallstreetcn: 'WallStreetCN',
+  social_accounts: 'Social Accounts',
+  social_topics: 'Social Topics',
+  social_trends: 'Social Trends',
+  chrome_radar: 'Chrome Radar',
+  rss_feeds: 'RSS Feeds',
+}
+
+// Hardcoded prompts (will be replaced by configurable prompts in a future task)
+const SUMMARY_SYSTEM = 'You are an intel analyst writing concise briefings. Summarize the key themes, notable items, and emerging trends. Be specific — cite names, numbers, and links where relevant. Keep each summary to 2-4 sentences.'
+const OVERALL_SYSTEM = 'You are an intel analyst writing an executive briefing. Synthesize the per-source summaries into a coherent overview of the most important developments. Highlight cross-cutting themes. Keep it to 3-6 sentences.'
+
+export interface PipelineResult {
+  report: IntelReport | null
+  summary: BriefingSummary | null
+}
+
+/** Format an IntelItem into a text block for the LLM prompt. */
+function formatItem(item: IntelItem): string {
+  const parts = [`- ${item.title}`]
+  if (item.url) parts.push(`  URL: ${item.url}`)
+  if (item.abstract) parts.push(`  Abstract: ${item.abstract.slice(0, 400)}`)
+  if (item.content) parts.push(`  Content: ${item.content.slice(0, 500)}`)
+  if (item.heat) parts.push(`  Heat: ${item.heat}`)
+  if (item.account) parts.push(`  Account: ${item.account}`)
+  return parts.join('\n')
+}
+
+/**
+ * Run a single sensor's fetch function and return a SensorResult.
+ * Catches all errors so one failing sensor never blocks the pipeline.
+ */
+async function fetchSensor(
+  name: string,
+  config: ConfigSettings,
+): Promise<SensorResult> {
+  const fetchFn = SENSOR_REGISTRY[name]
+  if (!fetchFn) {
+    return { sensor_name: name, items: [], error: `Unknown sensor: ${name}`, error_kind: 'config' }
+  }
+  const limit = sensorLimit(config, name)
+  try {
+    const items = await fetchFn(config, limit)
+    return { sensor_name: name, items, error: null, error_kind: null }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    const isConfig = err instanceof SensorConfigError
+    return { sensor_name: name, items: [], error: message, error_kind: isConfig ? 'config' : 'api' }
+  }
+}
+
+/** Group report items by their source sensor name. */
+function groupBySensor(report: IntelReport): Map<string, IntelItem[]> {
+  const groups = new Map<string, IntelItem[]>()
+  for (const section of Object.values(report.items)) {
+    for (const item of section) {
+      const existing = groups.get(item.source) ?? []
+      existing.push(item)
+      groups.set(item.source, existing)
+    }
+  }
+  return groups
+}
+
+/**
+ * Summarize items from a single sensor via LLM.
+ * Returns null if there are no items or the LLM call fails.
+ */
+async function summarizeSensor(
+  sensorName: string,
+  items: IntelItem[],
+  llmConfig: LlmConfig,
+): Promise<SensorSummary | null> {
+  if (items.length === 0) return null
+
+  const label = SENSOR_LABELS[sensorName] ?? sensorName
+  const itemsText = items.map(formatItem).join('\n\n')
+
+  const messages: ChatMessage[] = [
+    { role: 'system', content: SUMMARY_SYSTEM },
+    { role: 'user', content: `Summarize these ${items.length} items from ${label}:\n\n${itemsText}` },
+  ]
+
+  const summary = await chatCompletion(messages, llmConfig)
+  return { sensor_name: sensorName, label, summary, item_count: items.length }
+}
+
+/**
+ * Build an LlmConfig from ConfigSettings, or return null if summary provider is not configured.
+ */
+function buildLlmConfig(config: ConfigSettings): LlmConfig | null {
+  if (!config.summary_provider) return null
+  return {
+    base_url: config.summary_base_url,
+    api_key: config.summary_api_key,
+    model: config.summary_model,
+  }
+}
+
+/**
+ * Assemble a report from sensor results: dedup, filter, post-process, then write to cache.
+ * Mirrors the assembly logic from collector.ts.
+ */
+async function assembleReport(
+  results: SensorResult[],
+  config: ConfigSettings,
+): Promise<IntelReport> {
+  // Apply per-sensor lookback time filtering
+  for (const result of results) {
+    if (!sensorResultSucceeded(result)) continue
+    const lookbackHours = config.sensor_lookback_hours?.[result.sensor_name]
+    if (!lookbackHours) continue
+    const cutoffMs = Date.now() - lookbackHours * 60 * 60 * 1000
+    const cutoffDayStr = new Date(cutoffMs).toISOString().slice(0, 10)
+    result.items = result.items.filter((item) => {
+      if (!item.published_at) return true
+      // Date-only timestamps (YYYY-MM-DD): compare at day granularity
+      if (item.published_at.length <= 10) return item.published_at >= cutoffDayStr
+      // Full timestamps: compare at ms precision
+      const pubMs = new Date(item.published_at).getTime()
+      return !isNaN(pubMs) && pubMs >= cutoffMs
+    })
+  }
+
+  // Assemble sections
+  const sections = emptyItemsMap()
+  const sourcesOk: string[] = []
+  const sourcesFailed: string[] = []
+
+  for (const result of results) {
+    if (sensorResultSucceeded(result)) {
+      sourcesOk.push(result.sensor_name)
+      const section = SENSOR_SECTION_MAP[result.sensor_name] ?? 'tech_trends'
+      sections[section].push(...result.items)
+    } else {
+      sourcesFailed.push(result.sensor_name)
+    }
+  }
+
+  // Deduplicate within each section
+  for (const key of Object.keys(sections) as SectionKey[]) {
+    sections[key] = dedupItems(sections[key])
+  }
+
+  // Deduplicate within the social section (accounts take priority over topics/trends)
+  const dedupedSections = dedupAcrossSections(sections)
+
+  // Decode HTML entities in all text fields
+  for (const key of Object.keys(dedupedSections) as SectionKey[]) {
+    for (const item of dedupedSections[key]) {
+      decodeItemEntities(item as Record<string, unknown>)
+    }
+  }
+
+  // Keyword filtering: suppress matching items, boost matching items to the top
+  for (const key of Object.keys(dedupedSections) as SectionKey[]) {
+    dedupedSections[key] = suppressItems(dedupedSections[key], config.suppress_keywords ?? [])
+    dedupedSections[key] = boostItems(dedupedSections[key], config.boost_keywords ?? [])
+  }
+
+  // Post-processing: verify links (Grok items) + enrich content (hn_blogs) — concurrent
+  const postProcessTasks: Promise<void>[] = []
+  for (const key of Object.keys(dedupedSections) as SectionKey[]) {
+    for (const item of dedupedSections[key]) {
+      if (item.source === 'x' && item.url) {
+        postProcessTasks.push(
+          verifyLink(item.url).then(ok => { item.verified = ok }),
+        )
+      }
+      if (item.source === 'hn_blogs' && item.url) {
+        postProcessTasks.push(
+          fetchContent(item.url).then(text => {
+            if (text) item.content = text
+          }),
+        )
+      }
+    }
+  }
+  await Promise.allSettled(postProcessTasks)
+
+  const now = new Date()
+  const report = createReport({
+    date: now.toISOString().slice(0, 10),
+    fetched_at: now.toISOString().replace(/\.\d+Z$/, 'Z'),
+    stale: false,
+    sources_ok: sourcesOk.sort(),
+    sources_failed: sourcesFailed.sort(),
+    items: dedupedSections as Record<SectionKey, IntelItem[]>,
+  })
+
+  // Write to cache
+  try {
+    await writeReport(report)
+  } catch (err) {
+    console.error('Failed to write report cache:', err)
+  }
+
+  return report
+}
+
+/**
+ * Run the full pipeline: fetch sensors, optionally summarize, and persist results.
+ *
+ * Supports three run modes:
+ *   - `fetch`: Fetch from all enabled sensors, build report, skip summaries.
+ *   - `summarize`: Skip fetching, load cached report, generate summaries only.
+ *   - `fetch_summarize`: Fetch first, then summarize the fresh report.
+ *
+ * All sensor fetches and per-sensor summaries are concurrency-limited via a Semaphore.
+ * Progress is tracked via PipelineProgressTracker and persisted to the database.
+ */
+export async function runPipeline(
+  config: ConfigSettings,
+  mode: RunMode,
+): Promise<PipelineResult> {
+  const concurrency = config.pipeline_concurrency ?? 4
+  const semaphore = new Semaphore(concurrency)
+
+  // Identify enabled sensors from the registry
+  const registrySensorNames = Object.keys(SENSOR_REGISTRY).filter(
+    name => config.sensors_enabled[name] !== false,
+  )
+
+  const llmConfig = buildLlmConfig(config)
+  const shouldFetch = mode === 'fetch' || mode === 'fetch_summarize'
+  const shouldSummarize = mode === 'summarize' || mode === 'fetch_summarize'
+
+  // For summarize-only mode, load the cached report up front so we can derive
+  // sensor names for the tracker from the report's actual contents.
+  let cachedReport: IntelReport | null = null
+  if (mode === 'summarize') {
+    cachedReport = await readReport()
+    if (!cachedReport) {
+      // No cached report — create a minimal tracker, mark complete, return empty
+      const tracker = new PipelineProgressTracker([], mode, concurrency, (status) => {
+        writePipelineStatus(status).catch(() => {})
+      })
+      writePipelineStatus(tracker.snapshot()).catch(() => {})
+      tracker.complete()
+      return { report: null, summary: null }
+    }
+  }
+
+  // Determine sensor names for the tracker: use registry names for fetch modes,
+  // and derive from the cached report for summarize-only mode.
+  const trackerSensorNames = mode === 'summarize'
+    ? extractSensorNames(cachedReport!)
+    : registrySensorNames
+
+  // Create progress tracker with persistence callback
+  const tracker = new PipelineProgressTracker(trackerSensorNames, mode, concurrency, (status) => {
+    writePipelineStatus(status).catch(() => {})
+  })
+
+  // Write initial status
+  writePipelineStatus(tracker.snapshot()).catch(() => {})
+
+  let report: IntelReport | null = null
+  let summary: BriefingSummary | null = null
+
+  if (shouldFetch) {
+    // Run all sensor fetches concurrently through the semaphore
+    const fetchPromises = registrySensorNames.map(name =>
+      semaphore.run(async () => {
+        tracker.setFetchState(name, 'running')
+        const result = await fetchSensor(name, config)
+        if (sensorResultSucceeded(result)) {
+          tracker.setFetchState(name, 'ok', result.items.length)
+        } else {
+          tracker.setFetchState(name, 'failed', 0, result.error, result.error_kind ?? 'api')
+        }
+        return result
+      }),
+    )
+
+    const results = await Promise.all(fetchPromises)
+    report = await assembleReport(results, config)
+  }
+
+  if (shouldSummarize) {
+    // Use the freshly-fetched report, or the pre-loaded cached report
+    const sourceReport = report ?? cachedReport
+    if (!sourceReport) {
+      tracker.complete()
+      return { report: null, summary: null }
+    }
+
+    if (llmConfig) {
+      const sensorGroups = groupBySensor(sourceReport)
+      const sensorSummaries: SensorSummary[] = []
+
+      // Per-sensor summaries — concurrent through the semaphore
+      const summaryPromises = Array.from(sensorGroups.entries()).map(([sensorName, items]) =>
+        semaphore.run(async () => {
+          if (items.length === 0) return null
+          tracker.setSummaryState(sensorName, 'running')
+          try {
+            const result = await summarizeSensor(sensorName, items, llmConfig)
+            tracker.setSummaryState(sensorName, 'ok')
+            return result
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err)
+            tracker.setSummaryState(sensorName, 'failed', message)
+            return null
+          }
+        }),
+      )
+
+      const summaryResults = await Promise.all(summaryPromises)
+      for (const result of summaryResults) {
+        if (result) sensorSummaries.push(result)
+      }
+
+      // Overall briefing summary
+      tracker.setOverallSummary('running')
+      const overallContext = sensorSummaries.length > 0
+        ? sensorSummaries.map(s => `**${s.label}** (${s.item_count} items): ${s.summary}`).join('\n\n')
+        : 'No data was collected in this run.'
+
+      const overallMessages: ChatMessage[] = [
+        { role: 'system', content: OVERALL_SYSTEM },
+        { role: 'user', content: `Write an executive briefing based on these source summaries:\n\n${overallContext}` },
+      ]
+
+      try {
+        const overall = await chatCompletion(overallMessages, llmConfig)
+        tracker.setOverallSummary('ok')
+
+        summary = {
+          generated_at: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
+          report_fetched_at: sourceReport.fetched_at,
+          sections: sensorSummaries,
+          overall,
+        }
+
+        // Persist summary to cache
+        try {
+          await writeSummary(summary)
+        } catch (err) {
+          console.error('Failed to write summary cache:', err)
+        }
+      } catch (err) {
+        tracker.setOverallSummary('failed')
+        console.error('Failed to generate overall summary:', err)
+      }
+    }
+  }
+
+  tracker.complete()
+  return { report, summary }
+}
+
+/** Extract unique sensor names from a report's items. */
+function extractSensorNames(report: IntelReport): string[] {
+  const names = new Set<string>()
+  for (const section of Object.values(report.items)) {
+    for (const item of section) {
+      names.add(item.source)
+    }
+  }
+  return Array.from(names)
+}

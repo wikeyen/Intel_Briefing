@@ -1,7 +1,7 @@
 // ABOUTME: Tests for the URL hallucination checker / ref verifier.
 // ABOUTME: Validates pool matching, HTTP fallback, concurrent verification, and result shape.
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { verifyRefs, buildUrlPool } from './ref-verifier'
+import { verifyRefs, buildUrlPool, buildSensorUrlPool } from './ref-verifier'
 import type { BriefingRef } from '../models'
 
 const originalFetch = globalThis.fetch
@@ -39,6 +39,72 @@ describe('buildUrlPool', () => {
     ]
     const pool = buildUrlPool(items)
     expect(pool.size).toBe(1)
+  })
+})
+
+describe('buildSensorUrlPool', () => {
+  it('creates a URL pool from sensor summaries', () => {
+    const sensorSummaries = [
+      {
+        items: [
+          { title: 'Article A', url: 'https://example.com/a', brief: 'Summary A', verified: true },
+          { title: 'Article B', url: 'https://example.com/b', brief: 'Summary B', verified: true },
+        ],
+      },
+      {
+        items: [
+          { title: 'Article C', url: 'https://example.com/c', brief: 'Summary C', verified: true },
+        ],
+      },
+    ]
+    const pool = buildSensorUrlPool(sensorSummaries)
+    expect(pool.has('https://example.com/a')).toBe(true)
+    expect(pool.has('https://example.com/b')).toBe(true)
+    expect(pool.has('https://example.com/c')).toBe(true)
+    expect(pool.size).toBe(3)
+  })
+
+  it('filters out items where verified is false', () => {
+    const sensorSummaries = [
+      {
+        items: [
+          { title: 'Good', url: 'https://example.com/good', brief: 'OK', verified: true },
+          { title: 'Bad', url: 'https://example.com/bad', brief: 'Nope', verified: false },
+          { title: 'Unset', url: 'https://example.com/unset', brief: 'No flag' },
+          { title: 'Null', url: 'https://example.com/null', brief: 'Null flag', verified: null },
+        ],
+      },
+    ]
+    const pool = buildSensorUrlPool(sensorSummaries)
+    expect(pool.has('https://example.com/good')).toBe(true)
+    expect(pool.has('https://example.com/bad')).toBe(false)
+    expect(pool.has('https://example.com/unset')).toBe(true)
+    expect(pool.has('https://example.com/null')).toBe(true)
+    expect(pool.size).toBe(3)
+  })
+
+  it('deduplicates across sensor sections', () => {
+    const sensorSummaries = [
+      {
+        items: [
+          { title: 'Shared', url: 'https://example.com/shared', brief: 'A', verified: true },
+        ],
+      },
+      {
+        items: [
+          { title: 'Also shared', url: 'https://example.com/shared', brief: 'B', verified: true },
+        ],
+      },
+    ]
+    const pool = buildSensorUrlPool(sensorSummaries)
+    expect(pool.size).toBe(1)
+    expect(pool.has('https://example.com/shared')).toBe(true)
+  })
+
+  it('handles empty arrays', () => {
+    expect(buildSensorUrlPool([]).size).toBe(0)
+    expect(buildSensorUrlPool([{ items: [] }]).size).toBe(0)
+    expect(buildSensorUrlPool([{ items: [] }, { items: [] }]).size).toBe(0)
   })
 })
 

@@ -19,7 +19,7 @@ import { SENSOR_REGISTRY } from '../sensors'
 import { SensorConfigError } from '../sensors/errors'
 import { SENSOR_LABELS } from './sensor-map'
 import { assembleReport } from './report-builder'
-import { getSensorPrompt, getOverallPrompt } from '../summary/prompts'
+import { getSensorPrompt, getOverallPrompt, SUMMARY_ITEM_CAP } from '../summary/prompts'
 
 export interface PipelineResult {
   report: IntelReport | null
@@ -86,11 +86,12 @@ async function summarizeSensor(
   if (items.length === 0) return null
 
   const label = SENSOR_LABELS[sensorName] ?? sensorName
-  const itemsText = items.map(formatItem).join('\n\n')
+  const capped = items.slice(0, SUMMARY_ITEM_CAP)
+  const itemsText = capped.map(formatItem).join('\n\n')
 
   const messages: ChatMessage[] = [
     { role: 'system', content: getSensorPrompt(sensorName, promptOverrides) },
-    { role: 'user', content: `Summarize these ${items.length} items from ${label}:\n\n${itemsText}` },
+    { role: 'user', content: `综合分析以下 ${label} 的 ${capped.length} 条内容：\n\n${itemsText}` },
   ]
 
   const summary = await chatCompletion(messages, llmConfig)

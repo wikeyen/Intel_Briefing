@@ -1,7 +1,7 @@
 // ABOUTME: Tests for configurable summary prompt resolution.
 // ABOUTME: Validates default prompts, user overrides, and fallback behavior.
 import { describe, it, expect } from 'vitest'
-import { getSensorPrompt, getOverallPrompt, DEFAULT_SENSOR_PROMPTS, DEFAULT_OVERALL_PROMPT } from './prompts'
+import { getSensorPrompt, getOverallPrompt, DEFAULT_SENSOR_PROMPTS, DEFAULT_OVERALL_PROMPT, SUMMARY_ITEM_CAP } from './prompts'
 
 describe('getSensorPrompt', () => {
   it('returns default prompt for known sensor', () => {
@@ -35,6 +35,20 @@ describe('getSensorPrompt', () => {
     for (const s of sensors) {
       expect(DEFAULT_SENSOR_PROMPTS[s]).toBeTruthy()
     }
+  })
+
+  it('all prompts contain anti-listing instruction', () => {
+    for (const prompt of Object.values(DEFAULT_SENSOR_PROMPTS)) {
+      expect(prompt).toContain('严禁逐条列举')
+      expect(prompt).toContain('2-4句')
+    }
+  })
+})
+
+describe('SUMMARY_ITEM_CAP', () => {
+  it('is a positive number', () => {
+    expect(SUMMARY_ITEM_CAP).toBeGreaterThan(0)
+    expect(SUMMARY_ITEM_CAP).toBe(15)
   })
 })
 

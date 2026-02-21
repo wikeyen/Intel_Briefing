@@ -406,11 +406,6 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
-@media (max-width: 768px) {
-  .page-padding > *:first-child {
-    animation: fadeInUp 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-}
 
 /* ─── Markdown Summary Rendering ─────────────────────────────────────── */
 .markdown-summary p {

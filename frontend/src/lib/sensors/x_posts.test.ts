@@ -94,6 +94,28 @@ const mockTweets = [
     urls: [],
     thread: [],
   },
+  {
+    id: '444',
+    text: 'Exactly',
+    timeParsed: new Date('2026-02-20T12:00:00Z'),
+    timestamp: Math.floor(new Date('2026-02-20T12:00:00Z').getTime() / 1000),
+    name: 'Test User',
+    username: 'testuser',
+    permanentUrl: 'https://x.com/testuser/status/444',
+    likes: 50000,
+    retweets: 3000,
+    views: 5000000,
+    isRetweet: false,
+    isReply: false,
+    isQuoted: true,
+    quotedStatusId: '999',
+    hashtags: [],
+    mentions: [],
+    photos: [],
+    videos: [],
+    urls: [],
+    thread: [],
+  },
 ]
 
 function makeMockScraper(tweets = mockTweets) {
@@ -141,18 +163,19 @@ describe('fetchXPosts (twitter-scraper)', () => {
     const items = await fetchXPosts(authConfig(), 10)
     expect(mockScraper.setCookies).toHaveBeenCalled()
     expect(mockScraper.getTweets).toHaveBeenCalledWith('testuser', expect.any(Number))
-    expect(items).toHaveLength(1) // retweet and reply excluded
+    expect(items).toHaveLength(1) // retweet, reply, and quote tweet excluded
     expect(items[0].id).toBe('x-111')
     expect(items[0].title).toBe('Latest tweet from test user')
     expect(items[0].heat).toContain('5.0K likes')
     expect(items[0].heat).toContain('100.0K views')
   })
 
-  it('skips retweets and replies, keeps only original posts', async () => {
+  it('skips retweets, replies, and quote tweets — keeps only original posts', async () => {
     const items = await fetchXPosts(authConfig(), 10)
     const ids = items.map(i => i.id)
     expect(ids).not.toContain('x-222') // retweet
     expect(ids).not.toContain('x-333') // reply
+    expect(ids).not.toContain('x-444') // quote tweet
     expect(ids).toEqual(['x-111'])     // only original
   })
 

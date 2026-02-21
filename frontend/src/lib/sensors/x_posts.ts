@@ -95,6 +95,7 @@ async function fetchViaScraper(
     if (items.length >= perAccountLimit) break
     if (tweet.isRetweet) continue
     if (tweet.isReply) continue
+    if (tweet.isQuoted) continue
 
     const pubDate = tweet.timeParsed ?? (tweet.timestamp ? new Date(tweet.timestamp * 1000) : null)
     if (pubDate && pubDate.getTime() < cutoff) break // tweets are chronological, stop early

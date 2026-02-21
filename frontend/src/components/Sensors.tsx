@@ -39,9 +39,9 @@ const LANGUAGE_TABS: { key: Language; label: string; desc: string }[] = [
 const SENSOR_LOOKBACK_SUPPORT: Record<string, number> = {
   hacker_news: 24,
   github: 168,
-  social_accounts: 48,
-  social_topics: 48,
-  social_trends: 24,
+  x: 48,
+  bluesky: 48,
+  mastodon: 48,
   hn_blogs: 72,
   arxiv: 72,
   wallstreetcn: 24,

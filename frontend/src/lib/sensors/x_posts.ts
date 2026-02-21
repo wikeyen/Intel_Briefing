@@ -1,7 +1,6 @@
 // ABOUTME: X posts sensor — fetches recent tweets via @the-convocation/twitter-scraper.
-// ABOUTME: Auth priority: config cookies > OpenClaw browser cookies > xcancel.com fallback.
+// ABOUTME: Auth priority: config cookies > OpenClaw browser cookies. No auth = no results.
 import { Scraper, type Tweet } from '@the-convocation/twitter-scraper'
-import { parse as parseHTML } from 'node-html-parser'
 import type { ConfigSettings, IntelItem } from '../models'
 import { delay } from './utils'
 
@@ -148,143 +147,6 @@ function accountDelay(accountCount: number): number {
   return Math.max(MIN_DELAY_MS, Math.round(base + jitter))
 }
 
-async function fetchViaScraperAll(
-  scraper: Scraper,
-  handles: string[],
-  lookbackMs: number,
-  perAccountLimit: number,
-  limit: number,
-  onProgress?: (detail: string) => void,
-): Promise<IntelItem[]> {
-  const allResults: PromiseSettledResult<IntelItem[]>[] = []
-  let okCount = 0
-  let failCount = 0
-  for (let i = 0; i < handles.length; i++) {
-    if (i > 0) await delay(accountDelay(handles.length))
-    onProgress?.(`Fetching ${handles[i]} (${i + 1}/${handles.length})${okCount + failCount > 0 ? ` — ${okCount} ok, ${failCount} failed` : ''}`)
-    const result = await Promise.allSettled([
-      fetchViaScraper(scraper, handles[i].replace(/^@/, ''), lookbackMs, perAccountLimit),
-    ])
-    allResults.push(result[0])
-    if (result[0].status === 'fulfilled') okCount++
-    else failCount++
-  }
-
-  onProgress?.(`Done: ${okCount} ok, ${failCount} failed (${handles.length} accounts)`)
-  return collectItems(allResults, limit)
-}
-
-// ── Fallback: xcancel.com HTML scraping ──────────────────────────────────────
-
-const XCANCEL_BASE = 'https://xcancel.com'
-const FETCH_TIMEOUT = 15_000
-const MAX_RETRIES = 2
-const BASE_DELAY_MS = 800
-const JITTER_MS = 1200
-
-const USER_AGENTS = [
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.2 Safari/605.1.15',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:134.0) Gecko/20100101 Firefox/134.0',
-]
-
-function randomUA(): string {
-  return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]
-}
-
-function jitteredDelay(): Promise<void> {
-  return delay(BASE_DELAY_MS + Math.random() * JITTER_MS)
-}
-
-function parseXDate(title: string): Date | null {
-  const cleaned = title.replace(' · ', ' ')
-  const d = new Date(cleaned)
-  return isNaN(d.getTime()) ? null : d
-}
-
-async function fetchWithRetry(url: string): Promise<string> {
-  let lastError: Error | null = null
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    if (attempt > 0) await delay(BASE_DELAY_MS * Math.pow(2, attempt) + Math.random() * JITTER_MS)
-    try {
-      const resp = await fetch(url, {
-        headers: {
-          'User-Agent': randomUA(),
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.9',
-          'Cache-Control': 'no-cache',
-        },
-        signal: AbortSignal.timeout(FETCH_TIMEOUT),
-      })
-      if (resp.status === 429 || resp.status === 503) {
-        lastError = new Error(`xcancel ${resp.status}`)
-        continue
-      }
-      if (!resp.ok) throw new Error(`xcancel ${resp.status}`)
-      return await resp.text()
-    } catch (e) {
-      lastError = e as Error
-      if ((e as Error).name === 'AbortError' || (e as Error).name === 'TimeoutError') continue
-      throw e
-    }
-  }
-  throw lastError ?? new Error('fetchWithRetry exhausted')
-}
-
-async function fetchAccountPostsXcancel(handle: string, lookbackMs: number): Promise<IntelItem[]> {
-  const html = await fetchWithRetry(`${XCANCEL_BASE}/${handle}`)
-  const root = parseHTML(html)
-  const now = Date.now()
-  const cutoff = now - lookbackMs
-  const items: IntelItem[] = []
-
-  for (const el of root.querySelectorAll('.timeline-item')) {
-    if (el.querySelector('.retweet-header')) continue
-
-    const linkEl = el.querySelector('.tweet-link')
-    const href = linkEl?.getAttribute('href') ?? ''
-    const statusMatch = href.match(/\/status\/(\d+)/)
-    if (!statusMatch) continue
-    const statusId = statusMatch[1]
-
-    const dateEl = el.querySelector('.tweet-date a')
-    const dateTitle = dateEl?.getAttribute('title') ?? ''
-    const pubDate = parseXDate(dateTitle)
-    if (pubDate && pubDate.getTime() < cutoff) continue
-
-    const contentEl = el.querySelector('.tweet-content')
-    const title = contentEl?.textContent?.trim() ?? ''
-    if (!title) continue
-
-    const fullnameEl = el.querySelector('.fullname')
-    const usernameEl = el.querySelector('.username')
-    const account = fullnameEl?.textContent?.trim() ?? handle
-    const authorHandle = (usernameEl?.textContent?.trim() ?? `@${handle}`).replace(/^@/, '')
-
-    const stats = el.querySelectorAll('.tweet-stat')
-    const statValues = stats.map(s => s.textContent?.trim() ?? '')
-    const likes = statValues[2] ?? ''
-    const retweets = statValues[1] ?? ''
-    const heat = [likes ? `${likes} likes` : '', retweets ? `${retweets} retweets` : '']
-      .filter(Boolean).join(' \u00b7 ')
-
-    items.push({
-      id: `x-${statusId}`,
-      source: 'x',
-      title: title.slice(0, 280),
-      url: `https://x.com/${authorHandle}/status/${statusId}`,
-      heat: heat || null,
-      account,
-      handle: authorHandle,
-      published_at: pubDate?.toISOString() ?? null,
-    })
-  }
-
-  return items
-}
-
 // ── Public API ───────────────────────────────────────────────────────────────
 
 export async function fetchXPosts(
@@ -300,49 +162,32 @@ export async function fetchXPosts(
   const lookbackMs = lookbackHours * 60 * 60 * 1000
   const perAccountLimit = Math.max(10, Math.ceil(limit / handles.length) * 2)
 
-  // Try authenticated scraper (config cookies or OpenClaw browser)
   const auth = await resolveAuth(config)
-  if (auth) {
-    try {
-      const scraper = await initScraper(auth.auth_token, auth.ct0)
-      return await fetchViaScraperAll(scraper, handles, lookbackMs, perAccountLimit, limit, onProgress)
-    } catch (e) {
-      console.warn('twitter-scraper failed, falling back to xcancel:', (e as Error).message)
-    }
+  if (!auth) {
+    throw new Error('X sensor requires authentication — set Twitter cookies in Credentials or install OpenClaw')
   }
 
-  // Fallback: xcancel.com HTML scraping
-  return fetchViaXcancelAll(handles, lookbackMs, limit, onProgress)
-}
-
-async function fetchViaXcancelAll(
-  handles: string[],
-  lookbackMs: number,
-  limit: number,
-  onProgress?: (detail: string) => void,
-): Promise<IntelItem[]> {
-  // Stagger requests to avoid burst traffic patterns
-  const results: PromiseSettledResult<IntelItem[]>[] = []
+  const scraper = await initScraper(auth.auth_token, auth.ct0)
+  const allResults: PromiseSettledResult<IntelItem[]>[] = []
   let okCount = 0
   let failCount = 0
+
   for (let i = 0; i < handles.length; i++) {
-    if (i > 0) await jitteredDelay()
+    if (i > 0) await delay(accountDelay(handles.length))
     onProgress?.(`Fetching ${handles[i]} (${i + 1}/${handles.length})${okCount + failCount > 0 ? ` — ${okCount} ok, ${failCount} failed` : ''}`)
-    const result = await Promise.allSettled([fetchAccountPostsXcancel(handles[i].replace(/^@/, ''), lookbackMs)])
-      .then(r => r[0])
-    results.push(result)
-    if (result.status === 'fulfilled') okCount++
+    const result = await Promise.allSettled([
+      fetchViaScraper(scraper, handles[i].replace(/^@/, ''), lookbackMs, perAccountLimit),
+    ])
+    allResults.push(result[0])
+    if (result[0].status === 'fulfilled') okCount++
     else failCount++
   }
 
   onProgress?.(`Done: ${okCount} ok, ${failCount} failed (${handles.length} accounts)`)
-  return collectItems(results, limit)
-}
 
-function collectItems(results: PromiseSettledResult<IntelItem[]>[], limit: number): IntelItem[] {
   const items: IntelItem[] = []
   const seenIds = new Set<string>()
-  for (const r of results) {
+  for (const r of allResults) {
     if (r.status !== 'fulfilled') continue
     for (const item of r.value) {
       if (seenIds.has(item.id)) continue

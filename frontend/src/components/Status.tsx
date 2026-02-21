@@ -53,6 +53,19 @@ export function Status() {
   const selectNone = useCallback(() => setSelectedSensors(new Set()), [])
   const selectFailed = useCallback(() => setSelectedSensors(new Set(failedSensors)), [failedSensors])
 
+  const toggleSection = useCallback((sensors: string[]) => {
+    setSelectedSensors(prev => {
+      const allSelected = sensors.every(s => prev.has(s))
+      const next = new Set(prev)
+      if (allSelected) {
+        for (const s of sensors) next.delete(s)
+      } else {
+        for (const s of sensors) next.add(s)
+      }
+      return next
+    })
+  }, [])
+
   const loadAll = () => {
     api.health().then(setHealth).catch(() => setHealth({ status: 'error', last_fetch: null }))
     api.getLatest().then(setReport).catch(() => {})
@@ -241,10 +254,6 @@ export function Status() {
           summary: pipelineStatus.sensors.filter(s => s.summary === 'failed').length,
         } : undefined}
         selectedCount={selectedSensors.size}
-        onSelectAll={selectAll}
-        onSelectNone={selectNone}
-        onSelectFailed={failedSensors.length > 0 ? selectFailed : undefined}
-        failedCount={failedSensors.length}
       />
 
       <SensorTable
@@ -255,6 +264,11 @@ export function Status() {
         pipelineStatus={pipelineStatus}
         selected={selectedSensors}
         onToggleSelect={toggleSensorSelect}
+        onSelectAll={selectAll}
+        onSelectNone={selectNone}
+        onSelectFailed={failedSensors.length > 0 ? selectFailed : undefined}
+        onToggleSection={toggleSection}
+        failedCount={failedSensors.length}
       />
 
       <ScheduleFooter config={config} />

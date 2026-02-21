@@ -16,6 +16,14 @@ export interface SensorTableProps {
   selected: Set<string>
   /** Toggle a sensor's selection */
   onToggleSelect: (sensor: string) => void
+  /** Bulk-select helpers — shown in selection toolbar above cards */
+  onSelectAll?: () => void
+  onSelectNone?: () => void
+  onSelectFailed?: () => void
+  /** Toggle all sensors in a section at once */
+  onToggleSection?: (sensors: string[]) => void
+  /** Number of failed sensors from last run */
+  failedCount?: number
 }
 
 /* ------------------------------------------------------------------ */
@@ -105,7 +113,11 @@ function stageColor(state: string): string {
 /* Component                                                           */
 /* ------------------------------------------------------------------ */
 
-export function SensorTable({ isRunning, liveSensors, report, config, pipelineStatus, selected, onToggleSelect }: SensorTableProps) {
+export function SensorTable({
+  isRunning, liveSensors, report, config, pipelineStatus,
+  selected, onToggleSelect, onSelectAll, onSelectNone, onSelectFailed,
+  onToggleSection, failedCount = 0,
+}: SensorTableProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
   // Auto-expand failed sensors so errors are visible without clicking
@@ -155,6 +167,33 @@ export function SensorTable({ isRunning, liveSensors, report, config, pipelineSt
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      {/* Selection toolbar — above the cards, only when idle */}
+      {!isRunning && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.375rem',
+          padding: '0 0.25rem',
+          fontSize: '0.6875rem',
+          color: 'var(--ink-faint)',
+        }}>
+          <SelectLink label="All" onClick={onSelectAll} />
+          <span style={{ opacity: 0.4 }}>/</span>
+          <SelectLink label="None" onClick={onSelectNone} />
+          {failedCount > 0 && (
+            <>
+              <span style={{ opacity: 0.4 }}>/</span>
+              <SelectLink label={`Failed (${failedCount})`} onClick={onSelectFailed} color="var(--err)" />
+            </>
+          )}
+          {selected.size > 0 && (
+            <span style={{ color: 'var(--accent)', fontWeight: 500, marginLeft: 'auto' }}>
+              {selected.size} selected
+            </span>
+          )}
+        </div>
+      )}
+
       {SECTION_SENSORS.map((section) => {
         // Compute section total
         const sectionTotal = isRunning
@@ -184,7 +223,27 @@ export function SensorTable({ isRunning, liveSensors, report, config, pipelineSt
               justifyContent: 'space-between',
               padding: '0 1rem 0.375rem 1rem',
             }}>
-              <span style={sectionHeaderStyle}>{section.label.toUpperCase()}</span>
+              {(() => {
+                const enabledInSection = section.sensors.filter(
+                  s => config?.sensors_enabled[s] !== false,
+                )
+                const selectedInSection = enabledInSection.filter(s => selected.has(s)).length
+                const allSelected = enabledInSection.length > 0 && selectedInSection === enabledInSection.length
+                const partial = selectedInSection > 0 && !allSelected
+                return (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {!isRunning && enabledInSection.length > 0 && (
+                      <SelectToggle
+                        selected={allSelected}
+                        partial={partial}
+                        size={13}
+                        onClick={() => onToggleSection?.(enabledInSection)}
+                      />
+                    )}
+                    <span style={sectionHeaderStyle}>{section.label.toUpperCase()}</span>
+                  </span>
+                )
+              })()}
               <span
                 data-testid="section-count"
                 style={{
@@ -334,21 +393,12 @@ export function SensorTable({ isRunning, liveSensors, report, config, pipelineSt
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      {/* Checkbox for selection */}
+                      {/* Round toggle for selection */}
                       {!isDisabled && (
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => onToggleSelect(sensorKey)}
-                          onClick={e => e.stopPropagation()}
-                          style={{
-                            width: 13,
-                            height: 13,
-                            margin: 0,
-                            cursor: 'pointer',
-                            accentColor: 'var(--accent)',
-                            flexShrink: 0,
-                          }}
+                        <SelectToggle
+                          selected={isSelected}
+                          size={14}
+                          onClick={() => onToggleSelect(sensorKey)}
                         />
                       )}
                       <span style={dotStyle(idleDotColor, false)} />
@@ -538,4 +588,67 @@ function stageLabel(state: string): string {
     case 'skipped': return 'Skipped'
     default: return 'Queued'
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Selection UI helpers                                                */
+/* ------------------------------------------------------------------ */
+
+function SelectToggle({ selected, partial, onClick, size = 14 }: {
+  selected: boolean
+  partial?: boolean
+  onClick?: () => void
+  size?: number
+}) {
+  const active = selected || partial
+  return (
+    <span
+      onClick={e => { e.stopPropagation(); onClick?.() }}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        border: active ? 'none' : '1.5px solid var(--border)',
+        background: active ? 'var(--accent)' : 'transparent',
+        cursor: 'pointer',
+        flexShrink: 0,
+        transition: 'all 120ms ease',
+      }}
+    >
+      {selected && (
+        <svg width={size * 0.6} height={size * 0.6} viewBox="0 0 12 12" fill="none">
+          <path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+      {partial && !selected && (
+        <svg width={size * 0.6} height={size * 0.6} viewBox="0 0 12 12" fill="none">
+          <path d="M3 6H9" stroke="white" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      )}
+    </span>
+  )
+}
+
+function SelectLink({ label, onClick, color }: { label: string; onClick?: () => void; color?: string }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: 'none',
+        border: 'none',
+        color: color ?? 'var(--ink-faint)',
+        cursor: 'pointer',
+        fontSize: '0.6875rem',
+        padding: '0 0.1875rem',
+        textDecoration: 'underline',
+        textUnderlineOffset: '2px',
+        lineHeight: 1,
+      }}
+    >
+      {label}
+    </button>
+  )
 }

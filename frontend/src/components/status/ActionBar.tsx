@@ -23,14 +23,6 @@ export interface ActionBarProps {
   failures?: { fetch: number; summary: number }
   /** Number of sensors currently selected in the table */
   selectedCount?: number
-  /** Select all enabled sensors */
-  onSelectAll?: () => void
-  /** Deselect all sensors */
-  onSelectNone?: () => void
-  /** Select only failed sensors (undefined if no failures) */
-  onSelectFailed?: () => void
-  /** Number of failed sensors from last run */
-  failedCount?: number
 }
 
 function modeOptions(failures?: { fetch: number; summary: number }): { value: RunMode; label: string; disabled?: boolean }[] {
@@ -75,10 +67,6 @@ export function ActionBar({
   onStop,
   failures,
   selectedCount = 0,
-  onSelectAll,
-  onSelectNone,
-  onSelectFailed,
-  failedCount = 0,
 }: ActionBarProps) {
   const [selectedMode, setSelectedMode] = useState<RunMode>('fetch_summarize')
 
@@ -142,32 +130,6 @@ export function ActionBar({
 
       {/* -- Right: mode dropdown + Run button -- */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, paddingTop: '0.125rem' }}>
-        {/* Selection controls — always visible when idle */}
-        {!isRunning && (
-          <span style={{
-            fontSize: '0.6875rem',
-            color: 'var(--ink-faint)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.125rem',
-          }}>
-            {hasSelection && (
-              <span style={{ color: 'var(--accent)', fontWeight: 500, marginRight: '0.25rem' }}>
-                {selectedCount} sel
-              </span>
-            )}
-            <SelectLink label="All" onClick={onSelectAll} />
-            <span style={{ opacity: 0.4 }}>/</span>
-            <SelectLink label="None" onClick={onSelectNone} />
-            {failedCount > 0 && (
-              <>
-                <span style={{ opacity: 0.4 }}>/</span>
-                <SelectLink label={`Failed (${failedCount})`} onClick={onSelectFailed} color="var(--err)" />
-              </>
-            )}
-          </span>
-        )}
-
         {/* Mode dropdown — hidden during runs */}
         {!isRunning && (
           <select
@@ -251,26 +213,5 @@ export function ActionBar({
         </div>
       )}
     </div>
-  )
-}
-
-function SelectLink({ label, onClick, color }: { label: string; onClick?: () => void; color?: string }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        background: 'none',
-        border: 'none',
-        color: color ?? 'var(--ink-faint)',
-        cursor: 'pointer',
-        fontSize: '0.6875rem',
-        padding: '0 0.1875rem',
-        textDecoration: 'underline',
-        textUnderlineOffset: '2px',
-        lineHeight: 1,
-      }}
-    >
-      {label}
-    </button>
   )
 }

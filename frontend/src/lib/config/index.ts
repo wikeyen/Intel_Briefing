@@ -117,6 +117,30 @@ function migrateConfig(data: Record<string, unknown>): Record<string, unknown> {
   if (migrated.summary_provider === 'custom') {
     migrated.summary_provider = 'local'
   }
+  // x_posts → x (sensor rename)
+  const se = migrated.sensors_enabled as Record<string, boolean> | undefined
+  if (se) {
+    if ('x_posts' in se && !('x' in se)) se.x = se.x_posts
+    delete se.x_posts
+    // social_accounts → bluesky + mastodon
+    if ('social_accounts' in se) {
+      if (!('bluesky' in se)) se.bluesky = se.social_accounts
+      if (!('mastodon' in se)) se.mastodon = se.social_accounts
+      delete se.social_accounts
+    }
+    // social_topics → per-platform topics toggles
+    if ('social_topics' in se) {
+      if (!('bluesky_topics_enabled' in migrated)) migrated.bluesky_topics_enabled = se.social_topics
+      if (!('mastodon_topics_enabled' in migrated)) migrated.mastodon_topics_enabled = se.social_topics
+      delete se.social_topics
+    }
+    // social_trends → per-platform trends toggles
+    if ('social_trends' in se) {
+      if (!('bluesky_trends_enabled' in migrated)) migrated.bluesky_trends_enabled = se.social_trends
+      if (!('mastodon_trends_enabled' in migrated)) migrated.mastodon_trends_enabled = se.social_trends
+      delete se.social_trends
+    }
+  }
   return migrated
 }
 

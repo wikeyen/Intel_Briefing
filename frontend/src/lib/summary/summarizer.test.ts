@@ -319,8 +319,8 @@ describe('summarizeReport', () => {
       expect(result.sections[0].summary).toBe('Cached HN summary')
       expect(result.sections[1].sensor_name).toBe('arxiv')
 
-      // 1 LLM call for arxiv + 1 for overall = 2 (no call for hacker_news)
-      expect(chatSpy).toHaveBeenCalledTimes(2)
+      // 1 LLM call for arxiv + 1 for overall + 1 for attribution = 3 (no call for hacker_news)
+      expect(chatSpy).toHaveBeenCalledTimes(3)
 
       // hacker_news reports 'cached', not 'running'
       expect(progressCalls.find(c => c.sensor === 'hacker_news' && c.state === 'cached')).toBeTruthy()

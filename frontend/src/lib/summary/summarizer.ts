@@ -11,6 +11,16 @@ import { formatItem, groupBySensor, chunkArray, computeContentHash } from './sha
 import { readSensorSummary, writeSensorSummary } from './cache'
 import { buildUrlPool } from './ref-verifier'
 import { summarizeWithVerification } from './retry-with-verification'
+import {
+  ATTRIBUTION_SYSTEM_PROMPT,
+  buildSectionAttributionPrompt,
+  buildExecSummaryAttributionPrompt,
+  buildSentimentAttributionPrompt,
+  parseSectionAttributionResult,
+  parseTextAttributionResult,
+  parseSentimentAttributionResult,
+  stripInvalidMarkers,
+} from './attribution'
 
 export type SummaryProgressCallback = (
   sensorName: string,
@@ -303,6 +313,11 @@ export async function summarizeReport(
     overall = parseOverallJson(rawOverall)
     // Attach global source list to the result
     overall.sources = globalSources
+
+    // Post-hoc citation attribution
+    const cheapConfig: LlmConfig = options.attributionLlmConfig ?? llmConfig
+    await attributeCitations(overall, globalSources, sections, llmConfig, cheapConfig, signal)
+
     await onProgress?.('__overall__', 'Overall', 'ok', null)
   } catch (err) {
     await onProgress?.('__overall__', 'Overall', 'failed', (err as Error).message)
@@ -324,4 +339,105 @@ function buildPartialResult(report: IntelReport, sections: SensorSummary[]): Bri
     sections,
     overall: { executive_summary: '', sections: [], sentiment: { ...EMPTY_SENTIMENT } },
   }
+}
+
+async function attributeCitations(
+  overall: ReturnType<typeof parseOverallJson>,
+  globalSources: BriefingSource[],
+  sections: SensorSummary[],
+  strongConfig: LlmConfig,
+  cheapConfig: LlmConfig,
+  signal?: AbortSignal,
+): Promise<void> {
+  if (globalSources.length === 0) return
+
+  const validIds = new Set(globalSources.map(s => s.id))
+
+  // Build lookup: sensor label → source items for that sensor
+  const sensorSourceMap = new Map<string, BriefingSource[]>()
+  for (const src of globalSources) {
+    const existing = sensorSourceMap.get(src.sensor) ?? []
+    existing.push(src)
+    sensorSourceMap.set(src.sensor, existing)
+  }
+
+  const promises: Promise<void>[] = []
+
+  // Section entry attribution — cheap model, parallel per section
+  for (const section of overall.sections) {
+    if (section.entries.length === 0) continue
+
+    // Collect sources from sensors mentioned in this section's entries
+    const sectionSources: BriefingSource[] = []
+    const seenIds = new Set<number>()
+    for (const entry of section.entries) {
+      for (const s of (sensorSourceMap.get(entry.source) ?? [])) {
+        if (!seenIds.has(s.id)) {
+          seenIds.add(s.id)
+          sectionSources.push(s)
+        }
+      }
+    }
+    const pool = sectionSources.length > 0 ? sectionSources : globalSources
+
+    promises.push(
+      chatCompletion([
+        { role: 'system', content: ATTRIBUTION_SYSTEM_PROMPT },
+        { role: 'user', content: buildSectionAttributionPrompt(section.entries, pool) },
+      ], cheapConfig, signal).then(raw => {
+        const attributed = parseSectionAttributionResult(raw, section.entries.length)
+        if (attributed) {
+          for (let i = 0; i < section.entries.length; i++) {
+            section.entries[i].text = stripInvalidMarkers(attributed[i], validIds)
+          }
+        }
+      }).catch(() => { /* graceful degradation */ }),
+    )
+  }
+
+  // Executive summary attribution — strong model
+  if (overall.executive_summary) {
+    promises.push(
+      chatCompletion([
+        { role: 'system', content: ATTRIBUTION_SYSTEM_PROMPT },
+        { role: 'user', content: buildExecSummaryAttributionPrompt(overall.executive_summary, globalSources) },
+      ], strongConfig, signal).then(raw => {
+        overall.executive_summary = stripInvalidMarkers(parseTextAttributionResult(raw), validIds)
+      }).catch(() => { /* graceful degradation */ }),
+    )
+  }
+
+  // Sentiment attribution — strong model
+  const hasSentiment = overall.sentiment.controversies.length > 0
+    || overall.sentiment.opinion_shifts.length > 0
+    || overall.sentiment.risk_flags.length > 0
+
+  if (hasSentiment) {
+    promises.push(
+      chatCompletion([
+        { role: 'system', content: ATTRIBUTION_SYSTEM_PROMPT },
+        { role: 'user', content: buildSentimentAttributionPrompt(
+          overall.sentiment.controversies,
+          overall.sentiment.opinion_shifts,
+          overall.sentiment.risk_flags,
+          globalSources,
+        ) },
+      ], strongConfig, signal).then(raw => {
+        const attributed = parseSentimentAttributionResult(raw)
+        if (attributed) {
+          for (let i = 0; i < Math.min(overall.sentiment.controversies.length, attributed.controversies.length); i++) {
+            overall.sentiment.controversies[i].analysis = stripInvalidMarkers(attributed.controversies[i].analysis, validIds)
+          }
+          for (let i = 0; i < Math.min(overall.sentiment.opinion_shifts.length, attributed.opinion_shifts.length); i++) {
+            overall.sentiment.opinion_shifts[i].analysis = stripInvalidMarkers(attributed.opinion_shifts[i].analysis, validIds)
+          }
+          for (let i = 0; i < Math.min(overall.sentiment.risk_flags.length, attributed.risk_flags.length); i++) {
+            overall.sentiment.risk_flags[i].analysis = stripInvalidMarkers(attributed.risk_flags[i].analysis, validIds)
+          }
+        }
+      }).catch(() => { /* graceful degradation */ }),
+    )
+  }
+
+  await Promise.all(promises)
 }

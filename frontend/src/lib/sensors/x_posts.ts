@@ -154,16 +154,23 @@ async function fetchViaScraperAll(
   lookbackMs: number,
   perAccountLimit: number,
   limit: number,
+  onProgress?: (detail: string) => void,
 ): Promise<IntelItem[]> {
   const allResults: PromiseSettledResult<IntelItem[]>[] = []
+  let okCount = 0
+  let failCount = 0
   for (let i = 0; i < handles.length; i++) {
     if (i > 0) await delay(accountDelay(handles.length))
+    onProgress?.(`Fetching ${handles[i]} (${i + 1}/${handles.length})${okCount + failCount > 0 ? ` — ${okCount} ok, ${failCount} failed` : ''}`)
     const result = await Promise.allSettled([
       fetchViaScraper(scraper, handles[i].replace(/^@/, ''), lookbackMs, perAccountLimit),
     ])
     allResults.push(result[0])
+    if (result[0].status === 'fulfilled') okCount++
+    else failCount++
   }
 
+  onProgress?.(`Done: ${okCount} ok, ${failCount} failed (${handles.length} accounts)`)
   return collectItems(allResults, limit)
 }
 
@@ -280,7 +287,11 @@ async function fetchAccountPostsXcancel(handle: string, lookbackMs: number): Pro
 
 // ── Public API ───────────────────────────────────────────────────────────────
 
-export async function fetchXPosts(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
+export async function fetchXPosts(
+  config: ConfigSettings,
+  limit: number,
+  onProgress?: (detail: string) => void,
+): Promise<IntelItem[]> {
   const handles = config.social_accounts_x
   if (!handles || handles.length === 0) return []
 
@@ -293,31 +304,37 @@ export async function fetchXPosts(config: ConfigSettings, limit: number): Promis
   if (auth) {
     try {
       const scraper = await initScraper(auth.auth_token, auth.ct0)
-      return await fetchViaScraperAll(scraper, handles, lookbackMs, perAccountLimit, limit)
+      return await fetchViaScraperAll(scraper, handles, lookbackMs, perAccountLimit, limit, onProgress)
     } catch (e) {
       console.warn('twitter-scraper failed, falling back to xcancel:', (e as Error).message)
     }
   }
 
   // Fallback: xcancel.com HTML scraping
-  return fetchViaXcancelAll(handles, lookbackMs, limit)
+  return fetchViaXcancelAll(handles, lookbackMs, limit, onProgress)
 }
 
 async function fetchViaXcancelAll(
   handles: string[],
   lookbackMs: number,
   limit: number,
+  onProgress?: (detail: string) => void,
 ): Promise<IntelItem[]> {
   // Stagger requests to avoid burst traffic patterns
   const results: PromiseSettledResult<IntelItem[]>[] = []
-  for (const h of handles) {
-    if (results.length > 0) await jitteredDelay()
-    results.push(
-      await Promise.allSettled([fetchAccountPostsXcancel(h.replace(/^@/, ''), lookbackMs)])
-        .then(r => r[0]),
-    )
+  let okCount = 0
+  let failCount = 0
+  for (let i = 0; i < handles.length; i++) {
+    if (i > 0) await jitteredDelay()
+    onProgress?.(`Fetching ${handles[i]} (${i + 1}/${handles.length})${okCount + failCount > 0 ? ` — ${okCount} ok, ${failCount} failed` : ''}`)
+    const result = await Promise.allSettled([fetchAccountPostsXcancel(handles[i].replace(/^@/, ''), lookbackMs)])
+      .then(r => r[0])
+    results.push(result)
+    if (result.status === 'fulfilled') okCount++
+    else failCount++
   }
 
+  onProgress?.(`Done: ${okCount} ok, ${failCount} failed (${handles.length} accounts)`)
   return collectItems(results, limit)
 }
 

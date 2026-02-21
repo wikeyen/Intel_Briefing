@@ -19,13 +19,14 @@ import { fetchWeibo } from './weibo'
 import { fetchZhihu } from './zhihu'
 import { fetchXiaohongshu } from './xiaohongshu'
 
-export type SensorFetchFn = (config: ConfigSettings, limit: number) => Promise<IntelItem[]>
+export type FetchProgressFn = (detail: string) => void
+export type SensorFetchFn = (config: ConfigSettings, limit: number, onProgress?: FetchProgressFn) => Promise<IntelItem[]>
 
 export { SENSOR_TOKEN_FIELD } from './constants'
 
 // Platform wrappers for the sensor registry
-function fetchX(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
-  return fetchXPosts(config, limit)
+function fetchX(config: ConfigSettings, limit: number, onProgress?: FetchProgressFn): Promise<IntelItem[]> {
+  return fetchXPosts(config, limit, onProgress)
 }
 
 async function fetchBluesky(config: ConfigSettings, limit: number): Promise<IntelItem[]> {

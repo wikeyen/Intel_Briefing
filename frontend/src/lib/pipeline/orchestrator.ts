@@ -53,6 +53,7 @@ export function isPipelineRunning(): boolean {
 async function fetchSensor(
   name: string,
   config: ConfigSettings,
+  onProgress?: (detail: string) => void,
 ): Promise<SensorResult> {
   const fetchFn = SENSOR_REGISTRY[name]
   if (!fetchFn) {
@@ -60,7 +61,7 @@ async function fetchSensor(
   }
   const limit = sensorLimit(config, name)
   try {
-    const items = await fetchFn(config, limit)
+    const items = await fetchFn(config, limit, onProgress)
     return { sensor_name: name, items, error: null, error_kind: null }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
@@ -175,7 +176,9 @@ export async function runPipeline(
         fetchSemaphore.run(async () => {
           if (signal.aborted) return null
           tracker.setFetchState(name, 'running')
-          const result = await fetchSensor(name, config)
+          const result = await fetchSensor(name, config, (detail) => {
+            tracker.setFetchDetail(name, detail)
+          })
           if (signal.aborted) return null
           if (sensorResultSucceeded(result)) {
             tracker.setFetchState(name, 'ok', result.items.length)

@@ -215,6 +215,16 @@ export function SensorTable({ isRunning, liveSensors, report, config, pipelineSt
                         <span>
                           <span style={{ color: stageColor(sp.fetch) }}>{stageIcon(sp.fetch)}</span>
                           {' '}Fetch: {stageLabel(sp.fetch)}
+                          {sp.fetch_detail && (
+                            <span style={{ color: 'var(--ink-muted)', marginLeft: '0.375rem' }}>
+                              — {sp.fetch_detail}
+                            </span>
+                          )}
+                          {sp.fetch === 'ok' && sp.item_count > 0 && (
+                            <span style={{ color: 'var(--ok)', marginLeft: '0.375rem' }}>
+                              — {sp.item_count} items
+                            </span>
+                          )}
                         </span>
                         <span>
                           <span style={{ color: stageColor(sp.summary) }}>{stageIcon(sp.summary)}</span>

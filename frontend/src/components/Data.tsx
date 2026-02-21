@@ -632,7 +632,7 @@ export function Data() {
                         {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredItems.length)} of {filteredItems.length}
                       </div>
                     )}
-                    {pagedItems.map((item, i) => <ItemCard key={item.id} item={item} index={i} />)}
+                    {pagedItems.map((item, i) => <ItemCard key={item.id} item={item} index={i} searchQuery={searchQuery} />)}
                     <Pagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
                   </>
                 )

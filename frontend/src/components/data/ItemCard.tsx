@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import type { IntelItem } from '@/api/client'
 import { SENSOR_LABELS } from '@/lib/sensors/taxonomy'
+import { Highlight } from './Highlight'
 
 const SOURCE_LABELS: Record<string, string> = { ...SENSOR_LABELS }
 
@@ -64,10 +65,11 @@ function sourcePostUrl(item: IntelItem): string | null {
   return null
 }
 
-export function ItemCard({ item, index = 0 }: { item: IntelItem; index?: number }) {
+export function ItemCard({ item, index = 0, searchQuery }: { item: IntelItem; index?: number; searchQuery?: string }) {
   const isArxiv = item.source === 'arxiv'
   const [abstractExpanded, setAbstractExpanded] = useState(false)
   const [contentExpanded, setContentExpanded] = useState(false)
+  const q = searchQuery?.toLowerCase().trim() || ''
 
   return (
     <motion.article
@@ -112,7 +114,7 @@ export function ItemCard({ item, index = 0 }: { item: IntelItem; index?: number 
         onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'var(--accent)' }}
         onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'var(--ink)' }}
       >
-        {item.title}
+        <Highlight text={item.title} query={q} />
       </a>
 
       {/* Meta row */}
@@ -192,7 +194,7 @@ export function ItemCard({ item, index = 0 }: { item: IntelItem; index?: number 
               margin: 0,
             }}
           >
-            {item.abstract}
+            <Highlight text={item.abstract} query={q} />
           </p>
           {isArxiv && (
             <button
@@ -229,7 +231,7 @@ export function ItemCard({ item, index = 0 }: { item: IntelItem; index?: number 
               whiteSpace: 'pre-line',
             }}
           >
-            {item.content}
+            <Highlight text={item.content} query={q} />
           </p>
           <button
             onClick={() => setContentExpanded(!contentExpanded)}

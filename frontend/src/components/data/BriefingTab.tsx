@@ -4,6 +4,7 @@
 import Link from 'next/link'
 import type { ConfigSettings, BriefingSummary, SummaryProgress, PipelineStatus, OverallBriefing, BriefingSource } from '@/api/client'
 import { SENSOR_LABELS } from '@/lib/sensors/taxonomy'
+import { Highlight, textHas } from './Highlight'
 
 function timeAgo(isoString: string): string {
   const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000)
@@ -476,36 +477,6 @@ function SummaryProgressBanner({ progress, pipelineStatus, config, streamTokens,
       </div>
     </div>
   )
-}
-
-/* ------------------------------------------------------------------ */
-/* Search helpers — highlight matching text, check substring matches   */
-/* ------------------------------------------------------------------ */
-
-function Highlight({ text, query }: { text: string; query: string }) {
-  if (!query) return <>{text}</>
-  const parts: React.ReactNode[] = []
-  let remaining = text
-  let key = 0
-  while (remaining.length > 0) {
-    const idx = remaining.toLowerCase().indexOf(query)
-    if (idx === -1) {
-      parts.push(remaining)
-      break
-    }
-    if (idx > 0) parts.push(remaining.slice(0, idx))
-    parts.push(
-      <mark key={key++} style={{ background: 'var(--accent-wash, rgba(29,107,79,0.15))', color: 'inherit', padding: '0 1px', borderRadius: 2 }}>
-        {remaining.slice(idx, idx + query.length)}
-      </mark>,
-    )
-    remaining = remaining.slice(idx + query.length)
-  }
-  return <>{parts}</>
-}
-
-function textHas(text: string | null | undefined, q: string): boolean {
-  return !!text && text.toLowerCase().includes(q)
 }
 
 /** Style for a single ref superscript link. */

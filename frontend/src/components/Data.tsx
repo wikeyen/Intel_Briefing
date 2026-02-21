@@ -121,11 +121,13 @@ export function Data() {
   const activeSectionIdx = SECTIONS.findIndex(s => s.key === activeSection)
 
   const handleSectionChange = useCallback((key: string) => {
+    hasChangedSection.current = true
     prevSectionIdx.current = activeSectionIdx
     setActiveSection(key)
   }, [activeSectionIdx])
 
   const slideDirection = activeSectionIdx >= prevSectionIdx.current ? 1 : -1
+  const hasChangedSection = useRef(false)
 
   useEffect(() => {
     api.getConfig().then(setConfig).catch(() => {})
@@ -569,7 +571,7 @@ export function Data() {
 
       {/* Scrollable content */}
       <div style={{ flex: 1 }}>
-        <div className="data-content" style={{ maxWidth: 1024, margin: '0 auto', padding: '1.5rem 3rem 4rem' }}>
+        <div className="data-content" style={{ maxWidth: 1024, margin: '0 auto', padding: '0.75rem 3rem 4rem' }}>
           {staleInfo && (
             <StaleProcessBanner
               stale={staleInfo}
@@ -583,7 +585,7 @@ export function Data() {
               key={activeSection}
               custom={slideDirection}
               variants={contentVariants}
-              initial="enter"
+              initial={hasChangedSection.current ? 'enter' : false}
               animate="center"
               exit="exit"
               transition={{ type: 'spring', stiffness: 300, damping: 25, mass: 0.8 }}

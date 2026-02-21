@@ -202,6 +202,10 @@ export function Status() {
         isStopping={stopping}
         onRun={handleRun}
         onStop={handleStop}
+        failures={pipelineStatus ? {
+          fetch: pipelineStatus.sensors.filter(s => s.fetch === 'failed').length,
+          summary: pipelineStatus.sensors.filter(s => s.summary === 'failed').length,
+        } : undefined}
       />
 
       <SensorTable
@@ -210,8 +214,6 @@ export function Status() {
         report={report}
         config={config}
         pipelineStatus={pipelineStatus}
-        onRetryFetch={() => handleRun('fetch')}
-        onRetrySummary={() => handleRun('summarize')}
       />
 
       <ScheduleFooter config={config} />

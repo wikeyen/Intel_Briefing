@@ -9,13 +9,11 @@ export async function POST(): Promise<NextResponse> {
   // Try cancelling standalone summary first, then pipeline
   const stoppedStandalone = cancelSummary()
   const stoppedPipeline = !stoppedStandalone && cancelPipeline()
+  const stopped = stoppedStandalone || stoppedPipeline
 
-  if (stoppedStandalone || stoppedPipeline) {
-    return NextResponse.json({ status: 'stopped' })
-  }
-
-  // No active controller — but progress may be stale (e.g. after app restart).
-  // If SummaryProgress still shows running, mark it as stopped so the UI clears.
+  // Whether actively cancelled or stale, ensure DB reflects running=false.
+  // cancel functions fire async writes via notify() but don't await them,
+  // so the next status poll could see stale running=true + alive=false.
   const progress = await readSummaryProgress()
   if (progress?.running) {
     progress.running = false
@@ -23,10 +21,14 @@ export async function POST(): Promise<NextResponse> {
     for (const sp of progress.sensors) {
       if (sp.state === 'pending' || sp.state === 'running') {
         sp.state = 'failed'
-        sp.error = 'Cancelled (stale)'
+        sp.error = 'Cancelled'
       }
     }
     await writeSummaryProgress(progress).catch(() => {})
+    return NextResponse.json({ status: 'stopped' })
+  }
+
+  if (stopped) {
     return NextResponse.json({ status: 'stopped' })
   }
 

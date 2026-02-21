@@ -30,7 +30,8 @@ export function detectStale(
   pipelineStatus: PipelineStatus | null,
 ): StaleInfo | null {
   // Check pipeline first (higher priority — it drives both fetch and summary)
-  if (pipelineStatus?.running && !pipelineStatus.alive) {
+  // Skip cancelled pipelines — they were intentionally stopped, not interrupted.
+  if (pipelineStatus?.running && !pipelineStatus.alive && !pipelineStatus.cancelled) {
     // Don't flag as stale if the run is too recent — the process may still be starting
     if (pipelineStatus.started_at) {
       const age = Date.now() - new Date(pipelineStatus.started_at).getTime()

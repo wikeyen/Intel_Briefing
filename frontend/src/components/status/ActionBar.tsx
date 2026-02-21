@@ -19,13 +19,19 @@ export interface ActionBarProps {
   isStopping: boolean
   onRun: (mode: RunMode) => void
   onStop: () => void
+  /** Failure counts from last run — shown in the mode dropdown */
+  failures?: { fetch: number; summary: number }
 }
 
-const MODE_OPTIONS: { value: RunMode; label: string }[] = [
-  { value: 'fetch', label: 'Fetch' },
-  { value: 'fetch_summarize', label: 'Fetch + Summarize' },
-  { value: 'summarize', label: 'Summarize' },
-]
+function modeOptions(failures?: { fetch: number; summary: number }): { value: RunMode; label: string; disabled?: boolean }[] {
+  const ff = failures?.fetch ?? 0
+  const sf = failures?.summary ?? 0
+  return [
+    { value: 'fetch', label: ff > 0 ? `Fetch · ${ff} failed` : 'Fetch' },
+    { value: 'fetch_summarize', label: 'Fetch + Summarize' },
+    { value: 'summarize', label: sf > 0 ? `Summarize · ${sf} failed` : 'Summarize', disabled: ff > 0 },
+  ]
+}
 
 /** Build the subtitle text shown below the title when the pipeline is running. */
 function phaseLabel(phase: Phase, progress: { done: number; total: number }, detail?: string): string {
@@ -57,6 +63,7 @@ export function ActionBar({
   isStopping,
   onRun,
   onStop,
+  failures,
 }: ActionBarProps) {
   const [selectedMode, setSelectedMode] = useState<RunMode>('fetch_summarize')
 
@@ -64,6 +71,7 @@ export function ActionBar({
   const meta = STATUS_META[status] ?? STATUS_META.no_data
   const disabled = fetching || isRunning
   const pct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0
+  const options = modeOptions(failures)
 
   // Subtitle: progress text when running, health description when idle
   const subtitle = isRunning
@@ -132,8 +140,8 @@ export function ActionBar({
               cursor: 'pointer',
             }}
           >
-            {MODE_OPTIONS.map(m => (
-              <option key={m.value} value={m.value}>{m.label}</option>
+            {options.map(m => (
+              <option key={m.value} value={m.value} disabled={m.disabled}>{m.label}</option>
             ))}
           </select>
         )}

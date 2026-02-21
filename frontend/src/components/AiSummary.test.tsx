@@ -88,30 +88,36 @@ describe('AiSummary — OpenRouterModelPicker', () => {
   it('fetches and displays available model count', async () => {
     render(await renderAiSummary())
     await waitFor(() => {
-      expect(screen.getByText('3 models available')).toBeInTheDocument()
+      // Both generation and attribution pickers show model counts
+      const badges = screen.getAllByText('3 models available')
+      expect(badges.length).toBeGreaterThanOrEqual(1)
+      expect(badges[0]).toBeInTheDocument()
     })
   })
 
   it('shows the currently selected model in the input', async () => {
     render(await renderAiSummary())
     await waitFor(() => {
-      expect(screen.getByText('3 models available')).toBeInTheDocument()
+      expect(screen.getAllByText('3 models available').length).toBeGreaterThanOrEqual(1)
     })
-    const input = screen.getByPlaceholderText('Type to search models…')
-    expect(input).toHaveValue('anthropic/claude-sonnet-4')
+    // Generation model picker is the first one in the DOM
+    const inputs = screen.getAllByPlaceholderText('Type to search models…')
+    expect(inputs[0]).toHaveValue('anthropic/claude-sonnet-4')
   })
 
   it('filters models when typing a search term', async () => {
     render(await renderAiSummary())
     await waitFor(() => {
-      expect(screen.getByText('3 models available')).toBeInTheDocument()
+      expect(screen.getAllByText('3 models available').length).toBeGreaterThanOrEqual(1)
     })
-    const input = screen.getByPlaceholderText('Type to search models…')
+    // Generation model picker is the first one in the DOM
+    const inputs = screen.getAllByPlaceholderText('Type to search models…')
+    const input = inputs[0]
     // Focus opens the dropdown and clears search
     fireEvent.focus(input)
     // Type a search term
     fireEvent.change(input, { target: { value: 'gemini' } })
-    // Only the Gemini model should be visible
+    // Only the Gemini model should be visible in the generation picker dropdown
     expect(screen.getByText('google/gemini-2.5-pro')).toBeInTheDocument()
     expect(screen.queryByText('anthropic/claude-sonnet-4')).not.toBeInTheDocument()
     expect(screen.queryByText('openai/gpt-4o')).not.toBeInTheDocument()
@@ -120,10 +126,10 @@ describe('AiSummary — OpenRouterModelPicker', () => {
   it('shows pricing and context length in dropdown rows', async () => {
     render(await renderAiSummary())
     await waitFor(() => {
-      expect(screen.getByText('3 models available')).toBeInTheDocument()
+      expect(screen.getAllByText('3 models available').length).toBeGreaterThanOrEqual(1)
     })
-    const input = screen.getByPlaceholderText('Type to search models…')
-    fireEvent.focus(input)
+    const inputs = screen.getAllByPlaceholderText('Type to search models…')
+    fireEvent.focus(inputs[0])
     // Claude Sonnet 4: prompt=0.000003*1M=3 => "$3.0", completion=0.000015*1M=15 => "$15"
     // formatContext(200000) => "200K"
     expect(screen.getByText('$3.0 / $15 · 200K')).toBeInTheDocument()
@@ -136,9 +142,10 @@ describe('AiSummary — OpenRouterModelPicker', () => {
   it('selects a model when clicking a dropdown row', async () => {
     render(await renderAiSummary())
     await waitFor(() => {
-      expect(screen.getByText('3 models available')).toBeInTheDocument()
+      expect(screen.getAllByText('3 models available').length).toBeGreaterThanOrEqual(1)
     })
-    const input = screen.getByPlaceholderText('Type to search models…')
+    const inputs = screen.getAllByPlaceholderText('Type to search models…')
+    const input = inputs[0]
     fireEvent.focus(input)
     // Click on GPT-4o row
     const gptRow = screen.getByText('openai/gpt-4o')
@@ -150,13 +157,14 @@ describe('AiSummary — OpenRouterModelPicker', () => {
   it('shows error state when fetch fails', async () => {
     render(await renderAiSummary())
     await waitFor(() => {
-      expect(screen.getByText('3 models available')).toBeInTheDocument()
+      expect(screen.getAllByText('3 models available').length).toBeGreaterThanOrEqual(1)
     })
     // Replace fetch with a failing one and click Refresh (bypasses cache)
     const failingSpy = createFetchSpy(MOCK_MODELS_RESPONSE, true)
     vi.stubGlobal('fetch', failingSpy)
-    const refreshBtn = screen.getByText('Refresh')
-    fireEvent.click(refreshBtn)
+    // Click the first Refresh button (generation model picker)
+    const refreshBtns = screen.getAllByText('Refresh')
+    fireEvent.click(refreshBtns[0])
     await waitFor(() => {
       expect(screen.getByText('Cannot reach OpenRouter')).toBeInTheDocument()
     })
@@ -165,14 +173,14 @@ describe('AiSummary — OpenRouterModelPicker', () => {
   it('refetches models when Refresh button is clicked', async () => {
     render(await renderAiSummary())
     await waitFor(() => {
-      expect(screen.getByText('3 models available')).toBeInTheDocument()
+      expect(screen.getAllByText('3 models available').length).toBeGreaterThanOrEqual(1)
     })
     const initialCallCount = fetchSpy.mock.calls.filter(
       (c: unknown[]) => String(c[0]).includes('openrouter.ai'),
     ).length
-    // Click Refresh — should bypass cache and fetch again
-    const refreshBtn = screen.getByText('Refresh')
-    fireEvent.click(refreshBtn)
+    // Click the first Refresh button (generation model picker)
+    const refreshBtns = screen.getAllByText('Refresh')
+    fireEvent.click(refreshBtns[0])
     await waitFor(() => {
       const newCallCount = fetchSpy.mock.calls.filter(
         (c: unknown[]) => String(c[0]).includes('openrouter.ai'),
@@ -184,18 +192,18 @@ describe('AiSummary — OpenRouterModelPicker', () => {
   it('shows "no models matching" when search yields no results', async () => {
     render(await renderAiSummary())
     await waitFor(() => {
-      expect(screen.getByText('3 models available')).toBeInTheDocument()
+      expect(screen.getAllByText('3 models available').length).toBeGreaterThanOrEqual(1)
     })
-    const input = screen.getByPlaceholderText('Type to search models…')
-    fireEvent.focus(input)
-    fireEvent.change(input, { target: { value: 'nonexistent-xyz' } })
+    const inputs = screen.getAllByPlaceholderText('Type to search models…')
+    fireEvent.focus(inputs[0])
+    fireEvent.change(inputs[0], { target: { value: 'nonexistent-xyz' } })
     expect(screen.getByText('No models matching "nonexistent-xyz"')).toBeInTheDocument()
   })
 
   it('displays free pricing for zero-cost models', async () => {
     render(await renderAiSummary())
     await waitFor(() => {
-      expect(screen.getByText('3 models available')).toBeInTheDocument()
+      expect(screen.getAllByText('3 models available').length).toBeGreaterThanOrEqual(1)
     })
     // Replace fetch with free models data and click Refresh to bypass cache
     const freeModels = {
@@ -210,14 +218,15 @@ describe('AiSummary — OpenRouterModelPicker', () => {
     }
     const freeSpy = createFetchSpy(freeModels)
     vi.stubGlobal('fetch', freeSpy)
-    const refreshBtn = screen.getByText('Refresh')
-    fireEvent.click(refreshBtn)
+    // Click the first Refresh button (generation model picker)
+    const refreshBtns = screen.getAllByText('Refresh')
+    fireEvent.click(refreshBtns[0])
     await waitFor(() => {
       expect(screen.getByText('1 model available')).toBeInTheDocument()
     })
-    // Open dropdown
-    const input = screen.getByPlaceholderText('Type to search models…')
-    fireEvent.focus(input)
+    // Open dropdown on the generation model picker
+    const inputs = screen.getAllByPlaceholderText('Type to search models…')
+    fireEvent.focus(inputs[0])
     expect(screen.getByText('free / free · 8K')).toBeInTheDocument()
   })
 })

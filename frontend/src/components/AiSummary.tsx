@@ -56,6 +56,7 @@ export function AiSummary() {
   const [summaryProvider, setSummaryProvider] = useState<'openrouter' | 'local' | null>(null)
   const [summaryBaseUrl, setSummaryBaseUrl] = useState('https://openrouter.ai/api/v1')
   const [summaryModel, setSummaryModel] = useState('anthropic/claude-sonnet-4')
+  const [attributionModel, setAttributionModel] = useState('')
   const [testingLlm, setTestingLlm] = useState(false)
 
   const [sensorPrompts, setSensorPrompts] = useState<Record<string, string>>({})
@@ -72,6 +73,7 @@ export function AiSummary() {
       summary_provider: summaryProvider,
       summary_base_url: summaryBaseUrl,
       summary_model: summaryModel,
+      summary_attribution_model: attributionModel,
       summary_sensor_prompts: sensorPrompts,
       summary_overall_prompt: overallPrompt,
       ...(summaryProvider === 'local' ? { local_summary_concurrency: localConcurrency } : {}),
@@ -84,6 +86,7 @@ export function AiSummary() {
       setSummaryProvider(cfg.summary_provider ?? null)
       setSummaryBaseUrl(cfg.summary_base_url || OPENROUTER_BASE_URL)
       setSummaryModel(cfg.summary_model || 'anthropic/claude-sonnet-4')
+      setAttributionModel(cfg.summary_attribution_model || '')
       setSensorPrompts(cfg.summary_sensor_prompts ?? {})
       setOverallPrompt(cfg.summary_overall_prompt ?? '')
       setLocalConcurrency(cfg.local_summary_concurrency ?? 1)
@@ -96,9 +99,11 @@ export function AiSummary() {
     if (provider === 'openrouter') {
       setSummaryBaseUrl(OPENROUTER_BASE_URL)
       setSummaryModel('anthropic/claude-sonnet-4')
+      setAttributionModel('')
     } else if (provider === 'local') {
       setSummaryBaseUrl(OLLAMA_BASE_URL)
       setSummaryModel('')
+      setAttributionModel('')
     }
     trigger()
   }
@@ -226,6 +231,28 @@ export function AiSummary() {
                 )}
               </div>
             </div>
+
+            {/* Attribution Model */}
+            {isEnabled && (
+              <div>
+                <FieldLabel>Attribution Model</FieldLabel>
+                {isOllama ? (
+                  <OllamaModelPicker
+                    value={attributionModel}
+                    onChange={(v) => { setAttributionModel(v); trigger() }}
+                    baseUrl={summaryBaseUrl}
+                  />
+                ) : (
+                  <OpenRouterModelPicker
+                    value={attributionModel}
+                    onChange={(v) => { setAttributionModel(v); trigger() }}
+                  />
+                )}
+                <HelpText>
+                  Cheaper model for per-section citation matching. Falls back to generation model if unset.
+                </HelpText>
+              </div>
+            )}
 
             {/* Base URL */}
             {isEnabled && (

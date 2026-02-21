@@ -272,6 +272,10 @@ input[type="range"]::-moz-range-thumb {
   }
 
   /* ── Data page ── */
+  .data-sticky-header {
+    top: calc(56px + env(safe-area-inset-top, 0)) !important;
+  }
+
   .data-content {
     padding-left: 1.25rem !important;
     padding-right: 1.25rem !important;

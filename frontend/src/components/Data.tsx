@@ -369,7 +369,7 @@ export function Data() {
 
       {/* Sticky navigation — tabs + source filters */}
       {report && (
-        <div style={{
+        <div className="data-sticky-header" style={{
           position: 'sticky',
           top: 0,
           zIndex: 10,

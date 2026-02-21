@@ -140,7 +140,11 @@ export function Data() {
   const lastSummaryAt = useRef<string | null>(null)
   const lastPipelineCompletedAt = useRef<string | null>(null)
 
-  // Poll summary and pipeline status for live progress
+  // Derive whether any job is active — drives polling frequency
+  const isActive = !!(summaryProgress?.running) || !!(pipelineStatus?.running && pipelineStatus.alive !== false)
+
+  // Poll summary and pipeline status — fast (2s) when active, slow (15s) when idle.
+  // Idle polling detects jobs triggered from other tabs or scheduled runs.
   useEffect(() => {
     const check = () => {
       api.getSummaryStatus().then(s => {
@@ -164,10 +168,14 @@ export function Data() {
         }
       }).catch(() => {})
     }
-    check()
-    const iv = setInterval(check, 2_000)
-    return () => clearInterval(iv)
-  }, [])
+    // When transitioning from idle→active, fire immediately to get progress.
+    // When idle, delay the first check so it doesn't stampede with initial data fetches.
+    const interval = isActive ? 2_000 : 15_000
+    const delay = isActive ? 0 : 3_000
+    const timeout = setTimeout(() => { check() }, delay)
+    const iv = setInterval(check, interval)
+    return () => { clearTimeout(timeout); clearInterval(iv) }
+  }, [isActive])
 
   // Connect EventSource for streaming tokens during summarization
   const isSummarizing = !!(summaryProgress?.running)

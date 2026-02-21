@@ -98,8 +98,9 @@ export function Status() {
     return () => clearInterval(iv)
   }, [])
 
-  // Always poll /fetch/status every 3s — panel visibility driven by pipelineStatus.running
-  // This survives page switches and refreshes without any bootstrap race conditions
+  // Poll pipeline status — fast (3s) when running, slow (15s) when idle.
+  // Idle polling detects jobs triggered from other tabs or scheduled runs.
+  const isRunningOrTriggered = running || !!(pipelineStatus?.running && pipelineStatus.alive)
   useEffect(() => {
     const check = () => {
       api.getPipelineStatus().then(s => {
@@ -116,10 +117,12 @@ export function Status() {
         }
       }).catch(() => {})
     }
-    check()
-    const iv = setInterval(check, 3_000)
-    return () => clearInterval(iv)
-  }, [])
+    const interval = isRunningOrTriggered ? 3_000 : 15_000
+    const delay = isRunningOrTriggered ? 0 : 3_000
+    const timeout = setTimeout(() => { check() }, delay)
+    const iv = setInterval(check, interval)
+    return () => { clearTimeout(timeout); clearInterval(iv) }
+  }, [isRunningOrTriggered])
 
   const handleRun = async (mode: RunMode, sensors?: string[]) => {
     setFetching(true)

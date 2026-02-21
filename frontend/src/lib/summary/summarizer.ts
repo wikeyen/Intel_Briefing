@@ -144,13 +144,21 @@ async function summarizeSensor(
     onToken,
   })
 
+  // Correct LLM-generated titles with original verbatim titles from source items.
+  // The LLM sometimes rewrites or fabricates titles even when instructed not to.
+  const originalTitles = new Map(items.filter(i => i.url).map(i => [i.url, i.title]))
+  const correctedItems = parsed.items.map(it => {
+    const original = originalTitles.get(it.url)
+    return original ? { ...it, title: original } : it
+  })
+
   return {
     sensor_name: sensorName,
     label,
     source_url: SOURCE_URLS[sensorName] ?? '',
     summary: parsed.summary,
     item_count: items.length,
-    items: parsed.items,
+    items: correctedItems,
   }
 }
 

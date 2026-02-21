@@ -610,6 +610,29 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
   const q = searchQuery?.toLowerCase().trim() || ''
   const structured = summary && isStructuredOverall(summary.overall) ? summary.overall : null
 
+  // Collect the set of source IDs actually cited as [N] in the briefing text,
+  // so the References section only shows sources the reader can find in context.
+  const citedSourceIds: Set<number> = (() => {
+    if (!structured) return new Set<number>()
+    const texts: string[] = []
+    if (structured.executive_summary) texts.push(structured.executive_summary)
+    if (structured.quick_scan) for (const e of structured.quick_scan) texts.push(e.text)
+    for (const sec of structured.sections) for (const e of sec.entries) texts.push(e.text)
+    if (structured.sentiment) {
+      if (structured.sentiment.mood_summary) texts.push(structured.sentiment.mood_summary)
+      for (const e of structured.sentiment.controversies) texts.push(e.analysis)
+      for (const e of structured.sentiment.opinion_shifts) texts.push(e.analysis)
+      for (const e of structured.sentiment.risk_flags) texts.push(e.analysis)
+    }
+    const ids = new Set<number>()
+    const rx = /\[(\d+)\]/g
+    for (const t of texts) {
+      let m: RegExpExecArray | null
+      while ((m = rx.exec(t)) !== null) ids.add(Number(m[1]))
+    }
+    return ids
+  })()
+
   const filteredThemedSections = structured && q
     ? structured.sections
         .map(section => {
@@ -900,8 +923,8 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
             </div>
           )}
 
-          {/* Global Sources — Perplexity-style numbered reference list */}
-          {structured?.sources && structured.sources.length > 0 && (
+          {/* Global Sources — only show references actually cited [N] in the briefing */}
+          {structured?.sources && structured.sources.filter(s => citedSourceIds.has(s.id)).length > 0 && (
             <div style={{
               background: 'var(--surface)',
               border: '1px solid var(--border)',
@@ -927,7 +950,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                 flexDirection: 'column',
                 gap: '0.125rem',
               }}>
-                {structured.sources.map(src => (
+                {structured.sources.filter(s => citedSourceIds.has(s.id)).map(src => (
                   <div key={src.id} style={{ display: 'flex', alignItems: 'baseline', gap: '0.375rem' }}>
                     <span style={{
                       fontSize: '0.625rem',

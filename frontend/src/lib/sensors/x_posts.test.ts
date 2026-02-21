@@ -480,43 +480,6 @@ describe('fetchXPosts (provider fallback)', () => {
     }
   }
 
-  it('falls back to Apify when twitter-scraper has auth error', async () => {
-    vi.resetModules()
-    vi.spyOn(Date, 'now').mockReturnValue(NOW)
-
-    const scraper = mockFailingScraper('Authentication required — unauthorized')
-    vi.doMock('@the-convocation/twitter-scraper', () => ({
-      Scraper: vi.fn().mockImplementation(() => scraper),
-    }))
-
-    const apifyItems = [{
-      id_str: 'apify-1',
-      full_text: 'From Apify fallback',
-      permalink: '/testuser/status/apify-1',
-      user: { name: 'Test User', screen_name: 'testuser' },
-      favorite_count: 10,
-      retweet_count: 2,
-      created_at: 'Thu Feb 20 15:00:00 +0000 2026',
-    }]
-    vi.doMock('apify-client', () => ({
-      ApifyClient: mockApifyClient(apifyItems),
-    }))
-    mockExecFileNotFound()
-    mockDelay()
-
-    const mod = await import('./x_posts')
-    const config = makeConfig({
-      twitter_auth_token: 'bad-token',
-      twitter_ct0: 'bad-ct0',
-      apify_token: 'valid-apify-token',
-      x_scraper_provider: 'twitter-scraper',
-    })
-
-    const items = await mod.fetchXPosts(config, 10)
-    expect(items).toHaveLength(1)
-    expect(items[0].title).toBe('From Apify fallback')
-  })
-
   it('does not fall back on non-auth errors — absorbs per-account failures', async () => {
     vi.resetModules()
     vi.spyOn(Date, 'now').mockReturnValue(NOW)

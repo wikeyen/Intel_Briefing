@@ -163,3 +163,75 @@ describe('social_trends sensor', () => {
     expect(items[0].source).toBe('mastodon')
   })
 })
+
+function makeTrendsDataset(trends: Array<{ rank: number; name: string; link: string; tweet_count: string }>) {
+  return [{
+    scraped_at: '2026-02-21T12:00:00Z',
+    country_input: 'Worldwide',
+    timeline: [{
+      datetime: '2026-02-21 12:00',
+      timestamp: 1740132000,
+      trends,
+    }],
+  }]
+}
+
+function mockApifyTrends(items: unknown[]) {
+  return vi.fn().mockImplementation(() => ({
+    actor: () => ({
+      call: vi.fn().mockResolvedValue({ defaultDatasetId: 'ds-1' }),
+    }),
+    dataset: () => ({
+      listItems: vi.fn().mockResolvedValue({ items }),
+    }),
+  }))
+}
+
+describe('social_trends sensor — X via Apify', () => {
+  beforeEach(() => { vi.resetModules() })
+
+  it('fetches X trends when apify_token is set', async () => {
+    vi.doMock('apify-client', () => ({
+      ApifyClient: mockApifyTrends(makeTrendsDataset([
+        { rank: 1, name: '#TestTrend', link: 'https://x.com/search?q=%23TestTrend', tweet_count: '150000' },
+        { rank: 2, name: 'Breaking News', link: 'https://x.com/search?q=Breaking+News', tweet_count: '50000' },
+      ])),
+    }))
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve([]) })
+    const { fetchSocialTrends } = await import('./social_trends')
+    const items = await fetchSocialTrends(makeConfig({ apify_token: 'test-token' }), 10)
+    expect(items.some(i => i.source === 'x')).toBe(true)
+    const xItem = items.find(i => i.id === 'x-trend--testtrend')!
+    expect(xItem.title).toBe('#TestTrend')
+    expect(xItem.heat).toBe('150K posts')
+    expect(xItem.url).toBe('https://x.com/search?q=%23TestTrend')
+    vi.doUnmock('apify-client')
+  })
+
+  it('returns empty when no apify_token', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve([]) })
+    const { fetchSocialTrends } = await import('./social_trends')
+    const items = await fetchSocialTrends(makeConfig({ apify_token: null }), 10)
+    expect(items.every(i => i.source !== 'x')).toBe(true)
+  })
+
+  it('formats volume correctly', async () => {
+    vi.doMock('apify-client', () => ({
+      ApifyClient: mockApifyTrends(makeTrendsDataset([
+        { rank: 1, name: 'Millions', link: '', tweet_count: '2500000' },
+        { rank: 2, name: 'Thousands', link: '', tweet_count: '1500' },
+        { rank: 3, name: 'Small', link: '', tweet_count: '42' },
+        { rank: 4, name: 'Zero', link: '', tweet_count: '0' },
+      ])),
+    }))
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve([]) })
+    const { fetchSocialTrends } = await import('./social_trends')
+    const items = await fetchSocialTrends(makeConfig({ apify_token: 'tok' }), 10)
+    const x = items.filter(i => i.source === 'x')
+    expect(x.find(i => i.title === 'Millions')?.heat).toBe('2.5M posts')
+    expect(x.find(i => i.title === 'Thousands')?.heat).toBe('1.5K posts')
+    expect(x.find(i => i.title === 'Small')?.heat).toBe('42 posts')
+    expect(x.find(i => i.title === 'Zero')?.heat).toBeNull()
+    vi.doUnmock('apify-client')
+  })
+})

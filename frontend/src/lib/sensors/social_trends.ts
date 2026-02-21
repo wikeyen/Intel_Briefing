@@ -1,8 +1,51 @@
-// ABOUTME: Social trends sensor — surfaces trending content across Bluesky and Mastodon.
-// ABOUTME: Aggregates trending posts and discussions into a unified IntelItem feed.
+// ABOUTME: Social trends sensor — surfaces trending content across Bluesky, Mastodon, and X/Twitter.
+// ABOUTME: Aggregates trending posts and discussions into a unified IntelItem feed. X trends via Apify actor.
 import type { ConfigSettings, IntelItem } from '../models'
+import { ApifyClient } from 'apify-client'
 import { createBlueskyAgent, blueskyPostToItem } from '../platforms/bluesky'
 import { mastodonPublicGet, mastodonStatusToItem } from '../platforms/mastodon'
+
+const X_TRENDS_ACTOR = 'eunit/x-twitter-trends-scraper'
+
+interface ApifyTrend {
+  rank: number
+  name: string
+  link: string
+  tweet_count: string
+}
+
+interface ApifyTrendsTimeline {
+  datetime: string
+  timestamp: number
+  trends: ApifyTrend[]
+}
+
+interface ApifyTrendsResult {
+  scraped_at: string
+  country_input: string
+  timeline: ApifyTrendsTimeline[]
+}
+
+function formatVolume(raw: string): string | null {
+  const n = parseInt(raw, 10)
+  if (isNaN(n) || n <= 0) return null
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M posts`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}K posts`
+  return `${n} posts`
+}
+
+function mapTrendToItem(trend: ApifyTrend): IntelItem {
+  const normalized = trend.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')
+  return {
+    id: `x-trend-${normalized}`,
+    source: 'x',
+    title: trend.name,
+    url: trend.link || `https://x.com/search?q=${encodeURIComponent(trend.name)}`,
+    heat: formatVolume(trend.tweet_count),
+    account: null,
+    published_at: null,
+  }
+}
 
 async function fetchBlueskyTrends(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
   if (!config.bluesky_handle || !config.bluesky_app_password) return []
@@ -36,6 +79,21 @@ async function fetchMastodonTrends(_config: ConfigSettings, limit: number): Prom
   return items
 }
 
+async function fetchXTrends(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
+  if (!config.apify_token) return []
+  const client = new ApifyClient({ token: config.apify_token })
+  const { defaultDatasetId } = await client.actor(X_TRENDS_ACTOR).call(
+    { country: 'Worldwide' },
+    { waitSecs: 120 },
+  )
+  if (!defaultDatasetId) return []
+  const { items } = await client.dataset(defaultDatasetId).listItems()
+  const result = (items as unknown as ApifyTrendsResult[])[0]
+  if (!result?.timeline?.length) return []
+  const latest = result.timeline[result.timeline.length - 1]
+  return latest.trends.slice(0, limit).map(mapTrendToItem)
+}
+
 export async function fetchSocialTrends(
   config: ConfigSettings,
   limit: number,
@@ -47,6 +105,8 @@ export async function fetchSocialTrends(
   const fetches: Promise<IntelItem[]>[] = []
   if (checkBsky) fetches.push(fetchBlueskyTrends(config, limit))
   if (checkMasto) fetches.push(fetchMastodonTrends(config, limit))
+  // X trends always included when apify_token is available (not platform-filtered)
+  fetches.push(fetchXTrends(config, limit))
 
   const results = await Promise.allSettled(fetches)
 

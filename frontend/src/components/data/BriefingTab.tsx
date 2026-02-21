@@ -5,6 +5,7 @@ import Link from 'next/link'
 import type { ConfigSettings, BriefingSummary, SummaryProgress, PipelineStatus, OverallBriefing, BriefingSource } from '@/api/client'
 import { SENSOR_LABELS } from '@/lib/sensors/taxonomy'
 import { Highlight, textHas } from './Highlight'
+import { BriefingSkeleton } from '../Skeleton'
 
 function timeAgo(isoString: string): string {
   const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000)
@@ -578,7 +579,7 @@ function isStructuredOverall(overall: OverallBriefing | string): overall is Over
   return typeof overall === 'object' && overall !== null && 'executive_summary' in overall
 }
 
-export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, hasContent, onTrigger, onStop, onStopPipeline, streamTokens, searchQuery }: {
+export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, hasContent, onTrigger, onStop, onStopPipeline, streamTokens, searchQuery, loading }: {
   summary: BriefingSummary | null
   summaryProgress: SummaryProgress | null
   pipelineStatus: PipelineStatus | null
@@ -589,6 +590,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
   onStopPipeline: () => void
   streamTokens?: Record<string, string>
   searchQuery?: string
+  loading?: boolean
 }) {
   const isSummarizing = !!(summaryProgress?.running)
   const isPipelineActive = !!(pipelineStatus?.running && pipelineStatus.alive !== false)
@@ -1119,6 +1121,8 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
             </div>
           )}
         </>
+      ) : loading ? (
+        <BriefingSkeleton />
       ) : !showProgressBanner && (
         <div style={{
           padding: '4rem 1.5rem',

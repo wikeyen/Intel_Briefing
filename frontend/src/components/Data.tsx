@@ -12,6 +12,7 @@ import { Pagination } from './Pagination'
 import { StaleProcessBanner, detectStale } from './StaleProcessBanner'
 import { ItemCard, LINE_CLAMP_CSS } from './data/ItemCard'
 import { BriefingTabContent, PULSE_CSS } from './data/BriefingTab'
+import { BriefingSkeleton, FeedSkeleton } from './Skeleton'
 
 const PAGE_SIZE = 20
 
@@ -379,9 +380,9 @@ export function Data() {
             Feed
           </h2>
           <p style={{ fontSize: '0.8125rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
-            {loading ? 'Loading…' : report
+            {report
               ? `${totalItems} items from ${report.sources_ok.length} sources · ${report.date}`
-              : 'Fetched items from all configured sources.'}
+              : loading ? '\u00A0' : 'Fetched items from all configured sources.'}
           </p>
         </div>
       </div>
@@ -602,8 +603,11 @@ export function Data() {
               onStopPipeline={handleStopPipeline}
               streamTokens={streamTokens}
               searchQuery={searchQuery}
+              loading={loading}
             />
-          ) : !loading && !report ? (
+          ) : loading ? (
+            <FeedSkeleton />
+          ) : !report ? (
             <div style={{
               padding: '4rem 1.5rem',
               textAlign: 'center',
@@ -615,7 +619,7 @@ export function Data() {
             }}>
               No data available. Trigger a pipeline run from the Status page.
             </div>
-          ) : report ? (
+          ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {filteredItems.length === 0
                 ? <EmptySection needsKey={sectionNeedsKey(activeSection, config)} />
@@ -638,7 +642,7 @@ export function Data() {
                 )
               }
             </div>
-          ) : null}
+          )}
             </motion.div>
           </AnimatePresence>
         </div>

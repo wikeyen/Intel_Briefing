@@ -11,6 +11,7 @@ import { SensorTable } from './status/SensorTable'
 import { SENSOR_LABEL_MAP, SECTION_SENSORS } from './status/constants'
 import { ScheduleFooter } from './status/ScheduleFooter'
 import { StaleProcessBanner, detectStale } from './StaleProcessBanner'
+import { StatusSkeleton } from './Skeleton'
 
 export function Status() {
   const showToast = useToast()
@@ -234,6 +235,14 @@ export function Status() {
     }
     return undefined
   })()
+
+  if (!health && !report) {
+    return (
+      <section id="status" style={{ padding: '4.5rem 0' }}>
+        <StatusSkeleton />
+      </section>
+    )
+  }
 
   return (
     <section id="status" style={{ padding: '4.5rem 0' }}>

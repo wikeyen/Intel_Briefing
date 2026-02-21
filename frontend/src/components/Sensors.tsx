@@ -9,6 +9,7 @@ import { useToast } from '@/lib/toast-context'
 import { useAutoSave } from '@/lib/hooks/useAutoSave'
 import { AutoSaveIndicator } from '@/components/form-styles'
 import { sensorsByLanguageAndCategory } from '@/lib/sensors/taxonomy'
+import { SkeletonCard } from '@/components/Skeleton'
 
 interface SensorDef {
   key: string
@@ -233,6 +234,7 @@ export function Sensors() {
   const [defaultLimit, setDefaultLimit] = useState(10)
   const [activeLanguage, setActiveLanguage] = useState<Language>('row')
   const [xScraperProvider, setXScraperProvider] = useState<'twitter-scraper' | 'apify' | 'mixed'>('twitter-scraper')
+  const [loaded, setLoaded] = useState(false)
 
   const { status: saveStatus, trigger } = useAutoSave(
     () => ({
@@ -277,6 +279,7 @@ export function Sensors() {
       setSensorLookback(cfg.sensor_lookback_hours ?? {})
       setDefaultLimit(cfg.default_limit)
       setXScraperProvider(cfg.x_scraper_provider ?? 'twitter-scraper')
+      setLoaded(true)
     })
     const fetchStatuses = () => {
       api.getLatest().then((report) => {
@@ -337,6 +340,26 @@ export function Sensors() {
 
   const getBadge = (key: string): SensorStatus | undefined =>
     !enabled[key] ? 'disabled' : statuses[key]
+
+  if (!loaded) {
+    return (
+      <section id="sensors" style={{ padding: '4.5rem 0' }}>
+        <div className="page-header" style={{ marginBottom: '1.5rem' }}>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.375rem' }}>
+            Sources
+          </h2>
+          <p style={{ fontSize: '0.875rem', color: 'var(--ink-muted)', lineHeight: 1.6 }}>
+            Active data sources for your pipeline.
+          </p>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <SkeletonCard lines={4} />
+          <SkeletonCard lines={5} />
+          <SkeletonCard lines={3} />
+        </div>
+      </section>
+    )
+  }
 
   return (
     <section id="sensors" style={{ padding: '4.5rem 0' }}>

@@ -260,7 +260,7 @@ export interface ConfigSettings {
   twitter_ct0: string | null
 
   // X scraper provider selection — which scraper to try first
-  x_scraper_provider: 'twitter-scraper' | 'apify'
+  x_scraper_provider: 'twitter-scraper' | 'apify' | 'mixed'
 
   // Apify API token (for apify/twitter-scraper actor fallback)
   apify_token: string | null

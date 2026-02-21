@@ -1,5 +1,5 @@
-// ABOUTME: X posts sensor — fetches recent tweets via twitter-scraper or Apify (quacker/twitter-scraper).
-// ABOUTME: Provider selection via config; auth-error fallback to alternate provider.
+// ABOUTME: X posts sensor — fetches recent tweets via twitter-scraper, Apify, or mixed mode.
+// ABOUTME: Provider selection via config; auth/credit-error fallback to alternate provider.
 import { Scraper, type Tweet } from '@the-convocation/twitter-scraper'
 import { ApifyClient } from 'apify-client'
 import type { ConfigSettings, IntelItem } from '../models'
@@ -87,6 +87,15 @@ function isAuthError(err: unknown): boolean {
   return msg.includes('auth') || msg.includes('credential') || msg.includes('login')
     || msg.includes('unauthorized') || msg.includes('403') || msg.includes('401')
     || msg.includes('requires authentication')
+}
+
+// ── Credit/billing error detection ────────────────────────────────────────────
+
+export function isCreditError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase()
+  return msg.includes('credit') || msg.includes('billing') || msg.includes('limit exceeded')
+    || msg.includes('payment') || msg.includes('subscription') || msg.includes('quota')
+    || msg.includes('402')
 }
 
 // ── Strategy: twitter-scraper (authenticated) ────────────────────────────────
@@ -368,6 +377,64 @@ function hasApifyCredentials(config: ConfigSettings): boolean {
   return !!config.apify_token
 }
 
+// ── Mixed mode: split handles between scraper and Apify ──────────────────────
+
+async function fetchMixed(
+  config: ConfigSettings,
+  handles: string[],
+  lookbackMs: number,
+  perAccountLimit: number,
+  limit: number,
+  onProgress?: (detail: string) => void,
+): Promise<IntelItem[]> {
+  // Round-robin split: even-index → scraper, odd-index → Apify
+  const scraperHandles: string[] = []
+  const apifyHandles: string[] = []
+  for (let i = 0; i < handles.length; i++) {
+    if (i % 2 === 0) scraperHandles.push(handles[i])
+    else apifyHandles.push(handles[i])
+  }
+
+  onProgress?.(`[Mixed] Splitting ${handles.length} accounts: ${scraperHandles.length} Scraper, ${apifyHandles.length} Apify`)
+
+  // Run both groups in parallel
+  const [scraperResult, apifyResult] = await Promise.allSettled([
+    scraperHandles.length > 0
+      ? fetchAllViaScraper(config, scraperHandles, lookbackMs, perAccountLimit, limit, (d) => onProgress?.(`[Scraper] ${d}`))
+      : Promise.resolve([]),
+    apifyHandles.length > 0
+      ? fetchViaApify(config.apify_token!, apifyHandles, lookbackMs, perAccountLimit, (d) => onProgress?.(d))
+      : Promise.resolve([]),
+  ])
+
+  // If Apify group failed with credit or auth error, retry those handles via scraper
+  let apifyItems: IntelItem[] = []
+  if (apifyResult.status === 'fulfilled') {
+    apifyItems = apifyResult.value
+  } else if (isCreditError(apifyResult.reason) || isAuthError(apifyResult.reason)) {
+    onProgress?.('[Mixed] Apify failed (credits/auth) — retrying Apify accounts via Scraper')
+    try {
+      apifyItems = await fetchAllViaScraper(config, apifyHandles, lookbackMs, perAccountLimit, limit, (d) => onProgress?.(`[Scraper fallback] ${d}`))
+    } catch {
+      // If scraper fallback also fails, continue with whatever we have
+    }
+  }
+
+  const scraperItems = scraperResult.status === 'fulfilled' ? scraperResult.value : []
+
+  // Merge + deduplicate
+  const seenIds = new Set<string>()
+  const merged: IntelItem[] = []
+  for (const item of [...scraperItems, ...apifyItems]) {
+    if (seenIds.has(item.id)) continue
+    seenIds.add(item.id)
+    merged.push(item)
+    if (merged.length >= limit) break
+  }
+
+  return merged
+}
+
 // ── Public API ───────────────────────────────────────────────────────────────
 
 export async function fetchXPosts(
@@ -384,6 +451,27 @@ export async function fetchXPosts(
   const perAccountLimit = Math.max(10, Math.ceil(limit / handles.length) * 2)
 
   const provider = config.x_scraper_provider ?? 'twitter-scraper'
+
+  // Mixed mode: split handles between scraper and Apify
+  if (provider === 'mixed') {
+    const hasScraper = hasScraperCredentials(config)
+    const hasApify = hasApifyCredentials(config)
+
+    if (hasScraper && hasApify) {
+      return await fetchMixed(config, handles, lookbackMs, perAccountLimit, limit, onProgress)
+    }
+    // Fall back to whichever provider has credentials
+    if (hasApify) {
+      onProgress?.('[Mixed] No scraper credentials — using Apify only')
+      return await fetchViaApify(config.apify_token!, handles, lookbackMs, perAccountLimit, onProgress)
+    }
+    if (hasScraper) {
+      onProgress?.('[Mixed] No Apify credentials — using Scraper only')
+      return await fetchAllViaScraper(config, handles, lookbackMs, perAccountLimit, limit, onProgress)
+    }
+    throw new Error('X sensor requires authentication — set Twitter cookies or Apify token in Credentials')
+  }
+
   const fallbackProvider = provider === 'apify' ? 'twitter-scraper' : 'apify'
 
   // Try primary provider

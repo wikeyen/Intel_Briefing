@@ -233,7 +233,7 @@ export function Sensors() {
   const [sensorLookback, setSensorLookback] = useState<Record<string, number>>({})
   const [defaultLimit, setDefaultLimit] = useState(10)
   const [activeLanguage, setActiveLanguage] = useState<Language>('row')
-  const [xScraperProvider, setXScraperProvider] = useState<'twitter-scraper' | 'apify'>('twitter-scraper')
+  const [xScraperProvider, setXScraperProvider] = useState<'twitter-scraper' | 'apify' | 'mixed'>('twitter-scraper')
 
   const { status: saveStatus, trigger } = useAutoSave(
     () => ({
@@ -500,7 +500,7 @@ export function Sensors() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <select
                               value={xScraperProvider}
-                              onChange={(e) => { setXScraperProvider(e.target.value as 'twitter-scraper' | 'apify'); trigger() }}
+                              onChange={(e) => { setXScraperProvider(e.target.value as 'twitter-scraper' | 'apify' | 'mixed'); trigger() }}
                               style={{
                                 fontSize: '0.8125rem',
                                 padding: '0.375rem 0.625rem',
@@ -514,9 +514,12 @@ export function Sensors() {
                             >
                               <option value="twitter-scraper">Twitter Scraper</option>
                               <option value="apify">Apify</option>
+                              <option value="mixed">Mixed</option>
                             </select>
                             <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>
-                              Falls back to {xScraperProvider === 'apify' ? 'Twitter Scraper' : 'Apify'} on auth errors
+                              {xScraperProvider === 'mixed'
+                                ? 'Splits accounts between Scraper and Apify; falls back to Scraper if Apify credits run out'
+                                : `Falls back to ${xScraperProvider === 'apify' ? 'Twitter Scraper' : 'Apify'} on auth errors`}
                             </span>
                           </div>
                         </div>

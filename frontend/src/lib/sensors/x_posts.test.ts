@@ -1,11 +1,12 @@
-// ABOUTME: Tests for x_posts sensor — twitter-scraper primary path with auth cookie variants.
-// ABOUTME: Also tests Apify provider, data mapping, and auth-error fallback logic.
+// ABOUTME: Tests for x_posts sensor — twitter-scraper, Apify, and mixed mode paths.
+// ABOUTME: Also tests data mapping, auth-error fallback, and credit-error fallback logic.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { ConfigSettings } from '../models'
 import { defaultConfig } from '../models'
 
 let fetchXPosts: (config: ConfigSettings, limit: number, onProgress?: (detail: string) => void) => Promise<import('../models').IntelItem[]>
 let mapApifyTweet: typeof import('./x_posts').mapApifyTweet
+let isCreditError: typeof import('./x_posts').isCreditError
 
 // Use a recent fixed date so lookback filtering doesn't discard items
 const NOW = new Date('2026-02-20T17:00:00Z').getTime()
@@ -629,5 +630,233 @@ describe('fetchXPosts (provider fallback)', () => {
     })
 
     await expect(mod.fetchXPosts(config, 10)).rejects.toThrow('Apify API token')
+  })
+})
+
+// ── isCreditError tests ──────────────────────────────────────────────────────
+
+describe('isCreditError', () => {
+  beforeEach(async () => {
+    vi.resetModules()
+    vi.doMock('@the-convocation/twitter-scraper', () => ({
+      Scraper: vi.fn(),
+    }))
+    vi.doMock('apify-client', () => ({
+      ApifyClient: vi.fn(),
+    }))
+    const mod = await import('./x_posts')
+    isCreditError = mod.isCreditError
+  })
+
+  it('detects credit-related error messages', () => {
+    expect(isCreditError(new Error('Insufficient credits remaining'))).toBe(true)
+    expect(isCreditError(new Error('Billing limit exceeded'))).toBe(true)
+    expect(isCreditError(new Error('Payment required'))).toBe(true)
+    expect(isCreditError(new Error('Subscription expired'))).toBe(true)
+    expect(isCreditError(new Error('Quota exceeded'))).toBe(true)
+    expect(isCreditError(new Error('402 Payment Required'))).toBe(true)
+  })
+
+  it('rejects non-credit errors', () => {
+    expect(isCreditError(new Error('Network timeout'))).toBe(false)
+    expect(isCreditError(new Error('Internal server error'))).toBe(false)
+  })
+})
+
+// ── Mixed mode tests ─────────────────────────────────────────────────────────
+
+describe('fetchXPosts (mixed mode)', () => {
+  function mockApifyClient(items: unknown[]) {
+    return vi.fn().mockImplementation(() => ({
+      actor: vi.fn().mockReturnValue({
+        call: vi.fn().mockResolvedValue({ defaultDatasetId: 'ds-mix' }),
+      }),
+      dataset: vi.fn().mockReturnValue({
+        listItems: vi.fn().mockResolvedValue({ items }),
+      }),
+    }))
+  }
+
+  function mixedConfig(overrides?: Partial<ConfigSettings>): ConfigSettings {
+    return makeConfig({
+      twitter_auth_token: 'test-token',
+      twitter_ct0: 'test-ct0',
+      apify_token: 'valid-apify-token',
+      x_scraper_provider: 'mixed',
+      // 4 accounts: even-index → scraper, odd-index → Apify
+      social_accounts_x: ['@alice', '@bob', '@carol', '@dave'],
+      ...overrides,
+    })
+  }
+
+  it('splits accounts between providers and merges results', async () => {
+    vi.resetModules()
+    vi.spyOn(Date, 'now').mockReturnValue(NOW)
+
+    // Scraper returns items for even-index accounts (alice, carol)
+    const scraperTweets = [
+      {
+        id: 's1',
+        text: 'From scraper alice',
+        timeParsed: new Date('2026-02-20T15:00:00Z'),
+        timestamp: Math.floor(new Date('2026-02-20T15:00:00Z').getTime() / 1000),
+        name: 'Alice', username: 'alice',
+        permanentUrl: 'https://x.com/alice/status/s1',
+        likes: 10, retweets: 0, views: 100,
+        isRetweet: false, isReply: false, isQuoted: false,
+        hashtags: [], mentions: [], photos: [], videos: [], urls: [], thread: [],
+      },
+    ]
+    vi.doMock('@the-convocation/twitter-scraper', () => ({
+      Scraper: vi.fn().mockImplementation(() => makeMockScraper(scraperTweets)),
+    }))
+
+    // Apify returns items for odd-index accounts (bob, dave)
+    const apifyItems = [{
+      id_str: 'a1',
+      full_text: 'From apify bob',
+      permalink: '/bob/status/a1',
+      user: { name: 'Bob', screen_name: 'bob' },
+      favorite_count: 20,
+      created_at: 'Thu Feb 20 15:00:00 +0000 2026',
+    }]
+    vi.doMock('apify-client', () => ({
+      ApifyClient: mockApifyClient(apifyItems),
+    }))
+    mockExecFileNotFound()
+    mockDelay()
+
+    const mod = await import('./x_posts')
+    const items = await mod.fetchXPosts(mixedConfig(), 50)
+
+    // Should have items from both providers
+    expect(items.length).toBeGreaterThanOrEqual(2)
+    const titles = items.map(i => i.title)
+    expect(titles).toContain('From scraper alice')
+    expect(titles).toContain('From apify bob')
+  })
+
+  it('falls back to scraper when Apify credit error', async () => {
+    vi.resetModules()
+    vi.spyOn(Date, 'now').mockReturnValue(NOW)
+
+    const scraperTweets = [
+      {
+        id: 's2',
+        text: 'Scraper fallback tweet',
+        timeParsed: new Date('2026-02-20T15:00:00Z'),
+        timestamp: Math.floor(new Date('2026-02-20T15:00:00Z').getTime() / 1000),
+        name: 'Test', username: 'testuser',
+        permanentUrl: 'https://x.com/testuser/status/s2',
+        likes: 5, retweets: 0, views: 50,
+        isRetweet: false, isReply: false, isQuoted: false,
+        hashtags: [], mentions: [], photos: [], videos: [], urls: [], thread: [],
+      },
+    ]
+    vi.doMock('@the-convocation/twitter-scraper', () => ({
+      Scraper: vi.fn().mockImplementation(() => makeMockScraper(scraperTweets)),
+    }))
+
+    // Apify throws credit error
+    vi.doMock('apify-client', () => ({
+      ApifyClient: vi.fn().mockImplementation(() => ({
+        actor: vi.fn().mockReturnValue({
+          call: vi.fn().mockRejectedValue(new Error('Insufficient credits remaining')),
+        }),
+        dataset: vi.fn().mockReturnValue({
+          listItems: vi.fn().mockResolvedValue({ items: [] }),
+        }),
+      })),
+    }))
+    mockExecFileNotFound()
+    mockDelay()
+
+    const mod = await import('./x_posts')
+    const progress: string[] = []
+    const items = await mod.fetchXPosts(mixedConfig(), 50, (d) => progress.push(d))
+
+    // Should still return items — scraped handles succeed, Apify handles retried via scraper
+    expect(items.length).toBeGreaterThanOrEqual(1)
+    // Progress should mention credit/auth fallback
+    expect(progress.some(p => p.includes('Apify failed'))).toBe(true)
+  })
+
+  it('falls back to scraper-only when no Apify credentials', async () => {
+    vi.resetModules()
+    vi.spyOn(Date, 'now').mockReturnValue(NOW)
+
+    const scraperTweets = [
+      {
+        id: 's3',
+        text: 'Scraper only tweet',
+        timeParsed: new Date('2026-02-20T15:00:00Z'),
+        timestamp: Math.floor(new Date('2026-02-20T15:00:00Z').getTime() / 1000),
+        name: 'Test', username: 'testuser',
+        permanentUrl: 'https://x.com/testuser/status/s3',
+        likes: 5, retweets: 0, views: 50,
+        isRetweet: false, isReply: false, isQuoted: false,
+        hashtags: [], mentions: [], photos: [], videos: [], urls: [], thread: [],
+      },
+    ]
+    vi.doMock('@the-convocation/twitter-scraper', () => ({
+      Scraper: vi.fn().mockImplementation(() => makeMockScraper(scraperTweets)),
+    }))
+    vi.doMock('apify-client', () => ({
+      ApifyClient: vi.fn(),
+    }))
+    mockExecFileNotFound()
+    mockDelay()
+
+    const mod = await import('./x_posts')
+    const progress: string[] = []
+    const config = mixedConfig({ apify_token: null })
+    const items = await mod.fetchXPosts(config, 50, (d) => progress.push(d))
+
+    expect(items.length).toBeGreaterThanOrEqual(1)
+    expect(progress.some(p => p.includes('No Apify credentials'))).toBe(true)
+  })
+
+  it('deduplicates items across providers', async () => {
+    vi.resetModules()
+    vi.spyOn(Date, 'now').mockReturnValue(NOW)
+
+    // Both providers return the same tweet id
+    const sharedTweet = {
+      id: 'dup1',
+      text: 'Duplicate tweet',
+      timeParsed: new Date('2026-02-20T15:00:00Z'),
+      timestamp: Math.floor(new Date('2026-02-20T15:00:00Z').getTime() / 1000),
+      name: 'Test', username: 'testuser',
+      permanentUrl: 'https://x.com/testuser/status/dup1',
+      likes: 10, retweets: 0, views: 100,
+      isRetweet: false, isReply: false, isQuoted: false,
+      hashtags: [], mentions: [], photos: [], videos: [], urls: [], thread: [],
+    }
+    vi.doMock('@the-convocation/twitter-scraper', () => ({
+      Scraper: vi.fn().mockImplementation(() => makeMockScraper([sharedTweet])),
+    }))
+
+    // Apify returns same tweet id
+    vi.doMock('apify-client', () => ({
+      ApifyClient: mockApifyClient([{
+        id_str: 'dup1',
+        full_text: 'Duplicate tweet',
+        permalink: '/testuser/status/dup1',
+        user: { name: 'Test', screen_name: 'testuser' },
+        favorite_count: 10,
+        created_at: 'Thu Feb 20 15:00:00 +0000 2026',
+      }]),
+    }))
+    mockExecFileNotFound()
+    mockDelay()
+
+    const mod = await import('./x_posts')
+    // Use 2 accounts so round-robin sends one to each provider
+    const config = mixedConfig({ social_accounts_x: ['@testuser', '@testuser2'] })
+    const items = await mod.fetchXPosts(config, 50)
+
+    // The duplicate id should appear only once
+    const dupCount = items.filter(i => i.id === 'x-dup1').length
+    expect(dupCount).toBeLessThanOrEqual(1)
   })
 })

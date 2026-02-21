@@ -333,8 +333,8 @@ input[type="range"]::-moz-range-thumb {
     padding-top: 1.5rem !important;
   }
 
-  /* ── Data page — tabs flush against top bar (no gap from hidden page header) ── */
-  .data-page-root {
+  /* ── Data page — tabs flush against top bar ── */
+  .main-content:has(> .data-page-root) {
     padding-top: 0 !important;
   }
 
@@ -345,6 +345,8 @@ input[type="range"]::-moz-range-thumb {
   .data-content {
     padding-left: 1.25rem !important;
     padding-right: 1.25rem !important;
+    /* Compensate for removed main-content padding so content clears top bar */
+    padding-top: calc(56px + env(safe-area-inset-top, 0) + 0.75rem) !important;
     padding-bottom: 6rem !important;
   }
 

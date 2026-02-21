@@ -5,6 +5,8 @@ import { describe, it, expect } from 'vitest'
 import type { BriefingEntry, BriefingSource, SentimentEntry } from '../models'
 import {
   ATTRIBUTION_SYSTEM_PROMPT,
+  ATTRIBUTION_SYSTEM_PROMPT_EN,
+  getAttributionSystemPrompt,
   buildSectionAttributionPrompt,
   buildExecSummaryAttributionPrompt,
   buildSentimentAttributionPrompt,
@@ -288,6 +290,54 @@ describe('parseSentimentAttributionResult', () => {
     })
     const result = parseSentimentAttributionResult(raw)
     expect(result!.controversies[0].refs).toEqual([])
+  })
+})
+
+// -- English language support --
+
+describe('getAttributionSystemPrompt', () => {
+  it('returns Chinese prompt by default', () => {
+    expect(getAttributionSystemPrompt()).toBe(ATTRIBUTION_SYSTEM_PROMPT)
+    expect(getAttributionSystemPrompt('zh')).toBe(ATTRIBUTION_SYSTEM_PROMPT)
+  })
+
+  it('returns English prompt when language is en', () => {
+    expect(getAttributionSystemPrompt('en')).toBe(ATTRIBUTION_SYSTEM_PROMPT_EN)
+    expect(ATTRIBUTION_SYSTEM_PROMPT_EN).toContain('[N]')
+    expect(ATTRIBUTION_SYSTEM_PROMPT_EN).toContain('Do not modify')
+  })
+})
+
+describe('English language prompt builders', () => {
+  it('buildSectionAttributionPrompt uses English when language is en', () => {
+    const prompt = buildSectionAttributionPrompt(entries, sources, 'en')
+    expect(prompt).toContain('Available Sources')
+    expect(prompt).toContain('Entries to Annotate')
+    expect(prompt).toContain(`${entries.length} entries`)
+    expect(prompt).not.toContain('可用来源')
+  })
+
+  it('buildExecSummaryAttributionPrompt uses English when language is en', () => {
+    const prompt = buildExecSummaryAttributionPrompt('summary text', sources, 'en')
+    expect(prompt).toContain('Available Sources')
+    expect(prompt).toContain('Text to Annotate')
+    expect(prompt).toContain('attributed_text')
+    expect(prompt).not.toContain('可用来源')
+  })
+
+  it('buildSentimentAttributionPrompt uses English when language is en', () => {
+    const prompt = buildSentimentAttributionPrompt(sentimentContros, sentimentShifts, sentimentRisks, sources, 'en')
+    expect(prompt).toContain('Controversies')
+    expect(prompt).toContain('Opinion Shifts')
+    expect(prompt).toContain('Risk Flags')
+    expect(prompt).toContain('(none)')
+    expect(prompt).not.toContain('争议话题')
+  })
+
+  it('Chinese prompts are still default', () => {
+    const prompt = buildSectionAttributionPrompt(entries, sources)
+    expect(prompt).toContain('可用来源')
+    expect(prompt).toContain('待标注条目')
   })
 })
 

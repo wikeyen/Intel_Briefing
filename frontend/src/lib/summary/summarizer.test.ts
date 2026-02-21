@@ -104,7 +104,7 @@ describe('summarizeReport', () => {
     expect(result.overall).toEqual({
       quick_scan: [],
       executive_summary: '',
-      sections: [{ title: '简报', entries: [{ text: 'Overall briefing', source: '', refs: [] }] }],
+      sections: [{ title: 'Briefing', entries: [{ text: 'Overall briefing', source: '', refs: [] }] }],
       sentiment: { overall_mood: 'neutral', mood_summary: '', controversies: [], opinion_shifts: [], risk_flags: [] },
       sources: [],
     })
@@ -169,7 +169,7 @@ describe('summarizeReport', () => {
     expect(result.overall).toEqual({
       quick_scan: [],
       executive_summary: '',
-      sections: [{ title: '简报', entries: [{ text: 'Nothing to report', source: '', refs: [] }] }],
+      sections: [{ title: 'Briefing', entries: [{ text: 'Nothing to report', source: '', refs: [] }] }],
       sentiment: { overall_mood: 'neutral', mood_summary: '', controversies: [], opinion_shifts: [], risk_flags: [] },
       sources: [],
     })
@@ -382,5 +382,75 @@ describe('summarizeReport', () => {
     // Should still produce the expected output shape
     expect(result.sections).toHaveLength(2)
     expect(result.overall).toBeDefined()
+  })
+
+  it('uses English user messages when language is en', async () => {
+    const promptCapture: string[] = []
+    vi.spyOn(llm, 'chatCompletion').mockImplementation(async (messages) => {
+      const userMsg = messages.find(m => m.role === 'user')!.content
+      promptCapture.push(userMsg)
+      return 'Summary'
+    })
+
+    await summarizeReport(makeReport(), makeOptions({ language: 'en' }))
+
+    // Per-sensor prompt should use English user message
+    expect(promptCapture[0]).toContain('Synthesize the following')
+    expect(promptCapture[0]).toContain('Hacker News')
+    // Overall prompt should use English user message
+    const overallPrompt = promptCapture[promptCapture.length - 1]
+    expect(overallPrompt).toContain('Generate a briefing')
+    expect(overallPrompt).toContain('Per-Source Trend Analysis')
+  })
+
+  it('uses Chinese user messages when language is zh', async () => {
+    const promptCapture: string[] = []
+    vi.spyOn(llm, 'chatCompletion').mockImplementation(async (messages) => {
+      const userMsg = messages.find(m => m.role === 'user')!.content
+      promptCapture.push(userMsg)
+      return 'Summary'
+    })
+
+    await summarizeReport(makeReport(), makeOptions({ language: 'zh' }))
+
+    // Per-sensor prompt should use Chinese user message
+    expect(promptCapture[0]).toContain('综合分析以下')
+    // Overall prompt should use Chinese user message
+    const overallPrompt = promptCapture[promptCapture.length - 1]
+    expect(overallPrompt).toContain('请根据以下参考清单')
+  })
+
+  it('passes language to cache write', async () => {
+    vi.spyOn(llm, 'chatCompletion').mockResolvedValue('Summary text')
+
+    await summarizeReport(makeReport(), makeOptions({ skipCache: false, language: 'en' }))
+
+    // writeSensorSummary should receive language as the 4th argument
+    expect(cache.writeSensorSummary).toHaveBeenCalledTimes(2)
+    expect(vi.mocked(cache.writeSensorSummary).mock.calls[0][3]).toBe('en')
+    expect(vi.mocked(cache.writeSensorSummary).mock.calls[1][3]).toBe('en')
+  })
+
+  it('treats cache with different language as miss', async () => {
+    const chatSpy = vi.spyOn(llm, 'chatCompletion').mockResolvedValue('Fresh EN summary')
+
+    // Cache has Chinese summary
+    vi.mocked(cache.readSensorSummary).mockImplementation(async (name) => {
+      if (name === 'hacker_news') {
+        const crypto = await import('crypto')
+        const hash = crypto.createHash('sha256').update('hn-1\nhn-2').digest('hex').slice(0, 16)
+        return { content_hash: hash, sensor_summary: {
+          sensor_name: 'hacker_news', label: 'Hacker News', source_url: '', summary: 'Cached ZH', item_count: 2, items: [],
+        }, generated_at: '2026-02-19T09:00:00Z', language: 'zh' }
+      }
+      return null
+    })
+
+    const result = await summarizeReport(makeReport(), makeOptions({ skipCache: false, language: 'en' }))
+
+    // Should NOT use cache — language mismatch
+    expect(result.sections[0].summary).toBe('Fresh EN summary')
+    // Both sensors should trigger LLM calls (cache miss for hacker_news due to language)
+    expect(chatSpy).toHaveBeenCalledTimes(3) // 2 sensors + 1 overall
   })
 })

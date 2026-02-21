@@ -10,7 +10,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./vitest.setup.ts'],
+    setupFiles: [path.resolve(__dirname, 'vitest.setup.ts')],
     coverage: {
       provider: 'v8',
       thresholds: {

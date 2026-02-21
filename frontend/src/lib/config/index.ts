@@ -4,7 +4,7 @@ import { readFile, writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import yaml from 'js-yaml'
 import { kvSet, kvGet } from '../db'
-import { type ConfigSettings, defaultConfig } from '../models'
+import { type ConfigSettings, type SummaryLanguage, defaultConfig } from '../models'
 
 const DB_KEY = 'intel:config'
 
@@ -83,6 +83,9 @@ function applyEnvOverrides(config: ConfigSettings): ConfigSettings {
     twitter_auth_token: env.TWITTER_AUTH_TOKEN ?? config.twitter_auth_token,
     twitter_ct0:        env.TWITTER_CT0       ?? config.twitter_ct0,
     apify_token:        env.APIFY_TOKEN       ?? config.apify_token,
+    summary_language: (env.SUMMARY_LANGUAGE === 'en' || env.SUMMARY_LANGUAGE === 'zh')
+      ? env.SUMMARY_LANGUAGE as SummaryLanguage
+      : config.summary_language,
   }
 }
 

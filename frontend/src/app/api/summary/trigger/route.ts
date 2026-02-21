@@ -123,6 +123,7 @@ export async function POST(): Promise<NextResponse> {
         onProgress,
         skipCache: false, // Standalone regenerate uses cache — skip unchanged sensors
         enabledSensors,
+        language: config.summary_language,
         onToken: (sensorName, token) => bus.emitToken(sensorName, token),
       })
       await writeSummary(summary)

@@ -1,7 +1,7 @@
 // ABOUTME: SQLite-backed cache for BriefingSummary, SummaryProgress, and per-sensor summaries.
 // ABOUTME: Per-sensor cache enables skipping unchanged sources on regenerate.
 import { kvSet, kvGet, kvDelete, getDb } from '../db'
-import type { BriefingSummary, SummaryProgress, SensorSummary } from '../models'
+import type { BriefingSummary, SummaryProgress, SensorSummary, SummaryLanguage } from '../models'
 import { parseOverallJson } from './parse-json'
 
 const SUMMARY_KEY = 'intel:summary'
@@ -75,18 +75,21 @@ export interface CachedSensorSummary {
   content_hash: string
   sensor_summary: SensorSummary
   generated_at: string
+  language?: SummaryLanguage
 }
 
-/** Write a per-sensor summary with its content hash. */
+/** Write a per-sensor summary with its content hash and language. */
 export async function writeSensorSummary(
   sensorName: string,
   contentHash: string,
   sensorSummary: SensorSummary,
+  language?: SummaryLanguage,
 ): Promise<void> {
   const entry: CachedSensorSummary = {
     content_hash: contentHash,
     sensor_summary: sensorSummary,
     generated_at: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
+    language,
   }
   await kvSet(SENSOR_SUMMARY_PREFIX + sensorName, entry, SENSOR_SUMMARY_TTL_SECONDS)
 }

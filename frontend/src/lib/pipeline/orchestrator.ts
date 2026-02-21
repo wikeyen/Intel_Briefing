@@ -311,6 +311,7 @@ export async function runPipeline(
           onProgress,
           skipCache: shouldFetch,
           enabledSensors,
+          language: config.summary_language,
           onToken: (sensorName, token) => summaryBus!.emitToken(sensorName, token),
           attributionLlmConfig: buildAttributionLlmConfig(config) ?? undefined,
         })

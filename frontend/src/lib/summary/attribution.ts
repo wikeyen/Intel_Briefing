@@ -1,10 +1,10 @@
 // ABOUTME: Post-hoc citation attribution — prompt builders, result parsers, and marker validation.
 // ABOUTME: Used by the summarizer to insert [N] markers into clean text by matching claims to sources.
 
-import type { BriefingEntry, BriefingSource, SentimentEntry } from '../models'
+import type { BriefingEntry, BriefingSource, SentimentEntry, SummaryLanguage } from '../models'
 
 /**
- * System prompt for the attribution LLM.
+ * System prompt for the attribution LLM (Chinese).
  * Instructs the model to insert [N] citation markers after factual claims,
  * without modifying the original text content.
  */
@@ -19,12 +19,33 @@ export const ATTRIBUTION_SYSTEM_PROMPT = `你是一名引用标注助手。你�
 - 观点性总结和过渡句不需要标记`
 
 /**
+ * System prompt for the attribution LLM (English).
+ */
+export const ATTRIBUTION_SYSTEM_PROMPT_EN = `You are a citation attribution assistant. Your task is to insert citation markers [N] into existing text, where N is the reference source number.
+
+Rules:
+- Insert [N] markers after each factual claim that can be traced to a specific source
+- Do not modify the original text content — only add [N] markers
+- A claim can have multiple source markers, e.g. [1][3]
+- If a claim cannot be clearly matched to any source, do not add a marker
+- Only use source numbers provided — do not fabricate non-existent numbers
+- Opinion summaries and transition sentences do not need markers`
+
+/**
+ * Get the attribution system prompt for the given language.
+ */
+export function getAttributionSystemPrompt(language?: SummaryLanguage): string {
+  return language === 'en' ? ATTRIBUTION_SYSTEM_PROMPT_EN : ATTRIBUTION_SYSTEM_PROMPT
+}
+
+/**
  * Build the user message for attributing section entries.
  * Each entry is numbered, and sources are scoped to sensors present in the entries.
  */
 export function buildSectionAttributionPrompt(
   entries: BriefingEntry[],
   sources: BriefingSource[],
+  language?: SummaryLanguage,
 ): string {
   // Collect unique sensor labels from entries to scope sources
   const entrySensors = new Set(entries.map(e => e.source))
@@ -41,6 +62,24 @@ export function buildSectionAttributionPrompt(
   const entryList = entries
     .map((e, i) => `${i + 1}. ${e.text}`)
     .join('\n')
+
+  if (language === 'en') {
+    return `Add citation markers to the following entries.
+
+## Available Sources
+${sourceList}
+
+## Entries to Annotate
+${entryList}
+
+Output format (strict JSON array, no markdown code fences):
+["Annotated entry 1", "Annotated entry 2", ...]
+
+Requirements:
+- Output array length must exactly match the input entry count (${entries.length} entries)
+- Each element is the annotated entry text
+- Output strictly valid JSON array`
+  }
 
   return `请为以下条目添加引用标记。
 
@@ -66,10 +105,28 @@ ${entryList}
 export function buildExecSummaryAttributionPrompt(
   text: string,
   sources: BriefingSource[],
+  language?: SummaryLanguage,
 ): string {
   const sourceList = sources
     .map(s => `[${s.id}] "${s.title}" — ${s.sensor}${s.brief ? ` — ${s.brief}` : ''}`)
     .join('\n')
+
+  if (language === 'en') {
+    return `Add citation markers to the following executive analysis text.
+
+## Available Sources
+${sourceList}
+
+## Text to Annotate
+${text}
+
+Output format (strict JSON, no markdown code fences):
+{"attributed_text": "Full text with citation markers"}
+
+Requirements:
+- Do not modify the original text content — only insert [N] markers
+- Output strictly valid JSON object`
+  }
 
   return `请为以下综合分析文本添加引用标记。
 
@@ -96,10 +153,45 @@ export function buildSentimentAttributionPrompt(
   opinionShifts: SentimentEntry[],
   riskFlags: SentimentEntry[],
   sources: BriefingSource[],
+  language?: SummaryLanguage,
 ): string {
   const sourceList = sources
     .map(s => `[${s.id}] "${s.title}" — ${s.sensor}${s.brief ? ` — ${s.brief}` : ''}`)
     .join('\n')
+
+  if (language === 'en') {
+    const formatEntries = (entries: SentimentEntry[]): string =>
+      entries.length === 0
+        ? '(none)'
+        : entries.map((e, i) => `${i + 1}. Topic: ${e.topic}\n   Analysis: ${e.analysis}`).join('\n')
+
+    return `Add citation markers to the following sentiment analysis entries.
+
+## Available Sources
+${sourceList}
+
+## Controversies
+${formatEntries(controversies)}
+
+## Opinion Shifts
+${formatEntries(opinionShifts)}
+
+## Risk Flags
+${formatEntries(riskFlags)}
+
+Output format (strict JSON, no markdown code fences):
+{
+  "controversies": [{"topic": "Topic", "analysis": "Annotated analysis"}],
+  "opinion_shifts": [{"topic": "Topic", "analysis": "Annotated analysis"}],
+  "risk_flags": [{"topic": "Topic", "analysis": "Annotated analysis"}]
+}
+
+Requirements:
+- Array length for each category must match the input
+- Keep topic unchanged — only insert [N] markers in analysis
+- If an input category is empty, output an empty array
+- Output strictly valid JSON object`
+  }
 
   const formatEntries = (entries: SentimentEntry[]): string =>
     entries.length === 0

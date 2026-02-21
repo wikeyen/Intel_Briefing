@@ -73,6 +73,14 @@ export function ActionBar({
   const pct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0
   const options = modeOptions(failures)
 
+  // Retry logic — pick the right mode based on what failed
+  const ff = failures?.fetch ?? 0
+  const sf = failures?.summary ?? 0
+  const totalFailures = ff + sf
+  const retryMode: RunMode = ff > 0 && sf > 0 ? 'fetch_summarize'
+    : ff > 0 ? 'fetch'
+    : 'summarize'
+
   // Subtitle: progress text when running, health description when idle
   const subtitle = isRunning
     ? phaseLabel(phase, progress, detail)
@@ -144,6 +152,28 @@ export function ActionBar({
               <option key={m.value} value={m.value} disabled={m.disabled}>{m.label}</option>
             ))}
           </select>
+        )}
+
+        {/* Retry button — visible only when idle with failures */}
+        {!isRunning && totalFailures > 0 && (
+          <button
+            onClick={() => onRun(retryMode)}
+            disabled={disabled}
+            style={{
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              padding: '0.375rem 1rem',
+              borderRadius: 6,
+              border: 'none',
+              color: disabled ? 'var(--ink-faint)' : '#FFFFFF',
+              background: disabled ? 'var(--border)' : 'var(--err, #d93025)',
+              cursor: disabled ? 'not-allowed' : 'pointer',
+              transition: 'background 120ms',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Retry
+          </button>
         )}
 
         {/* Run / Stop button */}

@@ -325,6 +325,19 @@ input[type="range"]::-moz-range-thumb {
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.08) !important;
   }
 
+  /* ── Status action bar — show run controls on mobile ── */
+  .status-action-bar {
+    display: flex !important;
+    align-items: center !important;
+    margin-bottom: 1rem !important;
+  }
+  .status-action-bar > div:first-child h2 {
+    display: none !important;
+  }
+  .status-action-bar > div:first-child p {
+    font-size: 0.75rem !important;
+  }
+
   /* ── Status section top padding ── */
   #status {
     padding-top: 1.5rem !important;

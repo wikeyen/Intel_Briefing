@@ -86,7 +86,7 @@ export function ActionBar({
       : meta.desc
 
   return (
-    <div className="page-header" style={{
+    <div className="page-header status-action-bar" style={{
       position: 'relative',
       display: 'flex',
       alignItems: 'flex-start',

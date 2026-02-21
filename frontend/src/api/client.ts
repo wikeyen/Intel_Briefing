@@ -136,6 +136,15 @@ export interface BriefingRef {
   verified?: boolean | null
 }
 
+/** Global source list entry — Perplexity-style numbered source for [N] citation resolution. */
+export interface BriefingSource {
+  id: number
+  title: string
+  url: string
+  sensor: string
+  brief?: string
+}
+
 export interface BriefingEntry {
   text: string
   source: string
@@ -166,6 +175,8 @@ export interface OverallBriefing {
   executive_summary: string
   sections: BriefingSection[]
   sentiment: SentimentAnalysis
+  /** Global numbered source list for [N] citation resolution (Perplexity-style). */
+  sources?: BriefingSource[]
 }
 
 export interface BriefingSummary {

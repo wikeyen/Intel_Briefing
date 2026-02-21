@@ -1,15 +1,15 @@
 // ABOUTME: Unified summarization engine — per-sensor summaries with map-reduce and caching, plus overall briefing.
 // ABOUTME: Shared by both the pipeline orchestrator and the standalone trigger route.
-import type { IntelReport, IntelItem, BriefingSummary, SensorSummary, BriefingRef } from '../models'
+import type { IntelReport, IntelItem, BriefingSummary, SensorSummary, BriefingSource } from '../models'
 import { SOURCE_URLS, EMPTY_SENTIMENT } from '../models'
 import { Semaphore } from '../pipeline/semaphore'
-import { chatCompletion, type LlmConfig, type ChatMessage } from './llm'
+import { chatCompletion, chatCompletionStream, type LlmConfig, type ChatMessage } from './llm'
 import { getSensorPrompt, getOverallPrompt, CHUNK_SIZE, CHUNK_EXTRACT_PROMPT } from './prompts'
 import { parseSensorJson, parseOverallJson } from './parse-json'
 import { SENSOR_LABELS } from '../sensors/taxonomy'
 import { formatItem, groupBySensor, chunkArray, computeContentHash } from './shared'
 import { readSensorSummary, writeSensorSummary } from './cache'
-import { buildUrlPool, buildSensorUrlPool } from './ref-verifier'
+import { buildUrlPool } from './ref-verifier'
 import { summarizeWithVerification } from './retry-with-verification'
 
 export type SummaryProgressCallback = (
@@ -245,72 +245,62 @@ export async function summarizeReport(
     if (result) sections.push(result)
   }
 
-  // Overall briefing — include notable items with URLs so the LLM can cite sources
+  // Overall briefing — build global numbered source list (Perplexity-style)
   await onProgress?.('__overall__', 'Overall', 'running', null)
 
-  const overallContext = sections.length > 0
-    ? sections.map(s => {
-        const itemsList = s.items.length > 0
-          ? '\n  Notable items:\n' + s.items.map(it => `  - "${it.title}" ${it.url}${it.brief ? ` — ${it.brief}` : ''}`).join('\n')
-          : ''
-        return `**${s.label}** (${s.item_count} items): ${s.summary}${itemsList}`
-      }).join('\n\n')
-    : 'No data was collected in this run.'
+  // Build global source list from all verified per-sensor Notable items
+  const globalSources: BriefingSource[] = []
+  for (const s of sections) {
+    for (const item of s.items) {
+      if (item.verified === false) continue
+      globalSources.push({
+        id: globalSources.length + 1,
+        title: item.title,
+        url: item.url,
+        sensor: s.label,
+        brief: item.brief || undefined,
+      })
+    }
+  }
+
+  // Format context: numbered source list + per-sensor trend summaries
+  const sourceList = globalSources.length > 0
+    ? '## 参考清单\n' + globalSources.map(s =>
+        `[${s.id}] "${s.title}" — ${s.sensor}${s.brief ? ` — ${s.brief}` : ''}`
+      ).join('\n')
+    : ''
+
+  const sensorSummaries = sections.length > 0
+    ? '## 各信息源趋势分析\n\n' + sections.map(s =>
+        `### ${s.label} (${s.item_count} items)\n${s.summary}`
+      ).join('\n\n')
+    : ''
+
+  const overallContext = sourceList && sensorSummaries
+    ? `${sourceList}\n\n${sensorSummaries}`
+    : sensorSummaries || 'No data was collected in this run.'
 
   const overallMessages: ChatMessage[] = [
     { role: 'system', content: getOverallPrompt(overallPromptOverride) },
-    { role: 'user', content: `请根据以下各信息源摘要生成简报：\n\n${overallContext}` },
+    { role: 'user', content: `请根据以下参考清单和信息源趋势分析生成简报：\n\n${overallContext}` },
   ]
-
-  // Build URL pool from verified per-sensor notable items
-  const overallUrlPool = buildSensorUrlPool(sections)
 
   let overall: ReturnType<typeof parseOverallJson>
   try {
-    // Pool-only: overall refs must come from verified per-sensor notable items
+    // No per-entry ref verification needed — [N] markers resolve to the global source list
     // Overall synthesis processes all sources — needs longer timeout than per-sensor calls
-    overall = await summarizeWithVerification({
-      messages: overallMessages,
-      llmConfig,
-      parseFn: parseOverallJson,
-      knownUrls: overallUrlPool,
-      poolOnly: true,
-      timeoutMs: 300_000,
-      extractRefs: (parsed) => {
-        const allRefs: BriefingRef[] = []
-        for (const entry of parsed.quick_scan) allRefs.push(...entry.refs)
-        for (const sec of parsed.sections) {
-          for (const entry of sec.entries) allRefs.push(...entry.refs)
-        }
-        for (const entry of parsed.sentiment.controversies) allRefs.push(...entry.refs)
-        for (const entry of parsed.sentiment.opinion_shifts) allRefs.push(...entry.refs)
-        for (const entry of parsed.sentiment.risk_flags) allRefs.push(...entry.refs)
-        return allRefs
-      },
-      applyVerified: (parsed, refs) => {
-        const refMap = new Map(refs.map(r => [r.url, r.verified]))
-        const applyToRefs = (entryRefs: BriefingRef[]) =>
-          entryRefs.map(r => ({ ...r, verified: refMap.get(r.url) ?? r.verified }))
-        return {
-          ...parsed,
-          quick_scan: parsed.quick_scan.map(e => ({ ...e, refs: applyToRefs(e.refs) })),
-          sections: parsed.sections.map(s => ({
-            ...s,
-            entries: s.entries.map(e => ({ ...e, refs: applyToRefs(e.refs) })),
-          })),
-          sentiment: {
-            ...parsed.sentiment,
-            controversies: parsed.sentiment.controversies.map(e => ({ ...e, refs: applyToRefs(e.refs) })),
-            opinion_shifts: parsed.sentiment.opinion_shifts.map(e => ({ ...e, refs: applyToRefs(e.refs) })),
-            risk_flags: parsed.sentiment.risk_flags.map(e => ({ ...e, refs: applyToRefs(e.refs) })),
-          },
-        }
-      },
-      signal,
-      onRetry: (attempt, maxRetries, failures) =>
-        onProgress?.('__overall__', 'Overall', 'running', null, undefined, { attempt, maxRetries, failures }),
-      onToken: onToken ? (token) => onToken('__overall__', token) : undefined,
-    })
+    const onTokenOverall = onToken ? (token: string) => onToken('__overall__', token) : undefined
+    let rawOverall: string
+    if (onTokenOverall) {
+      rawOverall = await chatCompletionStream(overallMessages, llmConfig, {
+        onToken: onTokenOverall, signal, timeoutMs: 300_000,
+      }).fullText
+    } else {
+      rawOverall = await chatCompletion(overallMessages, llmConfig, signal, 300_000)
+    }
+    overall = parseOverallJson(rawOverall)
+    // Attach global source list to the result
+    overall.sources = globalSources
     await onProgress?.('__overall__', 'Overall', 'ok', null)
   } catch (err) {
     await onProgress?.('__overall__', 'Overall', 'failed', (err as Error).message)

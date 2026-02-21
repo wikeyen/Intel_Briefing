@@ -146,6 +146,15 @@ export interface BriefingRef {
   verified?: boolean | null
 }
 
+/** Global source list entry — Perplexity-style numbered source for [N] citation resolution. */
+export interface BriefingSource {
+  id: number
+  title: string
+  url: string
+  sensor: string
+  brief?: string
+}
+
 export interface BriefingEntry {
   text: string
   source: string
@@ -204,6 +213,8 @@ export interface OverallBriefing {
   executive_summary: string
   sections: BriefingSection[]
   sentiment: SentimentAnalysis
+  /** Global numbered source list for [N] citation resolution (Perplexity-style). */
+  sources?: BriefingSource[]
 }
 
 export interface BriefingSummary {
@@ -366,7 +377,7 @@ export function defaultConfig(): ConfigSettings {
     summary_provider: null,
     summary_api_key: null,
     summary_base_url: 'https://openrouter.ai/api/v1',
-    summary_model: 'anthropic/claude-sonnet-4',
+    summary_model: 'deepseek/deepseek-v3.2',
     summary_sensor_prompts: {},
     summary_overall_prompt: '',
   }

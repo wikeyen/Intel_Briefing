@@ -2,7 +2,7 @@
 // ABOUTME: Extracted from Data.tsx; includes summary progress banner, streaming token preview, and structured briefing display.
 'use client'
 import Link from 'next/link'
-import type { ConfigSettings, BriefingSummary, SummaryProgress, PipelineStatus, OverallBriefing } from '@/api/client'
+import type { ConfigSettings, BriefingSummary, SummaryProgress, PipelineStatus, OverallBriefing, BriefingSource } from '@/api/client'
 import { SENSOR_LABELS } from '@/lib/sensors/taxonomy'
 
 function timeAgo(isoString: string): string {
@@ -544,24 +544,18 @@ function RefLink({ ref, index }: { ref: { title: string; url: string; verified?:
 
 /**
  * Render text with inline [N] citation markers as superscript links.
- * Falls back to appending all refs at the end if no [N] markers found in text.
+ * When globalSources is provided (Perplexity-style), resolves [N] by ID from the global list.
+ * Falls back to per-entry refs for backward compatibility with older briefings.
  */
-function TextWithRefs({ text, refs, query }: {
+function TextWithRefs({ text, refs, query, globalSources }: {
   text: string
   refs: { title: string; url: string; verified?: boolean | null }[]
   query: string
+  globalSources?: BriefingSource[]
 }) {
-  if (!refs || refs.length === 0) {
-    return <Highlight text={text} query={query} />
-  }
-
-  // Check if text contains any [N] markers
   const hasInlineMarkers = /\[\d+\]/.test(text)
 
   if (hasInlineMarkers) {
-    // Split text on [N] markers and interleave with ref links.
-    // LLM uses global numbering across entries, but each entry has its own
-    // refs array.  Map markers positionally: first [N] → refs[0], etc.
     const parts: React.ReactNode[] = []
     const segments = text.split(/(\[\d+\])/)
     let key = 0
@@ -570,7 +564,16 @@ function TextWithRefs({ text, refs, query }: {
       const match = segment.match(/^\[(\d+)\]$/)
       if (match) {
         const displayNum = parseInt(match[1], 10)
-        if (refCounter < refs.length) {
+        if (globalSources && globalSources.length > 0) {
+          // New format: resolve [N] by ID from global source list
+          const source = globalSources.find(s => s.id === displayNum)
+          if (source) {
+            parts.push(<RefLink key={`ref-${key++}`} ref={{ title: source.title, url: source.url }} index={displayNum} />)
+          } else {
+            parts.push(<span key={`ref-${key++}`}>{segment}</span>)
+          }
+        } else if (refCounter < refs.length) {
+          // Legacy format: positional mapping into per-entry refs
           parts.push(<RefLink key={`ref-${key++}`} ref={refs[refCounter]} index={displayNum} />)
           refCounter++
         } else {
@@ -583,15 +586,19 @@ function TextWithRefs({ text, refs, query }: {
     return <>{parts}</>
   }
 
-  // Fallback: no inline markers — append refs at the end (backward compat)
-  return (
-    <>
-      <Highlight text={text} query={query} />
-      {refs.map((r, ri) => (
-        <RefLink key={ri} ref={r} index={ri + 1} />
-      ))}
-    </>
-  )
+  // Fallback: no inline markers — append per-entry refs at the end (backward compat)
+  if (refs && refs.length > 0) {
+    return (
+      <>
+        <Highlight text={text} query={query} />
+        {refs.map((r, ri) => (
+          <RefLink key={ri} ref={r} index={ri + 1} />
+        ))}
+      </>
+    )
+  }
+
+  return <Highlight text={text} query={query} />
 }
 
 /** Check if overall briefing has structured data (new format) vs legacy plain text fallback. */
@@ -757,7 +764,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                         color: 'var(--ink)',
                         lineHeight: 1.6,
                       }}>
-                        <TextWithRefs text={entry.text} refs={entry.refs ?? []} query={q} />
+                        <TextWithRefs text={entry.text} refs={entry.refs ?? []} query={q} globalSources={structured?.sources} />
                         {entry.source && (
                           <span style={{
                             marginLeft: '0.5rem',
@@ -829,7 +836,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                           marginBottom: '0.375rem', paddingLeft: '0.25rem',
                         }}>
                           <span style={{ fontWeight: 600 }}><Highlight text={entry.topic} query={q} /></span>
-                          {' — '}<TextWithRefs text={entry.analysis} refs={entry.refs} query={q} />
+                          {' — '}<TextWithRefs text={entry.analysis} refs={entry.refs} query={q} globalSources={structured?.sources} />
                         </div>
                       ))}
                     </div>
@@ -911,7 +918,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                             color: 'var(--ink-muted)',
                             lineHeight: 1.6,
                           }}>
-                            <TextWithRefs text={entry.text} refs={entry.refs ?? []} query={q} />
+                            <TextWithRefs text={entry.text} refs={entry.refs ?? []} query={q} globalSources={structured?.sources} />
                           </li>
                         ))}
                       </ul>
@@ -929,6 +936,52 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
               whiteSpace: 'pre-wrap',
             }}>
               {String(summary.overall)}
+            </div>
+          )}
+
+          {/* Global Sources — Perplexity-style numbered reference list */}
+          {structured?.sources && structured.sources.length > 0 && (
+            <div style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              padding: '1rem 1.25rem',
+            }}>
+              <div style={{
+                fontSize: '0.6875rem',
+                fontWeight: 600,
+                color: 'var(--ink-faint)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                marginBottom: '0.625rem',
+              }}>
+                References
+              </div>
+              <ol style={{
+                margin: 0,
+                paddingLeft: '1.5rem',
+                fontSize: '0.75rem',
+                lineHeight: 1.8,
+                color: 'var(--ink-muted)',
+              }}>
+                {structured.sources.map(src => (
+                  <li key={src.id} value={src.id} style={{ paddingLeft: '0.25rem' }}>
+                    <a
+                      href={src.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--accent)', textDecoration: 'none' }}
+                      onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+                      onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+                    >
+                      {src.title}
+                    </a>
+                    <span style={{ color: 'var(--ink-faint)', marginLeft: '0.375rem' }}>
+                      — {src.sensor}
+                    </span>
+                  </li>
+                ))}
+              </ol>
             </div>
           )}
 

@@ -58,7 +58,9 @@ function makeOptions(overrides?: Partial<SummarizeOptions>): SummarizeOptions {
 
 describe('summarizeReport', () => {
   beforeEach(() => {
-    // Reset cache mocks to defaults before each test (restoreAllMocks clears them)
+    // clearAllMocks resets call counts on vi.fn() mocks from vi.mock() factories
+    // (restoreAllMocks only reliably clears vi.spyOn mocks)
+    vi.clearAllMocks()
     vi.mocked(cache.readSensorSummary).mockResolvedValue(null)
     vi.mocked(cache.writeSensorSummary).mockResolvedValue(undefined)
   })
@@ -69,7 +71,7 @@ describe('summarizeReport', () => {
     vi.spyOn(llm, 'chatCompletion').mockImplementation(async (messages) => {
       const userMsg = messages.find(m => m.role === 'user')!.content
       // Check for overall prompt first — it also contains sensor labels
-      if (userMsg.includes('各信息源摘要')) {
+      if (userMsg.includes('各信息源趋势分析')) {
         calls.push('overall')
         return 'Overall briefing'
       }
@@ -103,6 +105,7 @@ describe('summarizeReport', () => {
       executive_summary: '',
       sections: [{ title: '简报', entries: [{ text: 'Overall briefing', source: '', refs: [] }] }],
       sentiment: { overall_mood: 'neutral', mood_summary: '', controversies: [], opinion_shifts: [], risk_flags: [] },
+      sources: [],
     })
     expect(result.report_fetched_at).toBe('2026-02-19T09:00:00Z')
     // Verify sequential order with concurrency=1 (default)
@@ -166,6 +169,7 @@ describe('summarizeReport', () => {
       executive_summary: '',
       sections: [{ title: '简报', entries: [{ text: 'Nothing to report', source: '', refs: [] }] }],
       sentiment: { overall_mood: 'neutral', mood_summary: '', controversies: [], opinion_shifts: [], risk_flags: [] },
+      sources: [],
     })
   })
 

@@ -1,4 +1,4 @@
-// ABOUTME: X posts sensor — fetches recent tweets via twitter-scraper or Apify.
+// ABOUTME: X posts sensor — fetches recent tweets via twitter-scraper or Apify (quacker/twitter-scraper).
 // ABOUTME: Provider selection via config; auth-error fallback to alternate provider.
 import { Scraper, type Tweet } from '@the-convocation/twitter-scraper'
 import { ApifyClient } from 'apify-client'
@@ -170,51 +170,56 @@ function stitchSelfReplies(tweets: Tweet[]): void {
 
 // ── Strategy: Apify twitter-scraper actor ────────────────────────────────────
 
-/** Raw tweet shape from the apify/twitter-scraper actor dataset. */
+/** Raw tweet shape from the quacker/twitter-scraper actor dataset. */
 interface ApifyTweet {
-  id?: string
+  id?: number
+  id_str?: string
   tweetId?: string
+  permalink?: string
   url?: string
   text?: string
-  contentText?: string
   full_text?: string
   user?: { name?: string; screen_name?: string; username?: string }
-  author?: { name?: string; userName?: string }
+  favorite_count?: number
   favorites?: number
-  favoriteCount?: number
-  likeCount?: number
+  retweet_count?: number
   retweets?: number
   retweetCount?: number
+  quote_count?: number
+  reply_count?: number
   views?: number
   viewCount?: number
-  dateTime?: string
-  createdAt?: string
   created_at?: string
+  createdAt?: string
+  retweeted?: boolean
   isRetweet?: boolean
 }
 
-const APIFY_ACTOR_ID = 'apify/twitter-scraper'
+const APIFY_ACTOR_ID = 'quacker/twitter-scraper'
 const APIFY_RUN_TIMEOUT_SECS = 120
 
 /** Map a single Apify tweet record to an IntelItem. */
 export function mapApifyTweet(raw: ApifyTweet, fallbackHandle: string): IntelItem | null {
-  const text = raw.text ?? raw.contentText ?? raw.full_text ?? ''
+  const text = raw.full_text ?? raw.text ?? ''
   if (!text.trim()) return null
 
-  const tweetId = raw.id ?? raw.tweetId ?? ''
-  const handle = raw.user?.screen_name ?? raw.user?.username ?? raw.author?.userName ?? fallbackHandle
-  const account = raw.user?.name ?? raw.author?.name ?? handle
-  const url = raw.url ?? `https://x.com/${handle}/status/${tweetId}`
+  const tweetId = raw.id_str ?? raw.tweetId ?? String(raw.id ?? '')
+  const handle = raw.user?.screen_name ?? raw.user?.username ?? fallbackHandle
+  const account = raw.user?.name ?? handle
+  const permalink = raw.permalink ?? raw.url
+  const url = permalink
+    ? (permalink.startsWith('http') ? permalink : `https://x.com${permalink}`)
+    : `https://x.com/${handle}/status/${tweetId}`
 
-  const likes = raw.favorites ?? raw.favoriteCount ?? raw.likeCount ?? 0
-  const rts = raw.retweets ?? raw.retweetCount ?? 0
+  const likes = raw.favorite_count ?? raw.favorites ?? 0
+  const rts = raw.retweet_count ?? raw.retweets ?? raw.retweetCount ?? 0
   const views = raw.views ?? raw.viewCount ?? 0
   const heatParts: string[] = []
   if (likes > 0) heatParts.push(`${formatCount(likes)} likes`)
   if (rts > 0) heatParts.push(`${formatCount(rts)} retweets`)
   if (views > 0) heatParts.push(`${formatCount(views)} views`)
 
-  const dateStr = raw.dateTime ?? raw.createdAt ?? raw.created_at ?? null
+  const dateStr = raw.created_at ?? raw.createdAt ?? null
   const pubDate = dateStr ? new Date(dateStr) : null
   const published_at = pubDate && !isNaN(pubDate.getTime()) ? pubDate.toISOString() : null
 
@@ -248,9 +253,8 @@ async function fetchViaApify(
 
     const { defaultDatasetId } = await client.actor(APIFY_ACTOR_ID).call(
       {
-        twitterHandles: [handle],
-        maxTweets: perAccountLimit * 2,
-        maxRequestRetries: 2,
+        handles: [handle],
+        tweetsDesired: perAccountLimit * 2,
       },
       { waitSecs: APIFY_RUN_TIMEOUT_SECS },
     )
@@ -259,7 +263,7 @@ async function fetchViaApify(
     const { items: rawItems } = await client.dataset(defaultDatasetId).listItems()
 
     for (const raw of rawItems as ApifyTweet[]) {
-      if (raw.isRetweet) continue
+      if (raw.retweeted || raw.isRetweet) continue
 
       const item = mapApifyTweet(raw, handle)
       if (!item) continue

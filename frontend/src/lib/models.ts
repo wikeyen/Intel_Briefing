@@ -316,6 +316,7 @@ export interface ConfigSettings {
   summary_api_key: string | null
   summary_base_url: string
   summary_model: string
+  summary_attribution_model: string
 
   // Customizable summary prompts
   summary_sensor_prompts: Record<string, string>
@@ -378,6 +379,7 @@ export function defaultConfig(): ConfigSettings {
     summary_api_key: null,
     summary_base_url: 'https://openrouter.ai/api/v1',
     summary_model: 'deepseek/deepseek-v3.2',
+    summary_attribution_model: '',
     summary_sensor_prompts: {},
     summary_overall_prompt: '',
   }

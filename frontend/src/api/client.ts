@@ -44,6 +44,7 @@ export interface ConfigSettings {
   summary_api_key: string | null
   summary_base_url: string
   summary_model: string
+  summary_attribution_model: string
   summary_sensor_prompts: Record<string, string>
   summary_overall_prompt: string
 }

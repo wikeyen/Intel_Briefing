@@ -85,6 +85,7 @@ function makeConfig(overrides: Partial<ConfigSettings> = {}): ConfigSettings {
     summary_api_key: null,
     summary_base_url: '',
     summary_model: '',
+    summary_attribution_model: '',
     summary_sensor_prompts: {},
     summary_overall_prompt: '',
     ...overrides,

@@ -1,5 +1,5 @@
 // ABOUTME: Mastodon platform adapter — REST API client for mastodon.social.
-// ABOUTME: Shared by social_accounts, social_topics, and social_trends sensors.
+// ABOUTME: Shared by the mastodon sensor (accounts, topics, and trends).
 import { SensorConfigError } from '../sensors/errors'
 import type { IntelItem } from '../models'
 

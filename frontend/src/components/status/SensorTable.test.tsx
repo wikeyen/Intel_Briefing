@@ -45,9 +45,9 @@ function makeConfig(overrides: Partial<ConfigSettings> = {}): ConfigSettings {
       hn_blogs: true,
       sources_36kr: true,
       wallstreetcn: true,
-      social_accounts: true,
-      social_topics: true,
-      social_trends: true,
+      x: true,
+      bluesky: true,
+      mastodon: true,
       chrome_radar: true,
       rss_feeds: true,
     },
@@ -166,7 +166,7 @@ describe('SensorTable', () => {
     expect(screen.getByText('ArXiv AI')).toBeInTheDocument()
     expect(screen.getByText('Product Hunt')).toBeInTheDocument()
     expect(screen.getByText('V2EX')).toBeInTheDocument()
-    expect(screen.getByText('Social Accounts')).toBeInTheDocument()
+    expect(screen.getByText('Bluesky')).toBeInTheDocument()
     expect(screen.getByText('RSS Feeds')).toBeInTheDocument()
   })
 

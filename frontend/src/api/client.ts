@@ -28,6 +28,10 @@ export interface ConfigSettings {
   social_topics_keywords: string[]
   social_following_bluesky: boolean
   social_following_mastodon: boolean
+  bluesky_topics_enabled: boolean
+  bluesky_trends_enabled: boolean
+  mastodon_topics_enabled: boolean
+  mastodon_trends_enabled: boolean
   rss_feed_urls: string[]
   cache_ttl_hours: number
   default_concurrency: number

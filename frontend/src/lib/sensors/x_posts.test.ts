@@ -99,7 +99,7 @@ describe('fetchXPosts (xcancel fallback)', () => {
     })
     const items = await fetchXPosts(makeConfig(), 10)
     expect(items).toHaveLength(1)
-    expect(items[0].source).toBe('x_posts')
+    expect(items[0].source).toBe('x')
     expect(items[0].title).toBe('Hello world this is a test tweet')
     expect(items[0].url).toBe('https://x.com/testuser/status/12345')
     expect(items[0].handle).toBe('testuser')

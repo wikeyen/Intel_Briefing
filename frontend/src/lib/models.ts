@@ -168,10 +168,9 @@ export const SOURCE_URLS: Record<string, string> = {
   wallstreetcn:     'https://wallstreetcn.com',
   chrome_radar:     'https://chromewebstore.google.com',
   rss_feeds:        '',
-  x_posts:          'https://x.com',
-  social_accounts:  '',
-  social_topics:    '',
-  social_trends:    '',
+  x:                'https://x.com',
+  bluesky:          'https://bsky.app',
+  mastodon:         'https://mastodon.social',
   weibo:            'https://weibo.com',
   zhihu:            'https://www.zhihu.com',
   xiaohongshu:      'https://www.xiaohongshu.com',
@@ -271,6 +270,13 @@ export interface ConfigSettings {
   social_following_bluesky: boolean
   social_following_mastodon: boolean
 
+  // Per-platform sub-toggles (Bluesky)
+  bluesky_topics_enabled: boolean
+  bluesky_trends_enabled: boolean
+  // Per-platform sub-toggles (Mastodon)
+  mastodon_topics_enabled: boolean
+  mastodon_trends_enabled: boolean
+
   // RSS feed URLs
   rss_feed_urls: string[]
 
@@ -308,12 +314,11 @@ export function defaultConfig(): ConfigSettings {
       product_hunt: true,
       sources_36kr: true,
       wallstreetcn: true,
-      social_accounts: true,
-      social_topics: true,
-      social_trends: true,
+      x: true,
+      bluesky: true,
+      mastodon: true,
       chrome_radar: false,
       rss_feeds: false,
-      x_posts: true,
       weibo: true,
       zhihu: true,
       xiaohongshu: true,
@@ -336,6 +341,10 @@ export function defaultConfig(): ConfigSettings {
     social_topics_keywords: [],
     social_following_bluesky: false,
     social_following_mastodon: false,
+    bluesky_topics_enabled: true,
+    bluesky_trends_enabled: true,
+    mastodon_topics_enabled: true,
+    mastodon_trends_enabled: true,
     rss_feed_urls: [],
     cache_ttl_hours: 6,
     default_concurrency: 4,

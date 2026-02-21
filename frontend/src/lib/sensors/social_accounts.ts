@@ -74,20 +74,29 @@ async function fetchMastodonAccounts(config: ConfigSettings, limit: number): Pro
   return items
 }
 
-export async function fetchSocialAccounts(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
-  const hasBsky = config.bluesky_handle && config.bluesky_app_password &&
+export async function fetchSocialAccounts(
+  config: ConfigSettings,
+  limit: number,
+  platform?: 'bluesky' | 'mastodon',
+): Promise<IntelItem[]> {
+  const checkBsky = !platform || platform === 'bluesky'
+  const checkMasto = !platform || platform === 'mastodon'
+
+  const hasBsky = checkBsky && config.bluesky_handle && config.bluesky_app_password &&
     (config.social_accounts_bluesky.length > 0 || config.social_following_bluesky)
-  const hasMasto = config.mastodon_token &&
+  const hasMasto = checkMasto && config.mastodon_token &&
     (config.social_accounts_mastodon.length > 0 || config.social_following_mastodon)
 
   if (!hasBsky && !hasMasto) {
-    throw new SensorConfigError('No social accounts configured on Bluesky or Mastodon')
+    const target = platform ?? 'Bluesky or Mastodon'
+    throw new SensorConfigError(`No social accounts configured on ${target}`)
   }
 
-  const results = await Promise.allSettled([
-    fetchBlueskyAccounts(config, limit),
-    fetchMastodonAccounts(config, limit),
-  ])
+  const fetches: Promise<IntelItem[]>[] = []
+  if (checkBsky) fetches.push(fetchBlueskyAccounts(config, limit))
+  if (checkMasto) fetches.push(fetchMastodonAccounts(config, limit))
+
+  const results = await Promise.allSettled(fetches)
 
   const items: IntelItem[] = []
   for (const r of results) {

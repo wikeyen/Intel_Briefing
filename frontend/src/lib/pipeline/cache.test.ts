@@ -93,6 +93,7 @@ describe('writePipelineStatus', () => {
   it('writes status to db with 1h TTL', async () => {
     const status: PipelineStatus = {
       running: true,
+      cancelled: false,
       mode: 'fetch_summarize',
       default_concurrency: 4,
       local_summary_concurrency: 4,
@@ -115,6 +116,7 @@ describe('readPipelineStatus', () => {
   it('returns status when data exists', async () => {
     const status: PipelineStatus = {
       running: false,
+      cancelled: false,
       mode: 'fetch_summarize',
       default_concurrency: 4,
       local_summary_concurrency: 4,

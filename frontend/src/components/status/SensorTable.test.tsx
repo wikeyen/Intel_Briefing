@@ -61,6 +61,8 @@ function makeConfig(overrides: Partial<ConfigSettings> = {}): ConfigSettings {
     bluesky_handle: null,
     bluesky_app_password: null,
     mastodon_token: null,
+    twitter_auth_token: null,
+    twitter_ct0: null,
     social_accounts_x: [],
     social_accounts_bluesky: [],
     social_accounts_mastodon: [],

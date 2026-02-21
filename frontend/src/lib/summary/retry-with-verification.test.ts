@@ -2,6 +2,7 @@
 // ABOUTME: Validates retry on bad refs, max retries, correction message format, and passthrough on success.
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { summarizeWithVerification } from './retry-with-verification'
+import type { BriefingRef } from '../models'
 import * as llm from './llm'
 import * as refVerifier from './ref-verifier'
 
@@ -22,7 +23,7 @@ describe('summarizeWithVerification', () => {
     const result = await summarizeWithVerification({
       messages: [{ role: 'user', content: 'test' }],
       llmConfig,
-      parseFn: (raw) => ({ raw, refs: [] }),
+      parseFn: (raw) => ({ raw, refs: [] as BriefingRef[] }),
       knownUrls: new Set(),
       extractRefs: (parsed) => parsed.refs,
       applyVerified: (parsed, refs) => ({ ...parsed, refs }),
@@ -125,7 +126,7 @@ describe('summarizeWithVerification', () => {
     await summarizeWithVerification({
       messages: [{ role: 'user', content: 'test' }],
       llmConfig,
-      parseFn: (raw) => ({ raw, refs: [] }),
+      parseFn: (raw) => ({ raw, refs: [] as BriefingRef[] }),
       knownUrls: new Set(),
       extractRefs: (parsed) => parsed.refs,
       applyVerified: (parsed, refs) => ({ ...parsed, refs }),

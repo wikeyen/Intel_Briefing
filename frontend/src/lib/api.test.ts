@@ -142,6 +142,7 @@ describe('GET /api/fetch/status', () => {
   it('returns pipeline status when available', async () => {
     const status: PipelineStatus = {
       running: true,
+      cancelled: false,
       mode: 'fetch_summarize',
       default_concurrency: 4,
       local_summary_concurrency: 4,

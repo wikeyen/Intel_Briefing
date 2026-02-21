@@ -20,6 +20,8 @@ export interface ConfigSettings {
   bluesky_handle: string | null
   bluesky_app_password: string | null
   mastodon_token: string | null
+  twitter_auth_token: string | null
+  twitter_ct0: string | null
   social_accounts_x: string[]
   social_accounts_bluesky: string[]
   social_accounts_mastodon: string[]
@@ -123,6 +125,7 @@ export interface SensorSummaryItem {
 export interface BriefingRef {
   title: string
   url: string
+  verified?: boolean | null
 }
 
 export interface BriefingEntry {

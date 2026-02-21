@@ -22,16 +22,24 @@ const SAMPLE: BriefingSummary = {
   ],
   overall: {
     quick_scan: [
-      { text: 'AI continues to dominate tech news.', source: 'hacker_news' },
+      { text: 'AI continues to dominate tech news.', source: 'hacker_news', refs: [] },
     ],
+    executive_summary: '',
     sections: [
       {
         title: 'Key Developments',
         entries: [
-          { text: 'AI continues to dominate tech news.', source: 'hacker_news' },
+          { text: 'AI continues to dominate tech news.', source: 'hacker_news', refs: [] },
         ],
       },
     ],
+    sentiment: {
+      overall_mood: 'neutral',
+      mood_summary: '',
+      controversies: [],
+      opinion_shifts: [],
+      risk_flags: [],
+    },
   },
 }
 

@@ -7,7 +7,7 @@ import { SensorConfigError } from '../sensors/errors'
 
 // Mock all external dependencies
 const mockWriteReport = vi.fn().mockResolvedValue(undefined)
-const mockReadReport = vi.fn<() => Promise<IntelReport | null>>().mockResolvedValue(null)
+const mockReadReport = vi.fn<(...args: unknown[]) => Promise<IntelReport | null>>().mockResolvedValue(null)
 const mockWritePipelineStatus = vi.fn().mockResolvedValue(undefined)
 vi.mock('./cache', () => ({
   writeReport: (...args: unknown[]) => mockWriteReport(...args),

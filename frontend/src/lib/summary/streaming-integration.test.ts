@@ -2,6 +2,7 @@
 // ABOUTME: Validates that createBus/getActiveBus lifecycle and token emission work end-to-end.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createBus, getActiveBus, type SummaryEvent } from './events'
+import type { BriefingRef } from '../models'
 import * as llm from './llm'
 import * as refVerifier from './ref-verifier'
 import { summarizeWithVerification } from './retry-with-verification'
@@ -83,7 +84,7 @@ describe('streaming integration', () => {
     await summarizeWithVerification({
       messages: [{ role: 'user', content: 'test' }],
       llmConfig,
-      parseFn: (raw) => ({ raw, refs: [] }),
+      parseFn: (raw) => ({ raw, refs: [] as BriefingRef[] }),
       knownUrls: new Set(),
       extractRefs: (parsed) => parsed.refs,
       applyVerified: (parsed, refs) => ({ ...parsed, refs }),
@@ -110,7 +111,7 @@ describe('streaming integration', () => {
     await summarizeWithVerification({
       messages: [{ role: 'user', content: 'test' }],
       llmConfig,
-      parseFn: (raw) => ({ raw, refs: [] }),
+      parseFn: (raw) => ({ raw, refs: [] as BriefingRef[] }),
       knownUrls: new Set(),
       extractRefs: (parsed) => parsed.refs,
       applyVerified: (parsed, refs) => ({ ...parsed, refs }),

@@ -39,7 +39,7 @@ describe('chatCompletion', () => {
   let fetchSpy: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
-    fetchSpy = vi.spyOn(globalThis, 'fetch')
+    fetchSpy = vi.spyOn(globalThis, 'fetch') as ReturnType<typeof vi.spyOn>
   })
   afterEach(() => {
     vi.restoreAllMocks()
@@ -58,12 +58,12 @@ describe('chatCompletion', () => {
     expect(result).toBe('Hello from LLM')
     expect(fetchSpy).toHaveBeenCalledOnce()
 
-    const [url, opts] = fetchSpy.mock.calls[0]
+    const [url, opts] = fetchSpy.mock.calls[0] as [string, RequestInit]
     expect(url).toBe('https://openrouter.ai/api/v1/chat/completions')
-    const body = JSON.parse(opts!.body as string)
+    const body = JSON.parse(opts.body as string)
     expect(body.model).toBe('anthropic/claude-sonnet-4')
     expect(body.messages).toEqual([{ role: 'user', content: 'Say hello' }])
-    expect((opts!.headers as Record<string, string>)['Authorization']).toBe('Bearer test-key')
+    expect((opts.headers as Record<string, string>)['Authorization']).toBe('Bearer test-key')
   })
 
   it('works without api_key (local LLM)', async () => {
@@ -75,8 +75,8 @@ describe('chatCompletion', () => {
     const result = await chatCompletion([{ role: 'user', content: 'Hi' }], localConfig)
 
     expect(result).toBe('Local response')
-    const [, opts] = fetchSpy.mock.calls[0]
-    expect((opts!.headers as Record<string, string>)['Authorization']).toBeUndefined()
+    const [, opts] = fetchSpy.mock.calls[0] as [string, RequestInit]
+    expect((opts.headers as Record<string, string>)['Authorization']).toBeUndefined()
   })
 
   it('throws on HTTP error with raw text', async () => {
@@ -134,7 +134,7 @@ describe('chatCompletionStream', () => {
   let fetchSpy: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
-    fetchSpy = vi.spyOn(globalThis, 'fetch')
+    fetchSpy = vi.spyOn(globalThis, 'fetch') as ReturnType<typeof vi.spyOn>
   })
   afterEach(() => {
     vi.restoreAllMocks()
@@ -150,8 +150,8 @@ describe('chatCompletionStream', () => {
     )
     await result.fullText
 
-    const [, opts] = fetchSpy.mock.calls[0]
-    const body = JSON.parse(opts!.body as string)
+    const [, opts] = fetchSpy.mock.calls[0] as [string, RequestInit]
+    const body = JSON.parse(opts.body as string)
     expect(body.stream).toBe(true)
   })
 

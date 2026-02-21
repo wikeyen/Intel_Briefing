@@ -328,11 +328,12 @@ export async function runPipeline(
     }
     return { report, summary }
   } finally {
-    // Mark SummaryProgress complete for cross-page awareness
+    // Mark SummaryProgress complete for cross-page awareness — await to prevent
+    // a race where status polls see running=true + alive=false (stale false positive)
     if (summaryStatus) {
       summaryStatus.running = false
       summaryStatus.completed_at = new Date().toISOString().replace(/\.\d+Z$/, 'Z')
-      writeSummaryProgress(summaryStatus).catch(() => {})
+      await writeSummaryProgress(summaryStatus).catch(() => {})
     }
     summaryBus?.emitDone()
     // Persist final status BEFORE clearing singletons so the DB always reflects

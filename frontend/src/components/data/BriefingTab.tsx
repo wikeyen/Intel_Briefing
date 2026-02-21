@@ -77,14 +77,14 @@ function SummaryProgressBanner({ progress, pipelineStatus, config, streamTokens,
   const done = sourceSensors.filter(s => s.state === 'ok' || s.state === 'failed').length
   const total = sourceSensors.length
 
-  // Derive workflow phase from pipeline status
-  const hasFetch = pipelineStatus?.mode === 'fetch' || pipelineStatus?.mode === 'fetch_summarize'
+  // Derive workflow phase — only trust pipelineStatus when it's actively running
+  const pipelineActive = pipelineStatus?.running && pipelineStatus?.alive !== false
+  const hasFetch = pipelineActive && (pipelineStatus?.mode === 'fetch' || pipelineStatus?.mode === 'fetch_summarize')
   const fetchDone = pipelineStatus
     ? pipelineStatus.sensors.filter(s => s.fetch === 'ok' || s.fetch === 'failed' || s.fetch === 'skipped').length
     : 0
   const fetchTotal = pipelineStatus?.sensors.length ?? 0
   const allFetchDone = fetchDone >= fetchTotal
-  const overallState = pipelineStatus?.overall_summary ?? 'queued'
 
   // Determine current phase for the step indicator
   type Phase = 'fetching' | 'extracting' | 'synthesizing' | 'overall'
@@ -92,12 +92,12 @@ function SummaryProgressBanner({ progress, pipelineStatus, config, streamTokens,
   if (hasFetch && !allFetchDone) {
     currentPhase = 'fetching'
   } else if (done < total) {
-    // Check if any sensor is in map-reduce chunk extraction
-    const hasChunks = pipelineStatus?.sensors.some(
+    // Check if any sensor is in map-reduce chunk extraction (only valid during active pipeline)
+    const hasChunks = pipelineActive && pipelineStatus?.sensors.some(
       s => s.summary === 'running' && s.summary_chunks_total > 0 && s.summary_chunks_done < s.summary_chunks_total,
     )
     currentPhase = hasChunks ? 'extracting' : 'synthesizing'
-  } else if (overallState === 'running') {
+  } else if (overallSensor?.state === 'running') {
     currentPhase = 'overall'
   }
 

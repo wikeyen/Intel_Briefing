@@ -61,6 +61,10 @@ export function detectStale(
       const age = Date.now() - new Date(summaryProgress.started_at).getTime()
       if (age < STALE_MIN_AGE_MS) return null
     }
+    // If all sensors finished, this is a transient DB-lag race, not a real crash
+    const allSensorsDone = summaryProgress.sensors.length > 0 &&
+      summaryProgress.sensors.every(s => s.state === 'ok' || s.state === 'failed')
+    if (allSensorsDone) return null
     const completed = summaryProgress.sensors.filter(
       s => s.state === 'ok' || s.state === 'failed',
     ).length

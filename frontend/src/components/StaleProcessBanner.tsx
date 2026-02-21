@@ -15,6 +15,11 @@ export interface StaleInfo {
   fetchComplete: boolean
 }
 
+/** Minimum age (ms) before a run can be flagged as stale. Prevents false
+ *  positives during startup (after() hasn't run yet) and completion (DB write
+ *  in-flight). */
+const STALE_MIN_AGE_MS = 30_000
+
 /**
  * Detect stale processes from status responses.
  * A process is stale when the DB says running=true but the server has no
@@ -26,6 +31,11 @@ export function detectStale(
 ): StaleInfo | null {
   // Check pipeline first (higher priority — it drives both fetch and summary)
   if (pipelineStatus?.running && !pipelineStatus.alive) {
+    // Don't flag as stale if the run is too recent — the process may still be starting
+    if (pipelineStatus.started_at) {
+      const age = Date.now() - new Date(pipelineStatus.started_at).getTime()
+      if (age < STALE_MIN_AGE_MS) return null
+    }
     const completed = pipelineStatus.sensors.filter(
       s => s.fetch === 'ok' || s.fetch === 'failed' || s.fetch === 'skipped',
     ).length
@@ -46,6 +56,10 @@ export function detectStale(
 
   // Check standalone summary
   if (summaryProgress?.running && !summaryProgress.alive) {
+    if (summaryProgress.started_at) {
+      const age = Date.now() - new Date(summaryProgress.started_at).getTime()
+      if (age < STALE_MIN_AGE_MS) return null
+    }
     const completed = summaryProgress.sensors.filter(
       s => s.state === 'ok' || s.state === 'failed',
     ).length

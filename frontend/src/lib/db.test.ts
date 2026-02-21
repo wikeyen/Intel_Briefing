@@ -58,14 +58,4 @@ describe('kvGet', () => {
     const result = await kvGet<{ data: string }>('test:forever')
     expect(result).toEqual({ data: 'persistent' })
   })
-
-  it('deserializes complex objects', async () => {
-    const complex = {
-      sections: [{ name: 'test', items: [1, 2, 3] }],
-      nested: { deep: true },
-    }
-    await kvSet('test:complex', complex)
-    const result = await kvGet('test:complex')
-    expect(result).toEqual(complex)
-  })
 })

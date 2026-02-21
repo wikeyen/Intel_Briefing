@@ -39,17 +39,25 @@ function isValidUrl(url: string): boolean {
   }
 }
 
+export interface VerifyRefsOptions {
+  /** When true, only accept URLs that are in the known pool — skip HTTP fallback.
+   *  Use this when all valid URLs are already known (e.g. overall briefing). */
+  poolOnly?: boolean
+}
+
 /**
  * Verify an array of BriefingRefs against a known-good URL pool.
- * Pool matches are instant. Non-pool URLs get HTTP verification.
+ * Pool matches are instant. Non-pool URLs get HTTP verification unless poolOnly is set.
  * Returns verified refs (with verified=true) and failures separately.
  */
 export async function verifyRefs(
   refs: BriefingRef[],
   knownUrls: Set<string>,
+  options?: VerifyRefsOptions,
 ): Promise<VerifyResult> {
   if (refs.length === 0) return { verified: [], failures: [] }
 
+  const poolOnly = options?.poolOnly ?? false
   const verified: BriefingRef[] = []
   const failures: BriefingRef[] = []
   const needsHttp: BriefingRef[] = []
@@ -60,6 +68,10 @@ export async function verifyRefs(
       failures.push({ ...ref, verified: false })
     } else if (knownUrls.has(ref.url)) {
       verified.push({ ...ref, verified: true })
+    } else if (poolOnly) {
+      // Pool-only mode: reject non-pool URLs immediately (prevents hallucinated URLs
+      // like platform homepages from passing just because they return HTTP 200)
+      failures.push({ ...ref, verified: false })
     } else {
       needsHttp.push(ref)
     }

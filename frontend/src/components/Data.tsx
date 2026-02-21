@@ -108,6 +108,7 @@ export function Data() {
   const [summaryProgress, setSummaryProgress] = useState<SummaryProgress | null>(null)
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null)
   const [streamTokens, setStreamTokens] = useState<Record<string, string>>({})
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     api.getConfig().then(setConfig).catch(() => {})
@@ -239,6 +240,12 @@ export function Data() {
     api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
   }
 
+  /** Poll both statuses so the UI picks up the new pipeline immediately. */
+  const refreshStatuses = () => {
+    api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
+    api.getSummaryStatus().then(setSummaryProgress).catch(() => {})
+  }
+
   const handleResumeStale = async () => {
     await handleAbortStale()
     if (staleInfo?.type === 'summary') {
@@ -249,6 +256,7 @@ export function Data() {
       try {
         await api.triggerFetch(mode)
         showToast(mode === 'summarize' ? 'Resuming summaries' : 'Pipeline resumed')
+        refreshStatuses()
       } catch (e) {
         showToast('Failed: ' + (e as Error).message)
       }
@@ -263,6 +271,7 @@ export function Data() {
       try {
         await api.triggerFetch(pipelineStatus?.mode ?? 'fetch_summarize')
         showToast('Pipeline restarted')
+        refreshStatuses()
       } catch (e) {
         showToast('Failed: ' + (e as Error).message)
       }
@@ -279,10 +288,12 @@ export function Data() {
     return [...seen].sort()
   }, [sectionItems, activeSection])
 
-  // Reset selected filters and page when section changes (select all by default)
+  // Reset selected filters, search, and page when section changes
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedSources(new Set(availableFilters))
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSearchQuery('')
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1)
   }, [activeSection, availableFilters.join(',')])
@@ -302,7 +313,21 @@ export function Data() {
     setPage(1)
   }
 
-  const filteredItems = sectionItems.filter(item => selectedSources.has(filterKey(item, activeSection)))
+  const filteredItems = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim()
+    return sectionItems.filter(item => {
+      if (!selectedSources.has(filterKey(item, activeSection))) return false
+      if (!q) return true
+      return (
+        item.title.toLowerCase().includes(q) ||
+        (item.abstract?.toLowerCase().includes(q) ?? false) ||
+        (item.content?.toLowerCase().includes(q) ?? false) ||
+        (item.account?.toLowerCase().includes(q) ?? false) ||
+        (item.topic?.toLowerCase().includes(q) ?? false) ||
+        (item.authors?.some(a => a.toLowerCase().includes(q)) ?? false)
+      )
+    })
+  }, [sectionItems, selectedSources, searchQuery, activeSection])
   const totalPages = Math.ceil(filteredItems.length / PAGE_SIZE)
   const currentPage = Math.min(page, totalPages || 1)
   const pagedItems = filteredItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
@@ -402,7 +427,7 @@ export function Data() {
               })}
             </div>
 
-            {/* Source filters — hidden on briefing tab */}
+            {/* Source filters + search — hidden on briefing tab */}
             {activeSection !== 'briefing' && (
               <div className="source-filters" style={{
                 display: 'flex',
@@ -446,6 +471,49 @@ export function Data() {
                     )}
                   </>
                 )}
+                {/* Search input */}
+                <div style={{ marginLeft: 'auto', position: 'relative', flexShrink: 0 }}>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => { setSearchQuery(e.target.value); setPage(1) }}
+                    placeholder="Search…"
+                    style={{
+                      fontSize: '0.75rem',
+                      padding: '0.3rem 0.625rem',
+                      paddingRight: searchQuery ? '1.5rem' : '0.625rem',
+                      width: searchQuery ? 180 : 100,
+                      border: '1px solid var(--border)',
+                      borderRadius: 4,
+                      background: 'var(--canvas)',
+                      color: 'var(--ink)',
+                      outline: 'none',
+                      transition: 'width 200ms ease, border-color 100ms',
+                    }}
+                    onFocus={e => { e.currentTarget.style.borderColor = 'var(--accent-dim)'; e.currentTarget.style.width = '180px' }}
+                    onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)'; if (!searchQuery) e.currentTarget.style.width = '100px' }}
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => { setSearchQuery(''); setPage(1) }}
+                      style={{
+                        position: 'absolute',
+                        right: 4,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        fontSize: '0.75rem',
+                        color: 'var(--ink-faint)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '0 0.25rem',
+                        lineHeight: 1,
+                      }}
+                    >
+                      &#x2715;
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>

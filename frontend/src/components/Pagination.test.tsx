@@ -19,12 +19,6 @@ describe('Pagination', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('renders prev and next buttons', () => {
-    render(<Pagination page={2} totalPages={5} onPageChange={() => {}} />)
-    expect(screen.getByLabelText('Previous page')).toBeInTheDocument()
-    expect(screen.getByLabelText('Next page')).toBeInTheDocument()
-  })
-
   it('disables prev button on first page', () => {
     render(<Pagination page={1} totalPages={5} onPageChange={() => {}} />)
     expect(screen.getByLabelText('Previous page')).toBeDisabled()

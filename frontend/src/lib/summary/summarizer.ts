@@ -112,11 +112,13 @@ async function summarizeSensor(
   }
 
   // Use retry-with-verification for the final synthesis call
+  // Pool-only: all valid URLs come from the source items — reject hallucinated URLs
   const parsed = await summarizeWithVerification({
     messages,
     llmConfig,
     parseFn: parseSensorJson,
     knownUrls,
+    poolOnly: true,
     extractRefs: (p) => p.items.map(it => ({ title: it.title, url: it.url })),
     applyVerified: (p, refs) => {
       const refMap = new Map(refs.map(r => [r.url, r.verified]))
@@ -265,11 +267,13 @@ export async function summarizeReport(
 
   let overall: ReturnType<typeof parseOverallJson>
   try {
+    // Pool-only: overall refs must come from verified per-sensor notable items
     overall = await summarizeWithVerification({
       messages: overallMessages,
       llmConfig,
       parseFn: parseOverallJson,
       knownUrls: overallUrlPool,
+      poolOnly: true,
       extractRefs: (parsed) => {
         const allRefs: BriefingRef[] = []
         for (const entry of parsed.quick_scan) allRefs.push(...entry.refs)

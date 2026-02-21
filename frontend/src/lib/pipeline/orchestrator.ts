@@ -316,6 +316,12 @@ export async function runPipeline(
       writeSummaryProgress(summaryStatus).catch(() => {})
     }
     summaryBus?.emitDone()
+    // Persist final status BEFORE clearing singletons so the DB always reflects
+    // running=false before isPipelineRunning() starts returning false.
+    // This prevents a race where a status poll sees running=true + alive=false.
+    if (activeTracker && activeAbortController === abortController) {
+      await writePipelineStatus(activeTracker.snapshot()).catch(() => {})
+    }
     // Clear singletons so a new run can start
     if (activeAbortController === abortController) {
       activeAbortController = null

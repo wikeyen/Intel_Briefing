@@ -12,6 +12,8 @@ export interface SensorTableProps {
   report: IntelReport | null
   config: ConfigSettings | null
   pipelineStatus: PipelineStatus | null
+  /** Called when user clicks "Retry Failed" — triggers a new fetch+summarize run. */
+  onRetryFailed?: () => void
 }
 
 /* ------------------------------------------------------------------ */
@@ -101,7 +103,7 @@ function stageColor(state: string): string {
 /* Component                                                           */
 /* ------------------------------------------------------------------ */
 
-export function SensorTable({ isRunning, liveSensors, report, config, pipelineStatus }: SensorTableProps) {
+export function SensorTable({ isRunning, liveSensors, report, config, pipelineStatus, onRetryFailed }: SensorTableProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
   const sensorCounts = useMemo(() => countItemsBySensor(report), [report])
@@ -410,6 +412,26 @@ export function SensorTable({ isRunning, liveSensors, report, config, pipelineSt
           gap: '0.5rem',
         }}
       >
+        {/* Retry Failed button — only when idle and there are failures */}
+        {!isRunning && onRetryFailed && (report?.sources_failed?.length ?? 0) > 0 && (
+          <button
+            onClick={onRetryFailed}
+            style={{
+              marginRight: 'auto',
+              fontSize: '0.6875rem',
+              fontWeight: 500,
+              color: 'var(--err)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '0.125rem 0',
+              textDecoration: 'underline',
+              textUnderlineOffset: '2px',
+            }}
+          >
+            Retry {report!.sources_failed.length} failed
+          </button>
+        )}
         <span style={{
           fontSize: '0.6875rem',
           color: 'var(--ink-faint)',

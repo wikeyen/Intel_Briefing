@@ -58,14 +58,11 @@ export function Status() {
   // Always poll /fetch/status every 3s — panel visibility driven by pipelineStatus.running
   // This survives page switches and refreshes without any bootstrap race conditions
   useEffect(() => {
-    const STALE_THRESHOLD = 5 * 60 * 1000
     const check = () => {
       api.getPipelineStatus().then(s => {
         setPipelineStatus(s)
-        // Clear running flag if pipeline is stopped or if the run is stale (started > 5 min ago)
-        const isStale = s.started_at
-          && (Date.now() - new Date(s.started_at).getTime()) > STALE_THRESHOLD
-        if (!s.running || isStale) {
+        // Clear local running flag when the pipeline has actually stopped
+        if (!s.running) {
           setRunning(false)
           setStopping(false)
         }
@@ -117,17 +114,19 @@ export function Status() {
     await handleAbortStale()
     // If fetch was complete, only re-run summaries; otherwise full run
     const mode = staleInfo?.fetchComplete ? 'summarize' as const : (pipelineStatus?.mode ?? 'fetch_summarize')
-    handleRun(mode)
+    await handleRun(mode)
+    // Poll immediately so progress appears without waiting for the 3s interval
+    api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
   }
 
   const handleRestartStale = async () => {
     await handleAbortStale()
-    handleRun(pipelineStatus?.mode ?? 'fetch_summarize')
+    await handleRun(pipelineStatus?.mode ?? 'fetch_summarize')
+    api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
   }
 
-  // Consider pipeline stale if started_at is more than 5 minutes ago
-  const isRunning = !!(pipelineStatus?.running && pipelineStatus.started_at
-    && (Date.now() - new Date(pipelineStatus.started_at).getTime()) < 5 * 60 * 1000)
+  // Pipeline is running when both DB and the in-memory controller agree
+  const isRunning = !!(pipelineStatus?.running && pipelineStatus.alive)
 
   // Build live-sensor lookup once (used across all sections when running)
   const liveSensors: Record<string, SensorJobProgress> = {}
@@ -211,6 +210,7 @@ export function Status() {
         report={report}
         config={config}
         pipelineStatus={pipelineStatus}
+        onRetryFailed={() => handleRun('fetch_summarize')}
       />
 
       <ScheduleFooter config={config} />

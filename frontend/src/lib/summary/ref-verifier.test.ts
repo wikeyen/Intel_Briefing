@@ -191,4 +191,20 @@ describe('verifyRefs', () => {
     expect(result.failures).toHaveLength(1)
     expect(globalThis.fetch).not.toHaveBeenCalled()
   })
+
+  it('poolOnly mode rejects non-pool URLs without HTTP check', async () => {
+    const pool = new Set(['https://example.com/real'])
+    const refs: BriefingRef[] = [
+      { title: 'In pool', url: 'https://example.com/real' },
+      { title: 'Hallucinated', url: 'https://x.com' },
+    ]
+    globalThis.fetch = vi.fn()
+
+    const result = await verifyRefs(refs, pool, { poolOnly: true })
+    expect(result.verified).toHaveLength(1)
+    expect(result.verified[0].title).toBe('In pool')
+    expect(result.failures).toHaveLength(1)
+    expect(result.failures[0].title).toBe('Hallucinated')
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+  })
 })

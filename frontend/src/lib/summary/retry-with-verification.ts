@@ -18,6 +18,9 @@ export interface SummarizeWithVerificationOptions<T> {
   extractRefs: (parsed: T) => BriefingRef[]
   /** Apply verified refs back into the parsed result. */
   applyVerified: (parsed: T, refs: BriefingRef[]) => T
+  /** When true, only accept URLs in the known pool — no HTTP fallback.
+   *  Prevents hallucinated URLs (like platform homepages) from passing verification. */
+  poolOnly?: boolean
   /** Max number of retry attempts (default: 3). */
   maxRetries?: number
   /** AbortSignal for cancellation. */
@@ -62,6 +65,7 @@ export async function summarizeWithVerification<T>(
     knownUrls,
     extractRefs,
     applyVerified,
+    poolOnly,
     maxRetries = DEFAULT_MAX_RETRIES,
     signal,
     onRetry,
@@ -87,7 +91,7 @@ export async function summarizeWithVerification<T>(
       return lastParsed
     }
 
-    const { verified, failures } = await verifyRefs(refs, knownUrls)
+    const { verified, failures } = await verifyRefs(refs, knownUrls, { poolOnly })
 
     if (failures.length === 0) {
       // All refs verified — apply verified status and return

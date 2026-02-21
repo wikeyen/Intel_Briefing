@@ -1,7 +1,8 @@
 // ABOUTME: Intel feed page — shows fetched items grouped by section with section tabs.
 // ABOUTME: Briefing tab shows AI-generated summary; other tabs show card-per-item news reader with source filtering and pagination.
 'use client'
-import { useState, useEffect, useMemo, useRef, Fragment } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback, Fragment } from 'react'
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
 import { api } from '@/api/client'
 import type { IntelReport, IntelItem, ConfigSettings, BriefingSummary, SummaryProgress, PipelineStatus } from '@/api/client'
 import { SENSOR_TOKEN_FIELD } from '@/lib/sensors/constants'
@@ -109,6 +110,22 @@ export function Data() {
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null)
   const [streamTokens, setStreamTokens] = useState<Record<string, string>>({})
   const [searchQuery, setSearchQuery] = useState('')
+
+  const prevSectionIdx = useRef(0)
+  const activeSectionIdx = SECTIONS.findIndex(s => s.key === activeSection)
+
+  const handleSectionChange = useCallback((key: string) => {
+    prevSectionIdx.current = activeSectionIdx
+    setActiveSection(key)
+  }, [activeSectionIdx])
+
+  const slideDirection = activeSectionIdx >= prevSectionIdx.current ? 1 : -1
+
+  const contentVariants = {
+    enter: (dir: number) => ({ x: dir * 20, opacity: 0 }),
+    center: { x: 0, opacity: 1 },
+    exit: (dir: number) => ({ x: dir * -20, opacity: 0 }),
+  }
 
   useEffect(() => {
     api.getConfig().then(setConfig).catch(() => {})
@@ -378,6 +395,7 @@ export function Data() {
         }}>
           <div className="data-sticky-nav" style={{ maxWidth: 1024, margin: '0 auto', paddingLeft: '3rem', paddingRight: '3rem' }}>
             {/* Section tabs */}
+            <LayoutGroup>
             <div className="section-tabs" style={{
               display: 'flex',
               gap: '0.25rem',
@@ -391,8 +409,9 @@ export function Data() {
                 return (
                   <Fragment key={key}>
                     <button
-                      onClick={() => setActiveSection(key)}
+                      onClick={() => handleSectionChange(key)}
                       style={{
+                        position: 'relative',
                         padding: '0.625rem 1rem',
                         paddingLeft: idx === 0 ? 0 : '1rem',
                         fontSize: '0.8125rem',
@@ -400,7 +419,7 @@ export function Data() {
                         color: active ? 'var(--accent)' : 'var(--ink-muted)',
                         background: 'none',
                         border: 'none',
-                        borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
+                        borderBottom: '2px solid transparent',
                         cursor: 'pointer',
                         whiteSpace: 'nowrap',
                         transition: 'color 100ms',
@@ -421,6 +440,21 @@ export function Data() {
                           {count}
                         </span>
                       )}
+                      {active && (
+                        <motion.div
+                          layoutId="tab-indicator"
+                          style={{
+                            position: 'absolute',
+                            bottom: 0,
+                            left: idx === 0 ? 0 : '1rem',
+                            right: '1rem',
+                            height: 2,
+                            background: 'var(--accent)',
+                            borderRadius: 1,
+                          }}
+                          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                        />
+                      )}
                     </button>
                     {idx === 0 && (
                       <div style={{
@@ -436,6 +470,7 @@ export function Data() {
                 )
               })}
             </div>
+            </LayoutGroup>
 
             {/* Source filters (non-briefing tabs) + search (all tabs) */}
             <div className="source-filters" style={{
@@ -543,6 +578,16 @@ export function Data() {
               onRestart={handleRestartStale}
             />
           )}
+          <AnimatePresence mode="wait" custom={slideDirection}>
+            <motion.div
+              key={activeSection}
+              custom={slideDirection}
+              variants={contentVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ type: 'spring', stiffness: 300, damping: 25, mass: 0.8 }}
+            >
           {activeSection === 'briefing' ? (
             <BriefingTabContent
               summary={summary}
@@ -585,13 +630,15 @@ export function Data() {
                         {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredItems.length)} of {filteredItems.length}
                       </div>
                     )}
-                    {pagedItems.map(item => <ItemCard key={item.id} item={item} />)}
+                    {pagedItems.map((item, i) => <ItemCard key={item.id} item={item} index={i} />)}
                     <Pagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
                   </>
                 )
               }
             </div>
           ) : null}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
     </div>

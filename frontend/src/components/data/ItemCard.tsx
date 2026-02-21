@@ -2,6 +2,7 @@
 // ABOUTME: Includes source chip, heat stats, abstract/content expand, and discussion links.
 'use client'
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 import type { IntelItem } from '@/api/client'
 import { SENSOR_LABELS } from '@/lib/sensors/taxonomy'
 
@@ -63,19 +64,28 @@ function sourcePostUrl(item: IntelItem): string | null {
   return null
 }
 
-export function ItemCard({ item }: { item: IntelItem }) {
+export function ItemCard({ item, index = 0 }: { item: IntelItem; index?: number }) {
   const isArxiv = item.source === 'arxiv'
   const [abstractExpanded, setAbstractExpanded] = useState(false)
   const [contentExpanded, setContentExpanded] = useState(false)
 
   return (
-    <article style={{
-      background: 'var(--surface)',
-      border: '1px solid var(--border)',
-      borderRadius: 8,
-      padding: '1.25rem',
-      transition: 'box-shadow 150ms, border-color 150ms',
-    }}
+    <motion.article
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        type: 'spring',
+        stiffness: 400,
+        damping: 30,
+        delay: index < 8 ? index * 0.04 : 0,
+      }}
+      style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
+        borderRadius: 8,
+        padding: '1.25rem',
+        transition: 'box-shadow 150ms, border-color 150ms',
+      }}
       onMouseEnter={e => {
         (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent-dim)'
         ;(e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)'
@@ -240,6 +250,6 @@ export function ItemCard({ item }: { item: IntelItem }) {
           </button>
         </div>
       )}
-    </article>
+    </motion.article>
   )
 }

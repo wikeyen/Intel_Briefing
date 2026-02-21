@@ -21,6 +21,7 @@
     "apify-client": "^2.22.2",
     "eslint-plugin-react-hooks": "^7.0.1",
     "fast-xml-parser": "^5.3.6",
+    "framer-motion": "^12.34.3",
     "he": "^1.2.0",
     "js-yaml": "^4.1.1",
     "jsonrepair": "^3.13.2",

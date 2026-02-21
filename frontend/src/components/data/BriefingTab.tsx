@@ -804,20 +804,24 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                 }
                 const mood = moodConfig[s.overall_mood] ?? moodConfig.neutral
 
-                const renderSubSection = (icon: string, title: string, entries: typeof s.controversies) => {
+                const renderSubSection = (accent: string, title: string, entries: typeof s.controversies) => {
                   if (entries.length === 0) return null
                   return (
-                    <div style={{ marginTop: '0.75rem' }}>
+                    <div style={{
+                      marginTop: '1rem',
+                      borderLeft: `3px solid ${accent}`,
+                      paddingLeft: '0.75rem',
+                    }}>
                       <div style={{
-                        fontSize: '0.75rem', fontWeight: 600, color: 'var(--ink-muted)',
-                        marginBottom: '0.375rem',
+                        fontSize: '0.8125rem', fontWeight: 700, color: 'var(--ink)',
+                        marginBottom: '0.5rem',
                       }}>
-                        {icon} {title}
+                        {title}
                       </div>
                       {entries.map((entry, j) => (
                         <div key={j} style={{
                           fontSize: '0.8125rem', color: 'var(--ink)', lineHeight: 1.7,
-                          marginBottom: '0.375rem', paddingLeft: '0.25rem',
+                          marginBottom: '0.5rem',
                         }}>
                           <span style={{ fontWeight: 600 }}><Highlight text={entry.topic} query={q} /></span>
                           {' — '}<TextWithRefs text={entry.analysis} refs={entry.refs} query={q} globalSources={structured?.sources} />
@@ -863,9 +867,9 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                         <Highlight text={s.mood_summary} query={q} />
                       </div>
                     )}
-                    {renderSubSection('⚡', '争议焦点', s.controversies)}
-                    {renderSubSection('📐', '舆论转向', s.opinion_shifts)}
-                    {renderSubSection('🚩', '风险信号', s.risk_flags)}
+                    {renderSubSection('#f59e0b', '争议焦点', s.controversies)}
+                    {renderSubSection('#8b5cf6', '舆论转向', s.opinion_shifts)}
+                    {renderSubSection('#ef4444', '风险信号', s.risk_flags)}
                   </div>
                 )
               })()}

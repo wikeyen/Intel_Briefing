@@ -437,95 +437,97 @@ export function Data() {
               })}
             </div>
 
-            {/* Source filters + search — hidden on briefing tab */}
-            {activeSection !== 'briefing' && (
-              <div className="source-filters" style={{
-                display: 'flex',
-                gap: '0.5rem',
-                alignItems: 'center',
-                padding: '0.625rem 0',
-                borderTop: '1px solid var(--border-soft)',
-                flexWrap: 'wrap',
-              }}>
-                <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--ink-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '0.25rem' }}>
-                  {activeSection === 'feeds' ? 'Feed' : 'Source'}
-                </span>
-                {availableFilters.length === 0 ? (
-                  <span style={{ fontSize: '0.75rem', color: 'var(--ink-faint)' }}>—</span>
-                ) : (
-                  <>
-                    {availableFilters.map(key => (
-                      <FilterTag
-                        key={key}
-                        label={activeSection === 'feeds' ? key : (SOURCE_LABELS[key] ?? key)}
-                        active={selectedSources.has(key)}
-                        onClick={() => toggleSource(key)}
-                      />
-                    ))}
-                    {selectedSources.size < availableFilters.length && (
-                      <button
-                        onClick={() => { setSelectedSources(new Set(availableFilters)); setPage(1) }}
-                        style={{
-                          fontSize: '0.6875rem',
-                          color: 'var(--ink-faint)',
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                          padding: '0.25rem 0.375rem',
-                        }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)' }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-faint)' }}
-                      >
-                        All
-                      </button>
-                    )}
-                  </>
-                )}
-                {/* Search input */}
-                <div style={{ marginLeft: 'auto', position: 'relative', flexShrink: 0 }}>
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={e => { setSearchQuery(e.target.value); setPage(1) }}
-                    placeholder="Search…"
-                    style={{
-                      fontSize: '0.75rem',
-                      padding: '0.3rem 0.625rem',
-                      paddingRight: searchQuery ? '1.5rem' : '0.625rem',
-                      width: searchQuery ? 180 : 100,
-                      border: '1px solid var(--border)',
-                      borderRadius: 4,
-                      background: 'var(--canvas)',
-                      color: 'var(--ink)',
-                      outline: 'none',
-                      transition: 'width 200ms ease, border-color 100ms',
-                    }}
-                    onFocus={e => { e.currentTarget.style.borderColor = 'var(--accent-dim)'; e.currentTarget.style.width = '180px' }}
-                    onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)'; if (!searchQuery) e.currentTarget.style.width = '100px' }}
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => { setSearchQuery(''); setPage(1) }}
-                      style={{
-                        position: 'absolute',
-                        right: 4,
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        fontSize: '0.75rem',
-                        color: 'var(--ink-faint)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: '0 0.25rem',
-                        lineHeight: 1,
-                      }}
-                    >
-                      &#x2715;
-                    </button>
+            {/* Source filters (non-briefing tabs) + search (all tabs) */}
+            <div className="source-filters" style={{
+              display: 'flex',
+              gap: '0.5rem',
+              alignItems: 'center',
+              padding: '0.625rem 0',
+              borderTop: '1px solid var(--border-soft)',
+              flexWrap: 'wrap',
+            }}>
+              {activeSection !== 'briefing' && (
+                <>
+                  <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--ink-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '0.25rem' }}>
+                    {activeSection === 'feeds' ? 'Feed' : 'Source'}
+                  </span>
+                  {availableFilters.length === 0 ? (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--ink-faint)' }}>—</span>
+                  ) : (
+                    <>
+                      {availableFilters.map(key => (
+                        <FilterTag
+                          key={key}
+                          label={activeSection === 'feeds' ? key : (SOURCE_LABELS[key] ?? key)}
+                          active={selectedSources.has(key)}
+                          onClick={() => toggleSource(key)}
+                        />
+                      ))}
+                      {selectedSources.size < availableFilters.length && (
+                        <button
+                          onClick={() => { setSelectedSources(new Set(availableFilters)); setPage(1) }}
+                          style={{
+                            fontSize: '0.6875rem',
+                            color: 'var(--ink-faint)',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '0.25rem 0.375rem',
+                          }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)' }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-faint)' }}
+                        >
+                          All
+                        </button>
+                      )}
+                    </>
                   )}
-                </div>
+                </>
+              )}
+              {/* Search input */}
+              <div style={{ marginLeft: 'auto', position: 'relative', flexShrink: 0 }}>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => { setSearchQuery(e.target.value); setPage(1) }}
+                  placeholder="Search…"
+                  style={{
+                    fontSize: '0.75rem',
+                    padding: '0.3rem 0.625rem',
+                    paddingRight: searchQuery ? '1.5rem' : '0.625rem',
+                    width: searchQuery ? 180 : 100,
+                    border: '1px solid var(--border)',
+                    borderRadius: 4,
+                    background: 'var(--canvas)',
+                    color: 'var(--ink)',
+                    outline: 'none',
+                    transition: 'width 200ms ease, border-color 100ms',
+                  }}
+                  onFocus={e => { e.currentTarget.style.borderColor = 'var(--accent-dim)'; e.currentTarget.style.width = '180px' }}
+                  onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)'; if (!searchQuery) e.currentTarget.style.width = '100px' }}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => { setSearchQuery(''); setPage(1) }}
+                    style={{
+                      position: 'absolute',
+                      right: 4,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      fontSize: '0.75rem',
+                      color: 'var(--ink-faint)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '0 0.25rem',
+                      lineHeight: 1,
+                    }}
+                  >
+                    &#x2715;
+                  </button>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}
@@ -552,6 +554,7 @@ export function Data() {
               onStop={handleStopSummary}
               onStopPipeline={handleStopPipeline}
               streamTokens={streamTokens}
+              searchQuery={searchQuery}
             />
           ) : !loading && !report ? (
             <div style={{

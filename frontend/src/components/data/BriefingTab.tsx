@@ -477,12 +477,42 @@ function SummaryProgressBanner({ progress, pipelineStatus, config, streamTokens,
   )
 }
 
+/* ------------------------------------------------------------------ */
+/* Search helpers — highlight matching text, check substring matches   */
+/* ------------------------------------------------------------------ */
+
+function Highlight({ text, query }: { text: string; query: string }) {
+  if (!query) return <>{text}</>
+  const parts: React.ReactNode[] = []
+  let remaining = text
+  let key = 0
+  while (remaining.length > 0) {
+    const idx = remaining.toLowerCase().indexOf(query)
+    if (idx === -1) {
+      parts.push(remaining)
+      break
+    }
+    if (idx > 0) parts.push(remaining.slice(0, idx))
+    parts.push(
+      <mark key={key++} style={{ background: 'var(--accent-wash, rgba(29,107,79,0.15))', color: 'inherit', padding: '0 1px', borderRadius: 2 }}>
+        {remaining.slice(idx, idx + query.length)}
+      </mark>,
+    )
+    remaining = remaining.slice(idx + query.length)
+  }
+  return <>{parts}</>
+}
+
+function textHas(text: string | null | undefined, q: string): boolean {
+  return !!text && text.toLowerCase().includes(q)
+}
+
 /** Check if overall briefing has structured data (new format) vs legacy plain text fallback. */
 function isStructuredOverall(overall: OverallBriefing | string): overall is OverallBriefing {
   return typeof overall === 'object' && overall !== null && 'quick_scan' in overall
 }
 
-export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, hasContent, onTrigger, onStop, onStopPipeline, streamTokens }: {
+export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, hasContent, onTrigger, onStop, onStopPipeline, streamTokens, searchQuery }: {
   summary: BriefingSummary | null
   summaryProgress: SummaryProgress | null
   pipelineStatus: PipelineStatus | null
@@ -492,6 +522,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
   onStop: () => void
   onStopPipeline: () => void
   streamTokens?: Record<string, string>
+  searchQuery?: string
 }) {
   const isSummarizing = !!(summaryProgress?.running)
   const isPipelineActive = !!(pipelineStatus?.running && pipelineStatus.alive !== false)
@@ -508,6 +539,43 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
   const handleStopAll = isPipelineActive ? onStopPipeline : onStop
 
   const hasProvider = config?.summary_provider !== null && config?.summary_provider !== undefined
+
+  // Search filtering — compute filtered versions of briefing content
+  const q = searchQuery?.toLowerCase().trim() || ''
+  const structured = summary && isStructuredOverall(summary.overall) ? summary.overall : null
+
+  const filteredQuickScan = structured && q
+    ? structured.quick_scan.filter(entry =>
+        textHas(entry.text, q) || textHas(entry.source, q)
+      )
+    : structured?.quick_scan
+
+  const filteredThemedSections = structured && q
+    ? structured.sections
+        .map(section => {
+          if (section.title.toLowerCase().includes(q)) return section
+          const matching = section.entries.filter(e => textHas(e.text, q))
+          return matching.length > 0 ? { ...section, entries: matching } : null
+        })
+        .filter((s): s is NonNullable<typeof s> => s !== null)
+    : structured?.sections
+
+  const filteredSourceSections = summary && q
+    ? summary.sections.filter(s =>
+        textHas(s.label, q) ||
+        textHas(s.summary, q) ||
+        (s.items?.some(item => textHas(item.title, q) || textHas(item.brief, q)) ?? false)
+      )
+    : summary?.sections
+
+  // "No results" state when searching
+  const hasSearchResults = !q || (
+    (filteredQuickScan?.length ?? 0) > 0 ||
+    textHas(structured?.executive_summary, q) ||
+    textHas(structured?.sentiment?.mood_summary, q) ||
+    (filteredThemedSections?.length ?? 0) > 0 ||
+    (filteredSourceSections?.length ?? 0) > 0
+  )
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -576,7 +644,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
           {isStructuredOverall(summary.overall) ? (
             <>
               {/* Quick Scan */}
-              {summary.overall.quick_scan.length > 0 && (
+              {(filteredQuickScan ?? []).length > 0 && (
                 <div style={{
                   background: 'var(--accent-wash, var(--surface-alt))',
                   border: '1px solid var(--accent-dim, var(--border))',
@@ -594,15 +662,15 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                     Quick Scan
                   </div>
                   <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-                    {summary.overall.quick_scan.map((entry, i) => (
+                    {(filteredQuickScan ?? []).map((entry, i) => (
                       <li key={i} style={{
                         padding: '0.375rem 0',
-                        borderBottom: i < summary.overall.quick_scan.length - 1 ? '1px solid var(--border-soft, var(--border))' : 'none',
+                        borderBottom: i < (filteredQuickScan ?? []).length - 1 ? '1px solid var(--border-soft, var(--border))' : 'none',
                         fontSize: '0.875rem',
                         color: 'var(--ink)',
                         lineHeight: 1.6,
                       }}>
-                        {entry.text}
+                        <Highlight text={entry.text} query={q} />
                         {entry.refs?.length > 0 && entry.refs.map((ref, ri) => (
                           <a
                             key={ri}
@@ -670,7 +738,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                     lineHeight: 1.8,
                     whiteSpace: 'pre-wrap',
                   }}>
-                    {summary.overall.executive_summary}
+                    <Highlight text={summary.overall.executive_summary} query={q} />
                   </div>
                 </div>
               )}
@@ -719,8 +787,8 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                           fontSize: '0.8125rem', color: 'var(--ink)', lineHeight: 1.7,
                           marginBottom: '0.375rem', paddingLeft: '0.25rem',
                         }}>
-                          <span style={{ fontWeight: 600 }}>{entry.topic}</span>
-                          {' — '}{entry.analysis}
+                          <span style={{ fontWeight: 600 }}><Highlight text={entry.topic} query={q} /></span>
+                          {' — '}<Highlight text={entry.analysis} query={q} />
                           {renderSentimentRefs(entry.refs)}
                         </div>
                       ))}
@@ -761,7 +829,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                       <div style={{
                         fontSize: '0.8125rem', color: 'var(--ink)', lineHeight: 1.7,
                       }}>
-                        {s.mood_summary}
+                        <Highlight text={s.mood_summary} query={q} />
                       </div>
                     )}
                     {renderSubSection('⚡', '争议焦点', s.controversies)}
@@ -772,13 +840,13 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
               })()}
 
               {/* Themed sections */}
-              {summary.overall.sections.length > 0 && (
+              {(filteredThemedSections ?? []).length > 0 && (
                 <div style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
                   gap: '0.75rem',
                 }}>
-                  {summary.overall.sections.map((section, i) => (
+                  {(filteredThemedSections ?? []).map((section, i) => (
                     <div key={i} style={{
                       background: 'var(--canvas)',
                       border: '1px solid var(--border)',
@@ -793,7 +861,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                         paddingBottom: '0.375rem',
                         borderBottom: '1px solid var(--border-soft, var(--border))',
                       }}>
-                        {section.title}
+                        <Highlight text={section.title} query={q} />
                       </div>
                       <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
                         {section.entries.map((entry, j) => (
@@ -803,7 +871,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                             color: 'var(--ink-muted)',
                             lineHeight: 1.6,
                           }}>
-                            {entry.text}
+                            <Highlight text={entry.text} query={q} />
                             {entry.refs?.length > 0 && entry.refs.map((ref, ri) => (
                               <a
                                 key={ri}
@@ -853,7 +921,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
           )}
 
           {/* Source Summaries */}
-          {summary.sections.length > 0 && (
+          {(filteredSourceSections ?? []).length > 0 && (
             <div>
               <div style={{
                 fontSize: '0.6875rem',
@@ -870,7 +938,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                 gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
                 gap: '0.75rem',
               }}>
-                {summary.sections.map(s => (
+                {(filteredSourceSections ?? []).map(s => (
                   <div key={s.sensor_name} style={{
                     background: 'var(--canvas)',
                     border: '1px solid var(--border)',
@@ -923,7 +991,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                       lineHeight: 1.65,
                       margin: 0,
                     }}>
-                      {s.summary}
+                      <Highlight text={s.summary} query={q} />
                     </p>
 
                     {/* Notable items list */}
@@ -968,6 +1036,21 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* No search results */}
+          {q && !hasSearchResults && (
+            <div style={{
+              padding: '3rem 1.5rem',
+              textAlign: 'center',
+              color: 'var(--ink-faint)',
+              fontSize: '0.875rem',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+            }}>
+              No results for &ldquo;{searchQuery}&rdquo;
             </div>
           )}
         </>

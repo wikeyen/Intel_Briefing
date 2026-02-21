@@ -46,6 +46,8 @@ export interface SummarizeOptions {
   enabledSensors?: Set<string>
   /** Token callback for streaming visual feedback. Called with (sensorName, token). */
   onToken?: (sensorName: string, token: string) => void
+  /** LLM config override for attribution calls (cheap model). Falls back to main llmConfig. */
+  attributionLlmConfig?: LlmConfig
 }
 
 /**

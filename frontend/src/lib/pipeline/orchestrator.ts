@@ -83,6 +83,20 @@ function buildLlmConfig(config: ConfigSettings): LlmConfig | null {
 }
 
 /**
+ * Build an LlmConfig for attribution calls from ConfigSettings, or return null if not configured.
+ * When set, the summarizer can use a cheaper/faster model for source-attribution passes.
+ */
+function buildAttributionLlmConfig(config: ConfigSettings): LlmConfig | null {
+  if (!config.summary_provider) return null
+  if (!config.summary_attribution_model) return null
+  return {
+    base_url: config.summary_base_url,
+    api_key: config.summary_api_key,
+    model: config.summary_attribution_model,
+  }
+}
+
+/**
  * Run the full pipeline: fetch sensors, optionally summarize, and persist results.
  *
  * Supports three run modes:
@@ -296,6 +310,7 @@ export async function runPipeline(
           skipCache: shouldFetch,
           enabledSensors,
           onToken: (sensorName, token) => summaryBus!.emitToken(sensorName, token),
+          attributionLlmConfig: buildAttributionLlmConfig(config) ?? undefined,
         })
 
         if (summary && !signal.aborted) {

@@ -79,6 +79,7 @@ function applyEnvOverrides(config: ConfigSettings): ConfigSettings {
     summary_api_key:  env.SUMMARY_API_KEY  ?? config.summary_api_key,
     summary_base_url: env.SUMMARY_BASE_URL || config.summary_base_url,
     summary_model:    env.SUMMARY_MODEL    || config.summary_model,
+    summary_attribution_model: env.SUMMARY_ATTRIBUTION_MODEL || config.summary_attribution_model,
     twitter_auth_token: env.TWITTER_AUTH_TOKEN ?? config.twitter_auth_token,
     twitter_ct0:        env.TWITTER_CT0       ?? config.twitter_ct0,
     apify_token:        env.APIFY_TOKEN       ?? config.apify_token,

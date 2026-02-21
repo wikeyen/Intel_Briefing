@@ -387,7 +387,7 @@ export function SensorTable({
                     style={{
                       ...sensorRowStyle,
                       cursor: isDisabled ? 'default' : 'pointer',
-                      background: isSelected ? 'var(--accent-bg, rgba(59,130,246,0.06))' : 'transparent',
+                      background: isSelected ? 'var(--accent-tint)' : 'transparent',
                     }}
                     onClick={() => {
                       if (!isDisabled) onToggleSelect(sensorKey)

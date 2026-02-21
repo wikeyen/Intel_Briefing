@@ -59,7 +59,7 @@ function StreamTokenPreview({ text }: { text: string }) {
         left: 0,
         right: 0,
         height: 16,
-        background: 'linear-gradient(to bottom, var(--surface-alt, rgba(255,255,255,0.9)), transparent)',
+        background: 'linear-gradient(to bottom, var(--canvas-fade), transparent)',
         pointerEvents: 'none',
       }} />
     </div>
@@ -161,7 +161,7 @@ function SummaryProgressBanner({ progress, pipelineStatus, config, streamTokens,
                 gap: '0.375rem',
                 padding: '0.25rem 0.5rem',
                 borderRadius: 4,
-                background: isActive ? 'rgba(29,107,79,0.08)' : 'transparent',
+                background: isActive ? 'var(--accent-tint)' : 'transparent',
               }}>
                 <span style={{
                   width: 6,
@@ -225,7 +225,7 @@ function SummaryProgressBanner({ progress, pipelineStatus, config, streamTokens,
               style={{
                 fontSize: '0.625rem',
                 fontWeight: 500,
-                color: '#ef4444',
+                color: 'var(--err)',
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
@@ -675,7 +675,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                 fontSize: '0.75rem',
                 fontWeight: 500,
                 color: 'var(--accent)',
-                background: 'rgba(29,107,79,0.08)',
+                background: 'var(--accent-tint)',
                 padding: '0.3rem 0.75rem',
                 borderRadius: 4,
               }}>
@@ -730,8 +730,8 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
               {/* Notice when overall briefing is incomplete (e.g. terminated mid-synthesis) */}
               {!summary.overall.executive_summary && (summary.overall.sections ?? []).length === 0 && (
                 <div style={{
-                  background: 'rgba(234,179,8,0.06)',
-                  border: '1px solid rgba(234,179,8,0.3)',
+                  background: 'var(--warn-tint)',
+                  border: '1px solid var(--warn-border)',
                   borderRadius: 8,
                   padding: '1rem 1.25rem',
                   display: 'flex',
@@ -751,7 +751,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                       style={{
                         fontSize: '0.75rem',
                         fontWeight: 500,
-                        color: '#fff',
+                        color: 'var(--canvas)',
                         background: 'var(--ink)',
                         border: 'none',
                         borderRadius: 4,
@@ -1156,12 +1156,12 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                   padding: '0.5rem 1.25rem',
                   borderRadius: 4,
                   border: 'none',
-                  color: '#FFFFFF',
+                  color: 'var(--canvas)',
                   background: 'var(--ink)',
                   cursor: 'pointer',
                   transition: 'background 120ms',
                 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#000000' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--ink-muted)' }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--ink)' }}
               >
                 Generate Summary

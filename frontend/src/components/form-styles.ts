@@ -17,7 +17,7 @@ export const inputBase: React.CSSProperties = {
 
 export function focus(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
   e.currentTarget.style.borderColor = 'var(--accent)'
-  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(29,107,79,0.1)'
+  e.currentTarget.style.boxShadow = 'var(--focus-ring)'
 }
 
 export function blur(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {

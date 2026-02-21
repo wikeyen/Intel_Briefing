@@ -93,7 +93,7 @@ export function TagInput({ tags, onChange, placeholder = 'Add…', validate, dis
                   gap: '0.375rem',
                   background: isDisabled ? 'var(--surface)' : 'var(--accent-wash)',
                   color: isDisabled ? 'var(--ink-faint)' : 'var(--accent)',
-                  border: isDisabled ? '1px dashed var(--border)' : '1px solid rgba(29,107,79,0.2)',
+                  border: isDisabled ? '1px dashed var(--border)' : '1px solid var(--accent-dim)',
                   borderRadius: 4,
                   fontSize: '0.8125rem',
                   fontWeight: 500,
@@ -150,7 +150,7 @@ export function TagInput({ tags, onChange, placeholder = 'Add…', validate, dis
         }}
         onFocus={e => {
           e.currentTarget.style.borderColor = 'var(--accent)'
-          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(29,107,79,0.1)'
+          e.currentTarget.style.boxShadow = 'var(--focus-ring)'
         }}
         onBlurCapture={e => {
           e.currentTarget.style.borderColor = 'var(--border)'

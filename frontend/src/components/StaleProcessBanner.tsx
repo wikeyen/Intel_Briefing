@@ -108,7 +108,7 @@ const ghostBtn: React.CSSProperties = {
 const solidBtn: React.CSSProperties = {
   fontSize: '0.75rem',
   fontWeight: 500,
-  color: '#fff',
+  color: 'var(--canvas)',
   background: 'var(--ink)',
   border: 'none',
   borderRadius: 4,
@@ -133,8 +133,8 @@ export function StaleProcessBanner({ stale, onAbort, onResume, onRestart }: {
 
   return (
     <div style={{
-      background: 'rgba(234,179,8,0.06)',
-      border: '1px solid rgba(234,179,8,0.3)',
+      background: 'var(--warn-tint)',
+      border: '1px solid var(--warn-border)',
       borderRadius: 8,
       padding: '1rem 1.25rem',
       marginBottom: '1.25rem',
@@ -217,7 +217,7 @@ export function StaleProcessBanner({ stale, onAbort, onResume, onRestart }: {
             onClick={onRestart}
             title="Start a fresh full run"
             style={solidBtn}
-            onMouseEnter={e => { e.currentTarget.style.background = '#000' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--ink-muted)' }}
             onMouseLeave={e => { e.currentTarget.style.background = 'var(--ink)' }}
           >
             Restart

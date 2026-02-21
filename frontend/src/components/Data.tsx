@@ -224,7 +224,7 @@ export function Data() {
   // Detect stale processes (running in DB but no in-memory controller)
   const staleInfo = detectStale(summaryProgress, pipelineStatus)
 
-  const handleDismissStale = async () => {
+  const handleAbortStale = async () => {
     try {
       if (staleInfo?.type === 'summary') {
         await api.stopSummary()
@@ -239,10 +239,24 @@ export function Data() {
     api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
   }
 
+  const handleResumeStale = async () => {
+    await handleAbortStale()
+    if (staleInfo?.type === 'summary') {
+      handleTriggerSummary()
+    } else if (staleInfo?.type === 'pipeline') {
+      // If fetch was complete, only re-run summaries; otherwise full run
+      const mode = staleInfo.fetchComplete ? 'summarize' as const : (pipelineStatus?.mode ?? 'fetch_summarize')
+      try {
+        await api.triggerFetch(mode)
+        showToast(mode === 'summarize' ? 'Resuming summaries' : 'Pipeline resumed')
+      } catch (e) {
+        showToast('Failed: ' + (e as Error).message)
+      }
+    }
+  }
+
   const handleRestartStale = async () => {
-    // First dismiss the stale state
-    await handleDismissStale()
-    // Then trigger a fresh run
+    await handleAbortStale()
     if (staleInfo?.type === 'summary') {
       handleTriggerSummary()
     } else if (staleInfo?.type === 'pipeline') {
@@ -444,7 +458,8 @@ export function Data() {
           {staleInfo && (
             <StaleProcessBanner
               stale={staleInfo}
-              onDismiss={handleDismissStale}
+              onAbort={handleAbortStale}
+              onResume={handleResumeStale}
               onRestart={handleRestartStale}
             />
           )}

@@ -103,7 +103,7 @@ export function Status() {
   // Detect stale processes (running in DB but no in-memory controller)
   const staleInfo = detectStale(null, pipelineStatus)
 
-  const handleDismissStale = async () => {
+  const handleAbortStale = async () => {
     try {
       await api.stopPipeline()
     } catch {
@@ -112,8 +112,15 @@ export function Status() {
     api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
   }
 
+  const handleResumeStale = async () => {
+    await handleAbortStale()
+    // If fetch was complete, only re-run summaries; otherwise full run
+    const mode = staleInfo?.fetchComplete ? 'summarize' as const : (pipelineStatus?.mode ?? 'fetch_summarize')
+    handleRun(mode)
+  }
+
   const handleRestartStale = async () => {
-    await handleDismissStale()
+    await handleAbortStale()
     handleRun(pipelineStatus?.mode ?? 'fetch_summarize')
   }
 
@@ -159,7 +166,8 @@ export function Status() {
       {staleInfo && !isRunning && (
         <StaleProcessBanner
           stale={staleInfo}
-          onDismiss={handleDismissStale}
+          onAbort={handleAbortStale}
+          onResume={handleResumeStale}
           onRestart={handleRestartStale}
         />
       )}

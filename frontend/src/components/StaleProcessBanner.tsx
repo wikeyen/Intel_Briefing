@@ -1,5 +1,5 @@
 // ABOUTME: Stale process detection banner — shows when a process was interrupted mid-run.
-// ABOUTME: Offers Dismiss (clear stale state) and Restart (re-trigger the process) actions.
+// ABOUTME: Offers Abort (clear state), Resume (continue from interruption), and Restart (fresh run).
 'use client'
 import type { SummaryProgress, PipelineStatus } from '@/api/client'
 
@@ -11,6 +11,8 @@ export interface StaleInfo {
   completedSensors: number
   totalSensors: number
   failedSensors: string[]
+  /** True when all sensors finished fetching — resume can skip to summarize */
+  fetchComplete: boolean
 }
 
 /**
@@ -30,12 +32,15 @@ export function detectStale(
     const failed = pipelineStatus.sensors
       .filter(s => s.fetch === 'failed')
       .map(s => s.name)
+    const fetchComplete = pipelineStatus.sensors.length > 0 &&
+      pipelineStatus.sensors.every(s => s.fetch === 'ok' || s.fetch === 'failed' || s.fetch === 'skipped')
     return {
       type: 'pipeline',
       startedAt: pipelineStatus.started_at ?? '',
       completedSensors: completed,
       totalSensors: pipelineStatus.sensors.length,
       failedSensors: failed,
+      fetchComplete,
     }
   }
 
@@ -53,6 +58,7 @@ export function detectStale(
       completedSensors: completed,
       totalSensors: summaryProgress.sensors.length,
       failedSensors: failed,
+      fetchComplete: true, // standalone summary = fetch already done
     }
   }
 
@@ -68,15 +74,43 @@ function timeAgo(isoString: string): string {
   return `${Math.floor(diff / 86400)}d ago`
 }
 
-export function StaleProcessBanner({ stale, onDismiss, onRestart }: {
+const ghostBtn: React.CSSProperties = {
+  fontSize: '0.75rem',
+  fontWeight: 500,
+  color: 'var(--ink-muted)',
+  background: 'none',
+  border: '1px solid var(--border)',
+  borderRadius: 4,
+  padding: '0.375rem 0.75rem',
+  cursor: 'pointer',
+  transition: 'border-color 100ms',
+}
+
+const solidBtn: React.CSSProperties = {
+  fontSize: '0.75rem',
+  fontWeight: 500,
+  color: '#fff',
+  background: 'var(--ink)',
+  border: 'none',
+  borderRadius: 4,
+  padding: '0.375rem 0.75rem',
+  cursor: 'pointer',
+  transition: 'background 100ms',
+}
+
+export function StaleProcessBanner({ stale, onAbort, onResume, onRestart }: {
   stale: StaleInfo
-  onDismiss: () => void
+  onAbort: () => void
+  onResume: () => void
   onRestart: () => void
 }) {
   const label = stale.type === 'pipeline' ? 'Pipeline' : 'Summary'
   const pct = stale.totalSensors > 0
     ? Math.round((stale.completedSensors / stale.totalSensors) * 100)
     : 0
+  const resumeHint = stale.fetchComplete
+    ? 'Resume will re-run summaries only'
+    : 'Resume will re-fetch and summarize'
 
   return (
     <div style={{
@@ -143,38 +177,29 @@ export function StaleProcessBanner({ stale, onDismiss, onRestart }: {
           alignItems: 'center',
         }}>
           <button
-            onClick={onDismiss}
-            style={{
-              fontSize: '0.75rem',
-              fontWeight: 500,
-              color: 'var(--ink-muted)',
-              background: 'none',
-              border: '1px solid var(--border)',
-              borderRadius: 4,
-              padding: '0.375rem 0.75rem',
-              cursor: 'pointer',
-              transition: 'border-color 100ms',
-            }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--ink-faint)' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)' }}
+            onClick={onAbort}
+            title="Clear the interrupted state"
+            style={ghostBtn}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--ink-faint)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
           >
-            Dismiss
+            Abort
+          </button>
+          <button
+            onClick={onResume}
+            title={resumeHint}
+            style={ghostBtn}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--ink-faint)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
+          >
+            Resume
           </button>
           <button
             onClick={onRestart}
-            style={{
-              fontSize: '0.75rem',
-              fontWeight: 500,
-              color: '#fff',
-              background: 'var(--ink)',
-              border: 'none',
-              borderRadius: 4,
-              padding: '0.375rem 0.75rem',
-              cursor: 'pointer',
-              transition: 'background 100ms',
-            }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#000' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--ink)' }}
+            title="Start a fresh full run"
+            style={solidBtn}
+            onMouseEnter={e => { e.currentTarget.style.background = '#000' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'var(--ink)' }}
           >
             Restart
           </button>

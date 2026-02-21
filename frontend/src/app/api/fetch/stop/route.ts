@@ -14,6 +14,7 @@ export async function POST(): Promise<NextResponse> {
   // If PipelineStatus still shows running, mark it as cancelled so the UI clears.
   const status = await readPipelineStatus()
   if (status && !status.completed_at && !status.cancelled) {
+    status.running = false
     status.cancelled = true
     status.completed_at = new Date().toISOString().replace(/\.\d+Z$/, 'Z')
     await writePipelineStatus(status).catch(() => {})

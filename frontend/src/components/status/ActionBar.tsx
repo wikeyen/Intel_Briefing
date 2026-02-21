@@ -13,6 +13,8 @@ export interface ActionBarProps {
   isRunning: boolean
   phase: Phase
   progress: { done: number; total: number }
+  /** Detail string for the current phase (e.g. sensor name being summarized) */
+  detail?: string
   fetching: boolean
   isStopping: boolean
   onRun: (mode: RunMode) => void
@@ -26,14 +28,18 @@ const MODE_OPTIONS: { value: RunMode; label: string }[] = [
 ]
 
 /** Build the subtitle text shown below the title when the pipeline is running. */
-function phaseLabel(phase: Phase, progress: { done: number; total: number }): string {
+function phaseLabel(phase: Phase, progress: { done: number; total: number }, detail?: string): string {
   switch (phase) {
     case 'fetching':
-      return `Fetching \u00b7 ${progress.done} of ${progress.total} sensors`
+      return detail
+        ? `Fetching \u00b7 ${progress.done}/${progress.total} \u00b7 ${detail}`
+        : `Fetching \u00b7 ${progress.done} of ${progress.total} sensors`
     case 'summarizing':
-      return `Summarizing \u00b7 ${progress.done} of ${progress.total} sensors`
+      return detail
+        ? `Summarizing \u00b7 ${progress.done}/${progress.total} \u00b7 ${detail}`
+        : `Summarizing \u00b7 ${progress.done} of ${progress.total} sensors`
     case 'briefing':
-      return 'Generating briefing\u2026'
+      return 'Generating overall briefing\u2026'
     case 'stopping':
       return 'Stopping\u2026'
     default:
@@ -46,6 +52,7 @@ export function ActionBar({
   isRunning,
   phase,
   progress,
+  detail,
   fetching,
   isStopping,
   onRun,
@@ -60,7 +67,7 @@ export function ActionBar({
 
   // Subtitle: progress text when running, health description when idle
   const subtitle = isRunning
-    ? phaseLabel(phase, progress)
+    ? phaseLabel(phase, progress, detail)
     : health?.last_fetch
       ? `${meta.desc} \u00b7 ${timeAgo(health.last_fetch)}`
       : meta.desc

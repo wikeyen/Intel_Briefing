@@ -229,6 +229,11 @@ export function SensorTable({ isRunning, liveSensors, report, config, pipelineSt
                         <span>
                           <span style={{ color: stageColor(sp.summary) }}>{stageIcon(sp.summary)}</span>
                           {' '}Summary: {stageLabel(sp.summary)}
+                          {sp.summary === 'running' && sp.summary_chunks_total > 0 && (
+                            <span style={{ color: 'var(--accent)', marginLeft: '0.375rem' }}>
+                              — chunk {sp.summary_chunks_done}/{sp.summary_chunks_total}
+                            </span>
+                          )}
                         </span>
                       </div>
                     )}
@@ -442,8 +447,12 @@ function runningDotColor(sp: SensorJobProgress | undefined): string {
 
 function runningRightText(sp: SensorJobProgress | undefined): string {
   if (!sp) return '\u2014'
-  if (sp.fetch === 'running') return 'Fetching\u2026'
-  if (sp.fetch === 'ok' && sp.summary === 'running') return 'Summarizing\u2026'
+  if (sp.fetch === 'running') return sp.fetch_detail ?? 'Fetching\u2026'
+  if (sp.fetch === 'ok' && sp.summary === 'running') {
+    if (sp.summary_chunks_total > 0) return `Summarizing ${sp.summary_chunks_done}/${sp.summary_chunks_total}`
+    return 'Summarizing\u2026'
+  }
+  if (sp.fetch === 'ok' && sp.summary === 'ok') return String(sp.item_count)
   if (sp.fetch === 'ok') return String(sp.item_count)
   if (sp.fetch === 'failed') return 'Failed'
   return '\u2014'

@@ -117,7 +117,7 @@ describe('ActionBar', () => {
     })
     render(<ActionBar {...props} />)
     const subtitle = screen.getByTestId('action-bar-subtitle')
-    expect(subtitle).toHaveTextContent(/Generating briefing/)
+    expect(subtitle).toHaveTextContent(/Generating overall briefing/)
   })
 
   it('hides mode dropdown when running', () => {

@@ -8,6 +8,7 @@ import { useToast } from '@/lib/toast-context'
 import { ActionBar } from './status/ActionBar'
 import type { Phase } from './status/ActionBar'
 import { SensorTable } from './status/SensorTable'
+import { SENSOR_LABEL_MAP } from './status/constants'
 import { ScheduleFooter } from './status/ScheduleFooter'
 import { StaleProcessBanner, detectStale } from './StaleProcessBanner'
 
@@ -161,6 +162,26 @@ export function Status() {
     return { done: active.filter(s => terminal.includes(s.fetch)).length, total: active.length }
   })()
 
+  // Detail string for the currently-active sensor (shown in ActionBar subtitle)
+  const phaseDetail = (() => {
+    if (!pipelineStatus) return undefined
+    if (phase === 'fetching') {
+      const running = pipelineStatus.sensors.find(s => s.fetch === 'running')
+      if (running?.fetch_detail) return running.fetch_detail
+      if (running) return SENSOR_LABEL_MAP[running.name] ?? running.name
+    }
+    if (phase === 'summarizing') {
+      const running = pipelineStatus.sensors.find(s => s.summary === 'running')
+      if (!running) return undefined
+      const label = SENSOR_LABEL_MAP[running.name] ?? running.name
+      if (running.summary_chunks_total > 0) {
+        return `${label} (${running.summary_chunks_done}/${running.summary_chunks_total} chunks)`
+      }
+      return label
+    }
+    return undefined
+  })()
+
   return (
     <section id="status" style={{ padding: '4.5rem 0' }}>
       {staleInfo && !isRunning && (
@@ -177,6 +198,7 @@ export function Status() {
         isRunning={isRunning}
         phase={phase}
         progress={progress}
+        detail={phaseDetail}
         fetching={fetching}
         isStopping={stopping}
         onRun={handleRun}

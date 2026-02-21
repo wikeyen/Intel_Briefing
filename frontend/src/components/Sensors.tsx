@@ -444,7 +444,7 @@ export function Sensors() {
                       </div>
                     </div>
 
-                    {/* X / Twitter sub-config */}
+                    {/* X sub-config */}
                     {isX && isOn && (
                       <div style={{
                         padding: '1rem 1.25rem 1.25rem 3.5rem',

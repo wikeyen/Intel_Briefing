@@ -20,7 +20,7 @@ export const SENSORS: SensorDef[] = [
   { key: 'product_hunt',    label: 'Product Hunt',      desc: 'Top products of the day',                        language: 'row', category: 'products' },
   { key: 'chrome_radar',    label: 'Chrome Radar',      desc: 'Chrome Web Store surveillance',                  language: 'row', category: 'products' },
   { key: 'hn_blogs',        label: 'HN Blogs',          desc: 'Curated blog posts from Hacker News',            language: 'row', category: 'insights' },
-  { key: 'x',         label: 'X / Twitter', desc: 'Posts from monitored X accounts',               language: 'row', category: 'social' },
+  { key: 'x',         label: 'X',           desc: 'Posts from monitored X accounts',               language: 'row', category: 'social' },
   { key: 'bluesky',   label: 'Bluesky',     desc: 'Accounts, topics, and trends on Bluesky',       language: 'row', category: 'social' },
   { key: 'mastodon',  label: 'Mastodon',     desc: 'Accounts, topics, and trends on Mastodon',      language: 'row', category: 'social' },
   { key: 'rss_feeds',       label: 'RSS Feeds',         desc: 'Custom RSS/Atom feed subscriptions',             language: 'row', category: 'feeds' },

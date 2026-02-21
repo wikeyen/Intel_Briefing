@@ -301,6 +301,24 @@ export function Sensors() {
     trigger()
   }
 
+  const enableAllAccounts = (accounts: string[]) => {
+    setDisabledAccounts((prev) => {
+      const next = new Set(prev)
+      for (const a of accounts) next.delete(a)
+      return next
+    })
+    trigger()
+  }
+
+  const disableAllAccounts = (accounts: string[]) => {
+    setDisabledAccounts((prev) => {
+      const next = new Set(prev)
+      for (const a of accounts) next.add(a)
+      return next
+    })
+    trigger()
+  }
+
   const updateSensorLimit = (key: string, value: number) => {
     setSensorLimits((prev) => ({ ...prev, [key]: value }))
     trigger()
@@ -483,6 +501,8 @@ export function Sensors() {
                             validate={validateXHandle}
                             disabledTags={disabledAccounts}
                             onToggleDisabled={toggleAccountDisabled}
+                            onEnableAll={() => enableAllAccounts(socialAccountsX)}
+                            onDisableAll={() => disableAllAccounts(socialAccountsX)}
                           />
                         </div>
                       </div>
@@ -510,6 +530,8 @@ export function Sensors() {
                             validate={validateBlueskyHandle}
                             disabledTags={disabledAccounts}
                             onToggleDisabled={toggleAccountDisabled}
+                            onEnableAll={() => enableAllAccounts(socialAccountsBluesky)}
+                            onDisableAll={() => disableAllAccounts(socialAccountsBluesky)}
                           />
                           <label style={{
                             display: 'flex',
@@ -566,6 +588,8 @@ export function Sensors() {
                             validate={validateMastodonHandle}
                             disabledTags={disabledAccounts}
                             onToggleDisabled={toggleAccountDisabled}
+                            onEnableAll={() => enableAllAccounts(socialAccountsMastodon)}
+                            onDisableAll={() => disableAllAccounts(socialAccountsMastodon)}
                           />
                           <label style={{
                             display: 'flex',

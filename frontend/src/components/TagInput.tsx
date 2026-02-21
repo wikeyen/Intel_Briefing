@@ -13,9 +13,13 @@ interface Props {
   disabledTags?: Set<string>
   /** Called when a tag is clicked to toggle its disabled state. */
   onToggleDisabled?: (tag: string) => void
+  /** Called to enable all tags at once. */
+  onEnableAll?: () => void
+  /** Called to disable all tags at once. */
+  onDisableAll?: () => void
 }
 
-export function TagInput({ tags, onChange, placeholder = 'Add…', validate, disabledTags, onToggleDisabled }: Props) {
+export function TagInput({ tags, onChange, placeholder = 'Add…', validate, disabledTags, onToggleDisabled, onEnableAll, onDisableAll }: Props) {
   const [input, setInput] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -38,6 +42,44 @@ export function TagInput({ tags, onChange, placeholder = 'Add…', validate, dis
 
   return (
     <div>
+      {tags.length > 0 && onEnableAll && onDisableAll && (
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+          <button
+            type="button"
+            onClick={onEnableAll}
+            style={{
+              fontSize: '0.6875rem',
+              fontWeight: 500,
+              color: 'var(--accent)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              textDecoration: 'underline',
+              textUnderlineOffset: '2px',
+            }}
+          >
+            Enable all
+          </button>
+          <button
+            type="button"
+            onClick={onDisableAll}
+            style={{
+              fontSize: '0.6875rem',
+              fontWeight: 500,
+              color: 'var(--ink-faint)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              textDecoration: 'underline',
+              textUnderlineOffset: '2px',
+            }}
+          >
+            Disable all
+          </button>
+        </div>
+      )}
       {tags.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', marginBottom: '0.625rem' }}>
           {tags.map((tag) => {

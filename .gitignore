@@ -76,7 +76,7 @@ htmlcov/
 .playwright-mcp/
 
 # Local data (SQLite DB, symlinks)
-data/
+/data/
 
 # Git worktrees
 .worktrees/

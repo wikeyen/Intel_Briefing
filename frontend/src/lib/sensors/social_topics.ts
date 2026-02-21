@@ -49,15 +49,23 @@ async function fetchMastodonTopics(config: ConfigSettings, limit: number): Promi
   return items
 }
 
-export async function fetchSocialTopics(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
+export async function fetchSocialTopics(
+  config: ConfigSettings,
+  limit: number,
+  platform?: 'bluesky' | 'mastodon',
+): Promise<IntelItem[]> {
   if (config.social_topics_keywords.length === 0) {
     throw new SensorConfigError('No topic keywords configured')
   }
 
-  const results = await Promise.allSettled([
-    fetchBlueskyTopics(config, limit),
-    fetchMastodonTopics(config, limit),
-  ])
+  const checkBsky = !platform || platform === 'bluesky'
+  const checkMasto = !platform || platform === 'mastodon'
+
+  const fetches: Promise<IntelItem[]>[] = []
+  if (checkBsky) fetches.push(fetchBlueskyTopics(config, limit))
+  if (checkMasto) fetches.push(fetchMastodonTopics(config, limit))
+
+  const results = await Promise.allSettled(fetches)
 
   const items: IntelItem[] = []
   for (const r of results) {

@@ -36,11 +36,19 @@ async function fetchMastodonTrends(_config: ConfigSettings, limit: number): Prom
   return items
 }
 
-export async function fetchSocialTrends(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
-  const results = await Promise.allSettled([
-    fetchBlueskyTrends(config, limit),
-    fetchMastodonTrends(config, limit),
-  ])
+export async function fetchSocialTrends(
+  config: ConfigSettings,
+  limit: number,
+  platform?: 'bluesky' | 'mastodon',
+): Promise<IntelItem[]> {
+  const checkBsky = !platform || platform === 'bluesky'
+  const checkMasto = !platform || platform === 'mastodon'
+
+  const fetches: Promise<IntelItem[]>[] = []
+  if (checkBsky) fetches.push(fetchBlueskyTrends(config, limit))
+  if (checkMasto) fetches.push(fetchMastodonTrends(config, limit))
+
+  const results = await Promise.allSettled(fetches)
 
   const items: IntelItem[] = []
   const errors: string[] = []
@@ -49,9 +57,10 @@ export async function fetchSocialTrends(config: ConfigSettings, limit: number): 
     else errors.push(String(r.reason))
   }
 
-  // Mastodon trends is public — only fail if both platforms errored
-  if (items.length === 0 && errors.length === 2) {
-    throw new Error('No platform available for trends — configure Bluesky or check Mastodon connectivity')
+  // Only fail if all requested platforms errored
+  if (items.length === 0 && errors.length === fetches.length) {
+    const target = platform ?? 'Bluesky or Mastodon'
+    throw new Error(`No platform available for trends — ${platform ? `check ${target} connectivity` : 'configure Bluesky or check Mastodon connectivity'}`)
   }
 
   return items.slice(0, limit)

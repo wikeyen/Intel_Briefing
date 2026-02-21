@@ -273,7 +273,7 @@ input[type="range"]::-moz-range-thumb {
 
   /* ── Data page ── */
   .data-sticky-header {
-    top: calc(56px + env(safe-area-inset-top, 0)) !important;
+    top: 0 !important;
   }
 
   .data-content {

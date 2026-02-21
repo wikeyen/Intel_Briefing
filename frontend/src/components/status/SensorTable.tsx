@@ -288,48 +288,104 @@ export function SensorTable({ isRunning, liveSensors, report, config, pipelineSt
                 rightColor = 'var(--ink-faint)'
               }
 
+              const hasDetail = !isDisabled && (isFailed || isOk || lastSp)
+
               return (
-                <div
-                  key={sensorKey}
-                  data-testid={`sensor-row-${sensorKey}`}
-                  style={sensorRowStyle}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={dotStyle(idleDotColor, false)} />
+                <div key={sensorKey}>
+                  <div
+                    data-testid={`sensor-row-${sensorKey}`}
+                    style={{
+                      ...sensorRowStyle,
+                      cursor: hasDetail ? 'pointer' : 'default',
+                    }}
+                    onClick={() => hasDetail && toggleExpanded(sensorKey)}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={dotStyle(idleDotColor, false)} />
+                      <span style={{
+                        color: isDisabled ? 'var(--ink-faint)' : 'var(--ink)',
+                      }}>
+                        {label}
+                      </span>
+                      {isFailed && (
+                        <span style={{
+                          display: 'inline-block',
+                          fontSize: '0.5625rem',
+                          fontWeight: 700,
+                          letterSpacing: '0.08em',
+                          textTransform: 'uppercase',
+                          padding: '0.0625rem 0.375rem',
+                          borderRadius: 3,
+                          color: isConfigErr ? 'var(--warn)' : 'var(--err)',
+                          background: isConfigErr ? 'var(--warn-bg)' : 'var(--err-bg)',
+                          border: `1px solid ${isConfigErr ? 'var(--warn)' : 'var(--err)'}`,
+                          opacity: 0.85,
+                          marginLeft: '0.25rem',
+                        }}>
+                          {isConfigErr ? 'config' : 'error'}
+                        </span>
+                      )}
+                    </div>
                     <span style={{
-                      color: isDisabled ? 'var(--ink-faint)' : 'var(--ink)',
+                      ...countStyle,
+                      color: rightColor,
+                      fontWeight: isOk && count > 0 ? 600 : 400,
                     }}>
-                      {label}
+                      {rightText}
                     </span>
-                    {isConfigErr && lastSp?.fetch_error && (
-                      <span style={{
-                        color: 'var(--warn)',
-                        fontSize: '0.75rem',
-                        marginLeft: '0.25rem',
-                      }}>
-                        {lastSp.fetch_error}
-                      </span>
-                    )}
-                    {isApiErr && lastSp?.fetch_error && (
-                      <span style={{
-                        color: 'var(--err)',
-                        fontSize: '0.75rem',
-                        marginLeft: '0.25rem',
-                        opacity: 0.8,
-                      }}>
-                        {lastSp.fetch_error.length > 60
-                          ? lastSp.fetch_error.slice(0, 60) + '\u2026'
-                          : lastSp.fetch_error}
-                      </span>
-                    )}
                   </div>
-                  <span style={{
-                    ...countStyle,
-                    color: rightColor,
-                    fontWeight: isOk && count > 0 ? 600 : 400,
-                  }}>
-                    {rightText}
-                  </span>
+
+                  {/* Expanded detail (idle state) */}
+                  {isExpanded && hasDetail && (
+                    <div data-testid={`sensor-detail-${sensorKey}`} style={detailStyle}>
+                      {lastSp && (
+                        <>
+                          <span>
+                            <span style={{ color: stageColor(lastSp.fetch) }}>{stageIcon(lastSp.fetch)}</span>
+                            {' '}Fetch: {stageLabel(lastSp.fetch)}
+                            {lastSp.fetch === 'ok' && lastSp.item_count > 0 && (
+                              <span style={{ color: 'var(--ok)', marginLeft: '0.375rem' }}>
+                                — {lastSp.item_count} items
+                              </span>
+                            )}
+                            {lastSp.fetch_detail && (
+                              <span style={{ color: 'var(--ink-muted)', marginLeft: '0.375rem' }}>
+                                — {lastSp.fetch_detail}
+                              </span>
+                            )}
+                          </span>
+                          {lastSp.fetch_error && (
+                            <span style={{
+                              color: lastSp.fetch_error_kind === 'config' ? 'var(--warn)' : 'var(--err)',
+                              fontFamily: 'ui-monospace, monospace',
+                              fontSize: '0.6875rem',
+                              lineHeight: 1.5,
+                              wordBreak: 'break-word',
+                              paddingLeft: '1rem',
+                            }}>
+                              {lastSp.fetch_error}
+                            </span>
+                          )}
+                          <span>
+                            <span style={{ color: stageColor(lastSp.summary) }}>{stageIcon(lastSp.summary)}</span>
+                            {' '}Summary: {stageLabel(lastSp.summary)}
+                          </span>
+                          {lastSp.summary_error && (
+                            <span style={{
+                              color: 'var(--err)',
+                              fontFamily: 'ui-monospace, monospace',
+                              fontSize: '0.6875rem',
+                              lineHeight: 1.5,
+                              wordBreak: 'break-word',
+                              paddingLeft: '1rem',
+                            }}>
+                              {lastSp.summary_error}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               )
             })}

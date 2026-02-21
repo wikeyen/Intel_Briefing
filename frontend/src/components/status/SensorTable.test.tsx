@@ -211,7 +211,7 @@ describe('SensorTable', () => {
     expect(within(ghRow).getByText('Off')).toBeInTheDocument()
   })
 
-  // 5. Shows inline error text for config errors
+  // 5. Shows error text in expanded detail for config errors
   it('shows inline error text for config errors', () => {
     const report = makeReport({
       sources_ok: ['hacker_news'],
@@ -238,7 +238,12 @@ describe('SensorTable', () => {
     })
     render(<SensorTable {...props} />)
     const ghRow = screen.getByTestId('sensor-row-github')
-    expect(within(ghRow).getByText('Missing GITHUB_TOKEN')).toBeInTheDocument()
+    // Row shows a config badge
+    expect(within(ghRow).getByText('config')).toBeInTheDocument()
+    // Click to expand and see the full error
+    fireEvent.click(ghRow)
+    const detail = screen.getByTestId('sensor-detail-github')
+    expect(within(detail).getByText('Missing GITHUB_TOKEN')).toBeInTheDocument()
   })
 
   // 6. Shows total items at the bottom
@@ -352,7 +357,7 @@ describe('SensorTable', () => {
     expect(within(detail).getByText(/Summary/)).toBeInTheDocument()
   })
 
-  // Additional: Shows inline error text for API errors
+  // Additional: Shows error text in expanded detail for API errors
   it('shows inline error text for API errors', () => {
     const report = makeReport({
       sources_ok: [],
@@ -375,7 +380,12 @@ describe('SensorTable', () => {
     })
     render(<SensorTable {...props} />)
     const hnRow = screen.getByTestId('sensor-row-hacker_news')
-    expect(within(hnRow).getByText('Connection timeout')).toBeInTheDocument()
+    // Row shows an error badge
+    expect(within(hnRow).getByText('error')).toBeInTheDocument()
+    // Click to expand and see the full error
+    fireEvent.click(hnRow)
+    const detail = screen.getByTestId('sensor-detail-hacker_news')
+    expect(within(detail).getByText('Connection timeout')).toBeInTheDocument()
   })
 
   // Section total should display the sum of items in that section

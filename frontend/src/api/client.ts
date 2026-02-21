@@ -71,6 +71,7 @@ export interface SensorJobProgress {
   fetch: StageState
   fetch_error: string | null
   fetch_error_kind: 'config' | 'api' | null
+  fetch_detail: string | null
   summary: StageState
   summary_error: string | null
   item_count: number

@@ -41,6 +41,7 @@ export class PipelineProgressTracker {
       fetch: skipFetch ? 'skipped' : 'queued',
       fetch_error: null,
       fetch_error_kind: null,
+      fetch_detail: null,
       summary: skipSummary ? 'skipped' : 'queued',
       summary_error: null,
       item_count: 0,
@@ -76,6 +77,13 @@ export class PipelineProgressTracker {
     if (itemCount !== undefined) s.item_count = itemCount
     if (error !== undefined) s.fetch_error = error
     if (errorKind !== undefined) s.fetch_error_kind = errorKind
+    if (state === 'ok' || state === 'failed') s.fetch_detail = null
+    this.notify()
+  }
+
+  setFetchDetail(name: string, detail: string | null): void {
+    const s = this.find(name)
+    s.fetch_detail = detail
     this.notify()
   }
 

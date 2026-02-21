@@ -501,28 +501,9 @@ export function Sensors() {
                             Scraper
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <select
-                              value={xScraperProvider}
-                              onChange={(e) => { setXScraperProvider(e.target.value as 'twitter-scraper' | 'apify' | 'mixed'); trigger() }}
-                              style={{
-                                fontSize: '0.8125rem',
-                                padding: '0.375rem 0.625rem',
-                                borderRadius: 6,
-                                border: '1px solid var(--border)',
-                                background: 'var(--surface)',
-                                color: 'var(--ink)',
-                                cursor: 'pointer',
-                                outline: 'none',
-                              }}
-                            >
-                              <option value="twitter-scraper">Twitter Scraper</option>
-                              <option value="apify">Apify</option>
-                              <option value="mixed">Mixed</option>
-                            </select>
+                            <span style={{ fontSize: '0.8125rem', color: 'var(--ink)' }}>Twitter Scraper</span>
                             <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>
-                              {xScraperProvider === 'mixed'
-                                ? 'Splits accounts between Scraper and Apify; falls back to Scraper if Apify credits run out'
-                                : `Falls back to ${xScraperProvider === 'apify' ? 'Twitter Scraper' : 'Apify'} on auth errors`}
+                              Apify is reserved for trends only
                             </span>
                           </div>
                         </div>

@@ -450,58 +450,7 @@ export async function fetchXPosts(
   const lookbackMs = lookbackHours * 60 * 60 * 1000
   const perAccountLimit = Math.max(10, Math.ceil(limit / handles.length) * 2)
 
-  const provider = config.x_scraper_provider ?? 'twitter-scraper'
-
-  // Mixed mode: split handles between scraper and Apify
-  if (provider === 'mixed') {
-    const hasScraper = hasScraperCredentials(config)
-    const hasApify = hasApifyCredentials(config)
-
-    if (hasScraper && hasApify) {
-      return await fetchMixed(config, handles, lookbackMs, perAccountLimit, limit, onProgress)
-    }
-    // Fall back to whichever provider has credentials
-    if (hasApify) {
-      onProgress?.('[Mixed] No scraper credentials — using Apify only')
-      return await fetchViaApify(config.apify_token!, handles, lookbackMs, perAccountLimit, onProgress)
-    }
-    if (hasScraper) {
-      onProgress?.('[Mixed] No Apify credentials — using Scraper only')
-      return await fetchAllViaScraper(config, handles, lookbackMs, perAccountLimit, limit, onProgress)
-    }
-    throw new Error('X sensor requires authentication — set Twitter cookies or Apify token in Credentials')
-  }
-
-  const fallbackProvider = provider === 'apify' ? 'twitter-scraper' : 'apify'
-
-  // Try primary provider
-  try {
-    if (provider === 'apify') {
-      if (!hasApifyCredentials(config)) {
-        throw new Error('X sensor requires authentication — set Apify API token in Credentials')
-      }
-      onProgress?.('[Apify] Starting X fetch…')
-      return await fetchViaApify(config.apify_token!, handles, lookbackMs, perAccountLimit, onProgress)
-    } else {
-      return await fetchAllViaScraper(config, handles, lookbackMs, perAccountLimit, limit, onProgress)
-    }
-  } catch (err) {
-    // Only fallback on auth errors
-    if (!isAuthError(err)) throw err
-
-    // Check if fallback provider has credentials
-    const canFallback = fallbackProvider === 'apify'
-      ? hasApifyCredentials(config)
-      : hasScraperCredentials(config)
-
-    if (!canFallback) throw err
-
-    onProgress?.(`Primary provider (${provider}) auth failed — falling back to ${fallbackProvider}`)
-
-    if (fallbackProvider === 'apify') {
-      return await fetchViaApify(config.apify_token!, handles, lookbackMs, perAccountLimit, onProgress)
-    } else {
-      return await fetchAllViaScraper(config, handles, lookbackMs, perAccountLimit, limit, onProgress)
-    }
-  }
+  // Always use twitter-scraper for account fetching.
+  // Apify is reserved for trends only (via social_trends sensor) to control costs.
+  return await fetchAllViaScraper(config, handles, lookbackMs, perAccountLimit, limit, onProgress)
 }

@@ -268,12 +268,14 @@ export async function summarizeReport(
   let overall: ReturnType<typeof parseOverallJson>
   try {
     // Pool-only: overall refs must come from verified per-sensor notable items
+    // Overall synthesis processes all sources — needs longer timeout than per-sensor calls
     overall = await summarizeWithVerification({
       messages: overallMessages,
       llmConfig,
       parseFn: parseOverallJson,
       knownUrls: overallUrlPool,
       poolOnly: true,
+      timeoutMs: 300_000,
       extractRefs: (parsed) => {
         const allRefs: BriefingRef[] = []
         for (const entry of parsed.quick_scan) allRefs.push(...entry.refs)

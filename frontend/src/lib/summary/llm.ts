@@ -24,7 +24,7 @@ export interface StreamResult {
   fullText: Promise<string>
 }
 
-const TIMEOUT_MS = 120_000
+const DEFAULT_TIMEOUT_MS = 120_000
 
 /** Build shared fetch options for both streaming and non-streaming requests. */
 function buildFetchOptions(
@@ -32,6 +32,7 @@ function buildFetchOptions(
   config: LlmConfig,
   signal: AbortSignal | undefined,
   stream: boolean,
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
 ): { url: string; init: RequestInit } {
   const baseUrl = config.base_url.replace(/\/+$/, '')
   const url = `${baseUrl}/chat/completions`
@@ -44,8 +45,8 @@ function buildFetchOptions(
   }
 
   const combinedSignal = signal
-    ? AbortSignal.any([signal, AbortSignal.timeout(TIMEOUT_MS)])
-    : AbortSignal.timeout(TIMEOUT_MS)
+    ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)])
+    : AbortSignal.timeout(timeoutMs)
 
   return {
     url,
@@ -82,8 +83,9 @@ export async function chatCompletion(
   messages: ChatMessage[],
   config: LlmConfig,
   signal?: AbortSignal,
+  timeoutMs?: number,
 ): Promise<string> {
-  const { url, init } = buildFetchOptions(messages, config, signal, false)
+  const { url, init } = buildFetchOptions(messages, config, signal, false, timeoutMs)
 
   const res = await fetch(url, init)
 
@@ -113,7 +115,7 @@ export async function chatCompletion(
 export function chatCompletionStream(
   messages: ChatMessage[],
   config: LlmConfig,
-  opts?: { onToken?: (token: string) => void; signal?: AbortSignal },
+  opts?: { onToken?: (token: string) => void; signal?: AbortSignal; timeoutMs?: number },
 ): StreamResult {
   const tokenQueue: string[] = []
   let streamDone = false
@@ -130,7 +132,7 @@ export function chatCompletionStream(
 
   // Eagerly drive the stream in the background
   const drive = async () => {
-    const { url, init } = buildFetchOptions(messages, config, opts?.signal, true)
+    const { url, init } = buildFetchOptions(messages, config, opts?.signal, true, opts?.timeoutMs)
     const res = await fetch(url, init)
 
     if (!res.ok) {

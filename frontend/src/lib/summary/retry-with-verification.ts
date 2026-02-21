@@ -29,6 +29,8 @@ export interface SummarizeWithVerificationOptions<T> {
   onRetry?: (attempt: number, maxRetries: number, failureCount: number) => void | Promise<void>
   /** Token callback for streaming visual feedback during LLM generation. */
   onToken?: (token: string) => void
+  /** Override LLM request timeout in milliseconds (default: 120s). */
+  timeoutMs?: number
 }
 
 /** Build a correction message telling the LLM which refs failed and what URLs are available. */
@@ -70,6 +72,7 @@ export async function summarizeWithVerification<T>(
     signal,
     onRetry,
     onToken,
+    timeoutMs,
   } = options
 
   // Clone messages so we can append without mutating the caller's array
@@ -80,9 +83,9 @@ export async function summarizeWithVerification<T>(
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     if (onToken) {
-      lastRaw = await chatCompletionStream(messages, llmConfig, { onToken, signal }).fullText
+      lastRaw = await chatCompletionStream(messages, llmConfig, { onToken, signal, timeoutMs }).fullText
     } else {
-      lastRaw = await chatCompletion(messages, llmConfig, signal)
+      lastRaw = await chatCompletion(messages, llmConfig, signal, timeoutMs)
     }
     lastParsed = parseFn(lastRaw)
 

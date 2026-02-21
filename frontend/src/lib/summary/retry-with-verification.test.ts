@@ -137,6 +137,7 @@ describe('summarizeWithVerification', () => {
       expect.anything(),
       llmConfig,
       controller.signal,
+      undefined,
     )
   })
 

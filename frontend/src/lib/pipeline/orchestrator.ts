@@ -27,23 +27,25 @@ export interface PipelineResult {
   summary: BriefingSummary | null
 }
 
-// Module-level singletons for abort support
-let activeAbortController: AbortController | null = null
-let activeTracker: PipelineProgressTracker | null = null
+// Store on globalThis so it survives Next.js HMR module re-evaluation.
+const g = globalThis as unknown as {
+  __pipelineAbortController?: AbortController | null
+  __pipelineTracker?: PipelineProgressTracker | null
+}
 
 /** Cancel the running pipeline, if any. Returns true if a pipeline was cancelled. */
 export function cancelPipeline(): boolean {
-  if (!activeAbortController || !activeTracker) return false
-  activeAbortController.abort()
-  activeTracker.cancel()
-  activeAbortController = null
-  activeTracker = null
+  if (!g.__pipelineAbortController || !g.__pipelineTracker) return false
+  g.__pipelineAbortController.abort()
+  g.__pipelineTracker.cancel()
+  g.__pipelineAbortController = null
+  g.__pipelineTracker = null
   return true
 }
 
 /** Check whether a pipeline is currently running. */
 export function isPipelineRunning(): boolean {
-  return activeAbortController !== null
+  return g.__pipelineAbortController != null
 }
 
 /**
@@ -165,8 +167,8 @@ export async function runPipeline(
   })
 
   // Store singletons for abort support
-  activeAbortController = abortController
-  activeTracker = tracker
+  g.__pipelineAbortController = abortController
+  g.__pipelineTracker = tracker
 
   // Write initial status
   writePipelineStatus(tracker.snapshot()).catch(() => {})
@@ -339,13 +341,13 @@ export async function runPipeline(
     // Persist final status BEFORE clearing singletons so the DB always reflects
     // running=false before isPipelineRunning() starts returning false.
     // This prevents a race where a status poll sees running=true + alive=false.
-    if (activeTracker && activeAbortController === abortController) {
-      await writePipelineStatus(activeTracker.snapshot()).catch(() => {})
+    if (g.__pipelineTracker && g.__pipelineAbortController === abortController) {
+      await writePipelineStatus(g.__pipelineTracker.snapshot()).catch(() => {})
     }
     // Clear singletons so a new run can start
-    if (activeAbortController === abortController) {
-      activeAbortController = null
-      activeTracker = null
+    if (g.__pipelineAbortController === abortController) {
+      g.__pipelineAbortController = null
+      g.__pipelineTracker = null
     }
   }
 }

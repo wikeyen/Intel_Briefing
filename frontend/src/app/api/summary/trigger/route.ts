@@ -8,20 +8,22 @@ import { writeSummary, writeSummaryProgress } from '@/lib/summary/cache'
 import type { SummaryProgress, SummarySensorProgress } from '@/lib/models'
 import { createBus } from '@/lib/summary/events'
 
-// Module-level singleton for abort support
-let activeAbortController: AbortController | null = null
+// Store controller on globalThis so it survives Next.js HMR module re-evaluation.
+// Without this, dev-mode module recycling resets the singleton to null mid-run,
+// causing the status endpoint to report alive=false and triggering a stale banner.
+const g = globalThis as unknown as { __summaryAbortController?: AbortController | null }
 
 /** Cancel the running standalone summary, if any. Returns true if cancelled. */
 export function cancelSummary(): boolean {
-  if (!activeAbortController) return false
-  activeAbortController.abort()
-  activeAbortController = null
+  if (!g.__summaryAbortController) return false
+  g.__summaryAbortController.abort()
+  g.__summaryAbortController = null
   return true
 }
 
 /** Check whether a standalone summary is currently running. */
 export function isSummaryRunning(): boolean {
-  return activeAbortController !== null
+  return g.__summaryAbortController != null
 }
 
 export async function POST(): Promise<NextResponse> {
@@ -77,7 +79,7 @@ export async function POST(): Promise<NextResponse> {
 
   // Create abort controller for this run
   const abortController = new AbortController()
-  activeAbortController = abortController
+  g.__summaryAbortController = abortController
 
   // Derive concurrency from config (same logic as pipeline orchestrator)
   const isLocalModel = config.summary_provider === 'local'
@@ -140,8 +142,8 @@ export async function POST(): Promise<NextResponse> {
       await writeSummaryProgress(summaryStatus).catch(() => {})
       bus.emitDone()
       // Clear singleton
-      if (activeAbortController === abortController) {
-        activeAbortController = null
+      if (g.__summaryAbortController === abortController) {
+        g.__summaryAbortController = null
       }
     }
   })

@@ -8,6 +8,7 @@ import type {
   BriefingSummary,
   SummaryProgress,
   SummarySensorProgress,
+  ResumeDecision,
 } from '../models'
 import { sensorResultSucceeded, sensorLimit } from '../models'
 import { Semaphore } from './semaphore'
@@ -31,6 +32,7 @@ export interface PipelineResult {
 const g = globalThis as unknown as {
   __pipelineAbortController?: AbortController | null
   __pipelineTracker?: PipelineProgressTracker | null
+  __pipelineResumeResolver?: ((decision: ResumeDecision) => void) | null
 }
 
 /** Cancel the running pipeline, if any. Returns true if a pipeline was cancelled. */
@@ -38,6 +40,11 @@ export function cancelPipeline(): boolean {
   if (!g.__pipelineAbortController || !g.__pipelineTracker) return false
   g.__pipelineAbortController.abort()
   g.__pipelineTracker.cancel()
+  // Unblock any pending resume so the orchestrator can exit
+  if (g.__pipelineResumeResolver) {
+    g.__pipelineResumeResolver({ action: 'proceed' })
+    g.__pipelineResumeResolver = null
+  }
   g.__pipelineAbortController = null
   g.__pipelineTracker = null
   return true
@@ -46,6 +53,30 @@ export function cancelPipeline(): boolean {
 /** Check whether a pipeline is currently running. */
 export function isPipelineRunning(): boolean {
   return g.__pipelineAbortController != null
+}
+
+/** Check whether the pipeline is paused awaiting user decision. */
+export function isPipelinePaused(): boolean {
+  return g.__pipelineResumeResolver != null
+}
+
+/** Resume a paused pipeline with the user's decision. Returns true if a pipeline was resumed. */
+export function resumePipeline(decision: ResumeDecision): boolean {
+  if (!g.__pipelineResumeResolver) return false
+  g.__pipelineResumeResolver(decision)
+  g.__pipelineResumeResolver = null
+  return true
+}
+
+/** Pause the pipeline and wait for a user decision (retry/proceed). */
+function waitForUserDecision(
+  tracker: PipelineProgressTracker,
+  stage: 'fetch' | 'summary',
+): Promise<ResumeDecision> {
+  tracker.pause(stage)
+  return new Promise<ResumeDecision>(resolve => {
+    g.__pipelineResumeResolver = resolve
+  })
 }
 
 /**
@@ -191,38 +222,59 @@ export async function runPipeline(
     const failedSensors = new Set<string>()
 
     if (shouldFetch) {
-      // Stage 1: Run all sensor fetches concurrently through the fetch semaphore
-      const fetchPromises = registrySensorNames.map(name =>
-        fetchSemaphore.run(async () => {
-          if (signal.aborted) return null
-          tracker.setFetchState(name, 'running')
-          const result = await fetchSensor(name, config, (detail) => {
-            tracker.setFetchDetail(name, detail)
-          })
-          if (signal.aborted) return null
-          if (sensorResultSucceeded(result)) {
-            tracker.setFetchState(name, 'ok', result.items.length)
-          } else {
-            tracker.setFetchState(name, 'failed', 0, result.error, result.error_kind ?? 'api')
-            failedSensors.add(name)
-          }
-          return result
-        }),
-      )
+      // Stage 1: Run all sensor fetches with retry loop on failures
+      const resultMap = new Map<string, SensorResult>()
 
-      // Wait for ALL fetches to complete before moving to summary stage
-      const results = await Promise.all(fetchPromises)
+      // Inner function to fetch a batch of sensors concurrently
+      const fetchBatch = async (sensorNames: string[]) => {
+        const promises = sensorNames.map(name =>
+          fetchSemaphore.run(async () => {
+            if (signal.aborted) return
+            tracker.setFetchState(name, 'running')
+            const result = await fetchSensor(name, config, (detail) => {
+              tracker.setFetchDetail(name, detail)
+            })
+            if (signal.aborted) return
+            resultMap.set(name, result)
+            if (sensorResultSucceeded(result)) {
+              tracker.setFetchState(name, 'ok', result.items.length)
+              failedSensors.delete(name)
+            } else {
+              tracker.setFetchState(name, 'failed', 0, result.error, result.error_kind ?? 'api')
+              failedSensors.add(name)
+            }
+          }),
+        )
+        await Promise.all(promises)
+      }
+
+      // Initial fetch of all sensors
+      await fetchBatch(registrySensorNames)
+
+      // Pause on failures only when there's a next stage (summary) — no point
+      // pausing fetch-only mode since there's nothing to "proceed to".
+      while (shouldSummarize && failedSensors.size > 0 && !signal.aborted) {
+        const decision = await waitForUserDecision(tracker, 'fetch')
+        tracker.resume()
+        if (signal.aborted || decision.action === 'proceed') break
+        const toRetry = (decision.sensors ?? [...failedSensors]).filter(s => failedSensors.has(s))
+        if (toRetry.length === 0) break
+        // Reset tracker state for retried sensors
+        for (const name of toRetry) {
+          tracker.setFetchState(name, 'queued')
+        }
+        await fetchBatch(toRetry)
+      }
 
       if (signal.aborted) {
-        // Assemble partial report from completed (non-null) results
-        const completed = results.filter((r): r is SensorResult => r !== null)
+        const completed = [...resultMap.values()]
         if (completed.length > 0) {
           report = await assembleReport(completed, config)
         }
         return { report, summary: null }
       }
 
-      report = await assembleReport(results as SensorResult[], config)
+      report = await assembleReport([...resultMap.values()], config)
 
       // Mark failed sensors' summaries as skipped — they don't pass to the next stage
       if (shouldSummarize) {
@@ -302,19 +354,50 @@ export async function runPipeline(
         // Delegate to the unified summarization engine
         // fetch_summarize uses skipCache:true since we just invalidated caches above
         // summarize-only uses skipCache:false to reuse cached per-sensor summaries
-        summary = await summarizeReport(sourceReport, {
-          llmConfig,
-          concurrency: effectiveSummaryConcurrency,
-          promptOverrides: config.summary_sensor_prompts,
-          overallPromptOverride: config.summary_overall_prompt,
-          signal,
-          onProgress,
-          skipCache: shouldFetch,
-          enabledSensors,
-          language: config.summary_language,
-          onToken: (sensorName, token) => summaryBus!.emitToken(sensorName, token),
-          attributionLlmConfig: buildAttributionLlmConfig(config) ?? undefined,
-        })
+        let skipCacheForSummary = shouldFetch
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          summary = await summarizeReport(sourceReport, {
+            llmConfig,
+            concurrency: effectiveSummaryConcurrency,
+            promptOverrides: config.summary_sensor_prompts,
+            overallPromptOverride: config.summary_overall_prompt,
+            signal,
+            onProgress,
+            skipCache: skipCacheForSummary,
+            enabledSensors,
+            language: config.summary_language,
+            onToken: (sensorName, token) => summaryBus!.emitToken(sensorName, token),
+            attributionLlmConfig: buildAttributionLlmConfig(config) ?? undefined,
+          })
+
+          if (signal.aborted) break
+
+          // Check for per-sensor summary failures
+          const snap = tracker.snapshot()
+          const summaryFailures = snap.sensors
+            .filter(s => s.summary === 'failed')
+            .map(s => s.name)
+
+          if (summaryFailures.length === 0) break
+
+          // Pause and let user decide retry or proceed
+          const decision = await waitForUserDecision(tracker, 'summary')
+          tracker.resume()
+          if (signal.aborted || decision.action === 'proceed') break
+
+          const toRetry = (decision.sensors ?? summaryFailures).filter(s => summaryFailures.includes(s))
+          if (toRetry.length === 0) break
+
+          // Reset state for retried sensors and overall
+          for (const name of toRetry) {
+            tracker.setSummaryState(name, 'queued')
+          }
+          tracker.setOverallSummary('queued')
+
+          // Re-run with skipCache:false — succeeded sensors hit cache, failed retry
+          skipCacheForSummary = false
+        }
 
         if (summary && !signal.aborted) {
           try {
@@ -349,6 +432,7 @@ export async function runPipeline(
     if (g.__pipelineAbortController === abortController) {
       g.__pipelineAbortController = null
       g.__pipelineTracker = null
+      g.__pipelineResumeResolver = null
     }
   }
 }

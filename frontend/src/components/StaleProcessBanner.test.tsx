@@ -33,6 +33,8 @@ function makePipelineStatus(overrides: Partial<PipelineStatus> = {}): PipelineSt
     overall_summary: 'ok',
     total_items: 0,
     alive: false,
+    paused: false,
+    paused_stage: null,
     ...overrides,
   }
 }

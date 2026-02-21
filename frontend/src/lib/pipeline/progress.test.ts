@@ -164,4 +164,48 @@ describe('PipelineProgressTracker', () => {
     const tracker = new PipelineProgressTracker(sensors, 'fetch', 4, 4)
     expect(tracker.snapshot().cancelled).toBe(false)
   })
+
+  it('snapshot includes paused fields (false by default)', () => {
+    const tracker = new PipelineProgressTracker(sensors, 'fetch', 4, 4)
+    const snap = tracker.snapshot()
+    expect(snap.paused).toBe(false)
+    expect(snap.paused_stage).toBeNull()
+  })
+
+  it('pause() sets paused state with stage', () => {
+    const onChange = vi.fn()
+    const tracker = new PipelineProgressTracker(sensors, 'fetch_summarize', 4, 4, onChange)
+    onChange.mockClear()
+
+    tracker.pause('fetch')
+    const snap = tracker.snapshot()
+
+    expect(snap.paused).toBe(true)
+    expect(snap.paused_stage).toBe('fetch')
+    expect(snap.running).toBe(true) // still running, just paused
+    expect(onChange).toHaveBeenCalledTimes(1)
+  })
+
+  it('resume() clears paused state', () => {
+    const tracker = new PipelineProgressTracker(sensors, 'fetch_summarize', 4, 4)
+    tracker.pause('summary')
+    expect(tracker.snapshot().paused).toBe(true)
+
+    tracker.resume()
+    const snap = tracker.snapshot()
+    expect(snap.paused).toBe(false)
+    expect(snap.paused_stage).toBeNull()
+    expect(snap.running).toBe(true) // still running after resume
+  })
+
+  it('pause() then cancel() clears paused state', () => {
+    const tracker = new PipelineProgressTracker(sensors, 'fetch_summarize', 4, 4)
+    tracker.pause('fetch')
+    tracker.cancel()
+    const snap = tracker.snapshot()
+    expect(snap.running).toBe(false)
+    expect(snap.cancelled).toBe(true)
+    // paused state remains as-is (cancel doesn't clear it), but running=false takes priority
+    expect(snap.paused).toBe(true)
+  })
 })

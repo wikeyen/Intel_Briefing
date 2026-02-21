@@ -93,6 +93,8 @@ export interface SensorJobProgress {
 export interface PipelineStatus {
   running: boolean
   cancelled: boolean
+  paused: boolean
+  paused_stage: 'fetch' | 'summary' | null
   mode: RunMode
   default_concurrency: number
   local_summary_concurrency: number
@@ -285,6 +287,12 @@ export const api = {
 
   stopPipeline: () =>
     apiFetch<{ status: string }>('/fetch/stop', { method: 'POST' }),
+
+  resumePipeline: (action: 'retry' | 'proceed', sensors?: string[]) =>
+    apiFetch<{ status: string }>('/fetch/resume', {
+      method: 'POST',
+      body: JSON.stringify({ action, ...(sensors?.length ? { sensors } : {}) }),
+    }),
 
   getOllamaModels: (baseUrl?: string) =>
     apiFetch<{ models: OllamaModelInfo[]; error?: string }>(

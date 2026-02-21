@@ -1,15 +1,11 @@
 // ABOUTME: Summary stop endpoint — POST /api/summary/stop.
-// ABOUTME: Cancels any running summarization (standalone or pipeline) and cleans up stale progress.
+// ABOUTME: Cancels any running summarization (routed through pipeline) and cleans up stale progress.
 import { NextResponse } from 'next/server'
-import { cancelSummary } from '../trigger/route'
 import { cancelPipeline } from '@/lib/pipeline/orchestrator'
 import { readSummaryProgress, writeSummaryProgress } from '@/lib/summary/cache'
 
 export async function POST(): Promise<NextResponse> {
-  // Try cancelling standalone summary first, then pipeline
-  const stoppedStandalone = cancelSummary()
-  const stoppedPipeline = !stoppedStandalone && cancelPipeline()
-  const stopped = stoppedStandalone || stoppedPipeline
+  const stopped = cancelPipeline()
 
   // Whether actively cancelled or stale, ensure DB reflects running=false.
   // cancel functions fire async writes via notify() but don't await them,

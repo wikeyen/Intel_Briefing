@@ -140,8 +140,9 @@ export function Data() {
   const lastSummaryAt = useRef<string | null>(null)
   const lastPipelineCompletedAt = useRef<string | null>(null)
 
-  // Derive whether any job is active — drives polling frequency
-  const isActive = !!(summaryProgress?.running) || !!(pipelineStatus?.running && pipelineStatus.alive !== false)
+  // Derive whether any job is active — drives polling frequency.
+  // Paused pipelines are still active (awaiting user input) and need fast polling.
+  const isActive = !!(summaryProgress?.running) || !!(pipelineStatus?.running && pipelineStatus.alive !== false) || !!(pipelineStatus?.paused)
 
   // Poll summary and pipeline status — fast (2s) when active, slow (15s) when idle.
   // Idle polling detects jobs triggered from other tabs or scheduled runs.
@@ -258,6 +259,15 @@ export function Data() {
       // 404 = nothing running
     }
     refreshStatuses()
+  }
+
+  const handleResumePipeline = async (action: 'retry' | 'proceed', sensors?: string[]) => {
+    try {
+      await api.resumePipeline(action, sensors)
+      refreshStatuses()
+    } catch (e) {
+      showToast('Failed: ' + (e as Error).message)
+    }
   }
 
   // Detect stale processes (running in DB but no in-memory controller)
@@ -609,6 +619,7 @@ export function Data() {
               onTrigger={handleTriggerSummary}
               onStop={handleStopSummary}
               onStopPipeline={handleStopPipeline}
+              onResume={handleResumePipeline}
               streamTokens={streamTokens}
               searchQuery={searchQuery}
               loading={loading}

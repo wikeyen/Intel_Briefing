@@ -1,6 +1,7 @@
-// ABOUTME: Shared form style primitives — inputBase, focus/blur handlers, label components.
+// ABOUTME: Shared form style primitives — inputBase, focus/blur handlers, label/indicator components.
 // ABOUTME: Eliminates duplication across AiSummary, Pipeline, ApiKeys, and Sensors.
 import React from 'react'
+import type { AutoSaveStatus } from '@/lib/hooks/useAutoSave'
 
 export const inputBase: React.CSSProperties = {
   background: 'var(--surface)',
@@ -52,4 +53,23 @@ export function HelpText({ children }: { children: React.ReactNode }) {
   return React.createElement('p', {
     style: { fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, marginTop: '0.5rem' },
   }, children)
+}
+
+const AUTO_SAVE_CONFIG: Record<Exclude<AutoSaveStatus, 'idle'>, { color: string; text: string }> = {
+  saving: { color: 'var(--ink-faint)', text: 'Saving\u2026' },
+  saved:  { color: 'var(--ok)',        text: 'Saved' },
+  error:  { color: 'var(--err)',       text: 'Save failed' },
+}
+
+export function AutoSaveIndicator({ status }: { status: AutoSaveStatus }) {
+  if (status === 'idle') return null
+  const cfg = AUTO_SAVE_CONFIG[status]
+  return React.createElement('span', {
+    style: {
+      fontSize: '0.75rem',
+      fontWeight: 500,
+      color: cfg.color,
+      transition: 'opacity 200ms',
+    },
+  }, cfg.text)
 }

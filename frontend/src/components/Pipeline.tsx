@@ -1,12 +1,13 @@
 // ABOUTME: Pipeline page — schedule, cache, expiry, filters, and output limits.
-// ABOUTME: Single save covers fetch timing, retention, boost/suppress keywords, and item count limits.
+// ABOUTME: Auto-saves on every change; action buttons (mark stale, cleanup) are independent operations.
 'use client'
 import { useState, useEffect } from 'react'
 import { api } from '@/api/client'
 import { TagInput } from '@/components/TagInput'
 
 import { useToast } from '@/lib/toast-context'
-import { inputBase, focus, blur, SubLabel } from '@/components/form-styles'
+import { useAutoSave } from '@/lib/hooks/useAutoSave'
+import { inputBase, focus, blur, SubLabel, AutoSaveIndicator } from '@/components/form-styles'
 import { ALL_CATEGORIES, CATEGORY_META } from '@/lib/sensors/taxonomy'
 
 const OUTPUT_SECTIONS = ALL_CATEGORIES.map(key => ({
@@ -42,9 +43,24 @@ export function Pipeline() {
   const [suppress, setSuppress] = useState<string[]>([])
   const [defaultLimit, setDefaultLimit] = useState(10)
   const [sectionLimits, setSectionLimits] = useState<Record<string, number>>({})
-  const [saving, setSaving] = useState(false)
   const [invalidating, setInvalidating] = useState(false)
   const [cleaning, setCleaning] = useState(false)
+
+  const { status: saveStatus, trigger } = useAutoSave(
+    () => ({
+      fetch_time: fetchTime,
+      fetch_timezone: timezone,
+      default_concurrency: defaultConcurrency,
+      local_summary_concurrency: localSummaryConcurrency,
+      cache_ttl_hours: cacheTtl,
+      post_expiry_days: postExpiryDays,
+      boost_keywords: boost,
+      suppress_keywords: suppress,
+      default_limit: defaultLimit,
+      sensor_limits: sectionLimits,
+    }),
+    { onError: (e) => showToast('Save failed: ' + e.message) },
+  )
 
   useEffect(() => {
     api.getConfig().then((cfg) => {
@@ -61,30 +77,9 @@ export function Pipeline() {
     })
   }, [])
 
-  const updateSection = (section: string, value: number) =>
+  const updateSection = (section: string, value: number) => {
     setSectionLimits((prev) => ({ ...prev, [section]: value }))
-
-  const save = async () => {
-    setSaving(true)
-    try {
-      await api.updateConfig({
-        fetch_time: fetchTime,
-        fetch_timezone: timezone,
-        default_concurrency: defaultConcurrency,
-        local_summary_concurrency: localSummaryConcurrency,
-        cache_ttl_hours: cacheTtl,
-        post_expiry_days: postExpiryDays,
-        boost_keywords: boost,
-        suppress_keywords: suppress,
-        default_limit: defaultLimit,
-        sensor_limits: sectionLimits,
-      })
-      showToast('Pipeline settings saved')
-    } catch (e) {
-      showToast('Save failed: ' + (e as Error).message)
-    } finally {
-      setSaving(false)
-    }
+    trigger()
   }
 
   const handleInvalidate = async () => {
@@ -119,9 +114,12 @@ export function Pipeline() {
     <section id="pipeline" style={{ padding: '4.5rem 0' }}>
 
       <div className="page-header" style={{ marginBottom: '2rem' }}>
-        <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.375rem' }}>
-          Pipeline
-        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.375rem' }}>
+            Pipeline
+          </h2>
+          <AutoSaveIndicator status={saveStatus} />
+        </div>
         <p style={{ fontSize: '0.875rem', color: 'var(--ink-muted)', lineHeight: 1.6 }}>
           Scheduling, ranking filters, and output limits for the generated briefing.
         </p>
@@ -141,7 +139,7 @@ export function Pipeline() {
                 <input
                   type="time"
                   value={fetchTime}
-                  onChange={(e) => setFetchTime(e.target.value)}
+                  onChange={(e) => { setFetchTime(e.target.value); trigger() }}
                   style={{ ...inputBase, width: '100%' }}
                   onFocus={focus}
                   onBlur={blur}
@@ -154,7 +152,7 @@ export function Pipeline() {
                 <div style={{ position: 'relative' }}>
                   <select
                     value={timezone}
-                    onChange={(e) => setTimezone(e.target.value)}
+                    onChange={(e) => { setTimezone(e.target.value); trigger() }}
                     style={{
                       ...inputBase,
                       width: '100%',
@@ -200,7 +198,7 @@ export function Pipeline() {
                 min={1}
                 max={13}
                 value={defaultConcurrency}
-                onChange={(e) => setDefaultConcurrency(Number(e.target.value))}
+                onChange={(e) => { setDefaultConcurrency(Number(e.target.value)); trigger() }}
               />
               <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, marginTop: '0.5rem' }}>
                 Parallel limit for fetching and summarization. Applies to both stages.
@@ -221,7 +219,7 @@ export function Pipeline() {
                 min={1}
                 max={13}
                 value={localSummaryConcurrency}
-                onChange={(e) => setLocalSummaryConcurrency(Number(e.target.value))}
+                onChange={(e) => { setLocalSummaryConcurrency(Number(e.target.value)); trigger() }}
               />
               <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, marginTop: '0.5rem' }}>
                 Override for local models (Ollama). Cloud providers use the default concurrency above.
@@ -242,7 +240,7 @@ export function Pipeline() {
                 min={1}
                 max={72}
                 value={cacheTtl}
-                onChange={(e) => setCacheTtl(Number(e.target.value))}
+                onChange={(e) => { setCacheTtl(Number(e.target.value)); trigger() }}
               />
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem' }}>
                 <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, margin: 0 }}>
@@ -285,7 +283,7 @@ export function Pipeline() {
                 min={1}
                 max={90}
                 value={postExpiryDays}
-                onChange={(e) => setPostExpiryDays(Number(e.target.value))}
+                onChange={(e) => { setPostExpiryDays(Number(e.target.value)); trigger() }}
               />
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem' }}>
                 <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, margin: 0 }}>
@@ -335,7 +333,7 @@ export function Pipeline() {
                   Boost Keywords
                 </label>
               </div>
-              <TagInput tags={boost} onChange={setBoost} placeholder="keyword — press Enter" />
+              <TagInput tags={boost} onChange={(tags) => { setBoost(tags); trigger() }} placeholder="keyword — press Enter" />
               <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.5rem' }}>
                 Items matching these terms rank higher within their section.
               </p>
@@ -347,7 +345,7 @@ export function Pipeline() {
                   Suppress Keywords
                 </label>
               </div>
-              <TagInput tags={suppress} onChange={setSuppress} placeholder="keyword — press Enter" />
+              <TagInput tags={suppress} onChange={(tags) => { setSuppress(tags); trigger() }} placeholder="keyword — press Enter" />
               <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.5rem' }}>
                 Items matching these terms are removed from the briefing entirely.
               </p>
@@ -377,7 +375,7 @@ export function Pipeline() {
                 min={3}
                 max={200}
                 value={defaultLimit}
-                onChange={(e) => setDefaultLimit(Number(e.target.value))}
+                onChange={(e) => { setDefaultLimit(Number(e.target.value)); trigger() }}
               />
             </div>
 
@@ -432,30 +430,6 @@ export function Pipeline() {
               </div>
             </div>
           </div>
-        </div>
-
-        <div>
-          <button
-            onClick={save}
-            disabled={saving}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              fontSize: '0.875rem',
-              fontWeight: 500,
-              padding: '0.625rem 1.5rem',
-              borderRadius: 4,
-              border: 'none',
-              color: saving ? 'var(--ink-faint)' : '#FFFFFF',
-              background: saving ? 'var(--border)' : 'var(--ink)',
-              cursor: saving ? 'not-allowed' : 'pointer',
-              transition: 'background 120ms',
-            }}
-            onMouseEnter={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = '#000000' }}
-            onMouseLeave={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = 'var(--ink)' }}
-          >
-            {saving ? 'Saving…' : 'Save changes'}
-          </button>
         </div>
       </div>
     </section>

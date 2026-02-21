@@ -6,6 +6,8 @@ import { api } from '@/api/client'
 import { TagInput } from '@/components/TagInput'
 
 import { useToast } from '@/lib/toast-context'
+import { useAutoSave } from '@/lib/hooks/useAutoSave'
+import { AutoSaveIndicator } from '@/components/form-styles'
 import { sensorsByLanguageAndCategory } from '@/lib/sensors/taxonomy'
 
 interface SensorDef {
@@ -229,8 +231,27 @@ export function Sensors() {
   const [sensorLimits, setSensorLimits] = useState<Record<string, number>>({})
   const [sensorLookback, setSensorLookback] = useState<Record<string, number>>({})
   const [defaultLimit, setDefaultLimit] = useState(10)
-  const [saving, setSaving] = useState(false)
   const [activeLanguage, setActiveLanguage] = useState<Language>('row')
+
+  const { status: saveStatus, trigger } = useAutoSave(
+    () => ({
+      sensors_enabled: enabled,
+      social_accounts_x: socialAccountsX,
+      social_accounts_bluesky: socialAccountsBluesky,
+      social_accounts_mastodon: socialAccountsMastodon,
+      social_topics_keywords: socialTopicsKeywords,
+      social_following_bluesky: followingBluesky,
+      social_following_mastodon: followingMastodon,
+      bluesky_topics_enabled: blueskyTopicsEnabled,
+      bluesky_trends_enabled: blueskyTrendsEnabled,
+      mastodon_topics_enabled: mastodonTopicsEnabled,
+      mastodon_trends_enabled: mastodonTrendsEnabled,
+      rss_feed_urls: rssFeedUrls,
+      sensor_limits: sensorLimits,
+      sensor_lookback_hours: sensorLookback,
+    }),
+    { onError: (e) => showToast('Save failed: ' + e.message) },
+  )
 
   useEffect(() => {
     api.getConfig().then((cfg) => {
@@ -262,39 +283,19 @@ export function Sensors() {
     }).catch(() => {})
   }, [])
 
-  const toggle = (key: string) => setEnabled((prev) => ({ ...prev, [key]: !prev[key] }))
+  const toggle = (key: string) => {
+    setEnabled((prev) => ({ ...prev, [key]: !prev[key] }))
+    trigger()
+  }
 
-  const updateSensorLimit = (key: string, value: number) =>
+  const updateSensorLimit = (key: string, value: number) => {
     setSensorLimits((prev) => ({ ...prev, [key]: value }))
+    trigger()
+  }
 
-  const updateSensorLookback = (key: string, value: number) =>
+  const updateSensorLookback = (key: string, value: number) => {
     setSensorLookback((prev) => ({ ...prev, [key]: value }))
-
-  const save = async () => {
-    setSaving(true)
-    try {
-      await api.updateConfig({
-        sensors_enabled: enabled,
-        social_accounts_x: socialAccountsX,
-        social_accounts_bluesky: socialAccountsBluesky,
-        social_accounts_mastodon: socialAccountsMastodon,
-        social_topics_keywords: socialTopicsKeywords,
-        social_following_bluesky: followingBluesky,
-        social_following_mastodon: followingMastodon,
-        bluesky_topics_enabled: blueskyTopicsEnabled,
-        bluesky_trends_enabled: blueskyTrendsEnabled,
-        mastodon_topics_enabled: mastodonTopicsEnabled,
-        mastodon_trends_enabled: mastodonTrendsEnabled,
-        rss_feed_urls: rssFeedUrls,
-        sensor_limits: sensorLimits,
-        sensor_lookback_hours: sensorLookback,
-      })
-      showToast('Sources saved')
-    } catch (e) {
-      showToast('Save failed: ' + (e as Error).message)
-    } finally {
-      setSaving(false)
-    }
+    trigger()
   }
 
   const getBadge = (key: string): SensorStatus | undefined =>
@@ -305,9 +306,12 @@ export function Sensors() {
       <style dangerouslySetInnerHTML={{ __html: HIDE_SPINNERS_CSS }} />
 
       <div className="page-header" style={{ marginBottom: '1.5rem' }}>
-        <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.375rem' }}>
-          Sources
-        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.375rem' }}>
+            Sources
+          </h2>
+          <AutoSaveIndicator status={saveStatus} />
+        </div>
         <p style={{ fontSize: '0.875rem', color: 'var(--ink-muted)', lineHeight: 1.6 }}>
           Active data sources for your pipeline.
         </p>
@@ -461,7 +465,7 @@ export function Sensors() {
                           </div>
                           <TagInput
                             tags={socialAccountsX}
-                            onChange={(tags) => setSocialAccountsX(tags.map(normalizeXHandle))}
+                            onChange={(tags) => { setSocialAccountsX(tags.map(normalizeXHandle)); trigger() }}
                             placeholder="@handle — press Enter"
                             validate={validateXHandle}
                           />
@@ -486,7 +490,7 @@ export function Sensors() {
                           </div>
                           <TagInput
                             tags={socialAccountsBluesky}
-                            onChange={setSocialAccountsBluesky}
+                            onChange={(tags) => { setSocialAccountsBluesky(tags); trigger() }}
                             placeholder="name.bsky.social — press Enter"
                             validate={validateBlueskyHandle}
                           />
@@ -502,7 +506,7 @@ export function Sensors() {
                               type="checkbox"
                               checked={followingBluesky}
                               disabled={!hasBlueskyCredentials}
-                              onChange={(e) => setFollowingBluesky(e.target.checked)}
+                              onChange={(e) => { setFollowingBluesky(e.target.checked); trigger() }}
                               style={{ accentColor: '#0085FF', cursor: 'inherit' }}
                             />
                             <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
@@ -512,11 +516,11 @@ export function Sensors() {
                         </div>
                         <div style={{ display: 'flex', gap: '1.5rem' }}>
                           <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                            <input type="checkbox" checked={blueskyTopicsEnabled} onChange={(e) => setBlueskyTopicsEnabled(e.target.checked)} style={{ accentColor: '#0085FF' }} />
+                            <input type="checkbox" checked={blueskyTopicsEnabled} onChange={(e) => { setBlueskyTopicsEnabled(e.target.checked); trigger() }} style={{ accentColor: '#0085FF' }} />
                             <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Topics</span>
                           </label>
                           <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                            <input type="checkbox" checked={blueskyTrendsEnabled} onChange={(e) => setBlueskyTrendsEnabled(e.target.checked)} style={{ accentColor: '#0085FF' }} />
+                            <input type="checkbox" checked={blueskyTrendsEnabled} onChange={(e) => { setBlueskyTrendsEnabled(e.target.checked); trigger() }} style={{ accentColor: '#0085FF' }} />
                             <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Trends</span>
                           </label>
                         </div>
@@ -540,7 +544,7 @@ export function Sensors() {
                           </div>
                           <TagInput
                             tags={socialAccountsMastodon}
-                            onChange={(tags) => setSocialAccountsMastodon(tags.map(normalizeMastodonHandle))}
+                            onChange={(tags) => { setSocialAccountsMastodon(tags.map(normalizeMastodonHandle)); trigger() }}
                             placeholder="@user@mastodon.social — press Enter"
                             validate={validateMastodonHandle}
                           />
@@ -556,7 +560,7 @@ export function Sensors() {
                               type="checkbox"
                               checked={followingMastodon}
                               disabled={!hasMastodonCredentials}
-                              onChange={(e) => setFollowingMastodon(e.target.checked)}
+                              onChange={(e) => { setFollowingMastodon(e.target.checked); trigger() }}
                               style={{ accentColor: '#6364FF', cursor: 'inherit' }}
                             />
                             <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
@@ -566,11 +570,11 @@ export function Sensors() {
                         </div>
                         <div style={{ display: 'flex', gap: '1.5rem' }}>
                           <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                            <input type="checkbox" checked={mastodonTopicsEnabled} onChange={(e) => setMastodonTopicsEnabled(e.target.checked)} style={{ accentColor: '#6364FF' }} />
+                            <input type="checkbox" checked={mastodonTopicsEnabled} onChange={(e) => { setMastodonTopicsEnabled(e.target.checked); trigger() }} style={{ accentColor: '#6364FF' }} />
                             <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Topics</span>
                           </label>
                           <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                            <input type="checkbox" checked={mastodonTrendsEnabled} onChange={(e) => setMastodonTrendsEnabled(e.target.checked)} style={{ accentColor: '#6364FF' }} />
+                            <input type="checkbox" checked={mastodonTrendsEnabled} onChange={(e) => { setMastodonTrendsEnabled(e.target.checked); trigger() }} style={{ accentColor: '#6364FF' }} />
                             <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Trends</span>
                           </label>
                         </div>
@@ -593,6 +597,7 @@ export function Sensors() {
                             const added = tags.find((t) => !rssFeedUrls.includes(t))
                             if (!added) {
                               setRssFeedUrls(tags)
+                              trigger()
                               return
                             }
                             setRssFeedUrls(tags)
@@ -608,8 +613,9 @@ export function Sensors() {
                                 showToast(`Feed discovery failed: ${result.message}`)
                               }
                               // type === 'feed' — URL is already a valid feed, keep silently
+                              trigger()
                             }).catch(() => {
-                              // Discovery API unavailable — keep the URL as-is
+                              trigger()
                             })
                           }}
                           placeholder="https://example.com/feed.xml — press Enter"
@@ -636,7 +642,7 @@ export function Sensors() {
                   </div>
                   <TagInput
                     tags={socialTopicsKeywords}
-                    onChange={setSocialTopicsKeywords}
+                    onChange={(tags) => { setSocialTopicsKeywords(tags); trigger() }}
                     placeholder="keyword or #hashtag — press Enter"
                   />
                 </div>
@@ -644,30 +650,6 @@ export function Sensors() {
             </div>
           </div>
         ))}
-
-        <div>
-          <button
-            onClick={save}
-            disabled={saving}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              fontSize: '0.875rem',
-              fontWeight: 500,
-              padding: '0.625rem 1.5rem',
-              borderRadius: 4,
-              border: 'none',
-              color: saving ? 'var(--ink-faint)' : '#FFFFFF',
-              background: saving ? 'var(--border)' : 'var(--ink)',
-              cursor: saving ? 'not-allowed' : 'pointer',
-              transition: 'background 120ms',
-            }}
-            onMouseEnter={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = '#000000' }}
-            onMouseLeave={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = 'var(--ink)' }}
-          >
-            {saving ? 'Saving…' : 'Save changes'}
-          </button>
-        </div>
       </div>
     </section>
   )

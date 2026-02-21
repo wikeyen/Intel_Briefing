@@ -6,7 +6,8 @@ import { api } from '@/api/client'
 import { DEFAULT_SENSOR_PROMPTS, DEFAULT_OVERALL_PROMPT } from '@/lib/summary/prompts'
 
 import { useToast } from '@/lib/toast-context'
-import { inputBase, focus, blur, SubLabel, FieldLabel, HelpText } from '@/components/form-styles'
+import { useAutoSave } from '@/lib/hooks/useAutoSave'
+import { inputBase, focus, blur, SubLabel, FieldLabel, HelpText, AutoSaveIndicator } from '@/components/form-styles'
 import { OllamaModelPicker } from '@/components/OllamaModelPicker'
 import { OpenRouterModelPicker } from '@/components/OpenRouterModelPicker'
 
@@ -56,7 +57,6 @@ export function AiSummary() {
   const [summaryBaseUrl, setSummaryBaseUrl] = useState('https://openrouter.ai/api/v1')
   const [summaryModel, setSummaryModel] = useState('anthropic/claude-sonnet-4')
   const [testingLlm, setTestingLlm] = useState(false)
-  const [saving, setSaving] = useState(false)
 
   const [sensorPrompts, setSensorPrompts] = useState<Record<string, string>>({})
   const [overallPrompt, setOverallPrompt] = useState('')
@@ -66,6 +66,18 @@ export function AiSummary() {
 
   const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
   const OLLAMA_BASE_URL = 'http://localhost:11434/v1'
+
+  const { status: saveStatus, trigger, save } = useAutoSave(
+    () => ({
+      summary_provider: summaryProvider,
+      summary_base_url: summaryBaseUrl,
+      summary_model: summaryModel,
+      summary_sensor_prompts: sensorPrompts,
+      summary_overall_prompt: overallPrompt,
+      ...(summaryProvider === 'local' ? { local_summary_concurrency: localConcurrency } : {}),
+    }),
+    { onError: (e) => showToast('Save failed: ' + e.message) },
+  )
 
   useEffect(() => {
     api.getConfig().then((cfg) => {
@@ -88,25 +100,7 @@ export function AiSummary() {
       setSummaryBaseUrl(OLLAMA_BASE_URL)
       setSummaryModel('')
     }
-  }
-
-  const save = async () => {
-    setSaving(true)
-    try {
-      await api.updateConfig({
-        summary_provider: summaryProvider,
-        summary_base_url: summaryBaseUrl,
-        summary_model: summaryModel,
-        summary_sensor_prompts: sensorPrompts,
-        summary_overall_prompt: overallPrompt,
-        ...(summaryProvider === 'local' ? { local_summary_concurrency: localConcurrency } : {}),
-      })
-      showToast('AI summary settings saved')
-    } catch (e) {
-      showToast('Save failed: ' + (e as Error).message)
-    } finally {
-      setSaving(false)
-    }
+    trigger()
   }
 
   const testLlm = async () => {
@@ -136,6 +130,7 @@ export function AiSummary() {
       }
       return next
     })
+    trigger()
   }
 
   const isOllama = summaryProvider === 'local'
@@ -145,9 +140,12 @@ export function AiSummary() {
     <section id="ai-summary" style={{ padding: '4.5rem 0' }}>
 
       <div className="page-header" style={{ marginBottom: '2rem' }}>
-        <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.375rem' }}>
-          AI Summary
-        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.375rem' }}>
+            AI Summary
+          </h2>
+          <AutoSaveIndicator status={saveStatus} />
+        </div>
         <p style={{ fontSize: '0.875rem', color: 'var(--ink-muted)', lineHeight: 1.6 }}>
           Generate per-source summaries and an executive briefing after each fetch using an LLM.
         </p>
@@ -202,13 +200,13 @@ export function AiSummary() {
                 {isOllama ? (
                   <OllamaModelPicker
                     value={summaryModel}
-                    onChange={setSummaryModel}
+                    onChange={(v) => { setSummaryModel(v); trigger() }}
                     baseUrl={summaryBaseUrl}
                   />
                 ) : isEnabled ? (
                   <OpenRouterModelPicker
                     value={summaryModel}
-                    onChange={setSummaryModel}
+                    onChange={(v) => { setSummaryModel(v); trigger() }}
                   />
                 ) : (
                   <input
@@ -236,7 +234,7 @@ export function AiSummary() {
                 <input
                   type="text"
                   value={summaryBaseUrl}
-                  onChange={(e) => setSummaryBaseUrl(e.target.value)}
+                  onChange={(e) => { setSummaryBaseUrl(e.target.value); trigger() }}
                   placeholder={isOllama ? OLLAMA_BASE_URL : OPENROUTER_BASE_URL}
                   style={{ ...inputBase, width: '100%' }}
                   onFocus={focus}
@@ -259,7 +257,7 @@ export function AiSummary() {
                   min={1}
                   max={8}
                   value={localConcurrency}
-                  onChange={(e) => setLocalConcurrency(Math.max(1, Math.min(8, Number(e.target.value) || 1)))}
+                  onChange={(e) => { setLocalConcurrency(Math.max(1, Math.min(8, Number(e.target.value) || 1))); trigger() }}
                   style={{ ...inputBase, width: 100 }}
                   onFocus={focus}
                   onBlur={blur}
@@ -291,16 +289,16 @@ export function AiSummary() {
                 </div>
                 <button
                   onClick={testLlm}
-                  disabled={testingLlm || saving}
+                  disabled={testingLlm}
                   style={{
                     fontSize: '0.75rem',
                     fontWeight: 500,
                     padding: '0.375rem 0.875rem',
                     borderRadius: 4,
                     border: '1px solid var(--border)',
-                    color: (testingLlm || saving) ? 'var(--ink-faint)' : 'var(--ink-muted)',
+                    color: testingLlm ? 'var(--ink-faint)' : 'var(--ink-muted)',
                     background: 'var(--surface)',
-                    cursor: (testingLlm || saving) ? 'not-allowed' : 'pointer',
+                    cursor: testingLlm ? 'not-allowed' : 'pointer',
                     whiteSpace: 'nowrap',
                     flexShrink: 0,
                     marginLeft: '1.5rem',
@@ -331,7 +329,7 @@ export function AiSummary() {
                       <StatusBadge isCustom={!!overallPrompt} />
                       {overallPrompt && (
                         <button
-                          onClick={() => setOverallPrompt('')}
+                          onClick={() => { setOverallPrompt(''); trigger() }}
                           style={{
                             fontSize: '0.75rem',
                             fontWeight: 500,
@@ -349,7 +347,7 @@ export function AiSummary() {
                   </div>
                   <textarea
                     value={overallPrompt}
-                    onChange={(e) => setOverallPrompt(e.target.value)}
+                    onChange={(e) => { setOverallPrompt(e.target.value); trigger() }}
                     placeholder={DEFAULT_OVERALL_PROMPT.slice(0, 200) + '…'}
                     rows={5}
                     style={{
@@ -488,31 +486,6 @@ export function AiSummary() {
             </div>
           </>
         )}
-
-        {/* ── Save ──────────────────────────────────────────── */}
-        <div>
-          <button
-            onClick={save}
-            disabled={saving}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              fontSize: '0.875rem',
-              fontWeight: 500,
-              padding: '0.625rem 1.5rem',
-              borderRadius: 4,
-              border: 'none',
-              color: saving ? 'var(--ink-faint)' : '#FFFFFF',
-              background: saving ? 'var(--border)' : 'var(--ink)',
-              cursor: saving ? 'not-allowed' : 'pointer',
-              transition: 'background 120ms',
-            }}
-            onMouseEnter={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = '#000000' }}
-            onMouseLeave={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = 'var(--ink)' }}
-          >
-            {saving ? 'Saving…' : 'Save changes'}
-          </button>
-        </div>
       </div>
     </section>
   )

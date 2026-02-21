@@ -1,11 +1,12 @@
 // ABOUTME: API key management page — saved keys show 20 asterisks; Show reveals the real value.
-// ABOUTME: Saves to PUT /config; uses GET /config/raw to reveal stored keys on demand.
+// ABOUTME: Auto-saves on change; uses GET /config/raw to reveal stored keys on demand.
 'use client'
 import { useState, useEffect } from 'react'
 import { api } from '@/api/client'
 import type { ConfigSettings } from '@/api/client'
 import { useToast } from '@/lib/toast-context'
-import { inputBase as _inputBase, focus, blur } from '@/components/form-styles'
+import { useAutoSave } from '@/lib/hooks/useAutoSave'
+import { inputBase as _inputBase, focus, blur, AutoSaveIndicator } from '@/components/form-styles'
 import { MaskedInput } from '@/components/MaskedInput'
 
 interface KeyFieldDef { field: keyof ConfigSettings; label: string; hint: string }
@@ -56,7 +57,6 @@ export function ApiKeys() {
   const [pendingValues, setPendingValues] = useState<Record<string, string>>({})
   // plainValues: non-secret config fields (bluesky_handle)
   const [plainValues, setPlainValues] = useState<Record<string, string>>({})
-  const [saving, setSaving] = useState(false)
 
   const loadConfig = () => {
     api.getConfig().then((cfg) => {
@@ -72,11 +72,8 @@ export function ApiKeys() {
     })
   }
 
-  useEffect(() => { loadConfig() }, [])
-
-  const save = async () => {
-    setSaving(true)
-    try {
+  const { status: saveStatus, trigger } = useAutoSave(
+    () => {
       const partial: Partial<ConfigSettings> = {
         bluesky_handle: plainValues.bluesky_handle || null,
       }
@@ -84,25 +81,44 @@ export function ApiKeys() {
         const v = pendingValues[field]
         if (v) (partial as Record<string, string>)[field] = v
       }
-      await api.updateConfig(partial)
-      loadConfig()
-      showToast('API keys saved')
-    } catch (e) {
-      showToast('Save failed: ' + (e as Error).message)
-    } finally {
-      setSaving(false)
-    }
-  }
+      return partial
+    },
+    {
+      delay: 1200,
+      onError: (e) => showToast('Save failed: ' + e.message),
+      onSaved: () => {
+        // Mark fields as saved and clear their pending values
+        const savedFields = KEY_FIELDS.filter(({ field }) => !!pendingValues[field]).map(f => f.field)
+        if (savedFields.length > 0) {
+          setSavedFlags(prev => {
+            const next = { ...prev }
+            for (const f of savedFields) next[f] = true
+            return next
+          })
+          setPendingValues(prev => {
+            const next = { ...prev }
+            for (const f of savedFields) delete next[f]
+            return next
+          })
+        }
+      },
+    },
+  )
+
+  useEffect(() => { loadConfig() }, [])
 
   const inputStyle: React.CSSProperties = { ...inputBase, fontFamily: 'inherit' }
 
   return (
     <section id="api-keys" style={{ padding: '2rem 0' }}>
       <div className="page-header" style={{ marginBottom: '2rem' }}>
-        <h2 style={{
-          fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink)',
-          marginBottom: '0.25rem',
-        }}>Credentials</h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h2 style={{
+            fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink)',
+            marginBottom: '0.25rem',
+          }}>Credentials</h2>
+          <AutoSaveIndicator status={saveStatus} />
+        </div>
         <p style={{
           fontSize: '0.8125rem', color: 'var(--ink-muted)',
         }}>
@@ -136,7 +152,7 @@ export function ApiKeys() {
                   hint={hint}
                   saved={savedFlags[field] ?? false}
                   newValue={pendingValues[field] ?? ''}
-                  onNewValue={(v) => setPendingValues((prev) => ({ ...prev, [field]: v }))}
+                  onNewValue={(v) => { setPendingValues((prev) => ({ ...prev, [field]: v })); if (v) trigger() }}
                   onReveal={async () => {
                     const raw = await api.getRawConfig()
                     return (raw[field] as string | null) ?? ''
@@ -151,7 +167,7 @@ export function ApiKeys() {
                   <input
                     type="text"
                     value={plainValues[field] ?? ''}
-                    onChange={(e) => setPlainValues((prev) => ({ ...prev, [field]: e.target.value }))}
+                    onChange={(e) => { setPlainValues((prev) => ({ ...prev, [field]: e.target.value })); trigger() }}
                     placeholder={placeholder}
                     style={inputStyle}
                     onFocus={focus}
@@ -167,30 +183,6 @@ export function ApiKeys() {
             </div>
           </div>
         ))}
-
-        <div>
-          <button
-            onClick={save}
-            disabled={saving}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              fontSize: '0.875rem',
-              fontWeight: 500,
-              padding: '0.625rem 1.5rem',
-              borderRadius: 4,
-              border: 'none',
-              color: saving ? 'var(--ink-faint)' : '#FFFFFF',
-              background: saving ? 'var(--border)' : 'var(--ink)',
-              cursor: saving ? 'not-allowed' : 'pointer',
-              transition: 'background 120ms',
-            }}
-            onMouseEnter={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = '#000000' }}
-            onMouseLeave={e => { if (!saving) (e.currentTarget as HTMLElement).style.background = 'var(--ink)' }}
-          >
-            {saving ? 'Saving…' : 'Save changes'}
-          </button>
-        </div>
       </div>
     </section>
   )

@@ -278,12 +278,18 @@ export function Sensors() {
       setDefaultLimit(cfg.default_limit)
       setXScraperProvider(cfg.x_scraper_provider ?? 'twitter-scraper')
     })
-    api.getLatest().then((report) => {
-      const map: Record<string, SensorStatus> = {}
-      for (const key of report.sources_ok) map[key] = 'ok'
-      for (const key of report.sources_failed) map[key] = 'failed'
-      setStatuses(map)
-    }).catch(() => {})
+    const fetchStatuses = () => {
+      api.getLatest().then((report) => {
+        const map: Record<string, SensorStatus> = {}
+        for (const key of report.sources_ok) map[key] = 'ok'
+        for (const key of report.sources_failed) map[key] = 'failed'
+        setStatuses(map)
+      }).catch(() => {})
+    }
+    fetchStatuses()
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchStatuses() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
   }, [])
 
   const toggle = (key: string) => {

@@ -88,13 +88,13 @@ async function fetchViaScraper(
   perAccountLimit: number,
 ): Promise<IntelItem[]> {
   const cutoff = Date.now() - lookbackMs
-  const items: IntelItem[] = []
 
+  // Collect raw tweets including self-replies for thread stitching
+  const rawTweets: Tweet[] = []
   const fetchDepth = Math.min(perAccountLimit * 2, 20)
   for await (const tweet of scraper.getTweets(handle, fetchDepth)) {
-    if (items.length >= perAccountLimit) break
+    if (rawTweets.length >= fetchDepth) break
     if (tweet.isRetweet) continue
-    if (tweet.isReply) continue
     if (tweet.isQuoted) continue
 
     const pubDate = tweet.timeParsed ?? (tweet.timestamp ? new Date(tweet.timestamp * 1000) : null)
@@ -103,6 +103,20 @@ async function fetchViaScraper(
     const text = tweet.text ?? ''
     if (!text.trim()) continue
 
+    rawTweets.push(tweet)
+  }
+
+  // Stitch first self-reply into parent post
+  stitchSelfReplies(rawTweets)
+
+  // Convert originals (non-replies) to IntelItem
+  const items: IntelItem[] = []
+  for (const tweet of rawTweets) {
+    if (tweet.isReply) continue
+    if (items.length >= perAccountLimit) break
+
+    const pubDate = tweet.timeParsed ?? (tweet.timestamp ? new Date(tweet.timestamp * 1000) : null)
+    const text = tweet.text ?? ''
     const likes = tweet.likes ?? 0
     const retweets = tweet.retweets ?? 0
     const views = tweet.views ?? 0
@@ -114,7 +128,7 @@ async function fetchViaScraper(
     items.push({
       id: `x-${tweet.id}`,
       source: 'x',
-      title: text.slice(0, 280),
+      title: text.slice(0, 560),
       url: tweet.permanentUrl ?? `https://x.com/${handle}/status/${tweet.id}`,
       heat: heatParts.join(' \u00b7 ') || null,
       account: tweet.name ?? handle,
@@ -124,6 +138,24 @@ async function fetchViaScraper(
   }
 
   return items
+}
+
+/** Stitch first self-reply text into parent tweet (mutates array). */
+function stitchSelfReplies(tweets: Tweet[]): void {
+  const byId = new Map<string, Tweet>()
+  for (const t of tweets) {
+    if (t.id) byId.set(t.id, t)
+  }
+  const stitched = new Set<string>()
+  for (const tweet of tweets) {
+    if (!tweet.isReply || !tweet.inReplyToStatusId) continue
+    const parent = byId.get(tweet.inReplyToStatusId)
+    if (!parent) continue
+    if (parent.username?.toLowerCase() !== tweet.username?.toLowerCase()) continue
+    if (stitched.has(parent.id!)) continue // only stitch one reply per parent
+    parent.text = (parent.text ?? '') + '\n\n' + (tweet.text ?? '')
+    stitched.add(tweet.id!)
+  }
 }
 
 function formatCount(n: number): string {

@@ -198,6 +198,98 @@ describe('fetchXPosts (twitter-scraper)', () => {
     const items = await fetchXPosts(config, 10)
     expect(items).toHaveLength(1)
   })
+
+  it('stitches first self-reply into parent tweet title', async () => {
+    vi.resetModules()
+    vi.spyOn(Date, 'now').mockReturnValue(NOW)
+    const selfReplyTweets = [
+      {
+        id: '100',
+        text: 'Thread opener',
+        timeParsed: new Date('2026-02-20T16:00:00Z'),
+        timestamp: Math.floor(new Date('2026-02-20T16:00:00Z').getTime() / 1000),
+        name: 'Test User',
+        username: 'testuser',
+        permanentUrl: 'https://x.com/testuser/status/100',
+        likes: 10, retweets: 0, views: 100,
+        isRetweet: false, isReply: false, isQuoted: false,
+        inReplyToStatusId: undefined,
+        hashtags: [], mentions: [], photos: [], videos: [], urls: [], thread: [],
+      },
+      {
+        id: '101',
+        text: 'Continuing my thought here',
+        timeParsed: new Date('2026-02-20T15:59:00Z'),
+        timestamp: Math.floor(new Date('2026-02-20T15:59:00Z').getTime() / 1000),
+        name: 'Test User',
+        username: 'testuser',
+        permanentUrl: 'https://x.com/testuser/status/101',
+        likes: 2, retweets: 0, views: 50,
+        isRetweet: false, isReply: true, isQuoted: false,
+        inReplyToStatusId: '100',
+        hashtags: [], mentions: [], photos: [], videos: [], urls: [], thread: [],
+      },
+    ]
+    const scraper = makeMockScraper(selfReplyTweets)
+    vi.doMock('@the-convocation/twitter-scraper', () => ({
+      Scraper: vi.fn().mockImplementation(() => scraper),
+    }))
+    mockExecFileNotFound()
+    mockDelay()
+    const mod = await import('./x_posts')
+
+    const items = await mod.fetchXPosts(authConfig(), 10)
+    expect(items).toHaveLength(1)
+    expect(items[0].id).toBe('x-100')
+    expect(items[0].title).toContain('Thread opener')
+    expect(items[0].title).toContain('Continuing my thought here')
+  })
+
+  it('does not stitch replies from different authors', async () => {
+    vi.resetModules()
+    vi.spyOn(Date, 'now').mockReturnValue(NOW)
+    const mixedReplies = [
+      {
+        id: '200',
+        text: 'Original post',
+        timeParsed: new Date('2026-02-20T16:00:00Z'),
+        timestamp: Math.floor(new Date('2026-02-20T16:00:00Z').getTime() / 1000),
+        name: 'Test User',
+        username: 'testuser',
+        permanentUrl: 'https://x.com/testuser/status/200',
+        likes: 5, retweets: 0, views: 100,
+        isRetweet: false, isReply: false, isQuoted: false,
+        inReplyToStatusId: undefined,
+        hashtags: [], mentions: [], photos: [], videos: [], urls: [], thread: [],
+      },
+      {
+        id: '201',
+        text: 'Reply from someone else',
+        timeParsed: new Date('2026-02-20T15:59:00Z'),
+        timestamp: Math.floor(new Date('2026-02-20T15:59:00Z').getTime() / 1000),
+        name: 'Other User',
+        username: 'otheruser',
+        permanentUrl: 'https://x.com/otheruser/status/201',
+        likes: 1, retweets: 0, views: 20,
+        isRetweet: false, isReply: true, isQuoted: false,
+        inReplyToStatusId: '200',
+        hashtags: [], mentions: [], photos: [], videos: [], urls: [], thread: [],
+      },
+    ]
+    const scraper = makeMockScraper(mixedReplies)
+    vi.doMock('@the-convocation/twitter-scraper', () => ({
+      Scraper: vi.fn().mockImplementation(() => scraper),
+    }))
+    mockExecFileNotFound()
+    mockDelay()
+    const mod = await import('./x_posts')
+
+    const items = await mod.fetchXPosts(authConfig(), 10)
+    expect(items).toHaveLength(1)
+    expect(items[0].id).toBe('x-200')
+    expect(items[0].title).toBe('Original post')
+    expect(items[0].title).not.toContain('someone else')
+  })
 })
 
 // ── OpenClaw cookie extraction tests ─────────────────────────────────────────

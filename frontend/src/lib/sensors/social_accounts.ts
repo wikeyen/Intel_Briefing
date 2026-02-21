@@ -27,14 +27,47 @@ async function fetchBlueskyAccounts(config: ConfigSettings, limit: number): Prom
   const items: IntelItem[] = []
   for (const actor of actors) {
     if (items.length >= limit) break
-    const { data } = await agent.getAuthorFeed({ actor, limit: Math.min(5, limit) })
+    const { data } = await agent.getAuthorFeed({ actor, limit: Math.min(10, limit * 2) })
+
+    // Stitch first self-reply text into parent post before converting
+    stitchBlueskyReplies(data.feed as unknown as BlueskyFeedItem[])
+
     for (const feedItem of data.feed) {
       if (items.length >= limit) break
+      // Skip replies (self-replies already stitched into parents)
+      const reply = (feedItem as unknown as BlueskyFeedItem).reply
+      if (reply) continue
       const item = blueskyPostToItem(feedItem.post as unknown as Record<string, unknown>, 'accounts')
       if (item) items.push(item)
     }
   }
   return items
+}
+
+interface BlueskyFeedItem {
+  post: { uri: string; author: { handle: string }; record: { text?: string } }
+  reply?: { parent: { uri: string; author: { handle: string }; record: { text?: string } } }
+}
+
+/** Stitch first self-reply text into parent Bluesky post (mutates array). */
+function stitchBlueskyReplies(feed: BlueskyFeedItem[]): void {
+  const byUri = new Map<string, BlueskyFeedItem>()
+  for (const item of feed) {
+    byUri.set(item.post.uri, item)
+  }
+  const stitched = new Set<string>()
+  for (const item of feed) {
+    if (!item.reply?.parent) continue
+    const parentUri = item.reply.parent.uri
+    const parent = byUri.get(parentUri)
+    if (!parent) continue
+    if (parent.post.author.handle !== item.post.author.handle) continue
+    if (stitched.has(parentUri)) continue // only stitch one reply per parent
+    const parentText = parent.post.record.text ?? ''
+    const replyText = item.post.record.text ?? ''
+    parent.post.record.text = parentText + '\n\n' + replyText
+    stitched.add(item.post.uri)
+  }
 }
 
 async function fetchMastodonAccounts(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
@@ -65,15 +98,54 @@ async function fetchMastodonAccounts(config: ConfigSettings, limit: number): Pro
     const accountId = String(lookup.id ?? '')
     if (!accountId) continue
     const statuses = await mastodonGet<Array<Record<string, unknown>>>(
-      `/api/v1/accounts/${accountId}/statuses?limit=5`, config.mastodon_token,
+      `/api/v1/accounts/${accountId}/statuses?limit=10`, config.mastodon_token,
     )
+
+    // Identify self-replies for thread stitching
+    const selfReplyMap = buildMastodonSelfReplyMap(statuses)
+
     for (const status of statuses) {
       if (items.length >= limit) break
+      if (selfReplyMap.stitchedIds.has(String(status.id))) continue // skip stitched reply
+      if (status.in_reply_to_id) continue // skip other replies
       const item = mastodonStatusToItem(status, 'accounts')
-      if (item) items.push(item)
+      if (!item) continue
+      // Append self-reply text if one was found
+      const replyStatus = selfReplyMap.parentToReply.get(String(status.id))
+      if (replyStatus) {
+        const replyItem = mastodonStatusToItem(replyStatus, 'accounts')
+        if (replyItem) item.title = item.title + '\n\n' + replyItem.title
+      }
+      items.push(item)
     }
   }
   return items
+}
+
+/** Find first self-reply for each parent status. Returns maps for stitching. */
+function buildMastodonSelfReplyMap(statuses: Array<Record<string, unknown>>): {
+  parentToReply: Map<string, Record<string, unknown>>
+  stitchedIds: Set<string>
+} {
+  const byId = new Map<string, Record<string, unknown>>()
+  for (const s of statuses) byId.set(String(s.id), s)
+
+  const parentToReply = new Map<string, Record<string, unknown>>()
+  const stitchedIds = new Set<string>()
+  for (const status of statuses) {
+    const parentId = status.in_reply_to_id
+    if (!parentId) continue
+    const parent = byId.get(String(parentId))
+    if (!parent) continue
+    const statusAccount = status.account as Record<string, unknown> | undefined
+    const parentAccount = parent.account as Record<string, unknown> | undefined
+    if (!statusAccount || !parentAccount) continue
+    if (String(statusAccount.id) !== String(parentAccount.id)) continue
+    if (parentToReply.has(String(parentId))) continue // only first reply
+    parentToReply.set(String(parentId), status)
+    stitchedIds.add(String(status.id))
+  }
+  return { parentToReply, stitchedIds }
 }
 
 export async function fetchSocialAccounts(

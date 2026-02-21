@@ -804,7 +804,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                     lineHeight: 1.8,
                     whiteSpace: 'pre-wrap',
                   }}>
-                    <Highlight text={summary.overall.executive_summary} query={q} />
+                    <TextWithRefs text={summary.overall.executive_summary} refs={[]} query={q} globalSources={structured?.sources} />
                   </div>
                 </div>
               )}

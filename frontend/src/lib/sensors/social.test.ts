@@ -1,6 +1,6 @@
 // ABOUTME: Unit tests for multi-platform social sensors (accounts, topics, trends).
 // ABOUTME: Verifies SensorConfigError on missing config and correct item source tagging.
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { defaultConfig } from '../models'
 import type { ConfigSettings } from '../models'
 import { SensorConfigError } from './errors'

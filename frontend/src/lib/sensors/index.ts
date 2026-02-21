@@ -19,6 +19,8 @@ import { fetchWeibo } from './weibo'
 import { fetchZhihu } from './zhihu'
 import { fetchXiaohongshu } from './xiaohongshu'
 
+import { SensorConfigError } from './errors'
+
 export type FetchProgressFn = (detail: string) => void
 export type SensorFetchFn = (config: ConfigSettings, limit: number, onProgress?: FetchProgressFn) => Promise<IntelItem[]>
 
@@ -31,7 +33,12 @@ function fetchX(config: ConfigSettings, limit: number, onProgress?: FetchProgres
 
 async function fetchBluesky(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
   const items: IntelItem[] = []
-  items.push(...await fetchSocialAccounts(config, limit, 'bluesky'))
+  try {
+    items.push(...await fetchSocialAccounts(config, limit, 'bluesky'))
+  } catch (err) {
+    // No accounts configured is fine — topics/trends can still work
+    if (!(err instanceof SensorConfigError)) throw err
+  }
   if (config.bluesky_topics_enabled) {
     items.push(...await fetchSocialTopics(config, limit, 'bluesky'))
   }
@@ -43,7 +50,12 @@ async function fetchBluesky(config: ConfigSettings, limit: number): Promise<Inte
 
 async function fetchMastodon(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
   const items: IntelItem[] = []
-  items.push(...await fetchSocialAccounts(config, limit, 'mastodon'))
+  try {
+    items.push(...await fetchSocialAccounts(config, limit, 'mastodon'))
+  } catch (err) {
+    // No accounts configured is fine — topics/trends can still work
+    if (!(err instanceof SensorConfigError)) throw err
+  }
   if (config.mastodon_topics_enabled) {
     items.push(...await fetchSocialTopics(config, limit, 'mastodon'))
   }

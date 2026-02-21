@@ -734,15 +734,15 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
               {/* Executive Summary */}
               {summary.overall.executive_summary && (
                 <div style={{
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border)',
+                  background: 'var(--accent-wash, var(--surface-alt))',
+                  border: '1px solid var(--accent-dim, var(--border))',
                   borderRadius: 8,
                   padding: '1rem 1.25rem',
                 }}>
                   <div style={{
                     fontSize: '0.6875rem',
                     fontWeight: 600,
-                    color: 'var(--ink-muted)',
+                    color: 'var(--accent)',
                     textTransform: 'uppercase',
                     letterSpacing: '0.06em',
                     marginBottom: '0.625rem',

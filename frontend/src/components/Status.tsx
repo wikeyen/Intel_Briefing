@@ -210,7 +210,8 @@ export function Status() {
         report={report}
         config={config}
         pipelineStatus={pipelineStatus}
-        onRetryFailed={() => handleRun('fetch_summarize')}
+        onRetryFetch={() => handleRun('fetch')}
+        onRetrySummary={() => handleRun('summarize')}
       />
 
       <ScheduleFooter config={config} />

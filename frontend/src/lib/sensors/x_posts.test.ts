@@ -47,6 +47,8 @@ const mockTweets = [
     views: 100000,
     isRetweet: false,
     isReply: false,
+    isQuoted: false,
+    quotedStatusId: undefined,
     hashtags: [],
     mentions: [],
     photos: [],
@@ -67,6 +69,8 @@ const mockTweets = [
     views: 0,
     isRetweet: true,
     isReply: false,
+    isQuoted: false,
+    quotedStatusId: undefined,
     hashtags: [],
     mentions: [],
     photos: [],
@@ -87,6 +91,8 @@ const mockTweets = [
     views: 500,
     isRetweet: false,
     isReply: true,
+    isQuoted: false,
+    quotedStatusId: undefined,
     hashtags: [],
     mentions: [],
     photos: [],
@@ -118,7 +124,8 @@ const mockTweets = [
   },
 ]
 
-function makeMockScraper(tweets = mockTweets) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function makeMockScraper(tweets: any[] = mockTweets) {
   return {
     isLoggedIn: vi.fn().mockResolvedValue(false),
     setCookies: vi.fn().mockResolvedValue(undefined),

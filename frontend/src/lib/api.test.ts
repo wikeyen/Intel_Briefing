@@ -153,6 +153,7 @@ describe('GET /api/fetch/status', () => {
         fetch: 'running',
         fetch_error: null,
         fetch_error_kind: null,
+        fetch_detail: null,
         summary: 'queued',
         summary_error: null,
         item_count: 0,

@@ -12,8 +12,10 @@ export interface SensorTableProps {
   report: IntelReport | null
   config: ConfigSettings | null
   pipelineStatus: PipelineStatus | null
-  /** Called when user clicks "Retry Failed" — triggers a new fetch+summarize run. */
-  onRetryFailed?: () => void
+  /** Called when user clicks "Retry fetch" — triggers a fetch-only run. */
+  onRetryFetch?: () => void
+  /** Called when user clicks "Retry summary" — triggers a summarize-only run. */
+  onRetrySummary?: () => void
 }
 
 /* ------------------------------------------------------------------ */
@@ -103,7 +105,7 @@ function stageColor(state: string): string {
 /* Component                                                           */
 /* ------------------------------------------------------------------ */
 
-export function SensorTable({ isRunning, liveSensors, report, config, pipelineStatus, onRetryFailed }: SensorTableProps) {
+export function SensorTable({ isRunning, liveSensors, report, config, pipelineStatus, onRetryFetch, onRetrySummary }: SensorTableProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
   const sensorCounts = useMemo(() => countItemsBySensor(report), [report])
@@ -412,26 +414,56 @@ export function SensorTable({ isRunning, liveSensors, report, config, pipelineSt
           gap: '0.5rem',
         }}
       >
-        {/* Retry Failed button — only when idle and there are failures */}
-        {!isRunning && onRetryFailed && (report?.sources_failed?.length ?? 0) > 0 && (
-          <button
-            onClick={onRetryFailed}
-            style={{
-              marginRight: 'auto',
-              fontSize: '0.6875rem',
-              fontWeight: 500,
-              color: 'var(--err)',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '0.125rem 0',
-              textDecoration: 'underline',
-              textUnderlineOffset: '2px',
-            }}
-          >
-            Retry {report!.sources_failed.length} failed
-          </button>
-        )}
+        {/* Retry buttons — separate fetch and summary, only when idle */}
+        {!isRunning && pipelineStatus && (() => {
+          const fetchFailed = pipelineStatus.sensors.filter(s => s.fetch === 'failed').length
+          const summaryFailed = pipelineStatus.sensors.filter(s => s.summary === 'failed').length
+          const hasFetchFailures = fetchFailed > 0
+          if (!hasFetchFailures && summaryFailed === 0) return null
+          return (
+            <div style={{ marginRight: 'auto', display: 'flex', gap: '0.75rem' }}>
+              {hasFetchFailures && onRetryFetch && (
+                <button
+                  onClick={onRetryFetch}
+                  style={{
+                    fontSize: '0.6875rem',
+                    fontWeight: 500,
+                    color: 'var(--err)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '0.125rem 0',
+                    textDecoration: 'underline',
+                    textUnderlineOffset: '2px',
+                  }}
+                >
+                  Retry {fetchFailed} fetch
+                </button>
+              )}
+              {summaryFailed > 0 && onRetrySummary && (
+                <button
+                  onClick={hasFetchFailures ? undefined : onRetrySummary}
+                  disabled={hasFetchFailures}
+                  title={hasFetchFailures ? 'Fix fetch failures first' : undefined}
+                  style={{
+                    fontSize: '0.6875rem',
+                    fontWeight: 500,
+                    color: hasFetchFailures ? 'var(--ink-faint)' : 'var(--err)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: hasFetchFailures ? 'not-allowed' : 'pointer',
+                    padding: '0.125rem 0',
+                    textDecoration: 'underline',
+                    textUnderlineOffset: '2px',
+                    opacity: hasFetchFailures ? 0.5 : 1,
+                  }}
+                >
+                  Retry {summaryFailed} summary
+                </button>
+              )}
+            </div>
+          )
+        })()}
         <span style={{
           fontSize: '0.6875rem',
           color: 'var(--ink-faint)',

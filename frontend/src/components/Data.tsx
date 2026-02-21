@@ -222,6 +222,16 @@ export function Data() {
     }
   }
 
+  const handleStopPipeline = async () => {
+    try {
+      await api.stopPipeline()
+      showToast('Pipeline stopped')
+    } catch {
+      // 404 = nothing running
+    }
+    refreshStatuses()
+  }
+
   // Detect stale processes (running in DB but no in-memory controller)
   const staleInfo = detectStale(summaryProgress, pipelineStatus)
 
@@ -540,6 +550,7 @@ export function Data() {
               hasContent={hasContent}
               onTrigger={handleTriggerSummary}
               onStop={handleStopSummary}
+              onStopPipeline={handleStopPipeline}
               streamTokens={streamTokens}
             />
           ) : !loading && !report ? (

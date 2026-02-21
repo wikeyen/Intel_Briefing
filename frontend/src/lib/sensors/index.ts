@@ -23,6 +23,35 @@ export type SensorFetchFn = (config: ConfigSettings, limit: number) => Promise<I
 
 export { SENSOR_TOKEN_FIELD } from './constants'
 
+// Platform wrappers for the sensor registry
+function fetchX(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
+  return fetchXPosts(config, limit)
+}
+
+async function fetchBluesky(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
+  const items: IntelItem[] = []
+  items.push(...await fetchSocialAccounts(config, limit, 'bluesky'))
+  if (config.bluesky_topics_enabled) {
+    items.push(...await fetchSocialTopics(config, limit, 'bluesky'))
+  }
+  if (config.bluesky_trends_enabled) {
+    items.push(...await fetchSocialTrends(config, limit, 'bluesky'))
+  }
+  return items
+}
+
+async function fetchMastodon(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
+  const items: IntelItem[] = []
+  items.push(...await fetchSocialAccounts(config, limit, 'mastodon'))
+  if (config.mastodon_topics_enabled) {
+    items.push(...await fetchSocialTopics(config, limit, 'mastodon'))
+  }
+  if (config.mastodon_trends_enabled) {
+    items.push(...await fetchSocialTrends(config, limit, 'mastodon'))
+  }
+  return items
+}
+
 export const SENSOR_REGISTRY: Record<string, SensorFetchFn> = {
   hacker_news: fetchHackerNews,
   arxiv: fetchArxiv,
@@ -30,14 +59,13 @@ export const SENSOR_REGISTRY: Record<string, SensorFetchFn> = {
   product_hunt: fetchProductHunt,
   v2ex: fetchV2ex,
   hn_blogs: fetchHnBlogs,
-  social_accounts: fetchSocialAccounts,
-  social_topics: fetchSocialTopics,
-  social_trends: fetchSocialTrends,
+  x: fetchX,
+  bluesky: fetchBluesky,
+  mastodon: fetchMastodon,
   sources_36kr: fetch36kr,
   wallstreetcn: fetchWallStreetCN,
   chrome_radar: fetchChromeRadar,
   rss_feeds: fetchRssFeeds,
-  x_posts: fetchXPosts,
   weibo: fetchWeibo,
   zhihu: fetchZhihu,
   xiaohongshu: fetchXiaohongshu,

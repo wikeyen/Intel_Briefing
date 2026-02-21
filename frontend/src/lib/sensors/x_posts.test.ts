@@ -480,6 +480,31 @@ describe('fetchXPosts (provider fallback)', () => {
     }
   }
 
+  it('propagates auth error from twitter-scraper (no Apify fallback for accounts)', async () => {
+    vi.resetModules()
+    vi.spyOn(Date, 'now').mockReturnValue(NOW)
+
+    const scraper = mockFailingScraper('Authentication required — unauthorized')
+    vi.doMock('@the-convocation/twitter-scraper', () => ({
+      Scraper: vi.fn().mockImplementation(() => scraper),
+    }))
+    vi.doMock('apify-client', () => ({
+      ApifyClient: vi.fn(),
+    }))
+    mockExecFileNotFound()
+    mockDelay()
+
+    const mod = await import('./x_posts')
+    const config = makeConfig({
+      twitter_auth_token: 'bad-token',
+      twitter_ct0: 'bad-ct0',
+      apify_token: 'valid-apify-token',
+      x_scraper_provider: 'twitter-scraper',
+    })
+
+    await expect(mod.fetchXPosts(config, 10)).rejects.toThrow('unauthorized')
+  })
+
   it('does not fall back on non-auth errors — absorbs per-account failures', async () => {
     vi.resetModules()
     vi.spyOn(Date, 'now').mockReturnValue(NOW)

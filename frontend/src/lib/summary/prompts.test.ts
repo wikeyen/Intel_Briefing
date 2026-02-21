@@ -1,7 +1,12 @@
 // ABOUTME: Tests for configurable summary prompt resolution.
-// ABOUTME: Validates default prompts, user overrides, and fallback behavior.
+// ABOUTME: Validates default prompts, user overrides, language selection, and fallback behavior.
 import { describe, it, expect } from 'vitest'
-import { getSensorPrompt, getOverallPrompt, DEFAULT_SENSOR_PROMPTS, DEFAULT_OVERALL_PROMPT, CHUNK_EXTRACT_PROMPT } from './prompts'
+import {
+  getSensorPrompt, getOverallPrompt, getChunkExtractPrompt,
+  DEFAULT_SENSOR_PROMPTS, DEFAULT_SENSOR_PROMPTS_EN,
+  DEFAULT_OVERALL_PROMPT, DEFAULT_OVERALL_PROMPT_EN,
+  CHUNK_EXTRACT_PROMPT, CHUNK_EXTRACT_PROMPT_EN,
+} from './prompts'
 
 describe('getSensorPrompt', () => {
   it('returns default prompt for known sensor', () => {
@@ -49,6 +54,53 @@ describe('getSensorPrompt', () => {
       expect(prompt).toContain('严禁编造')
     }
   })
+
+  it('returns English prompt when language is en', () => {
+    const prompt = getSensorPrompt('hacker_news', undefined, 'en')
+    expect(prompt).toBe(DEFAULT_SENSOR_PROMPTS_EN['hacker_news'])
+    expect(prompt).toContain('Hacker News')
+    expect(prompt).toContain('never fabricate')
+  })
+
+  it('returns Chinese prompt when language is zh', () => {
+    const prompt = getSensorPrompt('hacker_news', undefined, 'zh')
+    expect(prompt).toBe(DEFAULT_SENSOR_PROMPTS['hacker_news'])
+  })
+
+  it('user override wins regardless of language', () => {
+    const custom = 'My custom prompt'
+    const prompt = getSensorPrompt('hacker_news', { hacker_news: custom }, 'en')
+    expect(prompt).toBe(custom)
+  })
+
+  it('falls back to EN rss_feeds for unknown sensor with language en', () => {
+    const prompt = getSensorPrompt('unknown_sensor', undefined, 'en')
+    expect(prompt).toBe(DEFAULT_SENSOR_PROMPTS_EN['rss_feeds'])
+  })
+
+  it('has an English prompt for every standard sensor', () => {
+    const sensors = [
+      'hacker_news', 'arxiv', 'github', 'product_hunt', 'v2ex',
+      'hn_blogs', 'sources_36kr', 'wallstreetcn', 'x',
+      'bluesky', 'mastodon', 'chrome_radar', 'rss_feeds',
+    ]
+    for (const s of sensors) {
+      expect(DEFAULT_SENSOR_PROMPTS_EN[s]).toBeTruthy()
+    }
+  })
+
+  it('all English prompts contain anti-listing instruction', () => {
+    for (const prompt of Object.values(DEFAULT_SENSOR_PROMPTS_EN)) {
+      expect(prompt).toContain('no bullet lists')
+      expect(prompt).toContain('2-4 sentence')
+    }
+  })
+
+  it('all English prompts contain anti-hallucination instruction', () => {
+    for (const prompt of Object.values(DEFAULT_SENSOR_PROMPTS_EN)) {
+      expect(prompt).toContain('never fabricate')
+    }
+  })
 })
 
 
@@ -60,6 +112,22 @@ describe('CHUNK_EXTRACT_PROMPT', () => {
 
   it('contains anti-hallucination instruction', () => {
     expect(CHUNK_EXTRACT_PROMPT).toContain('严禁编造')
+  })
+})
+
+describe('getChunkExtractPrompt', () => {
+  it('returns Chinese prompt by default', () => {
+    expect(getChunkExtractPrompt()).toBe(CHUNK_EXTRACT_PROMPT)
+    expect(getChunkExtractPrompt('zh')).toBe(CHUNK_EXTRACT_PROMPT)
+  })
+
+  it('returns English prompt when language is en', () => {
+    expect(getChunkExtractPrompt('en')).toBe(CHUNK_EXTRACT_PROMPT_EN)
+    expect(getChunkExtractPrompt('en')).toContain('Extract key signals')
+  })
+
+  it('English chunk prompt contains anti-hallucination instruction', () => {
+    expect(CHUNK_EXTRACT_PROMPT_EN).toContain('never fabricate')
   })
 })
 
@@ -76,5 +144,15 @@ describe('getOverallPrompt', () => {
 
   it('default overall prompt contains anti-hallucination instruction', () => {
     expect(DEFAULT_OVERALL_PROMPT).toContain('严禁编造')
+  })
+
+  it('returns English overall prompt when language is en', () => {
+    expect(getOverallPrompt(undefined, 'en')).toBe(DEFAULT_OVERALL_PROMPT_EN)
+    expect(DEFAULT_OVERALL_PROMPT_EN).toContain('never fabricate')
+  })
+
+  it('user override wins regardless of language', () => {
+    const custom = 'My custom overall'
+    expect(getOverallPrompt(custom, 'en')).toBe(custom)
   })
 })

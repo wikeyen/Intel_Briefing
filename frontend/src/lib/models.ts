@@ -90,6 +90,8 @@ export function sensorResultSucceeded(result: SensorResult): boolean {
   return result.error === null
 }
 
+export type SummaryLanguage = 'en' | 'zh'
+
 export type RunMode = 'fetch' | 'summarize' | 'fetch_summarize'
 export type StageState = 'queued' | 'running' | 'ok' | 'failed' | 'skipped' | 'cancelled'
 
@@ -321,6 +323,9 @@ export interface ConfigSettings {
   // Customizable summary prompts
   summary_sensor_prompts: Record<string, string>
   summary_overall_prompt: string
+
+  // Summary output language
+  summary_language: SummaryLanguage
 }
 
 export function defaultConfig(): ConfigSettings {
@@ -382,6 +387,7 @@ export function defaultConfig(): ConfigSettings {
     summary_attribution_model: '',
     summary_sensor_prompts: {},
     summary_overall_prompt: '',
+    summary_language: 'zh',
   }
 }
 

@@ -33,6 +33,7 @@ const MOCK_CONFIG = {
   summary_model: 'anthropic/claude-sonnet-4',
   summary_sensor_prompts: {},
   summary_overall_prompt: '',
+  summary_language: 'zh' as const,
 }
 
 const MOCK_MODELS_RESPONSE = {

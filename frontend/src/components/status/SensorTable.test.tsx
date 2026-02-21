@@ -88,6 +88,7 @@ function makeConfig(overrides: Partial<ConfigSettings> = {}): ConfigSettings {
     summary_attribution_model: '',
     summary_sensor_prompts: {},
     summary_overall_prompt: '',
+    summary_language: 'zh' as const,
     ...overrides,
   }
 }

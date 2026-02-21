@@ -1,11 +1,13 @@
 // ABOUTME: Default per-sensor and overall summary prompts for the LLM summarizer.
 // ABOUTME: Covers tech, finance, politics, and global investment landscape; user-overridable via config.
 
+import type { SummaryLanguage } from '../models'
+
 /** Max items per chunk in the map-reduce summarization pipeline. */
 export const CHUNK_SIZE = 12
 
 /**
- * Shared JSON output instruction appended to every per-sensor prompt.
+ * Shared JSON output instruction appended to every per-sensor prompt (Chinese).
  * Requests structured JSON with summary + notable items.
  */
 const JSON_SENSOR_RULE = `
@@ -29,7 +31,30 @@ const JSON_SENSOR_RULE = `
 - 如果原文信息不足以得出某个结论，不要强行总结`
 
 /**
- * Map-phase prompt: extracts key signals from a chunk of items.
+ * Shared JSON output instruction appended to every per-sensor prompt (English).
+ */
+const JSON_SENSOR_RULE_EN = `
+
+Output format (strict JSON, no markdown code fences):
+{
+  "summary": "A cohesive 2-4 sentence trend analysis paragraph",
+  "items": [
+    { "title": "Item title", "url": "Original link", "brief": "One sentence on why this matters" }
+  ]
+}
+
+Requirements:
+- summary: Synthesized trend analysis; no bullet lists, no numbered lists
+- items: Pick the 3-8 most noteworthy items; use the exact URLs and titles from the source text
+- Output strictly valid JSON
+
+Accuracy:
+- Summarize strictly from the provided source text; never fabricate, speculate, or add information not present in the original
+- All facts, figures, and names must come from the source text
+- If the source text is insufficient for a conclusion, do not force one`
+
+/**
+ * Map-phase prompt: extracts key signals from a chunk of items (Chinese).
  * Produces a short extraction that feeds into the reduce (merge) phase.
  */
 export const CHUNK_EXTRACT_PROMPT = `你是一名情报提取助手。请从以下内容中提取关键信号。
@@ -42,7 +67,20 @@ export const CHUNK_EXTRACT_PROMPT = `你是一名情报提取助手。请从以�
 - 严格基于原文提取，严禁编造或添加原文中不存在的信息
 - 输出3-5句话，纯文本，不要使用 Markdown 格式或编号列表`
 
-/** Per-sensor default system prompts, keyed by sensor name. */
+/**
+ * Map-phase prompt (English).
+ */
+export const CHUNK_EXTRACT_PROMPT_EN = `You are an intelligence extraction assistant. Extract key signals from the following content.
+
+Requirements:
+- Extract the most important facts, trend signals, and noteworthy developments
+- Preserve specific names, numbers, and figures
+- Distinguish facts from opinions
+- Ignore trivial noise
+- Extract strictly from the source text; never fabricate or add information not present in the original
+- Output 3-5 sentences in plain text, no Markdown formatting or numbered lists`
+
+/** Per-sensor default system prompts, keyed by sensor name (Chinese). */
 export const DEFAULT_SENSOR_PROMPTS: Record<string, string> = {
   hacker_news: `你是一名科技情报分析师。请综合分析以下 Hacker News 内容的整体趋势。
 重点关注：重大产品发布（非增量更新）、高热度讨论背后的行业信号、知名人物的参与。
@@ -97,7 +135,62 @@ export const DEFAULT_SENSOR_PROMPTS: Record<string, string> = {
 提炼出中文开发者社区的1-2个核心关注方向。` + JSON_SENSOR_RULE,
 }
 
-/** Default overall summary system prompt. */
+/** Per-sensor default system prompts (English). */
+export const DEFAULT_SENSOR_PROMPTS_EN: Record<string, string> = {
+  hacker_news: `You are a tech intelligence analyst. Synthesize the following Hacker News content into an overall trend analysis.
+Focus on: major product launches (not incremental updates), industry signals behind high-engagement discussions, notable figures involved.
+Distill 1-2 core technology trends or industry developments reflected in this batch.` + JSON_SENSOR_RULE_EN,
+
+  arxiv: `You are an AI research intelligence analyst. Synthesize the following ArXiv papers into an overall research direction analysis.
+Focus on: industry-backed papers (Google, Meta, OpenAI, Anthropic, etc.), breakthrough advances, potential commercial applications.
+Distill 1-2 core research trends reflected in this batch.` + JSON_SENSOR_RULE_EN,
+
+  github: `You are an open-source technology analyst. Synthesize the following GitHub trending projects into an overall trend analysis.
+Focus on: emerging technology directions, distribution of enterprise vs community projects, projects with unusual star velocity.
+Distill 1-2 core focus areas in the open-source community.` + JSON_SENSOR_RULE_EN,
+
+  product_hunt: `You are a product analyst. Synthesize the following Product Hunt products into an overall trend analysis.
+Focus on: complete new product launches (ignore tweaks and beta versions), share of AI-related products, pricing model trends.
+Distill 1-2 core directions in product innovation.` + JSON_SENSOR_RULE_EN,
+
+  x: `You are a social media intelligence analyst. Synthesize the following X/Twitter content into an overall signal analysis.
+Focus on: distinguishing facts from opinions, key figures' judgments and positions, important signals in tech/finance/policy.
+Distill 1-2 core signals reflected in this batch.` + JSON_SENSOR_RULE_EN,
+
+  bluesky: `You are a social media intelligence analyst. Synthesize the following Bluesky content into an overall signal analysis.
+Focus on: distinguishing facts from opinions, key figures' judgments and positions, emerging narratives and trend signals.
+Distill 1-2 core signals reflected in this batch.` + JSON_SENSOR_RULE_EN,
+
+  mastodon: `You are a social media intelligence analyst. Synthesize the following Mastodon content into an overall signal analysis.
+Focus on: distinguishing facts from opinions, key figures' judgments and positions, emerging narratives and trend signals.
+Distill 1-2 core signals reflected in this batch.` + JSON_SENSOR_RULE_EN,
+
+  sources_36kr: `You are a venture capital analyst. Synthesize the following 36Kr content into an overall funding and investment analysis.
+Focus on: funding amounts and valuation trends, hot sectors, industry signals.
+Distill 1-2 core trends in the VC market.` + JSON_SENSOR_RULE_EN,
+
+  wallstreetcn: `You are a financial market analyst. Synthesize the following WallStreetCN content into an overall market analysis.
+Focus on: macroeconomic events, central bank policies, regulatory developments, geopolitical impact, tech and AI sectors, implications for global investment markets.
+Distill 1-2 core market signals.` + JSON_SENSOR_RULE_EN,
+
+  hn_blogs: `You are a tech commentary analyst. Synthesize the following HN-featured blog articles into core insights.
+Focus on: central arguments, contrarian vs consensus views, deep industry insights.
+Distill 1-2 core industry insights reflected in this batch.` + JSON_SENSOR_RULE_EN,
+
+  rss_feeds: `You are an information analyst. Synthesize the following RSS feed content into an overall trend analysis.
+Focus on: key facts and noteworthy claims spanning tech, finance, policy, and industry developments.
+Distill 1-2 core information signals.` + JSON_SENSOR_RULE_EN,
+
+  chrome_radar: `You are a developer tools analyst. Synthesize the following browser extensions and tools into an overall trend analysis.
+Focus on: newly launched tools, practical value for developers, connections to AI technology.
+Distill 1-2 core trends in the developer tools space.` + JSON_SENSOR_RULE_EN,
+
+  v2ex: `You are a Chinese tech community analyst. Synthesize the following V2EX discussions into an overall sentiment analysis.
+Focus on: developer community focal points and sentiment, technology trend signals, AI-related discussions.
+Distill 1-2 core focus areas in the Chinese developer community.` + JSON_SENSOR_RULE_EN,
+}
+
+/** Default overall summary system prompt (Chinese). */
 export const DEFAULT_OVERALL_PROMPT = `你是一名全球投资情报分析师，关注科技、金融、政策和地缘政治如何影响全球投资格局。以下是过去24小时内各信息源的摘要和编号参考清单。请将这些信息整理成一份结构化的投资简报。
 
 要求：
@@ -153,19 +246,88 @@ export const DEFAULT_OVERALL_PROMPT = `你是一名全球投资情报分析师�
 - 严格基于提供的内容进行总结和分析，严禁编造、推测或添加原文中不存在的信息
 - 所有事实、数字、名称、金额必须来自原文，不得杜撰`
 
+/** Default overall summary system prompt (English). */
+export const DEFAULT_OVERALL_PROMPT_EN = `You are a global investment intelligence analyst focused on how technology, finance, policy, and geopolitics shape the global investment landscape. Below are summaries and a numbered reference list from various sources over the past 24 hours. Organize this information into a structured investment briefing.
+
+Requirements:
+1. Review all content from every source — do not skip any
+2. Distinguish news facts from editorial positions
+3. Synthesize opinions by emphasizing judgments, stances, and potential impact — avoid simple paraphrasing
+
+Output format (strict JSON, no markdown code fences):
+{
+  "executive_summary": "2-3 cohesive paragraphs synthesizing the most noteworthy themes, trend intersections, and investment implications from today's information flow. Do not list items one by one — analyze cross-domain signal connections from a holistic perspective.",
+  "sections": [
+    {
+      "title": "Section Title",
+      "entries": [
+        { "text": "Entry content", "source": "Source name" }
+      ]
+    }
+  ],
+  "sentiment": {
+    "overall_mood": "bullish | bearish | mixed | neutral",
+    "mood_summary": "One sentence summarizing today's overall sentiment",
+    "controversies": [
+      { "topic": "Controversy topic", "analysis": "Key positions and points of disagreement" }
+    ],
+    "opinion_shifts": [
+      { "topic": "Shift topic", "analysis": "How sentiment has changed compared to recent trends" }
+    ],
+    "risk_flags": [
+      { "topic": "Risk signal", "analysis": "Specific negative signals and potential impact" }
+    ]
+  }
+}
+
+Section guidelines:
+- Executive Summary: Cross-domain trend analysis and investment implications.
+- Tech Products: Major tech product and platform launches and updates (not limited to AI). Include product names, feature highlights, and market significance.
+- Macro & Policy: Macroeconomic data, central bank policy, regulatory developments, geopolitical events, and their impact on investment markets.
+- Industry Voices: Facts and opinions from notable entrepreneurs, investors, and industry practitioners. Synthesize their judgments and stances, analyze potential impact. Note speaker identity.
+- Funding & Deals: Funding events, M&A, valuation changes, VC activity. Include specific amounts, valuations, and investors where available. Analyze industry landscape impact and investment implications.
+
+Sentiment analysis guidelines:
+- overall_mood: Based on aggregate sentiment across all sources (bullish=optimistic, bearish=pessimistic, mixed=divided, neutral=flat)
+- controversies: Only list topics with genuine disagreement or clearly opposing positions across sources — do not pad
+- opinion_shifts: Only list sentiment trends with notable directional change compared to recent patterns, with supporting evidence
+- risk_flags: Only list risk items backed by specific negative signals such as policy tightening, market anomalies, supply chain issues, etc.
+- If a sub-category has nothing worth reporting, return an empty array — do not fabricate
+
+Notes:
+- If content includes political, financial, or geopolitical information beyond tech, include it in the relevant section — do not ignore
+- If a section lacks sufficient information, omit it rather than fabricating content
+
+Accuracy:
+- Summarize and analyze strictly from the provided content; never fabricate, speculate, or add information not present in the original
+- All facts, figures, names, and amounts must come from the source text`
+
 /**
  * Get the system prompt for a sensor, using user override if available.
+ * Override always wins regardless of language.
  */
 export function getSensorPrompt(
   sensorName: string,
   overrides?: Record<string, string>,
+  language?: SummaryLanguage,
 ): string {
-  return overrides?.[sensorName] ?? DEFAULT_SENSOR_PROMPTS[sensorName] ?? DEFAULT_SENSOR_PROMPTS['rss_feeds']
+  if (overrides?.[sensorName]) return overrides[sensorName]
+  const defaults = language === 'en' ? DEFAULT_SENSOR_PROMPTS_EN : DEFAULT_SENSOR_PROMPTS
+  return defaults[sensorName] ?? defaults['rss_feeds']
 }
 
 /**
  * Get the overall summary prompt, using user override if available.
+ * Override always wins regardless of language.
  */
-export function getOverallPrompt(override?: string): string {
-  return override || DEFAULT_OVERALL_PROMPT
+export function getOverallPrompt(override?: string, language?: SummaryLanguage): string {
+  if (override) return override
+  return language === 'en' ? DEFAULT_OVERALL_PROMPT_EN : DEFAULT_OVERALL_PROMPT
+}
+
+/**
+ * Get the chunk extraction prompt for the given language.
+ */
+export function getChunkExtractPrompt(language?: SummaryLanguage): string {
+  return language === 'en' ? CHUNK_EXTRACT_PROMPT_EN : CHUNK_EXTRACT_PROMPT
 }

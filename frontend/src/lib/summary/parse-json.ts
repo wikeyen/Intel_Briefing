@@ -177,7 +177,7 @@ export function parseOverallJson(raw: string): OverallBriefing {
   return {
     quick_scan: [],
     executive_summary: '',
-    sections: [{ title: '简报', entries: [{ text: raw.trim(), source: '', refs: [] }] }],
+    sections: [{ title: 'Briefing', entries: [{ text: raw.trim(), source: '', refs: [] }] }],
     sentiment: { ...EMPTY_SENTIMENT },
   }
 }

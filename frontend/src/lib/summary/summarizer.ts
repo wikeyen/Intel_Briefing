@@ -1,10 +1,10 @@
 // ABOUTME: Unified summarization engine — per-sensor summaries with map-reduce and caching, plus overall briefing.
 // ABOUTME: Shared by both the pipeline orchestrator and the standalone trigger route.
-import type { IntelReport, IntelItem, BriefingSummary, SensorSummary, BriefingSource } from '../models'
+import type { IntelReport, IntelItem, BriefingSummary, SensorSummary, BriefingSource, SummaryLanguage } from '../models'
 import { SOURCE_URLS, EMPTY_SENTIMENT } from '../models'
 import { Semaphore } from '../pipeline/semaphore'
 import { chatCompletion, chatCompletionStream, type LlmConfig, type ChatMessage } from './llm'
-import { getSensorPrompt, getOverallPrompt, CHUNK_SIZE, CHUNK_EXTRACT_PROMPT } from './prompts'
+import { getSensorPrompt, getOverallPrompt, getChunkExtractPrompt, CHUNK_SIZE } from './prompts'
 import { parseSensorJson, parseOverallJson } from './parse-json'
 import { SENSOR_LABELS } from '../sensors/taxonomy'
 import { formatItem, groupBySensor, chunkArray, computeContentHash } from './shared'
@@ -12,7 +12,7 @@ import { readSensorSummary, writeSensorSummary } from './cache'
 import { buildUrlPool } from './ref-verifier'
 import { summarizeWithVerification } from './retry-with-verification'
 import {
-  ATTRIBUTION_SYSTEM_PROMPT,
+  getAttributionSystemPrompt,
   buildSectionAttributionPrompt,
   buildExecSummaryAttributionPrompt,
   buildSentimentAttributionPrompt,
@@ -58,6 +58,38 @@ export interface SummarizeOptions {
   onToken?: (sensorName: string, token: string) => void
   /** LLM config override for attribution calls (cheap model). Falls back to main llmConfig. */
   attributionLlmConfig?: LlmConfig
+  /** Output language for generated summaries. Defaults to 'zh'. */
+  language?: SummaryLanguage
+}
+
+/**
+ * Language-keyed template functions for user messages in the summarization pipeline.
+ * Keeps all inline Chinese/English strings in one place.
+ */
+function msg(language?: SummaryLanguage) {
+  const en = language === 'en'
+  return {
+    singlePass: (label: string, count: number, itemsText: string) =>
+      en
+        ? `Synthesize the following ${count} ${label} items:\n\n${itemsText}`
+        : `综合分析以下 ${label} 的 ${count} 条内容：\n\n${itemsText}`,
+    chunkUser: (label: string, i: number, total: number, count: number, chunkText: string) =>
+      en
+        ? `The following is batch ${i}/${total} of ${label} content (${count} items):\n\n${chunkText}`
+        : `以下是 ${label} 的第 ${i}/${total} 批内容（${count} 条）：\n\n${chunkText}`,
+    batchLabel: (i: number) =>
+      en ? `[Batch ${i}]` : `[批次 ${i}]`,
+    reduceUser: (count: number, label: string, chunks: number, merged: string) =>
+      en
+        ? `The following are key signals extracted from ${count} ${label} items (in ${chunks} batches). Please synthesize:\n\n${merged}`
+        : `以下是从 ${count} 条 ${label} 内容中提取的关键信号（分 ${chunks} 批提取）。请综合分析：\n\n${merged}`,
+    sourceListHeader: en ? '## Reference List\n' : '## 参考清单\n',
+    sensorSummariesHeader: en ? '## Per-Source Trend Analysis\n\n' : '## 各信息源趋势分析\n\n',
+    overallUser: (context: string) =>
+      en
+        ? `Generate a briefing based on the following reference list and per-source trend analysis:\n\n${context}`
+        : `请根据以下参考清单和信息源趋势分析生成简报：\n\n${context}`,
+  }
 }
 
 /**
@@ -76,12 +108,14 @@ async function summarizeSensor(
   signal?: AbortSignal,
   onVerifyRetry?: (attempt: number, maxRetries: number, failures: number) => void | Promise<void>,
   onToken?: (token: string) => void,
+  language?: SummaryLanguage,
 ): Promise<SensorSummary | null> {
   if (items.length === 0) return null
 
   const label = SENSOR_LABELS[sensorName] ?? sensorName
-  const sensorPrompt = getSensorPrompt(sensorName, promptOverrides)
+  const sensorPrompt = getSensorPrompt(sensorName, promptOverrides, language)
   const knownUrls = buildUrlPool(items)
+  const m = msg(language)
 
   let messages: ChatMessage[]
 
@@ -90,7 +124,7 @@ async function summarizeSensor(
     const itemsText = items.map(formatItem).join('\n\n')
     messages = [
       { role: 'system', content: sensorPrompt },
-      { role: 'user', content: `综合分析以下 ${label} 的 ${items.length} 条内容：\n\n${itemsText}` },
+      { role: 'user', content: m.singlePass(label, items.length, itemsText) },
     ]
   } else {
     // Map-reduce: chunk → extract signals → merge
@@ -103,8 +137,8 @@ async function summarizeSensor(
     const extractionPromises = chunks.map((chunk, i) => {
       const chunkText = chunk.map(formatItem).join('\n\n')
       return chatCompletion([
-        { role: 'system', content: CHUNK_EXTRACT_PROMPT },
-        { role: 'user', content: `以下是 ${label} 的第 ${i + 1}/${chunks.length} 批内容（${chunk.length} 条）：\n\n${chunkText}` },
+        { role: 'system', content: getChunkExtractPrompt(language) },
+        { role: 'user', content: m.chunkUser(label, i + 1, chunks.length, chunk.length, chunkText) },
       ], llmConfig, signal).then(result => {
         chunksCompleted++
         onChunkProgress?.(chunks.length, chunksCompleted)
@@ -115,11 +149,11 @@ async function summarizeSensor(
 
     // Reduce phase: synthesize all extractions with the per-sensor prompt
     const mergedExtractions = extractions
-      .map((ext, i) => `[批次 ${i + 1}] ${ext}`)
+      .map((ext, i) => `${m.batchLabel(i + 1)} ${ext}`)
       .join('\n\n')
     messages = [
       { role: 'system', content: sensorPrompt },
-      { role: 'user', content: `以下是从 ${items.length} 条 ${label} 内容中提取的关键信号（分 ${chunks.length} 批提取）。请综合分析：\n\n${mergedExtractions}` },
+      { role: 'user', content: m.reduceUser(items.length, label, chunks.length, mergedExtractions) },
     ]
   }
 
@@ -191,11 +225,13 @@ export async function summarizeReport(
     skipCache = false,
     enabledSensors,
     onToken,
+    language,
   } = options
 
   const semaphore = new Semaphore(concurrency)
   const sensorGroups = groupBySensor(report)
   const sections: SensorSummary[] = []
+  const m = msg(language)
 
   // Build the set of sensors to exclude:
   // 1. Sensors not in enabledSensors (if provided)
@@ -221,7 +257,7 @@ export async function summarizeReport(
         if (!skipCache) {
           const contentHash = computeContentHash(items)
           const cached = await readSensorSummary(sensorName)
-          if (cached && cached.content_hash === contentHash) {
+          if (cached && cached.content_hash === contentHash && cached.language === language) {
             await onProgress?.(sensorName, label, 'cached', null)
             return cached.sensor_summary
           }
@@ -236,12 +272,13 @@ export async function summarizeReport(
             signal,
             (attempt, maxRetries, failures) => onProgress?.(sensorName, label, 'running', null, undefined, { attempt, maxRetries, failures }),
             onToken ? (token) => onToken(sensorName, token) : undefined,
+            language,
           )
           if (signal?.aborted) return null
           if (result) {
             // Cache the per-sensor summary for future regeneration
             const contentHash = computeContentHash(items)
-            await writeSensorSummary(sensorName, contentHash, result).catch(() => {})
+            await writeSensorSummary(sensorName, contentHash, result, language).catch(() => {})
           }
           await onProgress?.(sensorName, label, 'ok', null)
           return result
@@ -285,13 +322,13 @@ export async function summarizeReport(
 
   // Format context: numbered source list + per-sensor trend summaries
   const sourceList = globalSources.length > 0
-    ? '## 参考清单\n' + globalSources.map(s =>
+    ? m.sourceListHeader + globalSources.map(s =>
         `[${s.id}] "${s.title}" — ${s.sensor}${s.brief ? ` — ${s.brief}` : ''}`
       ).join('\n')
     : ''
 
   const sensorSummaries = sections.length > 0
-    ? '## 各信息源趋势分析\n\n' + sections.map(s =>
+    ? m.sensorSummariesHeader + sections.map(s =>
         `### ${s.label} (${s.item_count} items)\n${s.summary}`
       ).join('\n\n')
     : ''
@@ -301,8 +338,8 @@ export async function summarizeReport(
     : sensorSummaries || 'No data was collected in this run.'
 
   const overallMessages: ChatMessage[] = [
-    { role: 'system', content: getOverallPrompt(overallPromptOverride) },
-    { role: 'user', content: `请根据以下参考清单和信息源趋势分析生成简报：\n\n${overallContext}` },
+    { role: 'system', content: getOverallPrompt(overallPromptOverride, language) },
+    { role: 'user', content: m.overallUser(overallContext) },
   ]
 
   let overall: ReturnType<typeof parseOverallJson>
@@ -324,7 +361,7 @@ export async function summarizeReport(
 
     // Post-hoc citation attribution
     const cheapConfig: LlmConfig = options.attributionLlmConfig ?? llmConfig
-    await attributeCitations(overall, globalSources, sections, llmConfig, cheapConfig, signal)
+    await attributeCitations(overall, globalSources, sections, llmConfig, cheapConfig, signal, language)
 
     await onProgress?.('__overall__', 'Overall', 'ok', null)
   } catch (err) {
@@ -356,10 +393,12 @@ async function attributeCitations(
   strongConfig: LlmConfig,
   cheapConfig: LlmConfig,
   signal?: AbortSignal,
+  language?: SummaryLanguage,
 ): Promise<void> {
   if (globalSources.length === 0) return
 
   const validIds = new Set(globalSources.map(s => s.id))
+  const attrSystemPrompt = getAttributionSystemPrompt(language)
 
   // Build lookup: sensor label → source items for that sensor
   const sensorSourceMap = new Map<string, BriefingSource[]>()
@@ -390,8 +429,8 @@ async function attributeCitations(
 
     promises.push(
       chatCompletion([
-        { role: 'system', content: ATTRIBUTION_SYSTEM_PROMPT },
-        { role: 'user', content: buildSectionAttributionPrompt(section.entries, pool) },
+        { role: 'system', content: attrSystemPrompt },
+        { role: 'user', content: buildSectionAttributionPrompt(section.entries, pool, language) },
       ], cheapConfig, signal).then(raw => {
         const attributed = parseSectionAttributionResult(raw, section.entries.length)
         if (attributed) {
@@ -407,8 +446,8 @@ async function attributeCitations(
   if (overall.executive_summary) {
     promises.push(
       chatCompletion([
-        { role: 'system', content: ATTRIBUTION_SYSTEM_PROMPT },
-        { role: 'user', content: buildExecSummaryAttributionPrompt(overall.executive_summary, globalSources) },
+        { role: 'system', content: attrSystemPrompt },
+        { role: 'user', content: buildExecSummaryAttributionPrompt(overall.executive_summary, globalSources, language) },
       ], strongConfig, signal).then(raw => {
         overall.executive_summary = stripInvalidMarkers(parseTextAttributionResult(raw), validIds)
       }).catch(() => { /* graceful degradation */ }),
@@ -423,12 +462,13 @@ async function attributeCitations(
   if (hasSentiment) {
     promises.push(
       chatCompletion([
-        { role: 'system', content: ATTRIBUTION_SYSTEM_PROMPT },
+        { role: 'system', content: attrSystemPrompt },
         { role: 'user', content: buildSentimentAttributionPrompt(
           overall.sentiment.controversies,
           overall.sentiment.opinion_shifts,
           overall.sentiment.risk_flags,
           globalSources,
+          language,
         ) },
       ], strongConfig, signal).then(raw => {
         const attributed = parseSentimentAttributionResult(raw)

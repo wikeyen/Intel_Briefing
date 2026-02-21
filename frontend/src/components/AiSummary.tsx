@@ -2,7 +2,7 @@
 // ABOUTME: Includes collapsible prompt customization for per-sensor and overall summary prompts.
 'use client'
 import { useState, useEffect } from 'react'
-import { api } from '@/api/client'
+import { api, type SummaryLanguage } from '@/api/client'
 import { DEFAULT_SENSOR_PROMPTS, DEFAULT_OVERALL_PROMPT } from '@/lib/summary/prompts'
 
 import { useToast } from '@/lib/toast-context'
@@ -64,6 +64,7 @@ export function AiSummary() {
   const [promptsExpanded, setPromptsExpanded] = useState(false)
   const [expandedSensor, setExpandedSensor] = useState<string | null>(null)
   const [localConcurrency, setLocalConcurrency] = useState(1)
+  const [summaryLanguage, setSummaryLanguage] = useState<SummaryLanguage>('zh')
 
   const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
   const OLLAMA_BASE_URL = 'http://localhost:11434/v1'
@@ -76,6 +77,7 @@ export function AiSummary() {
       summary_attribution_model: attributionModel,
       summary_sensor_prompts: sensorPrompts,
       summary_overall_prompt: overallPrompt,
+      summary_language: summaryLanguage,
       ...(summaryProvider === 'local' ? { local_summary_concurrency: localConcurrency } : {}),
     }),
     { onError: (e) => showToast('Save failed: ' + e.message) },
@@ -90,6 +92,7 @@ export function AiSummary() {
       setSensorPrompts(cfg.summary_sensor_prompts ?? {})
       setOverallPrompt(cfg.summary_overall_prompt ?? '')
       setLocalConcurrency(cfg.local_summary_concurrency ?? 1)
+      setSummaryLanguage(cfg.summary_language ?? 'zh')
     })
   }, [])
 
@@ -250,6 +253,47 @@ export function AiSummary() {
                 )}
                 <HelpText>
                   Cheaper model for per-section citation matching. Falls back to generation model if unset.
+                </HelpText>
+              </div>
+            )}
+
+            {/* Summary Language */}
+            {isEnabled && (
+              <div>
+                <FieldLabel>Summary Language</FieldLabel>
+                <div style={{ position: 'relative' }}>
+                  <select
+                    value={summaryLanguage}
+                    onChange={(e) => { setSummaryLanguage(e.target.value as SummaryLanguage); trigger() }}
+                    style={{
+                      ...inputBase,
+                      width: '100%',
+                      appearance: 'none',
+                      WebkitAppearance: 'none',
+                      paddingRight: '2.25rem',
+                      cursor: 'pointer',
+                    }}
+                    onFocus={focus}
+                    onBlur={blur}
+                  >
+                    <option value="zh">Chinese</option>
+                    <option value="en">English</option>
+                  </select>
+                  <span style={{
+                    position: 'absolute',
+                    right: '0.875rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    pointerEvents: 'none',
+                    color: 'var(--ink-faint)',
+                    fontSize: '0.625rem',
+                    userSelect: 'none',
+                  }}>
+                    ▾
+                  </span>
+                </div>
+                <HelpText>
+                  Language for generated summaries. Does not affect custom prompt overrides.
                 </HelpText>
               </div>
             )}

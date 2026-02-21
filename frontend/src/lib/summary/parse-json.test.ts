@@ -88,7 +88,7 @@ describe('parseOverallJson', () => {
     const result = parseOverallJson(input)
     expect(result.quick_scan).toEqual([])
     expect(result.sections).toHaveLength(1)
-    expect(result.sections[0].title).toBe('简报')
+    expect(result.sections[0].title).toBe('Briefing')
     expect(result.sections[0].entries[0].text).toBe(input)
   })
 

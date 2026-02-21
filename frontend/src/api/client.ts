@@ -6,6 +6,8 @@ export interface HealthResponse {
   last_fetch: string | null
 }
 
+export type SummaryLanguage = 'en' | 'zh'
+
 export interface ConfigSettings {
   github_token: string | null
   producthunt_token: string | null
@@ -47,6 +49,7 @@ export interface ConfigSettings {
   summary_attribution_model: string
   summary_sensor_prompts: Record<string, string>
   summary_overall_prompt: string
+  summary_language: SummaryLanguage
 }
 
 export interface IntelItem {

@@ -97,6 +97,12 @@ function EmptySection({ needsKey }: { needsKey?: boolean }) {
   )
 }
 
+const contentVariants = {
+  enter: (dir: number) => ({ x: dir * 20, opacity: 0 }),
+  center: { x: 0, opacity: 1 },
+  exit: (dir: number) => ({ x: dir * -20, opacity: 0 }),
+}
+
 export function Data() {
   const showToast = useToast()
   const [report, setReport] = useState<IntelReport | null>(null)
@@ -120,12 +126,6 @@ export function Data() {
   }, [activeSectionIdx])
 
   const slideDirection = activeSectionIdx >= prevSectionIdx.current ? 1 : -1
-
-  const contentVariants = {
-    enter: (dir: number) => ({ x: dir * 20, opacity: 0 }),
-    center: { x: 0, opacity: 1 },
-    exit: (dir: number) => ({ x: dir * -20, opacity: 0 }),
-  }
 
   useEffect(() => {
     api.getConfig().then(setConfig).catch(() => {})
@@ -427,7 +427,7 @@ export function Data() {
                         flexShrink: 0,
                       }}
                       onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.color = 'var(--ink)' }}
-                      onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.color = active ? 'var(--accent)' : 'var(--ink-muted)' }}
+                      onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)' }}
                     >
                       {label}
                       {count > 0 && (

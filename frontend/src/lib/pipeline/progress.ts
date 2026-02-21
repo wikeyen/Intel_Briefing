@@ -18,6 +18,8 @@ export class PipelineProgressTracker {
   private completedAt: string | null = null
   private running = true
   private cancelled = false
+  private paused = false
+  private pausedStage: 'fetch' | 'summary' | null = null
   private overallSummary: StageState
 
   constructor(
@@ -125,6 +127,20 @@ export class PipelineProgressTracker {
     this.notify()
   }
 
+  /** Pause the pipeline after a stage completes with failures — awaiting user decision. */
+  pause(stage: 'fetch' | 'summary'): void {
+    this.paused = true
+    this.pausedStage = stage
+    this.notify()
+  }
+
+  /** Resume the pipeline after user makes a retry/proceed decision. */
+  resume(): void {
+    this.paused = false
+    this.pausedStage = null
+    this.notify()
+  }
+
   /** Cancel the pipeline: mark incomplete stages as 'cancelled', stop running. */
   cancel(): void {
     this.running = false
@@ -150,6 +166,8 @@ export class PipelineProgressTracker {
     return {
       running: this.running,
       cancelled: this.cancelled,
+      paused: this.paused,
+      paused_stage: this.pausedStage,
       mode: this.mode,
       default_concurrency: this.defaultConcurrency,
       local_summary_concurrency: this.localSummaryConcurrency,

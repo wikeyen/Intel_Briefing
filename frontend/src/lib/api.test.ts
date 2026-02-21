@@ -31,9 +31,11 @@ vi.mock('./config', () => ({
 }))
 
 const mockIsPipelineRunning = vi.fn().mockReturnValue(false)
+const mockIsPipelinePaused = vi.fn().mockReturnValue(false)
 vi.mock('./pipeline/orchestrator', () => ({
   runPipeline: (...args: unknown[]) => mockRunPipeline(...args),
   isPipelineRunning: () => mockIsPipelineRunning(),
+  isPipelinePaused: () => mockIsPipelinePaused(),
   cancelPipeline: vi.fn().mockReturnValue(false),
 }))
 
@@ -165,6 +167,8 @@ describe('GET /api/fetch/status', () => {
       }],
       overall_summary: 'queued',
       total_items: 0,
+      paused: false,
+      paused_stage: null,
     }
     mockReadPipelineStatus.mockResolvedValue(status)
     const { GET } = await import('@/app/api/fetch/status/route')

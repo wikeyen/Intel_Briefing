@@ -2,7 +2,7 @@
 // ABOUTME: Returns the live status of the current or most recent pipeline run from SQLite.
 import { NextResponse } from 'next/server'
 import { readPipelineStatus } from '@/lib/pipeline/cache'
-import { isPipelineRunning } from '@/lib/pipeline/orchestrator'
+import { isPipelineRunning, isPipelinePaused } from '@/lib/pipeline/orchestrator'
 import type { PipelineStatus } from '@/lib/models'
 
 export async function GET(): Promise<NextResponse<PipelineStatus & { alive: boolean }>> {
@@ -19,12 +19,15 @@ export async function GET(): Promise<NextResponse<PipelineStatus & { alive: bool
       overall_summary: 'skipped',
       total_items: 0,
       cancelled: false,
+      paused: false,
+      paused_stage: null,
       alive: false,
     })
   }
 
   // alive = there's an in-memory AbortController driving this pipeline run
-  const alive = isPipelineRunning()
+  // A paused pipeline is still alive (it's awaiting user input, not stale)
+  const alive = isPipelineRunning() || isPipelinePaused()
 
   return NextResponse.json({ ...status, alive })
 }

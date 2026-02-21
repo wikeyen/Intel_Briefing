@@ -116,6 +116,8 @@ export interface SensorJobProgress {
 export interface PipelineStatus {
   running: boolean
   cancelled: boolean
+  paused: boolean
+  paused_stage: 'fetch' | 'summary' | null
   mode: RunMode
   default_concurrency: number
   local_summary_concurrency: number
@@ -124,6 +126,12 @@ export interface PipelineStatus {
   sensors: SensorJobProgress[]
   overall_summary: StageState
   total_items: number
+}
+
+/** User decision when the pipeline pauses on failures. */
+export interface ResumeDecision {
+  action: 'retry' | 'proceed'
+  sensors?: string[]
 }
 
 export interface SensorSummaryItem {

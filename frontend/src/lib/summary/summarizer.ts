@@ -251,7 +251,7 @@ export async function summarizeReport(
   const overallContext = sections.length > 0
     ? sections.map(s => {
         const itemsList = s.items.length > 0
-          ? '\n  Notable items:\n' + s.items.map(it => `  - "${it.title}" ${it.url}`).join('\n')
+          ? '\n  Notable items:\n' + s.items.map(it => `  - "${it.title}" ${it.url}${it.brief ? ` — ${it.brief}` : ''}`).join('\n')
           : ''
         return `**${s.label}** (${s.item_count} items): ${s.summary}${itemsList}`
       }).join('\n\n')

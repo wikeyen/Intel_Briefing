@@ -132,8 +132,9 @@ function SummaryProgressBanner({ progress, pipelineStatus, config, streamTokens,
       overflow: 'hidden',
     }}>
       {/* Step indicator bar */}
-      <div style={{
+      <div className="progress-step-bar" style={{
         display: 'flex',
+        flexWrap: 'wrap',
         alignItems: 'center',
         padding: '0.75rem 1.25rem',
         gap: '0.25rem',
@@ -181,7 +182,7 @@ function SummaryProgressBanner({ progress, pipelineStatus, config, streamTokens,
             </div>
           )
         })}
-        <div style={{ flex: 1 }} />
+        <div style={{ flex: 1, minWidth: '1rem' }} />
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -191,7 +192,7 @@ function SummaryProgressBanner({ progress, pipelineStatus, config, streamTokens,
           color: 'var(--ink-faint)',
         }}>
           {config?.summary_model && (
-            <span style={{ whiteSpace: 'nowrap' }}>
+            <span className="progress-model-name" style={{ whiteSpace: 'nowrap' }}>
               {config.summary_model}
             </span>
           )}
@@ -558,16 +559,20 @@ function TextWithRefs({ text, refs, query }: {
   const hasInlineMarkers = /\[\d+\]/.test(text)
 
   if (hasInlineMarkers) {
-    // Split text on [N] markers and interleave with ref links
+    // Split text on [N] markers and interleave with ref links.
+    // LLM uses global numbering across entries, but each entry has its own
+    // refs array.  Map markers positionally: first [N] → refs[0], etc.
     const parts: React.ReactNode[] = []
     const segments = text.split(/(\[\d+\])/)
     let key = 0
+    let refCounter = 0
     for (const segment of segments) {
       const match = segment.match(/^\[(\d+)\]$/)
       if (match) {
-        const refIndex = parseInt(match[1], 10) - 1
-        if (refIndex >= 0 && refIndex < refs.length) {
-          parts.push(<RefLink key={`ref-${key++}`} ref={refs[refIndex]} index={refIndex + 1} />)
+        const displayNum = parseInt(match[1], 10)
+        if (refCounter < refs.length) {
+          parts.push(<RefLink key={`ref-${key++}`} ref={refs[refCounter]} index={displayNum} />)
+          refCounter++
         } else {
           parts.push(<span key={`ref-${key++}`}>{segment}</span>)
         }

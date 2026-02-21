@@ -287,6 +287,15 @@ input[type="range"]::-moz-range-thumb {
     padding-right: 0 !important;
   }
 
+  /* ── Briefing progress banner ── */
+  .progress-step-bar {
+    padding: 0.5rem 0.75rem !important;
+    gap: 0.125rem !important;
+  }
+  .progress-model-name {
+    display: none !important;
+  }
+
   /* Section tabs — edge-to-edge scroll with fade masks */
   .data-sticky-nav .section-tabs {
     padding: 0 1.25rem !important;

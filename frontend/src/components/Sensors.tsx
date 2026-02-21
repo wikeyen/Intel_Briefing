@@ -225,7 +225,6 @@ export function Sensors() {
   const [hasBlueskyCredentials, setHasBlueskyCredentials] = useState(false)
   const [hasMastodonCredentials, setHasMastodonCredentials] = useState(false)
   const [blueskyTopicsEnabled, setBlueskyTopicsEnabled] = useState(true)
-  const [blueskyTrendsEnabled, setBlueskyTrendsEnabled] = useState(true)
   const [mastodonTopicsEnabled, setMastodonTopicsEnabled] = useState(true)
   const [mastodonTrendsEnabled, setMastodonTrendsEnabled] = useState(true)
   const [rssFeedUrls, setRssFeedUrls] = useState<string[]>([])
@@ -246,7 +245,6 @@ export function Sensors() {
       social_following_bluesky: followingBluesky,
       social_following_mastodon: followingMastodon,
       bluesky_topics_enabled: blueskyTopicsEnabled,
-      bluesky_trends_enabled: blueskyTrendsEnabled,
       mastodon_topics_enabled: mastodonTopicsEnabled,
       mastodon_trends_enabled: mastodonTrendsEnabled,
       rss_feed_urls: rssFeedUrls,
@@ -272,7 +270,6 @@ export function Sensors() {
       setHasBlueskyCredentials(!!cfg.bluesky_handle && !!cfg.bluesky_app_password)
       setHasMastodonCredentials(!!cfg.mastodon_token)
       setBlueskyTopicsEnabled(cfg.bluesky_topics_enabled ?? true)
-      setBlueskyTrendsEnabled(cfg.bluesky_trends_enabled ?? true)
       setMastodonTopicsEnabled(cfg.mastodon_topics_enabled ?? true)
       setMastodonTrendsEnabled(cfg.mastodon_trends_enabled ?? true)
       setRssFeedUrls(cfg.rss_feed_urls ?? [])
@@ -591,10 +588,6 @@ export function Sensors() {
                           <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                             <input type="checkbox" checked={blueskyTopicsEnabled} onChange={(e) => { setBlueskyTopicsEnabled(e.target.checked); trigger() }} style={{ accentColor: '#0085FF' }} />
                             <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Topics</span>
-                          </label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                            <input type="checkbox" checked={blueskyTrendsEnabled} onChange={(e) => { setBlueskyTrendsEnabled(e.target.checked); trigger() }} style={{ accentColor: '#0085FF' }} />
-                            <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Trends</span>
                           </label>
                         </div>
                       </div>

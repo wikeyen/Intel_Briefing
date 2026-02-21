@@ -1,8 +1,7 @@
-// ABOUTME: Social trends sensor — surfaces trending content across Bluesky, Mastodon, and X/Twitter.
-// ABOUTME: Aggregates trending posts and discussions into a unified IntelItem feed. X trends via Apify actor.
+// ABOUTME: Social trends sensor — surfaces trending content from Mastodon and X/Twitter.
+// ABOUTME: Mastodon uses public trends API; X trends via Apify actor. Bluesky has no public trends API.
 import type { ConfigSettings, IntelItem } from '../models'
 import { ApifyClient } from 'apify-client'
-import { createBlueskyAgent, blueskyPostToItem } from '../platforms/bluesky'
 import { mastodonPublicGet, mastodonStatusToItem } from '../platforms/mastodon'
 
 const X_TRENDS_ACTOR = 'eunit/x-twitter-trends-scraper'
@@ -47,25 +46,6 @@ function mapTrendToItem(trend: ApifyTrend): IntelItem {
   }
 }
 
-async function fetchBlueskyTrends(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
-  if (!config.bluesky_handle || !config.bluesky_app_password) return []
-  const agent = await createBlueskyAgent(config.bluesky_handle, config.bluesky_app_password)
-  const { data } = await agent.getTimeline({ limit: Math.min(50, limit * 3) })
-  // Sort by engagement (likes + reposts) and take the top items
-  const scored = data.feed.map(f => ({
-    post: f.post,
-    score: Number((f.post as unknown as Record<string, unknown>).likeCount ?? 0) +
-           Number((f.post as unknown as Record<string, unknown>).repostCount ?? 0),
-  }))
-  scored.sort((a, b) => b.score - a.score)
-  const items: IntelItem[] = []
-  for (const { post } of scored.slice(0, limit)) {
-    const item = blueskyPostToItem(post as unknown as Record<string, unknown>, 'trends')
-    if (item) items.push(item)
-  }
-  return items
-}
-
 async function fetchMastodonTrends(_config: ConfigSettings, limit: number): Promise<IntelItem[]> {
   const statuses = await mastodonPublicGet<Array<Record<string, unknown>>>(
     `/api/v1/trends/statuses?limit=${Math.min(20, limit)}`,
@@ -97,13 +77,11 @@ async function fetchXTrends(config: ConfigSettings, limit: number): Promise<Inte
 export async function fetchSocialTrends(
   config: ConfigSettings,
   limit: number,
-  platform?: 'bluesky' | 'mastodon',
+  platform?: 'mastodon',
 ): Promise<IntelItem[]> {
-  const checkBsky = !platform || platform === 'bluesky'
   const checkMasto = !platform || platform === 'mastodon'
 
   const fetches: Promise<IntelItem[]>[] = []
-  if (checkBsky) fetches.push(fetchBlueskyTrends(config, limit))
   if (checkMasto) fetches.push(fetchMastodonTrends(config, limit))
   // X trends always included when apify_token is available (not platform-filtered)
   fetches.push(fetchXTrends(config, limit))
@@ -117,10 +95,9 @@ export async function fetchSocialTrends(
     else errors.push(String(r.reason))
   }
 
-  // Only fail if all requested platforms errored
+  // Only fail if all platforms errored
   if (items.length === 0 && errors.length === fetches.length) {
-    const target = platform ?? 'Bluesky or Mastodon'
-    throw new Error(`No platform available for trends — ${platform ? `check ${target} connectivity` : 'configure Bluesky or check Mastodon connectivity'}`)
+    throw new Error('No platform available for trends — check Mastodon connectivity or configure Apify token')
   }
 
   return items.slice(0, limit)

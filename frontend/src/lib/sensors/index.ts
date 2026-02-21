@@ -42,9 +42,6 @@ async function fetchBluesky(config: ConfigSettings, limit: number): Promise<Inte
   if (config.bluesky_topics_enabled) {
     items.push(...await fetchSocialTopics(config, limit, 'bluesky'))
   }
-  if (config.bluesky_trends_enabled) {
-    items.push(...await fetchSocialTrends(config, limit, 'bluesky'))
-  }
   return items
 }
 

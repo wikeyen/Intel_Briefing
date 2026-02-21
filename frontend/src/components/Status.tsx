@@ -1,14 +1,14 @@
 // ABOUTME: Pipeline status dashboard — shows health, last run results, per-sensor outcomes, and section item counts.
 // ABOUTME: Polls health every 10s; when running, polls /fetch/status every 2s for live sensor progress.
 'use client'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { api } from '@/api/client'
 import type { HealthResponse, IntelReport, ConfigSettings, PipelineStatus, SensorJobProgress, RunMode } from '@/api/client'
 import { useToast } from '@/lib/toast-context'
 import { ActionBar } from './status/ActionBar'
 import type { Phase } from './status/ActionBar'
 import { SensorTable } from './status/SensorTable'
-import { SENSOR_LABEL_MAP } from './status/constants'
+import { SENSOR_LABEL_MAP, SECTION_SENSORS } from './status/constants'
 import { ScheduleFooter } from './status/ScheduleFooter'
 import { StaleProcessBanner, detectStale } from './StaleProcessBanner'
 
@@ -33,6 +33,25 @@ export function Status() {
       return next
     })
   }, [])
+
+  // All enabled sensor keys (flattened from SECTION_SENSORS, excluding disabled)
+  const allEnabledSensors = useMemo(() => {
+    return SECTION_SENSORS.flatMap(s => s.sensors).filter(
+      name => config?.sensors_enabled[name] !== false,
+    )
+  }, [config])
+
+  // Failed sensor keys from last pipeline run
+  const failedSensors = useMemo(() => {
+    if (!pipelineStatus) return []
+    return pipelineStatus.sensors
+      .filter(s => s.fetch === 'failed' || s.summary === 'failed')
+      .map(s => s.name)
+  }, [pipelineStatus])
+
+  const selectAll = useCallback(() => setSelectedSensors(new Set(allEnabledSensors)), [allEnabledSensors])
+  const selectNone = useCallback(() => setSelectedSensors(new Set()), [])
+  const selectFailed = useCallback(() => setSelectedSensors(new Set(failedSensors)), [failedSensors])
 
   const loadAll = () => {
     api.health().then(setHealth).catch(() => setHealth({ status: 'error', last_fetch: null }))
@@ -222,7 +241,10 @@ export function Status() {
           summary: pipelineStatus.sensors.filter(s => s.summary === 'failed').length,
         } : undefined}
         selectedCount={selectedSensors.size}
-        onClearSelection={() => setSelectedSensors(new Set())}
+        onSelectAll={selectAll}
+        onSelectNone={selectNone}
+        onSelectFailed={failedSensors.length > 0 ? selectFailed : undefined}
+        failedCount={failedSensors.length}
       />
 
       <SensorTable

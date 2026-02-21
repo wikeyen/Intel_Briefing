@@ -82,7 +82,7 @@ export function Toaster({ children }: Props) {
               <div style={{ paddingBottom: '0.5rem' }}>
                 <div className="toast-msg" style={{
                   background: 'var(--ink)',
-                  color: '#FFFFFF',
+                  color: 'var(--canvas)',
                   fontSize: '0.875rem',
                   fontWeight: 500,
                   padding: '0.75rem 1.125rem',

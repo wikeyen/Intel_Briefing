@@ -41,6 +41,17 @@
   --sb-faint:      #3D3C39;
   --sb-accent:     #3D8B6A;
 
+  /* Utility — shadows, fades, focus rings */
+  --canvas-fade:   rgba(248, 247, 244, 0.9);
+  --shadow-sm:     0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md:     0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --focus-ring:    0 0 0 3px rgba(29, 107, 79, 0.1);
+  --accent-tint:   rgba(29, 107, 79, 0.08);
+  --warn-tint:     rgba(234, 179, 8, 0.06);
+  --warn-border:   rgba(234, 179, 8, 0.3);
+
+  color-scheme: light dark;
+
   /* Typography */
   font-family: 'Inter', system-ui, sans-serif;
   font-size: 15px;
@@ -53,6 +64,57 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Dark Mode ─────────────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Surfaces */
+    --canvas:        #1C1B18;
+    --surface:       #252421;
+    --surface-alt:   #2E2D29;
+
+    /* Borders */
+    --border:        #3A3935;
+    --border-soft:   #302F2B;
+
+    /* Text */
+    --ink:           #EDEAE4;
+    --ink-muted:     #9B9892;
+    --ink-faint:     #6B6863;
+
+    /* Accent — brighter green for dark bg */
+    --accent:        #4D9478;
+    --accent-hover:  #5BA888;
+    --accent-dim:    #3D8B6A;
+    --accent-wash:   #1A2F24;
+
+    /* Semantic status — brighter for contrast */
+    --ok:            #4ADE80;
+    --ok-bg:         #14261A;
+    --warn:          #FACC15;
+    --warn-bg:       #26230E;
+    --err:           #F87171;
+    --err-bg:        #2A1515;
+
+    /* Sidebar — darker than canvas for distinction */
+    --sb:            #141310;
+    --sb-surface:    #1A1917;
+    --sb-border:     #2A2926;
+    --sb-ink:        #EDEAE4;
+    --sb-muted:      #6C6A65;
+    --sb-faint:      #3D3C39;
+    --sb-accent:     #4D9478;
+
+    /* Utility — dark-appropriate values */
+    --canvas-fade:   rgba(28, 27, 24, 0.9);
+    --shadow-sm:     0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-md:     0 4px 16px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.2);
+    --focus-ring:    0 0 0 3px rgba(77, 148, 120, 0.25);
+    --accent-tint:   rgba(77, 148, 120, 0.12);
+    --warn-tint:     rgba(250, 204, 21, 0.08);
+    --warn-border:   rgba(250, 204, 21, 0.3);
+  }
 }
 
 *, *::before, *::after {
@@ -221,7 +283,7 @@ input[type="range"]::-moz-range-thumb {
     transform: translateY(0);
     opacity: 1;
     pointer-events: auto;
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
   }
 
   /* Hide brand section on mobile — top bar already shows it */
@@ -345,7 +407,7 @@ input[type="range"]::-moz-range-thumb {
     border-radius: 10px !important;
     font-size: 0.8125rem !important;
     padding: 0.875rem 1.25rem !important;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.08) !important;
+    box-shadow: var(--shadow-md) !important;
   }
 
   /* ── Status action bar — show run controls on mobile ── */

@@ -20,7 +20,7 @@ export const LINE_CLAMP_CSS = `
 `
 
 const PLATFORM_COLORS: Record<string, { color: string; bg: string }> = {
-  x:        { color: '#000000', bg: 'rgba(0,0,0,0.08)' },
+  x:        { color: 'var(--ink)', bg: 'var(--surface-alt)' },
   bluesky:  { color: '#0085FF', bg: 'rgba(0,133,255,0.08)' },
   mastodon: { color: '#6364FF', bg: 'rgba(99,100,255,0.08)' },
   rss_feeds: { color: '#E97B20', bg: 'rgba(233,123,32,0.08)' },
@@ -90,7 +90,7 @@ export function ItemCard({ item, index = 0, searchQuery }: { item: IntelItem; in
       }}
       onMouseEnter={e => {
         (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent-dim)'
-        ;(e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)'
+        ;(e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-sm)'
       }}
       onMouseLeave={e => {
         (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'

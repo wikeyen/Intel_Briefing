@@ -105,7 +105,7 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
         borderRadius: '50%',
         background: on ? '#FFFFFF' : 'var(--ink-faint)',
         transition: 'left 150ms, background 150ms',
-        boxShadow: on ? '0 1px 3px rgba(0,0,0,0.2)' : 'none',
+        boxShadow: on ? 'var(--shadow-sm)' : 'none',
       }} />
     </button>
   )
@@ -520,7 +520,7 @@ export function Sensors() {
                       }}>
                         <div>
                           <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#000' }} />
+                            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--ink)' }} />
                             Scraper
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -532,7 +532,7 @@ export function Sensors() {
                         </div>
                         <div>
                           <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#000' }} />
+                            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--ink)' }} />
                             Accounts
                           </div>
                           <TagInput

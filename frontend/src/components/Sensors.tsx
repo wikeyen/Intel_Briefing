@@ -221,6 +221,10 @@ export function Sensors() {
   const [followingMastodon, setFollowingMastodon] = useState(false)
   const [hasBlueskyCredentials, setHasBlueskyCredentials] = useState(false)
   const [hasMastodonCredentials, setHasMastodonCredentials] = useState(false)
+  const [blueskyTopicsEnabled, setBlueskyTopicsEnabled] = useState(true)
+  const [blueskyTrendsEnabled, setBlueskyTrendsEnabled] = useState(true)
+  const [mastodonTopicsEnabled, setMastodonTopicsEnabled] = useState(true)
+  const [mastodonTrendsEnabled, setMastodonTrendsEnabled] = useState(true)
   const [rssFeedUrls, setRssFeedUrls] = useState<string[]>([])
   const [sensorLimits, setSensorLimits] = useState<Record<string, number>>({})
   const [sensorLookback, setSensorLookback] = useState<Record<string, number>>({})
@@ -241,6 +245,10 @@ export function Sensors() {
       setFollowingMastodon(cfg.social_following_mastodon ?? false)
       setHasBlueskyCredentials(!!cfg.bluesky_handle && !!cfg.bluesky_app_password)
       setHasMastodonCredentials(!!cfg.mastodon_token)
+      setBlueskyTopicsEnabled(cfg.bluesky_topics_enabled ?? true)
+      setBlueskyTrendsEnabled(cfg.bluesky_trends_enabled ?? true)
+      setMastodonTopicsEnabled(cfg.mastodon_topics_enabled ?? true)
+      setMastodonTrendsEnabled(cfg.mastodon_trends_enabled ?? true)
       setRssFeedUrls(cfg.rss_feed_urls ?? [])
       setSensorLimits(cfg.sensor_limits ?? {})
       setSensorLookback(cfg.sensor_lookback_hours ?? {})
@@ -273,6 +281,10 @@ export function Sensors() {
         social_topics_keywords: socialTopicsKeywords,
         social_following_bluesky: followingBluesky,
         social_following_mastodon: followingMastodon,
+        bluesky_topics_enabled: blueskyTopicsEnabled,
+        bluesky_trends_enabled: blueskyTrendsEnabled,
+        mastodon_topics_enabled: mastodonTopicsEnabled,
+        mastodon_trends_enabled: mastodonTrendsEnabled,
         rss_feed_urls: rssFeedUrls,
         sensor_limits: sensorLimits,
         sensor_lookback_hours: sensorLookback,
@@ -366,12 +378,13 @@ export function Sensors() {
             }}>
               {group.sensors.map(({ key, label, desc }, i) => {
                 const isLast = i === group.sensors.length - 1
-                const isSocialAccounts = key === 'social_accounts'
-                const isSocialTopics = key === 'social_topics'
+                const isX = key === 'x'
+                const isBluesky = key === 'bluesky'
+                const isMastodon = key === 'mastodon'
                 const isRssFeeds = key === 'rss_feeds'
                 const isOn = enabled[key] ?? true
                 const hasLookback = key in SENSOR_LOOKBACK_SUPPORT
-                const showSubConfig = (isSocialAccounts || isSocialTopics || isRssFeeds) && isOn
+                const hasPlatformSubConfig = (isX || isBluesky || isMastodon || isRssFeeds) && isOn
 
                 return (
                   <div key={key}>
@@ -381,7 +394,7 @@ export function Sensors() {
                         display: 'flex',
                         alignItems: 'center',
                         padding: '0.875rem 1.25rem',
-                        borderBottom: showSubConfig || !isLast ? '1px solid var(--border-soft)' : 'none',
+                        borderBottom: hasPlatformSubConfig || !isLast ? '1px solid var(--border-soft)' : 'none',
                         transition: 'background 120ms',
                         gap: '0.75rem',
                       }}
@@ -431,8 +444,8 @@ export function Sensors() {
                       </div>
                     </div>
 
-                    {/* Inline sub-config: Social Accounts — per-platform fields */}
-                    {isSocialAccounts && isOn && (
+                    {/* X / Twitter sub-config */}
+                    {isX && isOn && (
                       <div style={{
                         padding: '1rem 1.25rem 1.25rem 3.5rem',
                         background: 'var(--canvas)',
@@ -444,7 +457,7 @@ export function Sensors() {
                         <div>
                           <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                             <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#000' }} />
-                            X / Twitter handles
+                            Accounts
                           </div>
                           <TagInput
                             tags={socialAccountsX}
@@ -453,10 +466,23 @@ export function Sensors() {
                             validate={validateXHandle}
                           />
                         </div>
+                      </div>
+                    )}
+
+                    {/* Bluesky sub-config */}
+                    {isBluesky && isOn && (
+                      <div style={{
+                        padding: '1rem 1.25rem 1.25rem 3.5rem',
+                        background: 'var(--canvas)',
+                        borderBottom: isLast ? 'none' : '1px solid var(--border-soft)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '1rem',
+                      }}>
                         <div>
                           <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                             <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#0085FF' }} />
-                            Bluesky handles
+                            Accounts
                           </div>
                           <TagInput
                             tags={socialAccountsBluesky}
@@ -484,10 +510,33 @@ export function Sensors() {
                             </span>
                           </label>
                         </div>
+                        <div style={{ display: 'flex', gap: '1.5rem' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={blueskyTopicsEnabled} onChange={(e) => setBlueskyTopicsEnabled(e.target.checked)} style={{ accentColor: '#0085FF' }} />
+                            <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Topics</span>
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={blueskyTrendsEnabled} onChange={(e) => setBlueskyTrendsEnabled(e.target.checked)} style={{ accentColor: '#0085FF' }} />
+                            <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Trends</span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Mastodon sub-config */}
+                    {isMastodon && isOn && (
+                      <div style={{
+                        padding: '1rem 1.25rem 1.25rem 3.5rem',
+                        background: 'var(--canvas)',
+                        borderBottom: isLast ? 'none' : '1px solid var(--border-soft)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '1rem',
+                      }}>
                         <div>
                           <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                             <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#6364FF' }} />
-                            Mastodon accounts
+                            Accounts
                           </div>
                           <TagInput
                             tags={socialAccountsMastodon}
@@ -515,24 +564,16 @@ export function Sensors() {
                             </span>
                           </label>
                         </div>
-                      </div>
-                    )}
-
-                    {/* Inline sub-config: Social Topics */}
-                    {isSocialTopics && isOn && (
-                      <div style={{
-                        padding: '1rem 1.25rem 1.25rem 3.5rem',
-                        background: 'var(--canvas)',
-                        borderBottom: isLast ? 'none' : '1px solid var(--border-soft)',
-                      }}>
-                        <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem' }}>
-                          Keywords and hashtags to search
+                        <div style={{ display: 'flex', gap: '1.5rem' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={mastodonTopicsEnabled} onChange={(e) => setMastodonTopicsEnabled(e.target.checked)} style={{ accentColor: '#6364FF' }} />
+                            <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Topics</span>
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={mastodonTrendsEnabled} onChange={(e) => setMastodonTrendsEnabled(e.target.checked)} style={{ accentColor: '#6364FF' }} />
+                            <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Trends</span>
+                          </label>
                         </div>
-                        <TagInput
-                          tags={socialTopicsKeywords}
-                          onChange={setSocialTopicsKeywords}
-                          placeholder="keyword or #hashtag — press Enter"
-                        />
                       </div>
                     )}
 
@@ -579,6 +620,27 @@ export function Sensors() {
                   </div>
                 )
               })}
+
+              {/* Shared Topic Keywords — shown in Social group when any platform has Topics enabled */}
+              {group.label === 'Social' && (
+                (blueskyTopicsEnabled && (enabled.bluesky ?? true)) ||
+                (mastodonTopicsEnabled && (enabled.mastodon ?? true))
+              ) && (
+                <div style={{
+                  padding: '1rem 1.25rem 1.25rem 3.5rem',
+                  background: 'var(--canvas)',
+                  borderTop: '1px solid var(--border-soft)',
+                }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem' }}>
+                    Topic Keywords
+                  </div>
+                  <TagInput
+                    tags={socialTopicsKeywords}
+                    onChange={setSocialTopicsKeywords}
+                    placeholder="keyword or #hashtag — press Enter"
+                  />
+                </div>
+              )}
             </div>
           </div>
         ))}

@@ -15,6 +15,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     mode = body.mode
   }
 
+  // Optional sensor filter — only run the listed sensors
+  const sensors: string[] | undefined = Array.isArray(body.sensors) ? body.sensors : undefined
+
   if (isPipelineRunning()) {
     return NextResponse.json(
       { error: 'Pipeline is already running' },
@@ -27,7 +30,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   // Run pipeline in background via after() — survives response delivery
   after(async () => {
     try {
-      await runPipeline(config, mode)
+      await runPipeline(config, mode, sensors)
     } catch (err) {
       console.error('Pipeline run failed:', err)
     }

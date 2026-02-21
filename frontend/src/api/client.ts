@@ -226,10 +226,10 @@ export const api = {
   getLatest: () =>
     apiFetch<IntelReport>('/intel/latest'),
 
-  triggerFetch: (mode?: RunMode) =>
+  triggerFetch: (mode?: RunMode, sensors?: string[]) =>
     apiFetch<{ status: string; mode: string }>('/fetch', {
       method: 'POST',
-      body: JSON.stringify({ mode: mode ?? 'fetch_summarize' }),
+      body: JSON.stringify({ mode: mode ?? 'fetch_summarize', ...(sensors?.length ? { sensors } : {}) }),
     }),
 
   getPipelineStatus: () =>

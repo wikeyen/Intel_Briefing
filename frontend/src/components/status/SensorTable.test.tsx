@@ -134,6 +134,8 @@ function buildProps(overrides: Partial<SensorTableProps> = {}): SensorTableProps
     report: null,
     config: null,
     pipelineStatus: null,
+    selected: new Set(),
+    onToggleSelect: () => {},
     ...overrides,
   }
 }
@@ -248,8 +250,8 @@ describe('SensorTable', () => {
     const ghRow = screen.getByTestId('sensor-row-github')
     // Row shows a config badge
     expect(within(ghRow).getByText('config')).toBeInTheDocument()
-    // Click to expand and see the full error
-    fireEvent.click(ghRow)
+    // Click the expand chevron to see the full error
+    fireEvent.click(within(ghRow).getByText('\u25B6'))
     const detail = screen.getByTestId('sensor-detail-github')
     expect(within(detail).getByText('Missing GITHUB_TOKEN')).toBeInTheDocument()
   })
@@ -356,7 +358,7 @@ describe('SensorTable', () => {
     // Detail should not be visible before click
     expect(screen.queryByTestId('sensor-detail-hacker_news')).not.toBeInTheDocument()
 
-    // Click to expand
+    // Click the row to expand (running rows still expand on click)
     fireEvent.click(hnRow)
 
     // Detail should now be visible with stage info
@@ -390,8 +392,8 @@ describe('SensorTable', () => {
     const hnRow = screen.getByTestId('sensor-row-hacker_news')
     // Row shows an error badge
     expect(within(hnRow).getByText('error')).toBeInTheDocument()
-    // Click to expand and see the full error
-    fireEvent.click(hnRow)
+    // Click the expand chevron to see the full error
+    fireEvent.click(within(hnRow).getByText('\u25B6'))
     const detail = screen.getByTestId('sensor-detail-hacker_news')
     expect(within(detail).getByText('Connection timeout')).toBeInTheDocument()
   })

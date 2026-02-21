@@ -99,6 +99,7 @@ function buildLlmConfig(config: ConfigSettings): LlmConfig | null {
 export async function runPipeline(
   config: ConfigSettings,
   mode: RunMode,
+  sensorFilter?: string[],
 ): Promise<PipelineResult> {
   const abortController = new AbortController()
   const { signal } = abortController
@@ -109,10 +110,13 @@ export async function runPipeline(
   const effectiveSummaryConcurrency = isLocalModel ? localSummaryConcurrency : defaultConcurrency
   const fetchSemaphore = new Semaphore(defaultConcurrency)
 
-  // Identify enabled sensors from the registry
-  const registrySensorNames = Object.keys(SENSOR_REGISTRY).filter(
+  // Identify enabled sensors from the registry, optionally filtered to a subset
+  const allEnabledSensors = Object.keys(SENSOR_REGISTRY).filter(
     name => config.sensors_enabled[name] !== false,
   )
+  const registrySensorNames = sensorFilter?.length
+    ? allEnabledSensors.filter(name => sensorFilter.includes(name))
+    : allEnabledSensors
 
   const llmConfig = buildLlmConfig(config)
   const shouldFetch = mode === 'fetch' || mode === 'fetch_summarize'

@@ -1,7 +1,7 @@
 // ABOUTME: Pipeline status dashboard — shows health, last run results, per-sensor outcomes, and section item counts.
 // ABOUTME: Polls health every 10s; when running, polls /fetch/status every 2s for live sensor progress.
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { api } from '@/api/client'
 import type { HealthResponse, IntelReport, ConfigSettings, PipelineStatus, SensorJobProgress, RunMode } from '@/api/client'
 import { useToast } from '@/lib/toast-context'
@@ -22,7 +22,17 @@ export function Status() {
   const [stopping, setStopping]       = useState(false)
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null)
   const [, setTick]                   = useState(0)
+  const [selectedSensors, setSelectedSensors] = useState<Set<string>>(new Set())
   const lastFetchedAtRef              = useRef<string | null>(null)
+
+  const toggleSensorSelect = useCallback((sensor: string) => {
+    setSelectedSensors(prev => {
+      const next = new Set(prev)
+      if (next.has(sensor)) next.delete(sensor)
+      else next.add(sensor)
+      return next
+    })
+  }, [])
 
   const loadAll = () => {
     api.health().then(setHealth).catch(() => setHealth({ status: 'error', last_fetch: null }))
@@ -73,13 +83,15 @@ export function Status() {
     return () => clearInterval(iv)
   }, [])
 
-  const handleRun = async (mode: RunMode) => {
+  const handleRun = async (mode: RunMode, sensors?: string[]) => {
     setFetching(true)
     try {
-      await api.triggerFetch(mode)
+      await api.triggerFetch(mode, sensors)
       setRunning(true)
+      setSelectedSensors(new Set())
       const labels = { fetch: 'Fetch', summarize: 'Summarize', fetch_summarize: 'Fetch + Summarize' }
-      showToast(`${labels[mode]} triggered — results will appear shortly`)
+      const suffix = sensors?.length ? ` (${sensors.length} sensor${sensors.length > 1 ? 's' : ''})` : ''
+      showToast(`${labels[mode]}${suffix} triggered — results will appear shortly`)
     } catch (e) {
       showToast('Trigger failed: ' + (e as Error).message)
     } finally {
@@ -200,12 +212,17 @@ export function Status() {
         detail={phaseDetail}
         fetching={fetching}
         isStopping={stopping}
-        onRun={handleRun}
+        onRun={(mode) => {
+          const sensors = selectedSensors.size > 0 ? Array.from(selectedSensors) : undefined
+          handleRun(mode, sensors)
+        }}
         onStop={handleStop}
         failures={pipelineStatus ? {
           fetch: pipelineStatus.sensors.filter(s => s.fetch === 'failed').length,
           summary: pipelineStatus.sensors.filter(s => s.summary === 'failed').length,
         } : undefined}
+        selectedCount={selectedSensors.size}
+        onClearSelection={() => setSelectedSensors(new Set())}
       />
 
       <SensorTable
@@ -214,6 +231,8 @@ export function Status() {
         report={report}
         config={config}
         pipelineStatus={pipelineStatus}
+        selected={selectedSensors}
+        onToggleSelect={toggleSensorSelect}
       />
 
       <ScheduleFooter config={config} />

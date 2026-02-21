@@ -2,7 +2,7 @@
 // ABOUTME: Replaces SensorGrid + Console: shows per-sensor status, item counts, and inline errors.
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import type { IntelReport, ConfigSettings, PipelineStatus, SensorJobProgress } from '@/api/client'
 import { SECTION_SENSORS, SENSOR_LABEL_MAP } from './constants'
 
@@ -12,6 +12,10 @@ export interface SensorTableProps {
   report: IntelReport | null
   config: ConfigSettings | null
   pipelineStatus: PipelineStatus | null
+  /** Currently selected sensors for targeted run */
+  selected: Set<string>
+  /** Toggle a sensor's selection */
+  onToggleSelect: (sensor: string) => void
 }
 
 /* ------------------------------------------------------------------ */
@@ -101,8 +105,27 @@ function stageColor(state: string): string {
 /* Component                                                           */
 /* ------------------------------------------------------------------ */
 
-export function SensorTable({ isRunning, liveSensors, report, config, pipelineStatus }: SensorTableProps) {
+export function SensorTable({ isRunning, liveSensors, report, config, pipelineStatus, selected, onToggleSelect }: SensorTableProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+
+  // Auto-expand failed sensors so errors are visible without clicking
+  const prevRunningRef = useRef(isRunning)
+  useEffect(() => {
+    // Only auto-expand when transitioning from running → idle (run just finished)
+    if (prevRunningRef.current && !isRunning && pipelineStatus) {
+      const failed = pipelineStatus.sensors
+        .filter(s => s.fetch === 'failed' || s.summary === 'failed')
+        .map(s => s.name)
+      if (failed.length > 0) {
+        setExpanded(prev => {
+          const next = new Set(prev)
+          for (const name of failed) next.add(name)
+          return next
+        })
+      }
+    }
+    prevRunningRef.current = isRunning
+  }, [isRunning, pipelineStatus])
 
   const sensorCounts = useMemo(() => countItemsBySensor(report), [report])
 
@@ -295,17 +318,39 @@ export function SensorTable({ isRunning, liveSensors, report, config, pipelineSt
 
               const hasDetail = !isDisabled && (isFailed || isOk || lastSp)
 
+              const isSelected = selected.has(sensorKey)
+
               return (
                 <div key={sensorKey}>
                   <div
                     data-testid={`sensor-row-${sensorKey}`}
                     style={{
                       ...sensorRowStyle,
-                      cursor: hasDetail ? 'pointer' : 'default',
+                      cursor: isDisabled ? 'default' : 'pointer',
+                      background: isSelected ? 'var(--accent-bg, rgba(59,130,246,0.06))' : 'transparent',
                     }}
-                    onClick={() => hasDetail && toggleExpanded(sensorKey)}
+                    onClick={() => {
+                      if (!isDisabled) onToggleSelect(sensorKey)
+                    }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {/* Checkbox for selection */}
+                      {!isDisabled && (
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => onToggleSelect(sensorKey)}
+                          onClick={e => e.stopPropagation()}
+                          style={{
+                            width: 13,
+                            height: 13,
+                            margin: 0,
+                            cursor: 'pointer',
+                            accentColor: 'var(--accent)',
+                            flexShrink: 0,
+                          }}
+                        />
+                      )}
                       <span style={dotStyle(idleDotColor, false)} />
                       <span style={{
                         color: isDisabled ? 'var(--ink-faint)' : 'var(--ink)',
@@ -313,21 +358,40 @@ export function SensorTable({ isRunning, liveSensors, report, config, pipelineSt
                         {label}
                       </span>
                       {isFailed && (
-                        <span style={{
-                          display: 'inline-block',
-                          fontSize: '0.5625rem',
-                          fontWeight: 700,
-                          letterSpacing: '0.08em',
-                          textTransform: 'uppercase',
-                          padding: '0.0625rem 0.375rem',
-                          borderRadius: 3,
-                          color: isConfigErr ? 'var(--warn)' : 'var(--err)',
-                          background: isConfigErr ? 'var(--warn-bg)' : 'var(--err-bg)',
-                          border: `1px solid ${isConfigErr ? 'var(--warn)' : 'var(--err)'}`,
-                          opacity: 0.85,
-                          marginLeft: '0.25rem',
-                        }}>
+                        <span
+                          onClick={e => { e.stopPropagation(); toggleExpanded(sensorKey) }}
+                          style={{
+                            display: 'inline-block',
+                            fontSize: '0.5625rem',
+                            fontWeight: 700,
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase',
+                            padding: '0.0625rem 0.375rem',
+                            borderRadius: 3,
+                            color: isConfigErr ? 'var(--warn)' : 'var(--err)',
+                            background: isConfigErr ? 'var(--warn-bg)' : 'var(--err-bg)',
+                            border: `1px solid ${isConfigErr ? 'var(--warn)' : 'var(--err)'}`,
+                            opacity: 0.85,
+                            marginLeft: '0.25rem',
+                            cursor: 'pointer',
+                          }}
+                        >
                           {isConfigErr ? 'config' : 'error'}
+                        </span>
+                      )}
+                      {/* Expand/collapse toggle for detail */}
+                      {hasDetail && (
+                        <span
+                          onClick={e => { e.stopPropagation(); toggleExpanded(sensorKey) }}
+                          style={{
+                            fontSize: '0.5rem',
+                            color: 'var(--ink-faint)',
+                            cursor: 'pointer',
+                            marginLeft: '0.125rem',
+                            userSelect: 'none',
+                          }}
+                        >
+                          {isExpanded ? '\u25BC' : '\u25B6'}
                         </span>
                       )}
                     </div>

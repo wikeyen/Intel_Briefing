@@ -21,15 +21,19 @@ export interface ActionBarProps {
   onStop: () => void
   /** Failure counts from last run — shown in the mode dropdown */
   failures?: { fetch: number; summary: number }
+  /** Number of sensors currently selected in the table */
+  selectedCount?: number
+  /** Clear all selected sensors */
+  onClearSelection?: () => void
 }
 
 function modeOptions(failures?: { fetch: number; summary: number }): { value: RunMode; label: string; disabled?: boolean }[] {
   const ff = failures?.fetch ?? 0
   const sf = failures?.summary ?? 0
   return [
-    { value: 'fetch', label: ff > 0 ? `Fetch · ${ff} failed` : 'Fetch' },
+    { value: 'fetch', label: ff > 0 ? `Fetch \u00b7 ${ff} failed` : 'Fetch' },
     { value: 'fetch_summarize', label: 'Fetch + Summarize' },
-    { value: 'summarize', label: sf > 0 ? `Summarize · ${sf} failed` : 'Summarize', disabled: ff > 0 },
+    { value: 'summarize', label: sf > 0 ? `Summarize \u00b7 ${sf} failed` : 'Summarize', disabled: ff > 0 },
   ]
 }
 
@@ -64,6 +68,8 @@ export function ActionBar({
   onRun,
   onStop,
   failures,
+  selectedCount = 0,
+  onClearSelection,
 }: ActionBarProps) {
   const [selectedMode, setSelectedMode] = useState<RunMode>('fetch_summarize')
 
@@ -73,13 +79,7 @@ export function ActionBar({
   const pct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0
   const options = modeOptions(failures)
 
-  // Retry logic — pick the right mode based on what failed
-  const ff = failures?.fetch ?? 0
-  const sf = failures?.summary ?? 0
-  const totalFailures = ff + sf
-  const retryMode: RunMode = ff > 0 && sf > 0 ? 'fetch_summarize'
-    : ff > 0 ? 'fetch'
-    : 'summarize'
+  const hasSelection = selectedCount > 0
 
   // Subtitle: progress text when running, health description when idle
   const subtitle = isRunning
@@ -97,7 +97,7 @@ export function ActionBar({
       marginBottom: '2rem',
       overflow: 'hidden',
     }}>
-      {/* ── Left: "Status" title with health dot + subtitle ── */}
+      {/* -- Left: "Status" title with health dot + subtitle -- */}
       <div>
         <h2 style={{
           fontSize: '1.125rem',
@@ -131,8 +131,37 @@ export function ActionBar({
         </p>
       </div>
 
-      {/* ── Right: mode dropdown + Run button ── */}
+      {/* -- Right: mode dropdown + Run button -- */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, paddingTop: '0.125rem' }}>
+        {/* Selection indicator + clear */}
+        {!isRunning && hasSelection && (
+          <span style={{
+            fontSize: '0.6875rem',
+            color: 'var(--accent)',
+            fontWeight: 500,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.25rem',
+          }}>
+            {selectedCount} selected
+            <button
+              onClick={onClearSelection}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--ink-faint)',
+                cursor: 'pointer',
+                fontSize: '0.75rem',
+                padding: '0 0.125rem',
+                lineHeight: 1,
+              }}
+              title="Clear selection"
+            >
+              \u2715
+            </button>
+          </span>
+        )}
+
         {/* Mode dropdown — hidden during runs */}
         {!isRunning && (
           <select
@@ -152,28 +181,6 @@ export function ActionBar({
               <option key={m.value} value={m.value} disabled={m.disabled}>{m.label}</option>
             ))}
           </select>
-        )}
-
-        {/* Retry button — visible only when idle with failures */}
-        {!isRunning && totalFailures > 0 && (
-          <button
-            onClick={() => onRun(retryMode)}
-            disabled={disabled}
-            style={{
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              padding: '0.375rem 1rem',
-              borderRadius: 6,
-              border: 'none',
-              color: disabled ? 'var(--ink-faint)' : '#FFFFFF',
-              background: disabled ? 'var(--border)' : 'var(--err, #d93025)',
-              cursor: disabled ? 'not-allowed' : 'pointer',
-              transition: 'background 120ms',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            Retry
-          </button>
         )}
 
         {/* Run / Stop button */}
@@ -213,12 +220,12 @@ export function ActionBar({
               whiteSpace: 'nowrap',
             }}
           >
-            Run
+            Run{hasSelection ? ` (${selectedCount})` : ''}
           </button>
         )}
       </div>
 
-      {/* ── Progress bar — thin strip at the bottom when running ── */}
+      {/* -- Progress bar — thin strip at the bottom when running -- */}
       {isRunning && (
         <div style={{
           position: 'absolute',

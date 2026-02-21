@@ -522,19 +522,20 @@ const refLinkStyle = (verified: boolean | null | undefined): React.CSSProperties
 })
 
 /** Render a single ref as a superscript link. */
-function RefLink({ ref, index }: { ref: { title: string; url: string; verified?: boolean | null }; index: number }) {
+function RefLink({ source, index }: { source: { title: string; url: string; verified?: boolean | null }; index: number }) {
   return (
     <a
-      href={ref.verified === false ? undefined : ref.url}
+      className="citation-ref"
+      href={source.verified === false ? undefined : source.url}
       target="_blank"
       rel="noopener noreferrer"
-      title={ref.verified === false ? `${ref.title} — link could not be verified` : ref.title}
-      style={refLinkStyle(ref.verified)}
+      title={source.verified === false ? `${source.title} — link could not be verified` : source.title}
+      style={refLinkStyle(source.verified)}
       onMouseEnter={e => {
-        if (ref.verified !== false) (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'underline'
+        if (source.verified !== false) (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'underline'
       }}
       onMouseLeave={e => {
-        if (ref.verified !== false) (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'none'
+        if (source.verified !== false) (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'none'
       }}
     >
       [{index}]
@@ -568,13 +569,13 @@ function TextWithRefs({ text, refs, query, globalSources }: {
           // New format: resolve [N] by ID from global source list
           const source = globalSources.find(s => s.id === displayNum)
           if (source) {
-            parts.push(<RefLink key={`ref-${key++}`} ref={{ title: source.title, url: source.url }} index={displayNum} />)
+            parts.push(<RefLink key={`ref-${key++}`} source={{ title: source.title, url: source.url }} index={displayNum} />)
           } else {
             parts.push(<span key={`ref-${key++}`}>{segment}</span>)
           }
         } else if (refCounter < refs.length) {
           // Legacy format: positional mapping into per-entry refs
-          parts.push(<RefLink key={`ref-${key++}`} ref={refs[refCounter]} index={displayNum} />)
+          parts.push(<RefLink key={`ref-${key++}`} source={refs[refCounter]} index={displayNum} />)
           refCounter++
         } else {
           parts.push(<span key={`ref-${key++}`}>{segment}</span>)
@@ -592,7 +593,7 @@ function TextWithRefs({ text, refs, query, globalSources }: {
       <>
         <Highlight text={text} query={query} />
         {refs.map((r, ri) => (
-          <RefLink key={ri} ref={r} index={ri + 1} />
+          <RefLink key={ri} source={r} index={ri + 1} />
         ))}
       </>
     )

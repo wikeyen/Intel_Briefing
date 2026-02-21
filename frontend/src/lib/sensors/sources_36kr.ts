@@ -2,6 +2,7 @@
 // ABOUTME: Fetches latest news flashes from 36Kr, a leading Chinese tech news outlet.
 import { parse as parseHTML } from 'node-html-parser'
 import type { ConfigSettings, IntelItem } from '../models'
+import { hashString } from './utils'
 
 const KR_URL = 'https://36kr.com/newsflashes'
 const HEADERS = {
@@ -100,10 +101,3 @@ function parseFromHTML(html: string, limit: number): IntelItem[] {
   return items
 }
 
-function hashString(s: string): number {
-  let hash = 0
-  for (let i = 0; i < s.length; i++) {
-    hash = ((hash << 5) - hash + s.charCodeAt(i)) | 0
-  }
-  return Math.abs(hash)
-}

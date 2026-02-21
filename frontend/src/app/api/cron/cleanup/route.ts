@@ -6,6 +6,19 @@ import { readReport, writeReport } from '@/lib/pipeline/cache'
 import type { IntelItem } from '@/lib/models'
 import type { CategoryKey } from '@/lib/sensors/taxonomy'
 
+/** Constant-time string comparison to prevent timing attacks. */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  const encoder = new TextEncoder()
+  const bufA = encoder.encode(a)
+  const bufB = encoder.encode(b)
+  let diff = 0
+  for (let i = 0; i < bufA.length; i++) {
+    diff |= bufA[i] ^ bufB[i]
+  }
+  return diff === 0
+}
+
 /** Returns true if the item should be kept (not expired). */
 function isItemAlive(item: IntelItem, cutoffMs: number): boolean {
   if (!item.published_at) {
@@ -22,8 +35,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const cronSecret = process.env.CRON_SECRET
   if (cronSecret) {
     const authHeader = request.headers.get('authorization')
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 })
+    const expected = `Bearer ${cronSecret}`
+    if (!authHeader || !timingSafeEqual(authHeader, expected)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
   }
 

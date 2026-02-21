@@ -6,6 +6,7 @@ import { api } from '@/api/client'
 import { TagInput } from '@/components/TagInput'
 
 import { useToast } from '@/lib/toast-context'
+import { inputBase, focus, blur, SubLabel } from '@/components/form-styles'
 import { ALL_CATEGORIES, CATEGORY_META } from '@/lib/sensors/taxonomy'
 
 const OUTPUT_SECTIONS = ALL_CATEGORIES.map(key => ({
@@ -28,42 +29,6 @@ const TIMEZONES = [
   'Asia/Seoul',
   'Australia/Sydney',
 ]
-
-const inputBase: React.CSSProperties = {
-  background: 'var(--surface)',
-  border: '1px solid var(--border)',
-  borderRadius: 4,
-  padding: '0.75rem 1rem',
-  fontSize: '0.9375rem',
-  color: 'var(--ink)',
-  outline: 'none',
-  transition: 'border-color 120ms, box-shadow 120ms',
-  fontFamily: 'inherit',
-}
-
-function focus(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) {
-  e.currentTarget.style.borderColor = 'var(--accent)'
-  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(29,107,79,0.1)'
-}
-function blur(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) {
-  e.currentTarget.style.borderColor = 'var(--border)'
-  e.currentTarget.style.boxShadow = 'none'
-}
-
-function SubLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{
-      fontSize: '0.6875rem',
-      fontWeight: 700,
-      letterSpacing: '0.09em',
-      textTransform: 'uppercase',
-      color: 'var(--ink-faint)',
-      marginBottom: '1rem',
-    }}>
-      {children}
-    </div>
-  )
-}
 
 export function Pipeline() {
   const showToast = useToast()

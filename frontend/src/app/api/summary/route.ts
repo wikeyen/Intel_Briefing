@@ -16,7 +16,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Basic validation
     if (!body.generated_at || !body.report_fetched_at || !body.overall || !Array.isArray(body.sections)) {
       return NextResponse.json(
-        { detail: 'Invalid BriefingSummary: missing required fields' },
+        { error: 'Invalid BriefingSummary: missing required fields' },
         { status: 400 },
       )
     }
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: true })
   } catch {
     return NextResponse.json(
-      { detail: 'Invalid request body' },
+      { error: 'Invalid request body' },
       { status: 400 },
     )
   }

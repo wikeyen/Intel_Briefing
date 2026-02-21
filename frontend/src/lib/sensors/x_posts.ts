@@ -3,12 +3,7 @@
 import { Scraper, type Tweet } from '@the-convocation/twitter-scraper'
 import { parse as parseHTML } from 'node-html-parser'
 import type { ConfigSettings, IntelItem } from '../models'
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
+import { delay } from './utils'
 
 // ── Scraper singleton (reuse across calls to keep auth session) ──────────────
 let _scraper: Scraper | null = null

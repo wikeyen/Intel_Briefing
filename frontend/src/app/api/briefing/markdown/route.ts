@@ -8,7 +8,7 @@ export async function GET(): Promise<NextResponse> {
   const report = await readReport()
   if (!report) {
     return NextResponse.json(
-      { detail: 'No data available yet' },
+      { error: 'No data available yet' },
       { status: 503 },
     )
   }

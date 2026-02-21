@@ -1,8 +1,8 @@
 // ABOUTME: Hacker News top blogs sensor using OPML + RSS/Atom feed parsing.
 // ABOUTME: Fetches recent articles from a curated list of high-quality tech blogs.
-import { createHash } from 'crypto'
 import { XMLParser } from 'fast-xml-parser'
 import type { ConfigSettings, IntelItem } from '../models'
+import { stripHtml, md5Short } from './utils'
 
 const OPML_URL =
   'https://gist.githubusercontent.com/emschwartz/e6d2bf860ccc367fe37ff953ba6de66b/raw/hn-popular-blogs-2025.opml'
@@ -41,14 +41,6 @@ async function fetchOpml(): Promise<BlogEntry[]> {
   } catch {
     return []
   }
-}
-
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]+>/g, '').trim()
-}
-
-function md5Short(input: string): string {
-  return createHash('md5').update(input).digest('hex').slice(0, 8)
 }
 
 async function fetchRss(sourceTitle: string, rssUrl: string): Promise<IntelItem[]> {
@@ -120,8 +112,8 @@ async function fetchRss(sourceTitle: string, rssUrl: string): Promise<IntelItem[
 
 export async function fetchHnBlogs(_config: ConfigSettings, limit: number): Promise<IntelItem[]> {
   try {
-    const blogs = (await fetchOpml()).length > 0 ? await fetchOpml() : FALLBACK_FEEDS
-    const actualBlogs = blogs.length > 0 ? blogs : FALLBACK_FEEDS
+    const opmlBlogs = await fetchOpml()
+    const actualBlogs = opmlBlogs.length > 0 ? opmlBlogs : FALLBACK_FEEDS
 
     const articles: IntelItem[] = []
     for (const blog of actualBlogs.slice(0, MAX_BLOGS)) {

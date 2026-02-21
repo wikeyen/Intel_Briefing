@@ -2,16 +2,13 @@
 // ABOUTME: Uses a 3-tier query fallback strategy to stay resilient over weekends and low-submission periods.
 import { XMLParser } from 'fast-xml-parser'
 import type { ConfigSettings, IntelItem } from '../models'
+import { delay } from './utils'
 
 const STRATEGIES: [string, string][] = [
   ['cat:cs.AI', 'submittedDate'],
   ['cat:cs.AI+OR+cat:cs.LG+OR+cat:cs.CL', 'submittedDate'],
   ['cat:cs.AI+OR+cat:cs.LG', 'lastUpdatedDate'],
 ]
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
 
 export async function fetchArxiv(_config: ConfigSettings, limit: number): Promise<IntelItem[]> {
   let lastError: Error | null = null
@@ -24,7 +21,7 @@ export async function fetchArxiv(_config: ConfigSettings, limit: number): Promis
       lastError = err instanceof Error ? err : new Error(String(err))
     }
     if (i < STRATEGIES.length - 1) {
-      await sleep(3000)
+      await delay(3000)
     }
   }
   if (lastError) throw lastError

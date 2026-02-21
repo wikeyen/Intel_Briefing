@@ -17,7 +17,7 @@ export async function GET(
   if (!KNOWN_SECTIONS.has(section)) {
     return NextResponse.json(
       {
-        detail: `Unknown section '${section}'. Known sections: ${[...ALL_CATEGORIES].sort().join(', ')}`,
+        error: `Unknown section '${section}'. Known sections: ${[...ALL_CATEGORIES].sort().join(', ')}`,
       },
       { status: 404 },
     )
@@ -35,7 +35,7 @@ export async function GET(
   const report = await readReport()
   if (!report) {
     return NextResponse.json(
-      { detail: 'No data available yet' },
+      { error: 'No data available yet' },
       { status: 503 },
     )
   }

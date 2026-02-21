@@ -10,13 +10,9 @@ const VALID_MODES: RunMode[] = ['fetch', 'summarize', 'fetch_summarize']
 export async function POST(request: NextRequest): Promise<NextResponse> {
   let mode: RunMode = 'fetch_summarize'
 
-  try {
-    const body = await request.json().catch(() => ({}))
-    if (body.mode && VALID_MODES.includes(body.mode)) {
-      mode = body.mode
-    }
-  } catch {
-    // Use default mode
+  const body = await request.json().catch(() => ({}))
+  if (body.mode && VALID_MODES.includes(body.mode)) {
+    mode = body.mode
   }
 
   if (isPipelineRunning()) {

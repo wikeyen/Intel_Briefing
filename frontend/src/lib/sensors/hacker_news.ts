@@ -1,13 +1,10 @@
 // ABOUTME: Hacker News sensor using the official Firebase REST API.
 // ABOUTME: Fetches top stories with parallel fetching and top-level comments.
 import type { ConfigSettings, IntelItem } from '../models'
+import { stripHtml } from './utils'
 
 const HN_BASE = 'https://hacker-news.firebaseio.com/v0'
 const MAX_COMMENTS = 5
-
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]+>/g, '').trim()
-}
 
 interface HnComment {
   by?: string

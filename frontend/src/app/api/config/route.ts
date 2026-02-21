@@ -17,14 +17,14 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
     body = await request.json()
   } catch {
     return NextResponse.json(
-      { detail: 'Request body must be valid JSON' },
+      { error: 'Request body must be valid JSON' },
       { status: 400 },
     )
   }
 
   if (typeof body !== 'object' || body === null || Array.isArray(body)) {
     return NextResponse.json(
-      { detail: 'Request body must be a JSON object' },
+      { error: 'Request body must be a JSON object' },
       { status: 400 },
     )
   }
@@ -40,8 +40,10 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
     const updated = await saveConfig(update)
     return NextResponse.json(maskConfig(updated))
   } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    console.error('Failed to save config:', message)
     return NextResponse.json(
-      { detail: `Failed to save config: ${err}` },
+      { error: 'Failed to save config' },
       { status: 500 },
     )
   }

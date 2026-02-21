@@ -4,13 +4,27 @@ import { NextRequest, NextResponse } from 'next/server'
 import { loadConfig } from '@/lib/config'
 import { runPipeline } from '@/lib/pipeline/orchestrator'
 
+/** Constant-time string comparison to prevent timing attacks. */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  const encoder = new TextEncoder()
+  const bufA = encoder.encode(a)
+  const bufB = encoder.encode(b)
+  let diff = 0
+  for (let i = 0; i < bufA.length; i++) {
+    diff |= bufA[i] ^ bufB[i]
+  }
+  return diff === 0
+}
+
 export async function GET(request: NextRequest): Promise<NextResponse> {
   // Verify cron secret
   const cronSecret = process.env.CRON_SECRET
   if (cronSecret) {
     const authHeader = request.headers.get('authorization')
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 })
+    const expected = `Bearer ${cronSecret}`
+    if (!authHeader || !timingSafeEqual(authHeader, expected)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
   }
 
@@ -29,8 +43,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       summarized: !!result.summary,
     })
   } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    console.error('Cron pipeline failed:', message)
     return NextResponse.json(
-      { detail: `Pipeline failed: ${err}` },
+      { error: 'Pipeline failed' },
       { status: 500 },
     )
   }

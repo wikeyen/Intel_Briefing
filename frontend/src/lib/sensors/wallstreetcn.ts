@@ -1,6 +1,7 @@
 // ABOUTME: WallStreetCN sensor using the public information-flow API.
 // ABOUTME: Fetches global finance and macro news from China's leading financial news platform.
 import type { ConfigSettings, IntelItem } from '../models'
+import { hashString } from './utils'
 
 const WSCN_URL =
   'https://api-one.wallstcn.com/apiv1/content/information-flow?channel=global-channel&accept=article&limit=30'
@@ -44,10 +45,3 @@ export async function fetchWallStreetCN(_config: ConfigSettings, limit: number):
   }
 }
 
-function hashString(s: string): number {
-  let hash = 0
-  for (let i = 0; i < s.length; i++) {
-    hash = ((hash << 5) - hash + s.charCodeAt(i)) | 0
-  }
-  return hash
-}

@@ -1,9 +1,10 @@
 // ABOUTME: Console component — displays sensor errors from the last pipeline run.
 // ABOUTME: Shows error_kind badges (config vs api), error messages, and sensor names in a log-style layout.
 'use client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { api } from '@/api/client'
 import type { PipelineStatus } from '@/api/client'
+import { usePolling } from '@/lib/hooks/usePolling'
 import { Pagination } from './Pagination'
 import { SENSOR_LABELS } from '@/lib/sensors/taxonomy'
 
@@ -99,17 +100,8 @@ function ErrorRow({ entry }: { entry: { name: string; error: string; kind: 'conf
 }
 
 export function Console() {
-  const [status, setStatus] = useState<PipelineStatus | null>(null)
+  const status = usePolling<PipelineStatus>(() => api.getPipelineStatus(), 5_000)
   const [page, setPage] = useState(1)
-
-  useEffect(() => {
-    const load = () => {
-      api.getPipelineStatus().then(setStatus).catch(() => {})
-    }
-    load()
-    const iv = setInterval(load, 5_000)
-    return () => clearInterval(iv)
-  }, [])
 
   // Build errors from both fetch and summary stages, capped at MAX_ERRORS
   const allErrors: Array<{ name: string; error: string; kind: 'config' | 'api' | null }> = []

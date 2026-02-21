@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect, type ReactNode } from 'react'
 import { api } from '@/api/client'
 import type { HealthResponse, PipelineStatus, SummaryProgress } from '@/api/client'
+import { usePolling, usePollEffect } from '@/lib/hooks/usePolling'
 
 const CONFIG_NAV = [
   { href: '/sources',     label: 'Sources' },
@@ -66,25 +67,9 @@ interface Props {
 export function Sidebar({ onNavigate }: Props) {
   const pathname = usePathname()
   const router = useRouter()
-  const [health, setHealth] = useState<HealthResponse | null>(null)
-  const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null)
-  const [summaryProgress, setSummaryProgress] = useState<SummaryProgress | null>(null)
-
-  useEffect(() => {
-    api.health().then(setHealth).catch(() => setHealth({ status: 'error', last_fetch: null }))
-    const iv = setInterval(() => api.health().then(setHealth).catch(() => {}), 30_000)
-    return () => clearInterval(iv)
-  }, [])
-
-  useEffect(() => {
-    const poll = () => {
-      api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
-      api.getSummaryStatus().then(setSummaryProgress).catch(() => {})
-    }
-    poll()
-    const iv = setInterval(poll, 5_000)
-    return () => clearInterval(iv)
-  }, [])
+  const health = usePolling<HealthResponse>(() => api.health(), 30_000)
+  const pipelineStatus = usePolling<PipelineStatus>(() => api.getPipelineStatus(), 5_000)
+  const summaryProgress = usePolling<SummaryProgress>(() => api.getSummaryStatus(), 5_000)
 
   const hasErrors = (pipelineStatus?.sensors.some(s => s.fetch_error !== null || s.summary_error !== null)) ?? false
   const runId = pipelineStatus?.completed_at ?? pipelineStatus?.started_at ?? ''

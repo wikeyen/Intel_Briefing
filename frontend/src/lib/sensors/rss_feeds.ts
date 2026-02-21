@@ -1,20 +1,12 @@
 // ABOUTME: RSS feeds sensor — fetches user-specified RSS/Atom feeds and extracts article content.
 // ABOUTME: Parses XML with fast-xml-parser, scrapes full content via readability, with fallback to RSS summary.
-import { createHash } from 'crypto'
 import { XMLParser } from 'fast-xml-parser'
 import type { ConfigSettings, IntelItem } from '../models'
 import { SensorConfigError } from './errors'
+import { stripHtml, md5Short } from './utils'
 
 const FEED_FETCH_TIMEOUT = 10_000
 const SCRAPE_CONCURRENCY = 5
-
-function md5Short(input: string): string {
-  return createHash('md5').update(input).digest('hex').slice(0, 8)
-}
-
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]+>/g, '').trim()
-}
 
 interface RawItem {
   title: string

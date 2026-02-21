@@ -21,9 +21,9 @@ const PROMPT_SENSORS: Array<{ key: string; label: string }> = [
   { key: 'hn_blogs', label: 'HN Blogs' },
   { key: 'sources_36kr', label: '36Kr' },
   { key: 'wallstreetcn', label: 'WallStreetCN' },
-  { key: 'social_accounts', label: 'Social Accounts' },
-  { key: 'social_topics', label: 'Social Topics' },
-  { key: 'social_trends', label: 'Social Trends' },
+  { key: 'x', label: 'X / Twitter' },
+  { key: 'bluesky', label: 'Bluesky' },
+  { key: 'mastodon', label: 'Mastodon' },
   { key: 'chrome_radar', label: 'Chrome Radar' },
   { key: 'rss_feeds', label: 'RSS Feeds' },
 ]

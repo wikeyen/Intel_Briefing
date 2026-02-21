@@ -113,7 +113,7 @@ async function fetchViaScraper(
 
     items.push({
       id: `x-${tweet.id}`,
-      source: 'x_posts',
+      source: 'x',
       title: text.slice(0, 280),
       url: tweet.permanentUrl ?? `https://x.com/${handle}/status/${tweet.id}`,
       heat: heatParts.join(' \u00b7 ') || null,
@@ -265,7 +265,7 @@ async function fetchAccountPostsXcancel(handle: string, lookbackMs: number): Pro
 
     items.push({
       id: `x-${statusId}`,
-      source: 'x_posts',
+      source: 'x',
       title: title.slice(0, 280),
       url: `https://x.com/${authorHandle}/status/${statusId}`,
       heat: heat || null,
@@ -284,7 +284,7 @@ export async function fetchXPosts(config: ConfigSettings, limit: number): Promis
   const handles = config.social_accounts_x
   if (!handles || handles.length === 0) return []
 
-  const lookbackHours = config.sensor_lookback_hours?.x_posts ?? 48
+  const lookbackHours = config.sensor_lookback_hours?.x ?? 48
   const lookbackMs = lookbackHours * 60 * 60 * 1000
   const perAccountLimit = Math.max(10, Math.ceil(limit / handles.length) * 2)
 

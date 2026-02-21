@@ -1,5 +1,5 @@
 // ABOUTME: Bluesky platform adapter — AT Protocol API client for feed/search operations.
-// ABOUTME: Shared by social_accounts, social_topics, and social_trends sensors.
+// ABOUTME: Shared by the bluesky sensor (accounts, topics, and trends).
 import { BskyAgent } from '@atproto/api'
 import { SensorConfigError } from '../sensors/errors'
 import type { IntelItem } from '../models'

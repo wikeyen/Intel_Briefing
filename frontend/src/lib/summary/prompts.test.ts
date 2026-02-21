@@ -29,8 +29,8 @@ describe('getSensorPrompt', () => {
   it('has a default prompt for every standard sensor', () => {
     const sensors = [
       'hacker_news', 'arxiv', 'github', 'product_hunt', 'v2ex',
-      'hn_blogs', 'sources_36kr', 'wallstreetcn', 'social_accounts',
-      'social_topics', 'social_trends', 'chrome_radar', 'rss_feeds',
+      'hn_blogs', 'sources_36kr', 'wallstreetcn', 'x',
+      'bluesky', 'mastodon', 'chrome_radar', 'rss_feeds',
     ]
     for (const s of sensors) {
       expect(DEFAULT_SENSOR_PROMPTS[s]).toBeTruthy()

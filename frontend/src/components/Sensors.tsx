@@ -584,12 +584,6 @@ export function Sensors() {
                             </span>
                           </label>
                         </div>
-                        <div style={{ display: 'flex', gap: '1.5rem' }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                            <input type="checkbox" checked={blueskyTopicsEnabled} onChange={(e) => { setBlueskyTopicsEnabled(e.target.checked); trigger() }} style={{ accentColor: '#0085FF' }} />
-                            <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Topics</span>
-                          </label>
-                        </div>
                       </div>
                     )}
 
@@ -636,16 +630,6 @@ export function Sensors() {
                             <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
                               Include accounts I follow
                             </span>
-                          </label>
-                        </div>
-                        <div style={{ display: 'flex', gap: '1.5rem' }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                            <input type="checkbox" checked={mastodonTopicsEnabled} onChange={(e) => { setMastodonTopicsEnabled(e.target.checked); trigger() }} style={{ accentColor: '#6364FF' }} />
-                            <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Topics</span>
-                          </label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                            <input type="checkbox" checked={mastodonTrendsEnabled} onChange={(e) => { setMastodonTrendsEnabled(e.target.checked); trigger() }} style={{ accentColor: '#6364FF' }} />
-                            <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Trends</span>
                           </label>
                         </div>
                       </div>
@@ -697,24 +681,74 @@ export function Sensors() {
                 )
               })}
 
-              {/* Shared Topic Keywords — shown in Social group when any platform has Topics enabled */}
-              {group.label === 'Social' && (
-                (blueskyTopicsEnabled && (enabled.bluesky ?? true)) ||
-                (mastodonTopicsEnabled && (enabled.mastodon ?? true))
-              ) && (
+              {/* Discovery — shared Topics + Trends controls for social platforms */}
+              {group.label === 'Social' && ((enabled.bluesky ?? true) || (enabled.mastodon ?? true)) && (
                 <div style={{
-                  padding: '1rem 1.25rem 1.25rem 3.5rem',
+                  padding: '1rem 1.25rem 1.25rem 1.25rem',
                   background: 'var(--canvas)',
                   borderTop: '1px solid var(--border-soft)',
                 }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem' }}>
-                    Topic Keywords
+                  {/* Section header */}
+                  <div style={{ fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.09em',
+                    textTransform: 'uppercase', color: 'var(--ink-faint)', marginBottom: '0.75rem' }}>
+                    Discovery
                   </div>
-                  <TagInput
-                    tags={socialTopicsKeywords}
-                    onChange={(tags) => { setSocialTopicsKeywords(tags); trigger() }}
-                    placeholder="keyword or #hashtag — press Enter"
-                  />
+
+                  {/* Topics row */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', minWidth: 40 }}>
+                        Topics
+                      </span>
+                      {(enabled.bluesky ?? true) && (
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={blueskyTopicsEnabled}
+                            onChange={(e) => { setBlueskyTopicsEnabled(e.target.checked); trigger() }}
+                            style={{ accentColor: '#0085FF' }} />
+                          <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#0085FF' }} />
+                          <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Bluesky</span>
+                        </label>
+                      )}
+                      {(enabled.mastodon ?? true) && (
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={mastodonTopicsEnabled}
+                            onChange={(e) => { setMastodonTopicsEnabled(e.target.checked); trigger() }}
+                            style={{ accentColor: '#6364FF' }} />
+                          <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#6364FF' }} />
+                          <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Mastodon</span>
+                        </label>
+                      )}
+                    </div>
+                    {/* Keywords input — shown when any platform has topics on */}
+                    {((blueskyTopicsEnabled && (enabled.bluesky ?? true)) ||
+                      (mastodonTopicsEnabled && (enabled.mastodon ?? true))) && (
+                      <div style={{ paddingLeft: '0.25rem' }}>
+                        <TagInput
+                          tags={socialTopicsKeywords}
+                          onChange={(tags) => { setSocialTopicsKeywords(tags); trigger() }}
+                          placeholder="keyword or #hashtag — press Enter"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Trends row — only if mastodon sensor is on */}
+                  {(enabled.mastodon ?? true) && (
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', minWidth: 40 }}>
+                          Trends
+                        </span>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={mastodonTrendsEnabled}
+                            onChange={(e) => { setMastodonTrendsEnabled(e.target.checked); trigger() }}
+                            style={{ accentColor: '#6364FF' }} />
+                          <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#6364FF' }} />
+                          <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Mastodon</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

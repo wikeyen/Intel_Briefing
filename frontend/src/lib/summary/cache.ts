@@ -33,16 +33,13 @@ function repairIfNeeded(summary: BriefingSummary): BriefingSummary {
   if (
     overall &&
     typeof overall === 'object' &&
-    'quick_scan' in overall &&
-    Array.isArray(overall.quick_scan) &&
-    overall.quick_scan.length === 0 &&
     Array.isArray(overall.sections) &&
     overall.sections.length === 1 &&
     overall.sections[0].entries.length === 1 &&
     overall.sections[0].entries[0].text.trimStart().startsWith('{')
   ) {
     const reparsed = parseOverallJson(overall.sections[0].entries[0].text)
-    if (reparsed.quick_scan.length > 0 || reparsed.executive_summary) {
+    if (reparsed.executive_summary) {
       return { ...summary, overall: reparsed }
     }
   }

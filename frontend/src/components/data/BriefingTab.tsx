@@ -604,7 +604,7 @@ function TextWithRefs({ text, refs, query, globalSources }: {
 
 /** Check if overall briefing has structured data (new format) vs legacy plain text fallback. */
 function isStructuredOverall(overall: OverallBriefing | string): overall is OverallBriefing {
-  return typeof overall === 'object' && overall !== null && 'quick_scan' in overall
+  return typeof overall === 'object' && overall !== null && 'executive_summary' in overall
 }
 
 export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, hasContent, onTrigger, onStop, onStopPipeline, streamTokens, searchQuery }: {
@@ -639,12 +639,6 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
   const q = searchQuery?.toLowerCase().trim() || ''
   const structured = summary && isStructuredOverall(summary.overall) ? summary.overall : null
 
-  const filteredQuickScan = structured && q
-    ? structured.quick_scan.filter(entry =>
-        textHas(entry.text, q) || textHas(entry.source, q)
-      )
-    : structured?.quick_scan
-
   const filteredThemedSections = structured && q
     ? structured.sections
         .map(section => {
@@ -665,7 +659,6 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
 
   // "No results" state when searching
   const hasSearchResults = !q || (
-    (filteredQuickScan?.length ?? 0) > 0 ||
     textHas(structured?.executive_summary, q) ||
     textHas(structured?.sentiment?.mood_summary, q) ||
     (filteredThemedSections?.length ?? 0) > 0 ||
@@ -738,49 +731,6 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
           {/* Structured overall briefing */}
           {isStructuredOverall(summary.overall) ? (
             <>
-              {/* Quick Scan */}
-              {(filteredQuickScan ?? []).length > 0 && (
-                <div style={{
-                  background: 'var(--accent-wash, var(--surface-alt))',
-                  border: '1px solid var(--accent-dim, var(--border))',
-                  borderRadius: 8,
-                  padding: '1rem 1.25rem',
-                }}>
-                  <div style={{
-                    fontSize: '0.6875rem',
-                    fontWeight: 600,
-                    color: 'var(--accent)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                    marginBottom: '0.625rem',
-                  }}>
-                    Quick Scan
-                  </div>
-                  <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-                    {(filteredQuickScan ?? []).map((entry, i) => (
-                      <li key={i} style={{
-                        padding: '0.375rem 0',
-                        borderBottom: i < (filteredQuickScan ?? []).length - 1 ? '1px solid var(--border-soft, var(--border))' : 'none',
-                        fontSize: '0.875rem',
-                        color: 'var(--ink)',
-                        lineHeight: 1.6,
-                      }}>
-                        <TextWithRefs text={entry.text} refs={entry.refs ?? []} query={q} globalSources={structured?.sources} />
-                        {entry.source && (
-                          <span style={{
-                            marginLeft: '0.5rem',
-                            fontSize: '0.6875rem',
-                            color: 'var(--ink-faint)',
-                          }}>
-                            — {entry.source}
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
               {/* Executive Summary */}
               {summary.overall.executive_summary && (
                 <div style={{

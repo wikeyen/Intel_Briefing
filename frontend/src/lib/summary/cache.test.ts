@@ -26,10 +26,7 @@ const SAMPLE: BriefingSummary = {
     },
   ],
   overall: {
-    quick_scan: [
-      { text: 'AI breakthroughs dominated today.', source: 'hacker_news', refs: [] },
-    ],
-    executive_summary: '',
+    executive_summary: 'AI breakthroughs dominated today.',
     sections: [
       {
         title: 'Tech Highlights',
@@ -59,8 +56,7 @@ describe('summary cache', () => {
 
   it('overwrites previous summary', async () => {
     const updatedOverall = {
-      quick_scan: [{ text: 'Updated scan.', source: 'arxiv', refs: [] }],
-      executive_summary: '',
+      executive_summary: 'Updated analysis.',
       sections: [{ title: 'Updated', entries: [{ text: 'Updated briefing.', source: 'arxiv', refs: [] }] }],
       sentiment: { overall_mood: 'neutral' as const, mood_summary: '', controversies: [], opinion_shifts: [], risk_flags: [] },
     }

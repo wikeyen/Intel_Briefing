@@ -171,7 +171,7 @@ export interface SentimentAnalysis {
 }
 
 export interface OverallBriefing {
-  quick_scan: BriefingEntry[]
+  quick_scan?: BriefingEntry[]
   executive_summary: string
   sections: BriefingSection[]
   sentiment: SentimentAnalysis

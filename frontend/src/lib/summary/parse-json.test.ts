@@ -59,11 +59,9 @@ describe('parseSensorJson', () => {
 })
 
 describe('parseOverallJson', () => {
-  it('parses valid JSON with quick_scan and sections', () => {
+  it('parses valid JSON with executive_summary and sections', () => {
     const input = JSON.stringify({
-      quick_scan: [
-        { text: 'OpenAI launches GPT-5', source: 'Hacker News' },
-      ],
+      executive_summary: 'AI continues to dominate.',
       sections: [
         {
           title: 'AI Products',
@@ -73,19 +71,16 @@ describe('parseOverallJson', () => {
     })
 
     const result = parseOverallJson(input)
-    expect(result.quick_scan).toHaveLength(1)
-    expect(result.quick_scan[0].text).toBe('OpenAI launches GPT-5')
-    expect(result.quick_scan[0].source).toBe('Hacker News')
+    expect(result.executive_summary).toBe('AI continues to dominate.')
     expect(result.sections).toHaveLength(1)
     expect(result.sections[0].title).toBe('AI Products')
     expect(result.sections[0].entries).toHaveLength(1)
   })
 
   it('strips markdown code fences', () => {
-    const input = '```json\n{"quick_scan": [{"text": "Test", "source": "HN"}], "sections": []}\n```'
+    const input = '```json\n{"executive_summary": "Test summary", "sections": []}\n```'
     const result = parseOverallJson(input)
-    expect(result.quick_scan).toHaveLength(1)
-    expect(result.quick_scan[0].text).toBe('Test')
+    expect(result.executive_summary).toBe('Test summary')
   })
 
   it('falls back to single-section wrapper for plain text', () => {
@@ -98,24 +93,15 @@ describe('parseOverallJson', () => {
   })
 
   it('handles missing sections array', () => {
-    const input = JSON.stringify({ quick_scan: [{ text: 'A', source: 'B' }] })
+    const input = JSON.stringify({ executive_summary: 'Summary here' })
     const result = parseOverallJson(input)
-    expect(result.quick_scan).toHaveLength(1)
+    expect(result.executive_summary).toBe('Summary here')
     expect(result.sections).toEqual([])
   })
 
   it('parses refs on entries', () => {
     const input = JSON.stringify({
-      quick_scan: [
-        {
-          text: 'GPT-5 released',
-          source: 'HN',
-          refs: [
-            { title: 'GPT-5 Blog Post', url: 'https://example.com/gpt5' },
-            { title: 'Discussion Thread', url: 'https://example.com/discuss' },
-          ],
-        },
-      ],
+      executive_summary: 'AI is advancing.',
       sections: [
         {
           title: 'AI Products',
@@ -128,51 +114,49 @@ describe('parseOverallJson', () => {
     })
 
     const result = parseOverallJson(input)
-    expect(result.quick_scan[0].refs).toHaveLength(2)
-    expect(result.quick_scan[0].refs[0].url).toBe('https://example.com/gpt5')
     expect(result.sections[0].entries[0].refs).toHaveLength(1)
+    expect(result.sections[0].entries[0].refs[0].url).toBe('https://ph.com/1')
     expect(result.sections[0].entries[1].refs).toEqual([])
   })
 
   it('filters out refs with missing urls', () => {
     const input = JSON.stringify({
-      quick_scan: [
+      executive_summary: '',
+      sections: [
         {
-          text: 'Test',
-          source: 'HN',
-          refs: [
-            { title: 'Valid', url: 'https://example.com' },
-            { title: 'Missing URL' },
-            null,
+          title: 'Test Section',
+          entries: [
+            {
+              text: 'Test',
+              source: 'HN',
+              refs: [
+                { title: 'Valid', url: 'https://example.com' },
+                { title: 'Missing URL' },
+                null,
+              ],
+            },
           ],
         },
       ],
-      sections: [],
     })
     const result = parseOverallJson(input)
-    expect(result.quick_scan[0].refs).toHaveLength(1)
+    expect(result.sections[0].entries[0].refs).toHaveLength(1)
   })
 
-  it('filters out malformed entries and sections', () => {
+  it('filters out malformed sections', () => {
     const input = JSON.stringify({
-      quick_scan: [
-        { text: 'Valid', source: 'HN' },
-        'not-an-object',
-        null,
-      ],
+      executive_summary: '',
       sections: [
         { title: 'Good', entries: [{ text: 'Entry', source: 'X' }] },
         { no_title: true },
       ],
     })
     const result = parseOverallJson(input)
-    expect(result.quick_scan).toHaveLength(1)
     expect(result.sections).toHaveLength(1)
   })
 
   it('parses sentiment analysis block', () => {
     const input = JSON.stringify({
-      quick_scan: [],
       executive_summary: '',
       sections: [],
       sentiment: {
@@ -199,28 +183,25 @@ describe('parseOverallJson', () => {
   })
 
   it('defaults sentiment when missing or invalid', () => {
-    const noSentiment = JSON.stringify({ quick_scan: [], sections: [] })
+    const noSentiment = JSON.stringify({ executive_summary: '', sections: [] })
     const result1 = parseOverallJson(noSentiment)
     expect(result1.sentiment.overall_mood).toBe('neutral')
     expect(result1.sentiment.mood_summary).toBe('')
     expect(result1.sentiment.controversies).toEqual([])
 
-    const badMood = JSON.stringify({ quick_scan: [], sections: [], sentiment: { overall_mood: 'invalid' } })
+    const badMood = JSON.stringify({ executive_summary: '', sections: [], sentiment: { overall_mood: 'invalid' } })
     const result2 = parseOverallJson(badMood)
     expect(result2.sentiment.overall_mood).toBe('neutral')
   })
 
   it('extracts JSON when LLM adds preamble text', () => {
     const json = JSON.stringify({
-      quick_scan: [{ text: 'AI news', source: 'HN', refs: [] }],
       executive_summary: 'A busy day in tech.',
       sections: [{ title: 'Tech', entries: [{ text: 'Big release', source: 'GH', refs: [] }] }],
       sentiment: { overall_mood: 'bullish', mood_summary: 'Optimism', controversies: [], opinion_shifts: [], risk_flags: [] },
     })
     const input = `Here is the briefing summary:\n\n${json}\n\nI hope this helps!`
     const result = parseOverallJson(input)
-    expect(result.quick_scan).toHaveLength(1)
-    expect(result.quick_scan[0].text).toBe('AI news')
     expect(result.executive_summary).toBe('A busy day in tech.')
     expect(result.sections).toHaveLength(1)
     expect(result.sentiment.overall_mood).toBe('bullish')
@@ -239,7 +220,7 @@ describe('parseOverallJson', () => {
 
   it('filters malformed sentiment entries', () => {
     const input = JSON.stringify({
-      quick_scan: [],
+      executive_summary: '',
       sections: [],
       sentiment: {
         overall_mood: 'mixed',
@@ -263,16 +244,15 @@ describe('parseOverallJson', () => {
   it('repairs JSON with unescaped double quotes in string values', () => {
     // Simulates LLM output where source titles contain unescaped quotes
     const input = `{
-  "quick_scan": [
-    {"text": "港股科技股分化："AI新贵"受追捧", "source": "WSJ", "refs": []}
-  ],
   "executive_summary": "A summary with "quoted words" inside.",
-  "sections": [],
+  "sections": [
+    {"title": "港股科技股分化："AI新贵"受追捧", "entries": [{"text": "Test entry", "source": "WSJ"}]}
+  ],
   "sentiment": {"overall_mood": "mixed", "mood_summary": "Test", "controversies": [], "opinion_shifts": [], "risk_flags": []}
 }`
     const result = parseOverallJson(input)
-    expect(result.quick_scan.length).toBeGreaterThanOrEqual(1)
     expect(result.executive_summary.length).toBeGreaterThan(0)
+    expect(result.sections.length).toBeGreaterThanOrEqual(1)
     expect(result.sentiment.overall_mood).toBe('mixed')
   })
 

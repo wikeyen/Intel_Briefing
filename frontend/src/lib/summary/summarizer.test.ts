@@ -100,6 +100,7 @@ describe('summarizeReport', () => {
     expect(result.sections[1].source_url).toBe('https://arxiv.org/list/cs.AI/recent')
     expect(result.sections[1].items).toEqual([])
     // Overall is OverallBriefing fallback shape (raw text not valid JSON)
+    // quick_scan: [] comes from parseOverallJson which still parses it for backward compat
     expect(result.overall).toEqual({
       quick_scan: [],
       executive_summary: '',
@@ -164,6 +165,7 @@ describe('summarizeReport', () => {
     // Still gets one overall call
     expect(llm.chatCompletion).toHaveBeenCalledTimes(1)
     // Overall is OverallBriefing fallback shape (raw text not valid JSON)
+    // quick_scan: [] comes from parseOverallJson which still parses it for backward compat
     expect(result.overall).toEqual({
       quick_scan: [],
       executive_summary: '',

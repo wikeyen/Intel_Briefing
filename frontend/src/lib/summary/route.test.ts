@@ -21,10 +21,7 @@ const SAMPLE: BriefingSummary = {
     },
   ],
   overall: {
-    quick_scan: [
-      { text: 'AI continues to dominate tech news.', source: 'hacker_news', refs: [] },
-    ],
-    executive_summary: '',
+    executive_summary: 'AI continues to dominate tech news.',
     sections: [
       {
         title: 'Key Developments',
@@ -57,7 +54,7 @@ describe('/api/summary route logic', () => {
     await writeSummary(SAMPLE)
     const result = await readSummary()
     expect(result).toEqual(SAMPLE)
-    expect(result!.overall.quick_scan[0].text).toBe('AI continues to dominate tech news.')
+    expect(result!.overall.executive_summary).toBe('AI continues to dominate tech news.')
   })
 
 })

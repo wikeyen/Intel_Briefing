@@ -83,16 +83,13 @@ describe('Briefing tab in Data', () => {
     })
   })
 
-  it('renders quick scan entries when summary exists', async () => {
+  it('renders executive summary when summary exists', async () => {
     mockGetSummary.mockResolvedValue({
       summary: {
         generated_at: '2026-02-19T08:00:00Z',
         report_fetched_at: '2026-02-19T07:55:00Z',
         overall: {
-          quick_scan: [
-            { text: 'Major AI developments this week including new model releases.', source: 'Hacker News', refs: [] },
-          ],
-          executive_summary: '',
+          executive_summary: 'Major AI developments this week including new model releases.',
           sections: [],
           sentiment: { overall_mood: 'neutral', mood_summary: '', controversies: [], opinion_shifts: [], risk_flags: [] },
         },
@@ -110,7 +107,7 @@ describe('Briefing tab in Data', () => {
       summary: {
         generated_at: '2026-02-19T08:00:00Z',
         report_fetched_at: '2026-02-19T07:55:00Z',
-        overall: { quick_scan: [], executive_summary: '', sections: [] },
+        overall: { executive_summary: '', sections: [] },
         sections: [
           {
             sensor_name: 'hacker_news',
@@ -150,7 +147,7 @@ describe('Briefing tab in Data', () => {
       summary: {
         generated_at: '2026-02-19T08:00:00Z',
         report_fetched_at: '2026-02-19T07:55:00Z',
-        overall: { quick_scan: [], executive_summary: '', sections: [] },
+        overall: { executive_summary: '', sections: [] },
         sections: [],
       },
     })

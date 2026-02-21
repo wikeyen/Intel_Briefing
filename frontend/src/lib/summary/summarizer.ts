@@ -304,7 +304,7 @@ export async function summarizeReport(
     await onProgress?.('__overall__', 'Overall', 'ok', null)
   } catch (err) {
     await onProgress?.('__overall__', 'Overall', 'failed', (err as Error).message)
-    overall = { quick_scan: [], executive_summary: '', sections: [], sentiment: { ...EMPTY_SENTIMENT } }
+    overall = { executive_summary: '', sections: [], sentiment: { ...EMPTY_SENTIMENT } }
   }
 
   return {
@@ -320,6 +320,6 @@ function buildPartialResult(report: IntelReport, sections: SensorSummary[]): Bri
     generated_at: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
     report_fetched_at: report.fetched_at,
     sections,
-    overall: { quick_scan: [], executive_summary: '', sections: [], sentiment: { ...EMPTY_SENTIMENT } },
+    overall: { executive_summary: '', sections: [], sentiment: { ...EMPTY_SENTIMENT } },
   }
 }

@@ -702,6 +702,45 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
           {/* Structured overall briefing */}
           {isStructuredOverall(summary.overall) ? (
             <>
+              {/* Notice when overall briefing is incomplete (e.g. terminated mid-synthesis) */}
+              {!summary.overall.executive_summary && (summary.overall.sections ?? []).length === 0 && (
+                <div style={{
+                  background: 'rgba(234,179,8,0.06)',
+                  border: '1px solid rgba(234,179,8,0.3)',
+                  borderRadius: 8,
+                  padding: '1rem 1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '1rem',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#eab308', flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.8125rem', color: 'var(--ink-muted)' }}>
+                      Overall briefing is incomplete — source summaries are available below.
+                    </span>
+                  </div>
+                  {hasProvider && hasContent && (
+                    <button
+                      onClick={onTrigger}
+                      style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                        color: '#fff',
+                        background: 'var(--ink)',
+                        border: 'none',
+                        borderRadius: 4,
+                        padding: '0.375rem 0.75rem',
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                      }}
+                    >
+                      Regenerate
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* Executive Summary */}
               {summary.overall.executive_summary && (
                 <div style={{

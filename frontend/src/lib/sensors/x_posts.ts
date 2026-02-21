@@ -71,13 +71,32 @@ async function getOpenClawCookies(): Promise<XCookies | null> {
 
 // ── Resolve auth: config cookies > OpenClaw browser > null ───────────────────
 
+let _lastPersistTime = 0
+const PERSIST_INTERVAL_MS = 24 * 60 * 60 * 1000 // refresh stored cookies daily
+
 async function resolveAuth(config: ConfigSettings): Promise<XCookies | null> {
-  // Priority 1: explicit config
+  const needsRefresh = Date.now() - _lastPersistTime > PERSIST_INTERVAL_MS
+
+  // When due for daily refresh or no stored cookies, try OpenClaw first
+  if (needsRefresh || !(config.twitter_auth_token && config.twitter_ct0)) {
+    const fresh = await getOpenClawCookies()
+    if (fresh) {
+      // Persist to DB + YAML so values appear in the Credentials UI
+      try {
+        const { saveConfig } = await import('../config')
+        await saveConfig({ twitter_auth_token: fresh.auth_token, twitter_ct0: fresh.ct0 })
+      } catch { /* non-fatal — cookies still usable in-memory */ }
+      _lastPersistTime = Date.now()
+      return fresh
+    }
+  }
+
+  // Stored config cookies (manually entered or previously persisted)
   if (config.twitter_auth_token && config.twitter_ct0) {
     return { auth_token: config.twitter_auth_token, ct0: config.twitter_ct0 }
   }
-  // Priority 2: OpenClaw browser
-  return getOpenClawCookies()
+
+  return null
 }
 
 // ── Auth error detection ─────────────────────────────────────────────────────

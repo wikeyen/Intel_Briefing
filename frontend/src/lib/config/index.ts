@@ -20,7 +20,7 @@ export const CONTENT_TRUNCATE_LIMIT = 3000
 export const MAX_BLOGS_TO_FETCH = 20
 export const MAX_ARTICLES_PER_BLOG = 2
 
-const KEY_FIELDS = new Set(['github_token', 'producthunt_token', 'bluesky_app_password', 'mastodon_token', 'summary_api_key', 'twitter_auth_token', 'twitter_ct0'])
+const KEY_FIELDS = new Set(['github_token', 'producthunt_token', 'bluesky_app_password', 'mastodon_token', 'summary_api_key', 'twitter_auth_token', 'twitter_ct0', 'apify_token'])
 
 /** Resolve the path to the local YAML config file (lazy — reads env at call time). */
 function configFilePath(): string {
@@ -81,6 +81,7 @@ function applyEnvOverrides(config: ConfigSettings): ConfigSettings {
     summary_model:    env.SUMMARY_MODEL    || config.summary_model,
     twitter_auth_token: env.TWITTER_AUTH_TOKEN ?? config.twitter_auth_token,
     twitter_ct0:        env.TWITTER_CT0       ?? config.twitter_ct0,
+    apify_token:        env.APIFY_TOKEN       ?? config.apify_token,
   }
 }
 

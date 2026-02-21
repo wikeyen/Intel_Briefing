@@ -1,10 +1,11 @@
 // ABOUTME: Tests for x_posts sensor — twitter-scraper primary path with auth cookie variants.
-// ABOUTME: Mocks @the-convocation/twitter-scraper and child_process to verify all code paths.
+// ABOUTME: Also tests Apify provider, data mapping, and auth-error fallback logic.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { ConfigSettings } from '../models'
 import { defaultConfig } from '../models'
 
-let fetchXPosts: (config: ConfigSettings, limit: number) => Promise<import('../models').IntelItem[]>
+let fetchXPosts: (config: ConfigSettings, limit: number, onProgress?: (detail: string) => void) => Promise<import('../models').IntelItem[]>
+let mapApifyTweet: typeof import('./x_posts').mapApifyTweet
 
 // Use a recent fixed date so lookback filtering doesn't discard items
 const NOW = new Date('2026-02-20T17:00:00Z').getTime()
@@ -147,6 +148,9 @@ describe('fetchXPosts (twitter-scraper)', () => {
     vi.doMock('@the-convocation/twitter-scraper', () => ({
       Scraper: vi.fn().mockImplementation(() => mockScraper),
     }))
+    vi.doMock('apify-client', () => ({
+      ApifyClient: vi.fn(),
+    }))
     mockExecFileNotFound()
     mockDelay()
     const mod = await import('./x_posts')
@@ -241,6 +245,9 @@ describe('fetchXPosts (twitter-scraper)', () => {
     vi.doMock('@the-convocation/twitter-scraper', () => ({
       Scraper: vi.fn().mockImplementation(() => scraper),
     }))
+    vi.doMock('apify-client', () => ({
+      ApifyClient: vi.fn(),
+    }))
     mockExecFileNotFound()
     mockDelay()
     const mod = await import('./x_posts')
@@ -287,6 +294,9 @@ describe('fetchXPosts (twitter-scraper)', () => {
     vi.doMock('@the-convocation/twitter-scraper', () => ({
       Scraper: vi.fn().mockImplementation(() => scraper),
     }))
+    vi.doMock('apify-client', () => ({
+      ApifyClient: vi.fn(),
+    }))
     mockExecFileNotFound()
     mockDelay()
     const mod = await import('./x_posts')
@@ -310,6 +320,9 @@ describe('fetchXPosts (OpenClaw cookies)', () => {
     mockScraper = makeMockScraper()
     vi.doMock('@the-convocation/twitter-scraper', () => ({
       Scraper: vi.fn().mockImplementation(() => mockScraper),
+    }))
+    vi.doMock('apify-client', () => ({
+      ApifyClient: vi.fn(),
     }))
     mockDelay()
     // Mock execFile to return valid cookies
@@ -336,5 +349,274 @@ describe('fetchXPosts (OpenClaw cookies)', () => {
     expect(mockScraper.setCookies).toHaveBeenCalled()
     expect(mockScraper.getTweets).toHaveBeenCalled()
     expect(items).toHaveLength(1)
+  })
+})
+
+// ── mapApifyTweet tests ──────────────────────────────────────────────────────
+
+describe('mapApifyTweet', () => {
+  beforeEach(async () => {
+    vi.resetModules()
+    vi.doMock('@the-convocation/twitter-scraper', () => ({
+      Scraper: vi.fn(),
+    }))
+    vi.doMock('apify-client', () => ({
+      ApifyClient: vi.fn(),
+    }))
+    const mod = await import('./x_posts')
+    mapApifyTweet = mod.mapApifyTweet
+  })
+
+  it('maps standard Apify tweet fields to IntelItem', () => {
+    const item = mapApifyTweet({
+      id: '999',
+      text: 'Hello from Apify',
+      url: 'https://x.com/testuser/status/999',
+      user: { name: 'Test User', screen_name: 'testuser' },
+      favorites: 100,
+      retweets: 20,
+      views: 5000,
+      dateTime: '2026-02-20T15:00:00Z',
+    }, 'fallback')
+
+    expect(item).not.toBeNull()
+    expect(item!.id).toBe('x-999')
+    expect(item!.source).toBe('x')
+    expect(item!.title).toBe('Hello from Apify')
+    expect(item!.url).toBe('https://x.com/testuser/status/999')
+    expect(item!.account).toBe('Test User')
+    expect(item!.handle).toBe('testuser')
+    expect(item!.heat).toContain('100 likes')
+    expect(item!.heat).toContain('20 retweets')
+    expect(item!.heat).toContain('5.0K views')
+    expect(item!.published_at).toBe('2026-02-20T15:00:00.000Z')
+  })
+
+  it('handles alternative field names (contentText, tweetId, favoriteCount)', () => {
+    const item = mapApifyTweet({
+      tweetId: '888',
+      contentText: 'Alt fields tweet',
+      favoriteCount: 50,
+      retweetCount: 10,
+      viewCount: 1000,
+      createdAt: '2026-02-20T14:00:00Z',
+      author: { name: 'Alt Author', userName: 'altauthor' },
+    }, 'fallback')
+
+    expect(item).not.toBeNull()
+    expect(item!.id).toBe('x-888')
+    expect(item!.title).toBe('Alt fields tweet')
+    expect(item!.account).toBe('Alt Author')
+    expect(item!.handle).toBe('altauthor')
+    expect(item!.heat).toContain('50 likes')
+  })
+
+  it('returns null for empty text', () => {
+    const item = mapApifyTweet({ id: '777', text: '   ' }, 'fallback')
+    expect(item).toBeNull()
+  })
+
+  it('uses fallback handle when user info is missing', () => {
+    const item = mapApifyTweet({
+      id: '666',
+      text: 'No user info',
+      dateTime: '2026-02-20T13:00:00Z',
+    }, 'myhandle')
+
+    expect(item!.handle).toBe('myhandle')
+    expect(item!.account).toBe('myhandle')
+  })
+
+  it('constructs URL from handle and tweetId when url field is missing', () => {
+    const item = mapApifyTweet({
+      id: '555',
+      text: 'No URL field',
+      user: { screen_name: 'theuser' },
+    }, 'fallback')
+
+    expect(item!.url).toBe('https://x.com/theuser/status/555')
+  })
+
+  it('truncates title to 560 characters', () => {
+    const longText = 'A'.repeat(600)
+    const item = mapApifyTweet({ id: '444', text: longText }, 'fallback')
+    expect(item!.title).toHaveLength(560)
+  })
+})
+
+// ── Provider fallback tests ──────────────────────────────────────────────────
+
+describe('fetchXPosts (provider fallback)', () => {
+  function mockApifyClient(items: unknown[]) {
+    return vi.fn().mockImplementation(() => ({
+      actor: vi.fn().mockReturnValue({
+        call: vi.fn().mockResolvedValue({ defaultDatasetId: 'ds-123' }),
+      }),
+      dataset: vi.fn().mockReturnValue({
+        listItems: vi.fn().mockResolvedValue({ items }),
+      }),
+    }))
+  }
+
+  function mockFailingScraper(errorMessage: string) {
+    return {
+      isLoggedIn: vi.fn().mockResolvedValue(false),
+      setCookies: vi.fn().mockResolvedValue(undefined),
+      getTweets: vi.fn().mockImplementation(async function* () {
+        throw new Error(errorMessage)
+      }),
+    }
+  }
+
+  it('falls back to Apify when twitter-scraper has auth error', async () => {
+    vi.resetModules()
+    vi.spyOn(Date, 'now').mockReturnValue(NOW)
+
+    const scraper = mockFailingScraper('Authentication required — unauthorized')
+    vi.doMock('@the-convocation/twitter-scraper', () => ({
+      Scraper: vi.fn().mockImplementation(() => scraper),
+    }))
+
+    const apifyItems = [{
+      id: 'apify-1',
+      text: 'From Apify fallback',
+      url: 'https://x.com/testuser/status/apify-1',
+      user: { name: 'Test User', screen_name: 'testuser' },
+      favorites: 10,
+      retweets: 2,
+      dateTime: '2026-02-20T15:00:00Z',
+    }]
+    vi.doMock('apify-client', () => ({
+      ApifyClient: mockApifyClient(apifyItems),
+    }))
+    mockExecFileNotFound()
+    mockDelay()
+
+    const mod = await import('./x_posts')
+    const config = makeConfig({
+      twitter_auth_token: 'bad-token',
+      twitter_ct0: 'bad-ct0',
+      apify_token: 'valid-apify-token',
+      x_scraper_provider: 'twitter-scraper',
+    })
+
+    const items = await mod.fetchXPosts(config, 10)
+    expect(items).toHaveLength(1)
+    expect(items[0].title).toBe('From Apify fallback')
+  })
+
+  it('does not fall back on non-auth errors — absorbs per-account failures', async () => {
+    vi.resetModules()
+    vi.spyOn(Date, 'now').mockReturnValue(NOW)
+
+    const scraper = mockFailingScraper('Network timeout — connection refused')
+    vi.doMock('@the-convocation/twitter-scraper', () => ({
+      Scraper: vi.fn().mockImplementation(() => scraper),
+    }))
+
+    const apifyCallSpy = vi.fn().mockResolvedValue({ defaultDatasetId: 'ds-999' })
+    vi.doMock('apify-client', () => ({
+      ApifyClient: vi.fn().mockImplementation(() => ({
+        actor: vi.fn().mockReturnValue({ call: apifyCallSpy }),
+        dataset: vi.fn().mockReturnValue({
+          listItems: vi.fn().mockResolvedValue({ items: [] }),
+        }),
+      })),
+    }))
+    mockExecFileNotFound()
+    mockDelay()
+
+    const mod = await import('./x_posts')
+    const config = makeConfig({
+      twitter_auth_token: 'token',
+      twitter_ct0: 'ct0',
+      apify_token: 'valid-apify-token',
+      x_scraper_provider: 'twitter-scraper',
+    })
+
+    // Non-auth errors are absorbed per account — returns empty, no fallback triggered
+    const items = await mod.fetchXPosts(config, 10)
+    expect(items).toEqual([])
+    expect(apifyCallSpy).not.toHaveBeenCalled()
+  })
+
+  it('does not fall back when alternate provider has no credentials', async () => {
+    vi.resetModules()
+    vi.spyOn(Date, 'now').mockReturnValue(NOW)
+
+    const scraper = mockFailingScraper('Authentication required — unauthorized')
+    vi.doMock('@the-convocation/twitter-scraper', () => ({
+      Scraper: vi.fn().mockImplementation(() => scraper),
+    }))
+    vi.doMock('apify-client', () => ({
+      ApifyClient: vi.fn(),
+    }))
+    mockExecFileNotFound()
+    mockDelay()
+
+    const mod = await import('./x_posts')
+    const config = makeConfig({
+      twitter_auth_token: 'bad-token',
+      twitter_ct0: 'bad-ct0',
+      apify_token: null, // no Apify credentials
+      x_scraper_provider: 'twitter-scraper',
+    })
+
+    await expect(mod.fetchXPosts(config, 10)).rejects.toThrow('unauthorized')
+  })
+
+  it('uses Apify as primary when configured', async () => {
+    vi.resetModules()
+    vi.spyOn(Date, 'now').mockReturnValue(NOW)
+
+    vi.doMock('@the-convocation/twitter-scraper', () => ({
+      Scraper: vi.fn(),
+    }))
+
+    const apifyItems = [{
+      id: 'apify-primary-1',
+      text: 'Apify is primary',
+      url: 'https://x.com/testuser/status/apify-primary-1',
+      user: { name: 'Test User', screen_name: 'testuser' },
+      favorites: 50,
+      dateTime: '2026-02-20T15:00:00Z',
+    }]
+    vi.doMock('apify-client', () => ({
+      ApifyClient: mockApifyClient(apifyItems),
+    }))
+    mockExecFileNotFound()
+    mockDelay()
+
+    const mod = await import('./x_posts')
+    const config = makeConfig({
+      apify_token: 'valid-token',
+      x_scraper_provider: 'apify',
+    })
+
+    const items = await mod.fetchXPosts(config, 10)
+    expect(items).toHaveLength(1)
+    expect(items[0].title).toBe('Apify is primary')
+  })
+
+  it('throws when Apify is primary but has no token', async () => {
+    vi.resetModules()
+    vi.spyOn(Date, 'now').mockReturnValue(NOW)
+
+    vi.doMock('@the-convocation/twitter-scraper', () => ({
+      Scraper: vi.fn(),
+    }))
+    vi.doMock('apify-client', () => ({
+      ApifyClient: vi.fn(),
+    }))
+    mockExecFileNotFound()
+    mockDelay()
+
+    const mod = await import('./x_posts')
+    const config = makeConfig({
+      apify_token: null,
+      x_scraper_provider: 'apify',
+    })
+
+    await expect(mod.fetchXPosts(config, 10)).rejects.toThrow('Apify API token')
   })
 })

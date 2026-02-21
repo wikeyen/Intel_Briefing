@@ -63,6 +63,8 @@ function makeConfig(overrides: Partial<ConfigSettings> = {}): ConfigSettings {
     mastodon_token: null,
     twitter_auth_token: null,
     twitter_ct0: null,
+    x_scraper_provider: 'twitter-scraper',
+    apify_token: null,
     social_accounts_x: [],
     social_accounts_bluesky: [],
     social_accounts_mastodon: [],

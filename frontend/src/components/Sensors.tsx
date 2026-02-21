@@ -233,6 +233,7 @@ export function Sensors() {
   const [sensorLookback, setSensorLookback] = useState<Record<string, number>>({})
   const [defaultLimit, setDefaultLimit] = useState(10)
   const [activeLanguage, setActiveLanguage] = useState<Language>('row')
+  const [xScraperProvider, setXScraperProvider] = useState<'twitter-scraper' | 'apify'>('twitter-scraper')
 
   const { status: saveStatus, trigger } = useAutoSave(
     () => ({
@@ -251,6 +252,7 @@ export function Sensors() {
       rss_feed_urls: rssFeedUrls,
       sensor_limits: sensorLimits,
       sensor_lookback_hours: sensorLookback,
+      x_scraper_provider: xScraperProvider,
     }),
     { onError: (e) => showToast('Save failed: ' + e.message) },
   )
@@ -277,6 +279,7 @@ export function Sensors() {
       setSensorLimits(cfg.sensor_limits ?? {})
       setSensorLookback(cfg.sensor_lookback_hours ?? {})
       setDefaultLimit(cfg.default_limit)
+      setXScraperProvider(cfg.x_scraper_provider ?? 'twitter-scraper')
     })
     api.getLatest().then((report) => {
       const map: Record<string, SensorStatus> = {}
@@ -489,6 +492,34 @@ export function Sensors() {
                         flexDirection: 'column',
                         gap: '1rem',
                       }}>
+                        <div>
+                          <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#000' }} />
+                            Scraper
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <select
+                              value={xScraperProvider}
+                              onChange={(e) => { setXScraperProvider(e.target.value as 'twitter-scraper' | 'apify'); trigger() }}
+                              style={{
+                                fontSize: '0.8125rem',
+                                padding: '0.375rem 0.625rem',
+                                borderRadius: 6,
+                                border: '1px solid var(--border)',
+                                background: 'var(--surface)',
+                                color: 'var(--ink)',
+                                cursor: 'pointer',
+                                outline: 'none',
+                              }}
+                            >
+                              <option value="twitter-scraper">Twitter Scraper</option>
+                              <option value="apify">Apify</option>
+                            </select>
+                            <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>
+                              Falls back to {xScraperProvider === 'apify' ? 'Twitter Scraper' : 'Apify'} on auth errors
+                            </span>
+                          </div>
+                        </div>
                         <div>
                           <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                             <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#000' }} />

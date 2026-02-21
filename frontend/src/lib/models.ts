@@ -259,6 +259,12 @@ export interface ConfigSettings {
   twitter_auth_token: string | null
   twitter_ct0: string | null
 
+  // X scraper provider selection — which scraper to try first
+  x_scraper_provider: 'twitter-scraper' | 'apify'
+
+  // Apify API token (for apify/twitter-scraper actor fallback)
+  apify_token: string | null
+
   // Social sensor account lists (per platform)
   social_accounts_x: string[]
   social_accounts_bluesky: string[]
@@ -339,6 +345,8 @@ export function defaultConfig(): ConfigSettings {
     mastodon_token: null,
     twitter_auth_token: null,
     twitter_ct0: null,
+    x_scraper_provider: 'twitter-scraper',
+    apify_token: null,
     social_accounts_x: [],
     social_accounts_bluesky: [],
     social_accounts_mastodon: [],

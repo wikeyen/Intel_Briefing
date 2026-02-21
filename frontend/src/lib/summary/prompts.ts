@@ -200,7 +200,7 @@ export const DEFAULT_OVERALL_PROMPT = `你是一名全球投资情报分析师�
 
 输出格式（严格JSON，不要添加 markdown 代码块标记）：
 {
-  "executive_summary": "2-3段连贯的综合分析，提炼今日信息流中最值得关注的主题、趋势交叉点和投资启示。不要逐条列举，而是从全局视角分析各领域信号之间的关联。",
+  "executive_summary": "4-6段连贯的综合分析。首先概括今日信息流的整体格局，然后深入分析最值得关注的2-3个主题：每个主题用1-2段展开，包含关键事实、多方信号的交叉印证、以及对投资决策的具体启示。不要逐条列举，而是从全局视角分析各领域信号之间的关联和因果链条。",
   "sections": [
     {
       "title": "板块标题",
@@ -225,7 +225,7 @@ export const DEFAULT_OVERALL_PROMPT = `你是一名全球投资情报分析师�
 }
 
 板块说明：
-- 综合分析（executive_summary）：跨领域的趋势分析和投资启示。
+- 综合分析（executive_summary）：跨领域的深度趋势分析。先总览全局，再逐个展开2-3个核心主题，包含关键事实和投资启示。
 - 科技产品：重要科技产品和平台的发布与更新（不限于AI）。包含产品名称、功能亮点、市场意义。
 - 宏观与政策：宏观经济数据、央行政策、监管动向、地缘政治事件及其对投资市场的影响。
 - 行业声音：重要企业家、投资人和行业从业者发布的事实和观点。提炼其判断和立场，分析潜在影响。注明发言者身份。
@@ -256,7 +256,7 @@ Requirements:
 
 Output format (strict JSON, no markdown code fences):
 {
-  "executive_summary": "2-3 cohesive paragraphs synthesizing the most noteworthy themes, trend intersections, and investment implications from today's information flow. Do not list items one by one — analyze cross-domain signal connections from a holistic perspective.",
+  "executive_summary": "4-6 cohesive paragraphs of in-depth analysis. Open with a paragraph framing the overall landscape, then drill into the 2-3 most significant themes: dedicate 1-2 paragraphs to each, covering key facts, cross-source corroboration, and concrete investment implications. Do not list items one by one — analyze cross-domain signal connections, causal chains, and second-order effects from a holistic perspective.",
   "sections": [
     {
       "title": "Section Title",
@@ -281,7 +281,7 @@ Output format (strict JSON, no markdown code fences):
 }
 
 Section guidelines:
-- Executive Summary: Cross-domain trend analysis and investment implications.
+- Executive Summary: In-depth cross-domain analysis. Frame the overall landscape, then drill into 2-3 core themes with key facts and investment implications.
 - Tech Products: Major tech product and platform launches and updates (not limited to AI). Include product names, feature highlights, and market significance.
 - Macro & Policy: Macroeconomic data, central bank policy, regulatory developments, geopolitical events, and their impact on investment markets.
 - Industry Voices: Facts and opinions from notable entrepreneurs, investors, and industry practitioners. Synthesize their judgments and stances, analyze potential impact. Note speaker identity.

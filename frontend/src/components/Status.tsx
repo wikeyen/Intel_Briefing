@@ -24,6 +24,8 @@ export function Status() {
   const [, setTick]                   = useState(0)
   const [selectedSensors, setSelectedSensors] = useState<Set<string>>(new Set())
   const lastFetchedAtRef              = useRef<string | null>(null)
+  // Track when last trigger was sent — prevents clearing `running` before pipeline starts
+  const triggerTimeRef                = useRef(0)
 
   const toggleSensorSelect = useCallback((sensor: string) => {
     setSelectedSensors(prev => {
@@ -41,13 +43,11 @@ export function Status() {
     )
   }, [config])
 
-  // Failed sensor keys from last pipeline run
+  // Failed sensor keys — derived from report to match what the table displays
   const failedSensors = useMemo(() => {
-    if (!pipelineStatus) return []
-    return pipelineStatus.sensors
-      .filter(s => s.fetch === 'failed' || s.summary === 'failed')
-      .map(s => s.name)
-  }, [pipelineStatus])
+    if (!report) return []
+    return report.sources_failed
+  }, [report])
 
   const selectAll = useCallback(() => setSelectedSensors(new Set(allEnabledSensors)), [allEnabledSensors])
   const selectNone = useCallback(() => setSelectedSensors(new Set()), [])
@@ -103,9 +103,14 @@ export function Status() {
     const check = () => {
       api.getPipelineStatus().then(s => {
         setPipelineStatus(s)
-        // Clear local running flag when the pipeline has actually stopped
+        // Clear local running flag when the pipeline has actually stopped.
+        // Grace period after trigger: the pipeline starts via after() so there's
+        // a brief window where the DB shows not-running before the new run begins.
         if (!s.running) {
-          setRunning(false)
+          const sinceTrigger = Date.now() - triggerTimeRef.current
+          if (sinceTrigger > 5_000) {
+            setRunning(false)
+          }
           setStopping(false)
         }
       }).catch(() => {})
@@ -119,6 +124,7 @@ export function Status() {
     setFetching(true)
     try {
       await api.triggerFetch(mode, sensors)
+      triggerTimeRef.current = Date.now()
       setRunning(true)
       setSelectedSensors(new Set())
       const labels = { fetch: 'Fetch', summarize: 'Summarize', fetch_summarize: 'Fetch + Summarize' }
@@ -151,7 +157,10 @@ export function Status() {
     } catch {
       // 404 = already cleared
     }
-    api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
+    try {
+      const s = await api.getPipelineStatus()
+      setPipelineStatus(s)
+    } catch { /* ignore */ }
   }
 
   const handleResumeStale = async () => {
@@ -169,8 +178,9 @@ export function Status() {
     api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
   }
 
-  // Pipeline is running when both DB and the in-memory controller agree
-  const isRunning = !!(pipelineStatus?.running && pipelineStatus.alive)
+  // Pipeline is running when both DB and in-memory controller agree, OR when
+  // we just triggered a run and the poll hasn't caught up yet (optimistic flag)
+  const isRunning = running || !!(pipelineStatus?.running && pipelineStatus.alive)
 
   // Build live-sensor lookup once (used across all sections when running)
   const liveSensors: Record<string, SensorJobProgress> = {}

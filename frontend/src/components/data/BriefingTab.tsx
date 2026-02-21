@@ -908,31 +908,43 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
               }}>
                 References
               </div>
-              <ol style={{
+              <div style={{
                 margin: 0,
-                paddingLeft: '1.5rem',
                 fontSize: '0.75rem',
                 lineHeight: 1.8,
                 color: 'var(--ink-muted)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.125rem',
               }}>
                 {structured.sources.map(src => (
-                  <li key={src.id} value={src.id} style={{ paddingLeft: '0.25rem' }}>
-                    <a
-                      href={src.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: 'var(--accent)', textDecoration: 'none' }}
-                      onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
-                      onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
-                    >
-                      {src.title}
-                    </a>
-                    <span style={{ color: 'var(--ink-faint)', marginLeft: '0.375rem' }}>
-                      — {src.sensor}
+                  <div key={src.id} style={{ display: 'flex', alignItems: 'baseline', gap: '0.375rem' }}>
+                    <span style={{
+                      fontSize: '0.625rem',
+                      fontWeight: 600,
+                      color: 'var(--accent)',
+                      flexShrink: 0,
+                    }}>
+                      [{src.id}]
                     </span>
-                  </li>
+                    <span>
+                      <a
+                        href={src.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: 'var(--accent)', textDecoration: 'none' }}
+                        onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+                        onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+                      >
+                        {src.title}
+                      </a>
+                      <span style={{ color: 'var(--ink-faint)', marginLeft: '0.375rem' }}>
+                        — {src.sensor}
+                      </span>
+                    </span>
+                  </div>
                 ))}
-              </ol>
+              </div>
             </div>
           )}
 

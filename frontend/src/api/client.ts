@@ -22,6 +22,8 @@ export interface ConfigSettings {
   mastodon_token: string | null
   twitter_auth_token: string | null
   twitter_ct0: string | null
+  x_scraper_provider: 'twitter-scraper' | 'apify'
+  apify_token: string | null
   social_accounts_x: string[]
   social_accounts_bluesky: string[]
   social_accounts_mastodon: string[]

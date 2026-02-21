@@ -1,6 +1,7 @@
-// ABOUTME: X posts sensor — fetches recent tweets via @the-convocation/twitter-scraper.
-// ABOUTME: Auth priority: config cookies > OpenClaw browser cookies. No auth = no results.
+// ABOUTME: X posts sensor — fetches recent tweets via twitter-scraper or Apify.
+// ABOUTME: Provider selection via config; auth-error fallback to alternate provider.
 import { Scraper, type Tweet } from '@the-convocation/twitter-scraper'
+import { ApifyClient } from 'apify-client'
 import type { ConfigSettings, IntelItem } from '../models'
 import { delay } from './utils'
 
@@ -79,7 +80,16 @@ async function resolveAuth(config: ConfigSettings): Promise<XCookies | null> {
   return getOpenClawCookies()
 }
 
-// ── Primary: twitter-scraper (authenticated) ─────────────────────────────────
+// ── Auth error detection ─────────────────────────────────────────────────────
+
+function isAuthError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase()
+  return msg.includes('auth') || msg.includes('credential') || msg.includes('login')
+    || msg.includes('unauthorized') || msg.includes('403') || msg.includes('401')
+    || msg.includes('requires authentication')
+}
+
+// ── Strategy: twitter-scraper (authenticated) ────────────────────────────────
 
 async function fetchViaScraper(
   scraper: Scraper,
@@ -130,7 +140,7 @@ async function fetchViaScraper(
       source: 'x',
       title: text.slice(0, 560),
       url: tweet.permanentUrl ?? `https://x.com/${handle}/status/${tweet.id}`,
-      heat: heatParts.join(' \u00b7 ') || null,
+      heat: heatParts.join(' · ') || null,
       account: tweet.name ?? handle,
       handle: tweet.username ?? handle,
       published_at: pubDate?.toISOString() ?? null,
@@ -158,6 +168,118 @@ function stitchSelfReplies(tweets: Tweet[]): void {
   }
 }
 
+// ── Strategy: Apify twitter-scraper actor ────────────────────────────────────
+
+/** Raw tweet shape from the apify/twitter-scraper actor dataset. */
+interface ApifyTweet {
+  id?: string
+  tweetId?: string
+  url?: string
+  text?: string
+  contentText?: string
+  full_text?: string
+  user?: { name?: string; screen_name?: string; username?: string }
+  author?: { name?: string; userName?: string }
+  favorites?: number
+  favoriteCount?: number
+  likeCount?: number
+  retweets?: number
+  retweetCount?: number
+  views?: number
+  viewCount?: number
+  dateTime?: string
+  createdAt?: string
+  created_at?: string
+  isRetweet?: boolean
+}
+
+const APIFY_ACTOR_ID = 'apify/twitter-scraper'
+const APIFY_RUN_TIMEOUT_SECS = 120
+
+/** Map a single Apify tweet record to an IntelItem. */
+export function mapApifyTweet(raw: ApifyTweet, fallbackHandle: string): IntelItem | null {
+  const text = raw.text ?? raw.contentText ?? raw.full_text ?? ''
+  if (!text.trim()) return null
+
+  const tweetId = raw.id ?? raw.tweetId ?? ''
+  const handle = raw.user?.screen_name ?? raw.user?.username ?? raw.author?.userName ?? fallbackHandle
+  const account = raw.user?.name ?? raw.author?.name ?? handle
+  const url = raw.url ?? `https://x.com/${handle}/status/${tweetId}`
+
+  const likes = raw.favorites ?? raw.favoriteCount ?? raw.likeCount ?? 0
+  const rts = raw.retweets ?? raw.retweetCount ?? 0
+  const views = raw.views ?? raw.viewCount ?? 0
+  const heatParts: string[] = []
+  if (likes > 0) heatParts.push(`${formatCount(likes)} likes`)
+  if (rts > 0) heatParts.push(`${formatCount(rts)} retweets`)
+  if (views > 0) heatParts.push(`${formatCount(views)} views`)
+
+  const dateStr = raw.dateTime ?? raw.createdAt ?? raw.created_at ?? null
+  const pubDate = dateStr ? new Date(dateStr) : null
+  const published_at = pubDate && !isNaN(pubDate.getTime()) ? pubDate.toISOString() : null
+
+  return {
+    id: `x-${tweetId}`,
+    source: 'x',
+    title: text.slice(0, 560),
+    url,
+    heat: heatParts.join(' · ') || null,
+    account,
+    handle,
+    published_at,
+  }
+}
+
+async function fetchViaApify(
+  apifyToken: string,
+  handles: string[],
+  lookbackMs: number,
+  perAccountLimit: number,
+  onProgress?: (detail: string) => void,
+): Promise<IntelItem[]> {
+  const client = new ApifyClient({ token: apifyToken })
+  const cutoff = Date.now() - lookbackMs
+  const allItems: IntelItem[] = []
+  const seenIds = new Set<string>()
+
+  for (let i = 0; i < handles.length; i++) {
+    const handle = handles[i].replace(/^@/, '')
+    onProgress?.(`[Apify] Fetching @${handle} (${i + 1}/${handles.length})`)
+
+    const { defaultDatasetId } = await client.actor(APIFY_ACTOR_ID).call(
+      {
+        twitterHandles: [handle],
+        maxTweets: perAccountLimit * 2,
+        maxRequestRetries: 2,
+      },
+      { waitSecs: APIFY_RUN_TIMEOUT_SECS },
+    )
+
+    if (!defaultDatasetId) continue
+    const { items: rawItems } = await client.dataset(defaultDatasetId).listItems()
+
+    for (const raw of rawItems as ApifyTweet[]) {
+      if (raw.isRetweet) continue
+
+      const item = mapApifyTweet(raw, handle)
+      if (!item) continue
+
+      // Lookback filter
+      if (item.published_at) {
+        const pubTime = new Date(item.published_at).getTime()
+        if (pubTime < cutoff) continue
+      }
+
+      if (!seenIds.has(item.id)) {
+        seenIds.add(item.id)
+        allItems.push(item)
+      }
+    }
+  }
+
+  return allItems
+}
+
 function formatCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
@@ -180,21 +302,16 @@ function accountDelay(accountCount: number): number {
   return Math.max(MIN_DELAY_MS, Math.round(base + jitter))
 }
 
-// ── Public API ───────────────────────────────────────────────────────────────
+// ── twitter-scraper strategy: rate-limited sequential per-account fetch ──────
 
-export async function fetchXPosts(
+async function fetchAllViaScraper(
   config: ConfigSettings,
+  handles: string[],
+  lookbackMs: number,
+  perAccountLimit: number,
   limit: number,
   onProgress?: (detail: string) => void,
 ): Promise<IntelItem[]> {
-  const disabled = new Set(config.social_accounts_disabled ?? [])
-  const handles = (config.social_accounts_x ?? []).filter(h => !disabled.has(h))
-  if (handles.length === 0) return []
-
-  const lookbackHours = config.sensor_lookback_hours?.x ?? 48
-  const lookbackMs = lookbackHours * 60 * 60 * 1000
-  const perAccountLimit = Math.max(10, Math.ceil(limit / handles.length) * 2)
-
   const auth = await resolveAuth(config)
   if (!auth) {
     throw new Error('X sensor requires authentication — set Twitter cookies in Credentials or install OpenClaw')
@@ -212,8 +329,13 @@ export async function fetchXPosts(
       fetchViaScraper(scraper, handles[i].replace(/^@/, ''), lookbackMs, perAccountLimit),
     ])
     allResults.push(result[0])
-    if (result[0].status === 'fulfilled') okCount++
-    else failCount++
+    if (result[0].status === 'fulfilled') {
+      okCount++
+    } else {
+      failCount++
+      // Auth errors are systemic — re-throw immediately so fallback can kick in
+      if (isAuthError(result[0].reason)) throw result[0].reason
+    }
   }
 
   onProgress?.(`Done: ${okCount} ok, ${failCount} failed (${handles.length} accounts)`)
@@ -230,4 +352,64 @@ export async function fetchXPosts(
     }
   }
   return items
+}
+
+// ── Provider availability checks ─────────────────────────────────────────────
+
+function hasScraperCredentials(config: ConfigSettings): boolean {
+  return !!(config.twitter_auth_token && config.twitter_ct0)
+}
+
+function hasApifyCredentials(config: ConfigSettings): boolean {
+  return !!config.apify_token
+}
+
+// ── Public API ───────────────────────────────────────────────────────────────
+
+export async function fetchXPosts(
+  config: ConfigSettings,
+  limit: number,
+  onProgress?: (detail: string) => void,
+): Promise<IntelItem[]> {
+  const disabled = new Set(config.social_accounts_disabled ?? [])
+  const handles = (config.social_accounts_x ?? []).filter(h => !disabled.has(h))
+  if (handles.length === 0) return []
+
+  const lookbackHours = config.sensor_lookback_hours?.x ?? 48
+  const lookbackMs = lookbackHours * 60 * 60 * 1000
+  const perAccountLimit = Math.max(10, Math.ceil(limit / handles.length) * 2)
+
+  const provider = config.x_scraper_provider ?? 'twitter-scraper'
+  const fallbackProvider = provider === 'apify' ? 'twitter-scraper' : 'apify'
+
+  // Try primary provider
+  try {
+    if (provider === 'apify') {
+      if (!hasApifyCredentials(config)) {
+        throw new Error('X sensor requires authentication — set Apify API token in Credentials')
+      }
+      onProgress?.('[Apify] Starting X fetch…')
+      return await fetchViaApify(config.apify_token!, handles, lookbackMs, perAccountLimit, onProgress)
+    } else {
+      return await fetchAllViaScraper(config, handles, lookbackMs, perAccountLimit, limit, onProgress)
+    }
+  } catch (err) {
+    // Only fallback on auth errors
+    if (!isAuthError(err)) throw err
+
+    // Check if fallback provider has credentials
+    const canFallback = fallbackProvider === 'apify'
+      ? hasApifyCredentials(config)
+      : hasScraperCredentials(config)
+
+    if (!canFallback) throw err
+
+    onProgress?.(`Primary provider (${provider}) auth failed — falling back to ${fallbackProvider}`)
+
+    if (fallbackProvider === 'apify') {
+      return await fetchViaApify(config.apify_token!, handles, lookbackMs, perAccountLimit, onProgress)
+    } else {
+      return await fetchAllViaScraper(config, handles, lookbackMs, perAccountLimit, limit, onProgress)
+    }
+  }
 }

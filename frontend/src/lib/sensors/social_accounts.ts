@@ -10,7 +10,8 @@ async function fetchBlueskyAccounts(config: ConfigSettings, limit: number): Prom
   const agent = await createBlueskyAgent(config.bluesky_handle, config.bluesky_app_password)
 
   // Merge manual accounts with following list when toggle is on (dedup by handle)
-  const actors = [...config.social_accounts_bluesky]
+  const disabled = new Set(config.social_accounts_disabled ?? [])
+  const actors = config.social_accounts_bluesky.filter(h => !disabled.has(h))
   if (config.social_following_bluesky) {
     const following = await getBlueskyFollowing(agent)
     const seen = new Set(actors.map(h => h.toLowerCase()))
@@ -40,7 +41,8 @@ async function fetchMastodonAccounts(config: ConfigSettings, limit: number): Pro
   if (!config.mastodon_token) return []
 
   // Merge manual accounts with following list when toggle is on (dedup by acct)
-  const accts = [...config.social_accounts_mastodon]
+  const disabled = new Set(config.social_accounts_disabled ?? [])
+  const accts = config.social_accounts_mastodon.filter(h => !disabled.has(h))
   if (config.social_following_mastodon) {
     const following = await getMastodonFollowing(config.mastodon_token)
     const seen = new Set(accts.map(a => a.toLowerCase()))

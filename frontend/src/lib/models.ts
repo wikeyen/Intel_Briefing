@@ -264,6 +264,9 @@ export interface ConfigSettings {
   social_accounts_bluesky: string[]
   social_accounts_mastodon: string[]
 
+  // Disabled accounts — these remain in the list but are skipped during fetch
+  social_accounts_disabled: string[]
+
   // Social sensor topic keywords
   social_topics_keywords: string[]
 
@@ -339,6 +342,7 @@ export function defaultConfig(): ConfigSettings {
     social_accounts_x: [],
     social_accounts_bluesky: [],
     social_accounts_mastodon: [],
+    social_accounts_disabled: [],
     social_topics_keywords: [],
     social_following_bluesky: false,
     social_following_mastodon: false,

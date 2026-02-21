@@ -292,8 +292,9 @@ export async function fetchXPosts(
   limit: number,
   onProgress?: (detail: string) => void,
 ): Promise<IntelItem[]> {
-  const handles = config.social_accounts_x
-  if (!handles || handles.length === 0) return []
+  const disabled = new Set(config.social_accounts_disabled ?? [])
+  const handles = (config.social_accounts_x ?? []).filter(h => !disabled.has(h))
+  if (handles.length === 0) return []
 
   const lookbackHours = config.sensor_lookback_hours?.x ?? 48
   const lookbackMs = lookbackHours * 60 * 60 * 1000

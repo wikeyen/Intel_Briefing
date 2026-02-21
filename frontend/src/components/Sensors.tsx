@@ -218,6 +218,7 @@ export function Sensors() {
   const [socialAccountsX, setSocialAccountsX] = useState<string[]>([])
   const [socialAccountsBluesky, setSocialAccountsBluesky] = useState<string[]>([])
   const [socialAccountsMastodon, setSocialAccountsMastodon] = useState<string[]>([])
+  const [disabledAccounts, setDisabledAccounts] = useState<Set<string>>(new Set())
   const [socialTopicsKeywords, setSocialTopicsKeywords] = useState<string[]>([])
   const [followingBluesky, setFollowingBluesky] = useState(false)
   const [followingMastodon, setFollowingMastodon] = useState(false)
@@ -239,6 +240,7 @@ export function Sensors() {
       social_accounts_x: socialAccountsX,
       social_accounts_bluesky: socialAccountsBluesky,
       social_accounts_mastodon: socialAccountsMastodon,
+      social_accounts_disabled: [...disabledAccounts],
       social_topics_keywords: socialTopicsKeywords,
       social_following_bluesky: followingBluesky,
       social_following_mastodon: followingMastodon,
@@ -261,6 +263,7 @@ export function Sensors() {
       setSocialAccountsX(cfg.social_accounts_x)
       setSocialAccountsBluesky(cfg.social_accounts_bluesky)
       setSocialAccountsMastodon(cfg.social_accounts_mastodon)
+      setDisabledAccounts(new Set(cfg.social_accounts_disabled ?? []))
       setSocialTopicsKeywords(cfg.social_topics_keywords)
       setFollowingBluesky(cfg.social_following_bluesky ?? false)
       setFollowingMastodon(cfg.social_following_mastodon ?? false)
@@ -285,6 +288,16 @@ export function Sensors() {
 
   const toggle = (key: string) => {
     setEnabled((prev) => ({ ...prev, [key]: !prev[key] }))
+    trigger()
+  }
+
+  const toggleAccountDisabled = (account: string) => {
+    setDisabledAccounts((prev) => {
+      const next = new Set(prev)
+      if (next.has(account)) next.delete(account)
+      else next.add(account)
+      return next
+    })
     trigger()
   }
 
@@ -468,6 +481,8 @@ export function Sensors() {
                             onChange={(tags) => { setSocialAccountsX(tags.map(normalizeXHandle)); trigger() }}
                             placeholder="@handle — press Enter"
                             validate={validateXHandle}
+                            disabledTags={disabledAccounts}
+                            onToggleDisabled={toggleAccountDisabled}
                           />
                         </div>
                       </div>
@@ -493,6 +508,8 @@ export function Sensors() {
                             onChange={(tags) => { setSocialAccountsBluesky(tags); trigger() }}
                             placeholder="name.bsky.social — press Enter"
                             validate={validateBlueskyHandle}
+                            disabledTags={disabledAccounts}
+                            onToggleDisabled={toggleAccountDisabled}
                           />
                           <label style={{
                             display: 'flex',
@@ -547,6 +564,8 @@ export function Sensors() {
                             onChange={(tags) => { setSocialAccountsMastodon(tags.map(normalizeMastodonHandle)); trigger() }}
                             placeholder="@user@mastodon.social — press Enter"
                             validate={validateMastodonHandle}
+                            disabledTags={disabledAccounts}
+                            onToggleDisabled={toggleAccountDisabled}
                           />
                           <label style={{
                             display: 'flex',

@@ -1,5 +1,5 @@
 // ABOUTME: Reusable tag-input component — chip pills with add-on-enter and remove-on-click.
-// ABOUTME: Supports optional validation; uses design system tokens for consistent styling.
+// ABOUTME: Supports optional validation and per-tag disable toggle; uses design system tokens.
 'use client'
 import { useState } from 'react'
 import type { KeyboardEvent } from 'react'
@@ -9,9 +9,13 @@ interface Props {
   onChange: (tags: string[]) => void
   placeholder?: string
   validate?: (value: string) => string | null
+  /** Set of tags that are disabled (skipped during fetch). */
+  disabledTags?: Set<string>
+  /** Called when a tag is clicked to toggle its disabled state. */
+  onToggleDisabled?: (tag: string) => void
 }
 
-export function TagInput({ tags, onChange, placeholder = 'Add…', validate }: Props) {
+export function TagInput({ tags, onChange, placeholder = 'Add…', validate, disabledTags, onToggleDisabled }: Props) {
   const [input, setInput] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -36,42 +40,51 @@ export function TagInput({ tags, onChange, placeholder = 'Add…', validate }: P
     <div>
       {tags.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', marginBottom: '0.625rem' }}>
-          {tags.map((tag) => (
-            <span
-              key={tag}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.375rem',
-                background: 'var(--accent-wash)',
-                color: 'var(--accent)',
-                border: '1px solid rgba(29,107,79,0.2)',
-                borderRadius: 4,
-                fontSize: '0.8125rem',
-                fontWeight: 500,
-                padding: '0.25rem 0.625rem',
-              }}
-            >
-              {tag}
-              <button
-                type="button"
-                onClick={() => onChange(tags.filter((t) => t !== tag))}
+          {tags.map((tag) => {
+            const isDisabled = disabledTags?.has(tag) ?? false
+            return (
+              <span
+                key={tag}
                 style={{
-                  color: 'var(--accent-dim)',
-                  fontSize: '1rem',
-                  lineHeight: 1,
-                  cursor: 'pointer',
-                  transition: 'color 120ms',
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
+                  gap: '0.375rem',
+                  background: isDisabled ? 'var(--surface)' : 'var(--accent-wash)',
+                  color: isDisabled ? 'var(--ink-faint)' : 'var(--accent)',
+                  border: isDisabled ? '1px dashed var(--border)' : '1px solid rgba(29,107,79,0.2)',
+                  borderRadius: 4,
+                  fontSize: '0.8125rem',
+                  fontWeight: 500,
+                  padding: '0.25rem 0.625rem',
+                  textDecoration: isDisabled ? 'line-through' : 'none',
+                  cursor: onToggleDisabled ? 'pointer' : 'default',
+                  opacity: isDisabled ? 0.6 : 1,
+                  transition: 'opacity 120ms, background 120ms, border 120ms',
                 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--err)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--accent-dim)' }}
+                onClick={() => onToggleDisabled?.(tag)}
+                title={isDisabled ? 'Click to enable' : 'Click to disable'}
               >
-                ×
-              </button>
-            </span>
-          ))}
+                {tag}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onChange(tags.filter((t) => t !== tag)) }}
+                  style={{
+                    color: isDisabled ? 'var(--ink-faint)' : 'var(--accent-dim)',
+                    fontSize: '1rem',
+                    lineHeight: 1,
+                    cursor: 'pointer',
+                    transition: 'color 120ms',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--err)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = isDisabled ? 'var(--ink-faint)' : 'var(--accent-dim)' }}
+                >
+                  ×
+                </button>
+              </span>
+            )
+          })}
         </div>
       )}
       <input

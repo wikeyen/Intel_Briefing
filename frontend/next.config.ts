@@ -4,7 +4,7 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  serverExternalPackages: ['@libsql/client', 'libsql', 'jsdom', '@mozilla/readability', 'turndown'],
+  serverExternalPackages: ['@libsql/client', 'libsql', 'jsdom', '@mozilla/readability', 'turndown', 'apify-client'],
 }
 
 export default nextConfig

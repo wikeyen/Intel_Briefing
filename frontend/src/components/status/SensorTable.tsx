@@ -286,6 +286,7 @@ export function SensorTable({
                       <span style={{
                         ...countStyle,
                         color: runningRightColor(sp),
+                        minWidth: '2.5rem',
                       }}>
                         {runningRightText(sp)}
                       </span>
@@ -393,14 +394,15 @@ export function SensorTable({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      {/* Round toggle for selection */}
-                      {!isDisabled && (
-                        <SelectToggle
-                          selected={isSelected}
-                          size={14}
-                          onClick={() => onToggleSelect(sensorKey)}
-                        />
-                      )}
+                      {/* Round toggle for selection (spacer for disabled to keep alignment) */}
+                      {isDisabled
+                        ? <span style={{ width: 14, flexShrink: 0 }} />
+                        : <SelectToggle
+                            selected={isSelected}
+                            size={14}
+                            onClick={() => onToggleSelect(sensorKey)}
+                          />
+                      }
                       <span style={dotStyle(idleDotColor, false)} />
                       <span style={{
                         color: isDisabled ? 'var(--ink-faint)' : 'var(--ink)',
@@ -449,6 +451,7 @@ export function SensorTable({
                       ...countStyle,
                       color: rightColor,
                       fontWeight: isOk && count > 0 ? 600 : 400,
+                      minWidth: '2.5rem',
                     }}>
                       {rightText}
                     </span>

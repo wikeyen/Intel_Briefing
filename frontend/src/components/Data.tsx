@@ -372,7 +372,7 @@ export function Data() {
   const totalItems = Object.values(report?.items ?? {}).reduce((s, a) => s + a.length, 0)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
+    <div className="data-page-root" style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
       <style dangerouslySetInnerHTML={{ __html: LINE_CLAMP_CSS + PULSE_CSS }} />
 
       {/* Page header — not sticky (hidden on mobile — shown in top bar) */}

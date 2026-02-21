@@ -271,7 +271,11 @@ input[type="range"]::-moz-range-thumb {
     padding-top: 1.5rem !important;
   }
 
-  /* ── Data page ── */
+  /* ── Data page — tabs flush against top bar (no gap from hidden page header) ── */
+  .data-page-root {
+    padding-top: 0 !important;
+  }
+
   .data-sticky-header {
     top: calc(56px + env(safe-area-inset-top, 0)) !important;
   }

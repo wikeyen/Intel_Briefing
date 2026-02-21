@@ -109,14 +109,14 @@ export const DEFAULT_OVERALL_PROMPT = `你是一名全球投资情报分析师�
 输出格式（严格JSON，不要添加 markdown 代码块标记）：
 {
   "quick_scan": [
-    { "text": "最重要的新闻或观点摘要", "source": "来源名称", "refs": [{ "title": "原文标题", "url": "原文链接" }] }
+    { "text": "事件描述，在关键事实后用[1]标记引用来源", "source": "来源名称", "refs": [{ "title": "原文标题", "url": "原文链接" }] }
   ],
   "executive_summary": "2-3段连贯的综合分析，提炼今日信息流中最值得关注的主题、趋势交叉点和投资启示。不要逐条列举，而是从全局视角分析各领域信号之间的关联。",
   "sections": [
     {
       "title": "板块标题",
       "entries": [
-        { "text": "条目内容", "source": "来源名称", "refs": [{ "title": "原文标题", "url": "原文链接" }] }
+        { "text": "条目内容，在关键事实后用[1]标记引用来源", "source": "来源名称", "refs": [{ "title": "原文标题", "url": "原文链接" }] }
       ]
     }
   ],
@@ -136,12 +136,14 @@ export const DEFAULT_OVERALL_PROMPT = `你是一名全球投资情报分析师�
 }
 
 引用要求：
+- 行内引用：在 text 中使用 [N] 标记（N 对应 refs 数组的序号，从1开始）。标记放在它所支持的事实或观点之后，例如："OpenAI算力目标达6000亿美元[1]"
 - quick_scan 和 sections 中的每条 entry 必须围绕一个具体事件或观点展开，直接对应 Notable items 中的一条或几条原文
 - 严禁将信息源的"趋势分析"段落（summary）作为 entry 内容——那是综合性描述，不可引用为具体事件
 - refs 中的 title 和 url 必须来自上文提供的 Notable items，严禁编造链接
 - 每条 refs 必须是该 entry 所描述事件的直接来源——读者点击链接后应能看到该事件的原始报道
 - 宁可不引用，也不要附上关联度低的链接凑数
 - 一条 entry 只讨论一个话题；如果想覆盖多个话题，拆成多条 entry
+- sentiment 中的 analysis 字段同样使用 [N] 行内标记
 
 板块说明：
 - 速览（quick_scan）：从 Notable items 中挑选最重要的3-5条具体新闻或观点。每条只讲一件事，附上该事件的原文链接。筛选标准：重大产品发布、关键人物判断、重大融资/并购事件、重要政策变化、市场重大波动。

@@ -507,6 +507,88 @@ function textHas(text: string | null | undefined, q: string): boolean {
   return !!text && text.toLowerCase().includes(q)
 }
 
+/** Style for a single ref superscript link. */
+const refLinkStyle = (verified: boolean | null | undefined): React.CSSProperties => ({
+  fontSize: '0.5625rem',
+  fontWeight: 600,
+  color: verified === false ? 'var(--ink-muted)' : 'var(--accent)',
+  textDecoration: verified === false ? 'line-through' : 'none',
+  verticalAlign: 'super',
+  marginLeft: '0.125rem',
+  lineHeight: 1,
+  opacity: verified === false ? 0.5 : 1,
+  cursor: verified === false ? 'not-allowed' : 'pointer',
+})
+
+/** Render a single ref as a superscript link. */
+function RefLink({ ref, index }: { ref: { title: string; url: string; verified?: boolean | null }; index: number }) {
+  return (
+    <a
+      href={ref.verified === false ? undefined : ref.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={ref.verified === false ? `${ref.title} — link could not be verified` : ref.title}
+      style={refLinkStyle(ref.verified)}
+      onMouseEnter={e => {
+        if (ref.verified !== false) (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'underline'
+      }}
+      onMouseLeave={e => {
+        if (ref.verified !== false) (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'none'
+      }}
+    >
+      [{index}]
+    </a>
+  )
+}
+
+/**
+ * Render text with inline [N] citation markers as superscript links.
+ * Falls back to appending all refs at the end if no [N] markers found in text.
+ */
+function TextWithRefs({ text, refs, query }: {
+  text: string
+  refs: { title: string; url: string; verified?: boolean | null }[]
+  query: string
+}) {
+  if (!refs || refs.length === 0) {
+    return <Highlight text={text} query={query} />
+  }
+
+  // Check if text contains any [N] markers
+  const hasInlineMarkers = /\[\d+\]/.test(text)
+
+  if (hasInlineMarkers) {
+    // Split text on [N] markers and interleave with ref links
+    const parts: React.ReactNode[] = []
+    const segments = text.split(/(\[\d+\])/)
+    let key = 0
+    for (const segment of segments) {
+      const match = segment.match(/^\[(\d+)\]$/)
+      if (match) {
+        const refIndex = parseInt(match[1], 10) - 1
+        if (refIndex >= 0 && refIndex < refs.length) {
+          parts.push(<RefLink key={`ref-${key++}`} ref={refs[refIndex]} index={refIndex + 1} />)
+        } else {
+          parts.push(<span key={`ref-${key++}`}>{segment}</span>)
+        }
+      } else if (segment) {
+        parts.push(<Highlight key={`text-${key++}`} text={segment} query={query} />)
+      }
+    }
+    return <>{parts}</>
+  }
+
+  // Fallback: no inline markers — append refs at the end (backward compat)
+  return (
+    <>
+      <Highlight text={text} query={query} />
+      {refs.map((r, ri) => (
+        <RefLink key={ri} ref={r} index={ri + 1} />
+      ))}
+    </>
+  )
+}
+
 /** Check if overall briefing has structured data (new format) vs legacy plain text fallback. */
 function isStructuredOverall(overall: OverallBriefing | string): overall is OverallBriefing {
   return typeof overall === 'object' && overall !== null && 'quick_scan' in overall
@@ -670,35 +752,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                         color: 'var(--ink)',
                         lineHeight: 1.6,
                       }}>
-                        <Highlight text={entry.text} query={q} />
-                        {entry.refs?.length > 0 && entry.refs.map((ref, ri) => (
-                          <a
-                            key={ri}
-                            href={ref.verified === false ? undefined : ref.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title={ref.verified === false ? `${ref.title} — link could not be verified` : ref.title}
-                            style={{
-                              fontSize: '0.5625rem',
-                              fontWeight: 600,
-                              color: ref.verified === false ? 'var(--ink-muted)' : 'var(--accent)',
-                              textDecoration: ref.verified === false ? 'line-through' : 'none',
-                              verticalAlign: 'super',
-                              marginLeft: '0.125rem',
-                              lineHeight: 1,
-                              opacity: ref.verified === false ? 0.5 : 1,
-                              cursor: ref.verified === false ? 'not-allowed' : 'pointer',
-                            }}
-                            onMouseEnter={e => {
-                              if (ref.verified !== false) (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'underline'
-                            }}
-                            onMouseLeave={e => {
-                              if (ref.verified !== false) (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'none'
-                            }}
-                          >
-                            [{ri + 1}]
-                          </a>
-                        ))}
+                        <TextWithRefs text={entry.text} refs={entry.refs ?? []} query={q} />
                         {entry.source && (
                           <span style={{
                             marginLeft: '0.5rem',
@@ -754,24 +808,6 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                 }
                 const mood = moodConfig[s.overall_mood] ?? moodConfig.neutral
 
-                const renderSentimentRefs = (refs: { title: string; url: string; verified?: boolean | null }[]) =>
-                  refs.map((ref, ri) => (
-                    <a key={ri}
-                      href={ref.verified === false ? undefined : ref.url}
-                      target="_blank" rel="noopener noreferrer"
-                      title={ref.verified === false ? `${ref.title} — link could not be verified` : ref.title}
-                      style={{
-                        fontSize: '0.5625rem', fontWeight: 600,
-                        color: ref.verified === false ? 'var(--ink-muted)' : 'var(--accent)',
-                        textDecoration: ref.verified === false ? 'line-through' : 'none',
-                        verticalAlign: 'super',
-                        marginLeft: '0.125rem', lineHeight: 1,
-                        opacity: ref.verified === false ? 0.5 : 1,
-                        cursor: ref.verified === false ? 'not-allowed' : 'pointer',
-                      }}
-                    >[{ri + 1}]</a>
-                  ))
-
                 const renderSubSection = (icon: string, title: string, entries: typeof s.controversies) => {
                   if (entries.length === 0) return null
                   return (
@@ -788,8 +824,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                           marginBottom: '0.375rem', paddingLeft: '0.25rem',
                         }}>
                           <span style={{ fontWeight: 600 }}><Highlight text={entry.topic} query={q} /></span>
-                          {' — '}<Highlight text={entry.analysis} query={q} />
-                          {renderSentimentRefs(entry.refs)}
+                          {' — '}<TextWithRefs text={entry.analysis} refs={entry.refs} query={q} />
                         </div>
                       ))}
                     </div>
@@ -871,35 +906,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                             color: 'var(--ink-muted)',
                             lineHeight: 1.6,
                           }}>
-                            <Highlight text={entry.text} query={q} />
-                            {entry.refs?.length > 0 && entry.refs.map((ref, ri) => (
-                              <a
-                                key={ri}
-                                href={ref.verified === false ? undefined : ref.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                title={ref.verified === false ? `${ref.title} — link could not be verified` : ref.title}
-                                style={{
-                                  fontSize: '0.5625rem',
-                                  fontWeight: 600,
-                                  color: ref.verified === false ? 'var(--ink-muted)' : 'var(--accent)',
-                                  textDecoration: ref.verified === false ? 'line-through' : 'none',
-                                  verticalAlign: 'super',
-                                  marginLeft: '0.125rem',
-                                  lineHeight: 1,
-                                  opacity: ref.verified === false ? 0.5 : 1,
-                                  cursor: ref.verified === false ? 'not-allowed' : 'pointer',
-                                }}
-                                onMouseEnter={e => {
-                                  if (ref.verified !== false) (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'underline'
-                                }}
-                                onMouseLeave={e => {
-                                  if (ref.verified !== false) (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'none'
-                                }}
-                              >
-                                [{ri + 1}]
-                              </a>
-                            ))}
+                            <TextWithRefs text={entry.text} refs={entry.refs ?? []} query={q} />
                           </li>
                         ))}
                       </ul>

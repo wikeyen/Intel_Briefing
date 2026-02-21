@@ -15,3 +15,4 @@ build:
 # Run tests
 test:
 	cd frontend && npm test
+

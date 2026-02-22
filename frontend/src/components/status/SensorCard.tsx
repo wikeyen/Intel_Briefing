@@ -111,7 +111,10 @@ function cardContainerStyle(state: CardState, hovered: boolean): React.CSSProper
     borderBottomWidth: 1,
     borderLeftWidth: 1,
     borderStyle: 'solid',
-    borderColor: 'var(--border)',
+    borderTopColor: 'var(--border)',
+    borderRightColor: 'var(--border)',
+    borderBottomColor: 'var(--border)',
+    borderLeftColor: 'var(--border)',
     borderRadius: 8,
     boxShadow: 'var(--shadow-card)',
     transition: 'all 200ms ease',
@@ -134,9 +137,12 @@ function cardContainerStyle(state: CardState, hovered: boolean): React.CSSProper
   if (state === 'selected') {
     return {
       ...base,
-      borderColor: 'var(--accent)',
+      borderTopColor: 'var(--accent)',
+      borderRightColor: 'var(--accent)',
+      borderBottomColor: 'var(--accent)',
+      borderLeftColor: 'var(--accent)',
       background: 'var(--accent-wash)',
-      ...(hovered && { boxShadow: 'var(--shadow-card-hover)', borderColor: 'var(--accent)' }),
+      ...(hovered && { boxShadow: 'var(--shadow-card-hover)', borderTopColor: 'var(--accent)', borderRightColor: 'var(--accent)', borderBottomColor: 'var(--accent)', borderLeftColor: 'var(--accent)' }),
     }
   }
 
@@ -145,7 +151,7 @@ function cardContainerStyle(state: CardState, hovered: boolean): React.CSSProper
       ...base,
       borderLeftWidth: 3,
       borderLeftColor: 'var(--err)',
-      ...(hovered && { boxShadow: 'var(--shadow-card-hover)', borderColor: 'var(--border-strong)' }),
+      ...(hovered && { boxShadow: 'var(--shadow-card-hover)', borderTopColor: 'var(--border-strong)', borderRightColor: 'var(--border-strong)', borderBottomColor: 'var(--border-strong)', borderLeftColor: 'var(--err)' }),
     }
   }
 
@@ -154,13 +160,13 @@ function cardContainerStyle(state: CardState, hovered: boolean): React.CSSProper
       ...base,
       borderLeftWidth: 3,
       borderLeftColor: 'var(--warn)',
-      ...(hovered && { boxShadow: 'var(--shadow-card-hover)', borderColor: 'var(--border-strong)' }),
+      ...(hovered && { boxShadow: 'var(--shadow-card-hover)', borderTopColor: 'var(--border-strong)', borderRightColor: 'var(--border-strong)', borderBottomColor: 'var(--border-strong)', borderLeftColor: 'var(--warn)' }),
     }
   }
 
   return {
     ...base,
-    ...(hovered && { boxShadow: 'var(--shadow-card-hover)', borderColor: 'var(--border-strong)' }),
+    ...(hovered && { boxShadow: 'var(--shadow-card-hover)', borderTopColor: 'var(--border-strong)', borderRightColor: 'var(--border-strong)', borderBottomColor: 'var(--border-strong)', borderLeftColor: 'var(--border-strong)' }),
   }
 }
 
@@ -395,7 +401,10 @@ export const SensorCard = memo(function SensorCard(props: SensorCardProps) {
           const s = cardContainerStyle(state, true)
           Object.assign(e.currentTarget.style, {
             boxShadow: s.boxShadow,
-            borderColor: s.borderColor,
+            borderTopColor: s.borderTopColor,
+            borderRightColor: s.borderRightColor,
+            borderBottomColor: s.borderBottomColor,
+            borderLeftColor: s.borderLeftColor,
           })
         }
       }}
@@ -404,7 +413,10 @@ export const SensorCard = memo(function SensorCard(props: SensorCardProps) {
           const s = cardContainerStyle(state, false)
           Object.assign(e.currentTarget.style, {
             boxShadow: s.boxShadow,
-            borderColor: s.borderColor,
+            borderTopColor: s.borderTopColor,
+            borderRightColor: s.borderRightColor,
+            borderBottomColor: s.borderBottomColor,
+            borderLeftColor: s.borderLeftColor,
           })
         }
       }}

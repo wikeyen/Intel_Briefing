@@ -993,20 +993,18 @@ function TrendingWidget({ report, summary }: { report: IntelReport; summary?: Br
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-start gap-2.5 no-underline rounded-lg"
+                className="flex items-start gap-2.5 no-underline"
                 style={{
                   padding: '10px 24px',
                   margin: '0 -24px',
-                  transition: 'background 150ms ease',
                   ...(idx < top.length - 1 ? { borderBottom: '1px solid var(--border-subtle)' } : {}),
                 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-inset)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
               >
                 {/* Rank number */}
-                <span className="w-5 text-right shrink-0 font-mono font-bold mt-0.5" style={{
+                <span className="shrink-0 font-mono font-bold mt-0.5" style={{
                   fontSize: '0.6875rem',
                   color: idx < 3 ? 'var(--accent)' : 'var(--ink-disabled)',
+                  minWidth: '1rem',
                 }}>
                   {idx + 1}
                 </span>

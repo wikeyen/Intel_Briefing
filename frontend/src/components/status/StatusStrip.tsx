@@ -240,7 +240,7 @@ export function StatusStrip({
         className="status-strip-mobile"
         style={{
           flexDirection: 'column',
-          margin: '0 0.5rem',
+          margin: '0 0.75rem',
           background: 'var(--surface)',
           borderWidth: 1,
           borderStyle: 'solid',

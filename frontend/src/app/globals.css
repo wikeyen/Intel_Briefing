@@ -619,6 +619,9 @@ input[type="range"]::-moz-range-thumb {
   }
 
   /* ── Status page — mission control responsive ── */
+  .status-page {
+    padding-top: 0.75rem !important;
+  }
   .sensor-grid {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 0.5rem !important;

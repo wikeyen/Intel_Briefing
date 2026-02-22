@@ -1,7 +1,6 @@
 // ABOUTME: Briefing tab content for the Data page — shows AI-generated summary with progress tracking.
 // ABOUTME: Extracted from Data.tsx; includes summary progress banner, streaming token preview, and structured briefing display.
 'use client'
-import { useState } from 'react'
 import Link from 'next/link'
 import type { ConfigSettings, BriefingSummary, SummaryProgress, PipelineStatus, OverallBriefing, BriefingSource, IntelReport, IntelItem, SummaryLanguage } from '@/api/client'
 import { SENSOR_LABELS } from '@/lib/sensors/taxonomy'
@@ -67,172 +66,72 @@ function StreamTokenPreview({ text }: { text: string }) {
   )
 }
 
-function PauseDecisionBanner({ pipelineStatus, onResume, onStop }: {
+function RetryProgressBanner({ pipelineStatus, onSkip }: {
   pipelineStatus: PipelineStatus
-  onResume: (action: 'retry' | 'proceed', sensors?: string[]) => void
-  onStop: () => void
+  onSkip: () => void
 }) {
-  const stage = pipelineStatus.paused_stage
+  const { retry_attempt, retry_max } = pipelineStatus
   const failedSensors = pipelineStatus.sensors.filter(s =>
-    stage === 'fetch' ? s.fetch === 'failed' : s.summary === 'failed'
+    s.fetch === 'failed' || s.summary === 'failed'
   )
-  const [checked, setChecked] = useState<Set<string>>(() => new Set(failedSensors.map(s => s.name)))
-  const checkedCount = checked.size
-
-  const toggle = (name: string) => {
-    setChecked(prev => {
-      const next = new Set(prev)
-      if (next.has(name)) next.delete(name)
-      else next.add(name)
-      return next
-    })
-  }
-
-  const stageLabel = stage === 'fetch' ? 'Fetch' : 'Summary'
 
   return (
     <div style={{
       background: 'var(--surface)',
-      border: '1px solid var(--warn-border)',
+      border: '1px solid var(--border)',
       borderRadius: 8,
+      padding: '0.75rem 1.25rem',
       marginBottom: '1.25rem',
-      overflow: 'hidden',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: '1rem',
     }}>
-      {/* Header */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0.75rem 1.25rem',
-        borderBottom: '1px solid var(--border)',
-        background: 'var(--warn-tint)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            background: 'var(--warn)',
-            flexShrink: 0,
-          }} />
-          <span style={{
-            fontSize: '0.8125rem',
-            fontWeight: 600,
-            color: 'var(--ink)',
-          }}>
-            {stageLabel} complete &mdash; {failedSensors.length} source{failedSensors.length !== 1 ? 's' : ''} failed
-          </span>
-        </div>
-        <button
-          onClick={onStop}
-          style={{
-            fontSize: '0.625rem',
-            fontWeight: 500,
-            color: 'var(--err)',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '0.125rem 0.375rem',
-            textDecoration: 'underline',
-            textUnderlineOffset: '2px',
-          }}
-        >
-          Cancel
-        </button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', minWidth: 0 }}>
+        <span style={{
+          width: 6,
+          height: 6,
+          borderRadius: '50%',
+          background: 'var(--warn)',
+          flexShrink: 0,
+          animation: 'pulseDot 1.6s ease-in-out infinite',
+        }} />
+        <span style={{
+          fontSize: '0.8125rem',
+          fontWeight: 500,
+          color: 'var(--ink)',
+        }}>
+          Retrying {failedSensors.length} failed source{failedSensors.length !== 1 ? 's' : ''}
+        </span>
+        <span style={{
+          fontSize: '0.75rem',
+          fontWeight: 600,
+          color: 'var(--ink-muted)',
+          fontFamily: 'ui-monospace, monospace',
+          flexShrink: 0,
+        }}>
+          {retry_attempt}/{retry_max}
+        </span>
       </div>
-
-      {/* Failed sensor list with checkboxes */}
-      <div style={{ padding: '0.625rem 1.25rem' }}>
-        {failedSensors.map(s => {
-          const errorMsg = stage === 'fetch' ? s.fetch_error : s.summary_error
-          return (
-            <label
-              key={s.name}
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '0.5rem',
-                padding: '0.375rem 0',
-                cursor: 'pointer',
-                fontSize: '0.8125rem',
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={checked.has(s.name)}
-                onChange={() => toggle(s.name)}
-                style={{
-                  accentColor: 'var(--accent)',
-                  marginTop: '0.125rem',
-                  flexShrink: 0,
-                }}
-              />
-              <span style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem', minWidth: 0 }}>
-                <span style={{ fontWeight: 500, color: 'var(--ink)' }}>
-                  {SENSOR_LABELS[s.name] ?? s.name}
-                </span>
-                {errorMsg && (
-                  <span style={{
-                    fontSize: '0.6875rem',
-                    color: 'var(--ink-faint)',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {errorMsg}
-                  </span>
-                )}
-              </span>
-            </label>
-          )
-        })}
-      </div>
-
-      {/* Action buttons */}
-      <div style={{
-        display: 'flex',
-        gap: '0.625rem',
-        padding: '0.625rem 1.25rem 0.875rem',
-        borderTop: '1px solid var(--border)',
-      }}>
-        <button
-          onClick={() => onResume('retry', [...checked])}
-          disabled={checkedCount === 0}
-          style={{
-            fontSize: '0.8125rem',
-            fontWeight: 500,
-            padding: '0.5rem 1rem',
-            borderRadius: 4,
-            border: 'none',
-            color: 'var(--canvas)',
-            background: checkedCount > 0 ? 'var(--accent)' : 'var(--border)',
-            cursor: checkedCount > 0 ? 'pointer' : 'not-allowed',
-            transition: 'background 120ms',
-          }}
-          onMouseEnter={e => { if (checkedCount > 0) (e.currentTarget as HTMLElement).style.background = 'var(--accent-hover)' }}
-          onMouseLeave={e => { if (checkedCount > 0) (e.currentTarget as HTMLElement).style.background = 'var(--accent)' }}
-        >
-          Retry Selected ({checkedCount})
-        </button>
-        <button
-          onClick={() => onResume('proceed')}
-          style={{
-            fontSize: '0.8125rem',
-            fontWeight: 500,
-            padding: '0.5rem 1rem',
-            borderRadius: 4,
-            border: '1px solid var(--border)',
-            color: 'var(--ink-muted)',
-            background: 'transparent',
-            cursor: 'pointer',
-            transition: 'border-color 120ms',
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--ink-faint)' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)' }}
-        >
-          Proceed Without
-        </button>
-      </div>
+      <button
+        onClick={onSkip}
+        style={{
+          fontSize: '0.75rem',
+          fontWeight: 500,
+          padding: '0.375rem 0.75rem',
+          borderRadius: 4,
+          border: '1px solid var(--border)',
+          color: 'var(--ink-muted)',
+          background: 'transparent',
+          cursor: 'pointer',
+          flexShrink: 0,
+          transition: 'border-color 120ms',
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--ink-faint)' }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)' }}
+      >
+        Skip Retries
+      </button>
     </div>
   )
 }
@@ -750,7 +649,7 @@ function isStructuredOverall(overall: OverallBriefing | string): overall is Over
   return typeof overall === 'object' && overall !== null && 'executive_summary' in overall
 }
 
-export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, hasContent, onTrigger, onStop, onStopPipeline, onResume, onLanguageChange, streamTokens, searchQuery, loading, report }: {
+export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, hasContent, onTrigger, onStop, onStopPipeline, onSkipRetries, onLanguageChange, streamTokens, searchQuery, loading, report }: {
   summary: BriefingSummary | null
   summaryProgress: SummaryProgress | null
   pipelineStatus: PipelineStatus | null
@@ -759,7 +658,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
   onTrigger: () => void
   onStop: () => void
   onStopPipeline: () => void
-  onResume: (action: 'retry' | 'proceed', sensors?: string[]) => void
+  onSkipRetries: () => void
   onLanguageChange: (lang: SummaryLanguage) => void
   streamTokens?: Record<string, string>
   searchQuery?: string
@@ -768,15 +667,15 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
 }) {
   const isSummarizing = !!(summaryProgress?.running)
   const isPipelineActive = !!(pipelineStatus?.running && pipelineStatus.alive !== false)
-  const isPaused = !!(pipelineStatus?.paused && pipelineStatus.alive !== false)
+  const isRetrying = isPipelineActive && (pipelineStatus?.retry_attempt ?? 0) > 0
 
   // Summary is "lined up" — pipeline is running in a mode that will produce a summary,
   // but the summary stage hasn't started yet (e.g. still fetching).
   const isPendingRefresh = !isSummarizing && isPipelineActive
     && (pipelineStatus?.mode === 'fetch_summarize' || pipelineStatus?.mode === 'summarize')
 
-  // Show the progress banner whenever any job is active (but not when paused — show pause UI instead)
-  const showProgressBanner = (isSummarizing || isPipelineActive) && !isPaused
+  // Show the progress banner whenever any job is active
+  const showProgressBanner = isSummarizing || isPipelineActive
 
   // Stop handler: stop pipeline if active (stops everything), otherwise stop summary only
   const handleStopAll = isPipelineActive ? onStopPipeline : onStop
@@ -842,19 +741,19 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
       {summary && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-            {(showProgressBanner || isPaused) ? (
+            {showProgressBanner ? (
               <span style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.5rem',
                 fontSize: '0.75rem',
                 fontWeight: 500,
-                color: isPaused ? 'var(--warn)' : 'var(--accent)',
-                background: isPaused ? 'var(--warn-tint)' : 'var(--accent-tint)',
+                color: 'var(--accent)',
+                background: 'var(--accent-tint)',
                 padding: '0.3rem 0.75rem',
                 borderRadius: 4,
               }}>
-                {isPaused ? 'Action needed' : isSummarizing ? 'Updating briefing…' : 'Pipeline running…'}
+                {isSummarizing ? 'Updating briefing…' : 'Pipeline running…'}
               </span>
             ) : (
               <span style={{
@@ -866,7 +765,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
               </span>
             )}
           </div>
-          {hasProvider && hasContent && !showProgressBanner && !isPaused && (
+          {hasProvider && hasContent && !showProgressBanner && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               {/* Language toggle pill */}
               <div style={{
@@ -918,11 +817,10 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
         </div>
       )}
 
-      {isPaused && pipelineStatus && (
-        <PauseDecisionBanner
+      {isRetrying && pipelineStatus && (
+        <RetryProgressBanner
           pipelineStatus={pipelineStatus}
-          onResume={onResume}
-          onStop={handleStopAll}
+          onSkip={onSkipRetries}
         />
       )}
 

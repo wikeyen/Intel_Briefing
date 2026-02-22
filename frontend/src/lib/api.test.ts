@@ -31,12 +31,11 @@ vi.mock('./config', () => ({
 }))
 
 const mockIsPipelineRunning = vi.fn().mockReturnValue(false)
-const mockIsPipelinePaused = vi.fn().mockReturnValue(false)
 vi.mock('./pipeline/orchestrator', () => ({
   runPipeline: (...args: unknown[]) => mockRunPipeline(...args),
   isPipelineRunning: () => mockIsPipelineRunning(),
-  isPipelinePaused: () => mockIsPipelinePaused(),
   cancelPipeline: vi.fn().mockReturnValue(false),
+  skipPipelineRetries: vi.fn().mockReturnValue(false),
 }))
 
 // Mock next/server's after() — execute callback immediately in tests
@@ -169,6 +168,8 @@ describe('GET /api/fetch/status', () => {
       total_items: 0,
       paused: false,
       paused_stage: null,
+      retry_attempt: 0,
+      retry_max: 0,
     }
     mockReadPipelineStatus.mockResolvedValue(status)
     const { GET } = await import('@/app/api/fetch/status/route')

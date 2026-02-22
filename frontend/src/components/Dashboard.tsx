@@ -678,7 +678,7 @@ export function Dashboard() {
   }, [])
 
   // Derive whether any job is active
-  const isActive = !!(summaryProgress?.running) || !!(pipelineStatus?.running && pipelineStatus.alive !== false) || !!(pipelineStatus?.paused)
+  const isActive = !!(summaryProgress?.running) || !!(pipelineStatus?.running && pipelineStatus.alive !== false)
 
   // Poll pipeline + summary status — fast when active, slow when idle
   useEffect(() => {
@@ -711,7 +711,7 @@ export function Dashboard() {
     return () => { clearTimeout(timeout); clearInterval(iv) }
   }, [isActive])
 
-  const isRunning = isActive && !pipelineStatus?.paused
+  const isRunning = isActive
 
   // No data state
   const hasReport = report && Object.values(report.items).some(arr => arr.length > 0)

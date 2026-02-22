@@ -20,6 +20,8 @@ export class PipelineProgressTracker {
   private cancelled = false
   private paused = false
   private pausedStage: 'fetch' | 'summary' | null = null
+  private retryAttempt = 0
+  private retryMax = 0
   private overallSummary: StageState
 
   constructor(
@@ -127,17 +129,17 @@ export class PipelineProgressTracker {
     this.notify()
   }
 
-  /** Pause the pipeline after a stage completes with failures — awaiting user decision. */
-  pause(stage: 'fetch' | 'summary'): void {
-    this.paused = true
-    this.pausedStage = stage
+  /** Set auto-retry progress (e.g. attempt 2 of 3). */
+  setRetryProgress(attempt: number, max: number): void {
+    this.retryAttempt = attempt
+    this.retryMax = max
     this.notify()
   }
 
-  /** Resume the pipeline after user makes a retry/proceed decision. */
-  resume(): void {
-    this.paused = false
-    this.pausedStage = null
+  /** Clear retry progress (retries finished or skipped). */
+  clearRetryProgress(): void {
+    this.retryAttempt = 0
+    this.retryMax = 0
     this.notify()
   }
 
@@ -168,6 +170,8 @@ export class PipelineProgressTracker {
       cancelled: this.cancelled,
       paused: this.paused,
       paused_stage: this.pausedStage,
+      retry_attempt: this.retryAttempt,
+      retry_max: this.retryMax,
       mode: this.mode,
       default_concurrency: this.defaultConcurrency,
       local_summary_concurrency: this.localSummaryConcurrency,

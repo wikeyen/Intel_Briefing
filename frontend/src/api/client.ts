@@ -106,6 +106,8 @@ export interface PipelineStatus {
   cancelled: boolean
   paused: boolean
   paused_stage: 'fetch' | 'summary' | null
+  retry_attempt: number
+  retry_max: number
   mode: RunMode
   default_concurrency: number
   local_summary_concurrency: number

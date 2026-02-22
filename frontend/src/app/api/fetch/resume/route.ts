@@ -1,35 +1,34 @@
-// ABOUTME: Pipeline resume endpoint — POST /api/fetch/resume.
-// ABOUTME: Accepts user decision (retry/proceed) when the pipeline pauses on sensor failures.
+// ABOUTME: Pipeline skip-retries endpoint — POST /api/fetch/resume.
+// ABOUTME: Signals the running pipeline to skip remaining auto-retries and proceed.
 import { NextRequest, NextResponse } from 'next/server'
-import { resumePipeline, isPipelinePaused } from '@/lib/pipeline/orchestrator'
-import type { ResumeDecision } from '@/lib/models'
+import { skipPipelineRetries, isPipelineRunning } from '@/lib/pipeline/orchestrator'
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const body: Partial<ResumeDecision> = await request.json().catch(() => ({}))
+  const body = await request.json().catch(() => ({}))
+  const action = body?.action
 
-  if (!body.action || !['retry', 'proceed'].includes(body.action)) {
+  if (action !== 'proceed') {
     return NextResponse.json(
-      { error: 'Invalid action — must be "retry" or "proceed"' },
+      { error: 'Only "proceed" action is supported' },
       { status: 400 },
     )
   }
 
-  if (!isPipelinePaused()) {
+  if (!isPipelineRunning()) {
     return NextResponse.json(
-      { error: 'Pipeline is not paused' },
+      { error: 'Pipeline is not running' },
       { status: 409 },
     )
   }
 
-  const sensors = Array.isArray(body.sensors) ? body.sensors : undefined
-  const resumed = resumePipeline({ action: body.action, sensors })
+  const skipped = skipPipelineRetries()
 
-  if (!resumed) {
+  if (!skipped) {
     return NextResponse.json(
-      { error: 'Failed to resume pipeline' },
+      { error: 'Failed to skip retries' },
       { status: 500 },
     )
   }
 
-  return NextResponse.json({ status: 'resumed', action: body.action })
+  return NextResponse.json({ status: 'skipped_retries' })
 }

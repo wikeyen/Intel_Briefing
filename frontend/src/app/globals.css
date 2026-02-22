@@ -1,6 +1,8 @@
 /* ABOUTME: Global styles and design tokens for Intel Briefing — premium editorial aesthetic. */
 /* ABOUTME: All color, type, and spacing tokens defined here as CSS custom properties. */
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
 :root {
@@ -71,6 +73,25 @@
   --shadow-xs:         0 1px 2px rgba(0, 0, 0, 0.03);
 
   color-scheme: light dark;
+
+  /* ─── shadcn design tokens — mapped to our palette ─── */
+  --background:          #F8F7F4;
+  --foreground:          #18181A;
+  --card:                #FFFFFF;
+  --card-foreground:     #18181A;
+  --popover:             #FFFFFF;
+  --popover-foreground:  #18181A;
+  --primary:             #1D6B4F;
+  --primary-foreground:  #FFFFFF;
+  --secondary:           #F2F0EC;
+  --secondary-foreground:#18181A;
+  --muted:               #F2F0EC;
+  --muted-foreground:    #6B6968;
+  --accent-foreground:   #1D6B4F;
+  --destructive:         #B91C1C;
+  --input:               #E0DDD7;
+  --ring:                #1D6B4F;
+  --radius:              0.75rem;
 
   /* Typography */
   font-family: 'Inter', system-ui, sans-serif;
@@ -154,6 +175,68 @@
 
     /* Elevation */
     --shadow-xs:         0 1px 2px rgba(0, 0, 0, 0.15);
+
+    /* shadcn dark overrides */
+    --background:          #1C1B18;
+    --foreground:          #EDEAE4;
+    --card:                #252421;
+    --card-foreground:     #EDEAE4;
+    --popover:             #252421;
+    --popover-foreground:  #EDEAE4;
+    --primary:             #4D9478;
+    --primary-foreground:  #1C1B18;
+    --secondary:           #2E2D29;
+    --secondary-foreground:#EDEAE4;
+    --muted:               #2E2D29;
+    --muted-foreground:    #9B9892;
+    --accent-foreground:   #4D9478;
+    --destructive:         #F87171;
+    --input:               #3A3935;
+    --ring:                #4D9478;
+  }
+}
+
+/* ─── shadcn theme bridge — maps CSS vars to Tailwind utility classes ──── */
+@theme inline {
+  --radius-sm:   calc(var(--radius) - 4px);
+  --radius-md:   calc(var(--radius) - 2px);
+  --radius-lg:   var(--radius);
+  --radius-xl:   calc(var(--radius) + 4px);
+  --radius-2xl:  calc(var(--radius) + 8px);
+
+  --color-background:          var(--background);
+  --color-foreground:          var(--foreground);
+  --color-card:                var(--card);
+  --color-card-foreground:     var(--card-foreground);
+  --color-popover:             var(--popover);
+  --color-popover-foreground:  var(--popover-foreground);
+  --color-primary:             var(--primary);
+  --color-primary-foreground:  var(--primary-foreground);
+  --color-secondary:           var(--secondary);
+  --color-secondary-foreground:var(--secondary-foreground);
+  --color-muted:               var(--muted);
+  --color-muted-foreground:    var(--muted-foreground);
+  --color-destructive:         var(--destructive);
+  --color-border:              var(--border);
+  --color-input:               var(--input);
+  --color-ring:                var(--ring);
+
+  /* shadcn accent = subtle hover bg, NOT our brand green */
+  --color-accent:              var(--accent-wash);
+  --color-accent-foreground:   var(--accent-foreground);
+
+  /* Custom status colors for Tailwind */
+  --color-ok:   var(--ok);
+  --color-warn: var(--warn);
+  --color-err:  var(--err);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
   }
 }
 
@@ -549,7 +632,6 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
-
 /* ─── Dashboard Grid ────────────────────────────────────────────────────── */
 .dashboard-grid {
   display: grid;
@@ -579,7 +661,6 @@ input[type="range"]::-moz-range-thumb {
     transform: translateY(0);
   }
 }
-
 
 /* ─── Markdown Summary Rendering ─────────────────────────────────────── */
 .markdown-summary p {
@@ -635,4 +716,3 @@ input[type="range"]::-moz-range-thumb {
 .markdown-summary-sm strong {
   color: var(--ink-muted);
 }
-

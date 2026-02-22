@@ -1,5 +1,5 @@
 // ABOUTME: Dashboard home page — fluid grid data terminal with sentiment, trending, heatmap, risk/intel panel.
-// ABOUTME: Grafana-style tile layout with responsive 3-col / 4-col breakpoints and Framer Motion animations.
+// ABOUTME: Grafana-style tile layout using shadcn/ui components, Tailwind, and Framer Motion animations.
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
@@ -8,7 +8,12 @@ import { api } from '@/api/client'
 import type { IntelReport, IntelItem, BriefingSummary, PipelineStatus, SummaryProgress, OverallBriefing, BriefingSource, SentimentEntry } from '@/api/client'
 import { SENSOR_LABELS, SENSOR_DISPLAY_MAP, CATEGORY_TO_DISPLAY } from '@/lib/sensors/taxonomy'
 import type { CategoryKey, DisplayCategoryKey } from '@/lib/sensors/taxonomy'
-import { Skeleton, SkeletonCard } from './Skeleton'
+import { cn } from '@/lib/utils'
+import { Card, CardContent } from '@/components/ui/card'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
+import { Skeleton } from '@/components/ui/skeleton'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -52,15 +57,7 @@ function InlineRefs({ text, globalSources }: { text: string; globalSources?: Bri
             target="_blank"
             rel="noopener noreferrer"
             title={source.title}
-            style={{
-              fontSize: '0.5625rem',
-              fontWeight: 600,
-              color: 'var(--accent)',
-              verticalAlign: 'super',
-              marginLeft: '0.125rem',
-              lineHeight: 1,
-              textDecoration: 'none',
-            }}
+            className="text-[0.5625rem] font-semibold text-primary align-super ml-0.5 leading-none no-underline"
           >
             [{num}]
           </a>,
@@ -83,16 +80,9 @@ const PULSE_CSS = `
 `
 
 /** Section label — consistent uppercase treatment across all widgets. */
-function SectionLabel({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+function SectionLabel({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div style={{
-      fontSize: '0.625rem',
-      fontWeight: 700,
-      color: 'var(--ink-faint)',
-      textTransform: 'uppercase',
-      letterSpacing: '0.08em',
-      ...style,
-    }}>
+    <div className={cn('text-[0.625rem] font-bold text-muted-foreground uppercase tracking-wider', className)}>
       {children}
     </div>
   )
@@ -115,15 +105,6 @@ function StaggerChild({ index, children, className }: { index: number; children:
       {children}
     </motion.div>
   )
-}
-
-/** Standard card chrome shared by all widget panels. */
-const CARD: React.CSSProperties = {
-  background: 'var(--surface)',
-  border: '1px solid var(--border)',
-  borderRadius: 12,
-  padding: '1rem 1.25rem',
-  boxShadow: 'var(--shadow-xs)',
 }
 
 /** Social platform set for sentiment computation. */
@@ -150,81 +131,67 @@ function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
   const riskCount = overall && isStructuredOverall(overall) ? (overall.sentiment?.risk_flags?.length ?? 0) : 0
 
   const moodColors: Record<string, string> = {
-    bullish: 'var(--ok)',
-    bearish: 'var(--err)',
-    mixed: 'var(--warn)',
-    neutral: 'var(--ink-faint)',
+    bullish: 'text-ok',
+    bearish: 'text-err',
+    mixed: 'text-warn',
+    neutral: 'text-muted-foreground',
+  }
+  const moodDotColors: Record<string, string> = {
+    bullish: 'bg-ok',
+    bearish: 'bg-err',
+    mixed: 'bg-warn',
+    neutral: 'bg-muted-foreground',
   }
 
   return (
-    <div className="dashboard-ticker" style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '1.25rem',
-      padding: '0.5rem 1.25rem',
-      background: 'var(--surface-alt)',
-      borderRadius: 10,
-      fontSize: '0.6875rem',
-      fontFamily: 'ui-monospace, monospace',
-      color: 'var(--ink-faint)',
-      flexWrap: 'nowrap',
-      overflow: 'hidden',
-    }}>
+    <div className="dashboard-ticker flex items-center gap-5 px-5 py-2 bg-secondary rounded-[10px] text-[0.6875rem] font-mono text-muted-foreground overflow-hidden flex-nowrap">
       {/* Pipeline state */}
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
-        <span style={{
-          width: 6, height: 6, borderRadius: '50%',
-          background: isActive ? 'var(--accent)' : 'var(--ink-faint)',
-          animation: isActive ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
-        }} />
-        <span style={{ color: isActive ? 'var(--accent)' : 'var(--ink-faint)', fontWeight: 600 }}>
+      <span className="inline-flex items-center gap-1.5 shrink-0">
+        <span
+          className={cn('w-1.5 h-1.5 rounded-full', isActive ? 'bg-primary' : 'bg-muted-foreground')}
+          style={isActive ? { animation: 'pulseDot 1.6s ease-in-out infinite' } : undefined}
+        />
+        <span className={cn('font-semibold', isActive ? 'text-primary' : 'text-muted-foreground')}>
           {isActive ? 'Updating' : 'Idle'}
         </span>
       </span>
 
-      <span style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
+      <span className="w-px h-3.5 bg-border shrink-0" />
 
       {/* Last fetch */}
-      <span className="dashboard-ticker-hide-mobile" style={{ flexShrink: 0 }}>
+      <span className="dashboard-ticker-hide-mobile shrink-0">
         {report ? `Fetched ${timeAgo(report.fetched_at)}` : 'No data'}
       </span>
 
       {/* Last summary */}
       {summary && (
-        <span className="dashboard-ticker-hide-mobile" style={{ flexShrink: 0 }}>
+        <span className="dashboard-ticker-hide-mobile shrink-0">
           Summary {timeAgo(summary.generated_at)}
         </span>
       )}
 
-      <span style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
+      <span className="w-px h-3.5 bg-border shrink-0" />
 
       {/* Sources */}
-      <span style={{ flexShrink: 0 }}>
-        <span style={{ color: sourcesOk === sourcesTotal ? 'var(--ok)' : 'var(--warn)' }}>
+      <span className="shrink-0">
+        <span className={sourcesOk === sourcesTotal ? 'text-ok' : 'text-warn'}>
           {sourcesOk}/{sourcesTotal}
         </span>
         {' '}sources
       </span>
 
       {/* Items */}
-      <span className="dashboard-ticker-hide-mobile" style={{ flexShrink: 0 }}>
+      <span className="dashboard-ticker-hide-mobile shrink-0">
         {allItems.length} items
       </span>
 
       {/* Mood */}
       {mood && (
         <>
-          <span style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', flexShrink: 0 }}>
-            <span style={{
-              width: 6, height: 6, borderRadius: '50%',
-              background: moodColors[mood] ?? 'var(--ink-faint)',
-            }} />
-            <span style={{
-              color: moodColors[mood] ?? 'var(--ink-faint)',
-              fontWeight: 600,
-              textTransform: 'capitalize',
-            }}>
+          <span className="w-px h-3.5 bg-border shrink-0" />
+          <span className="inline-flex items-center gap-1 shrink-0">
+            <span className={cn('w-1.5 h-1.5 rounded-full', moodDotColors[mood] ?? 'bg-muted-foreground')} />
+            <span className={cn('font-semibold capitalize', moodColors[mood] ?? 'text-muted-foreground')}>
               {mood}
             </span>
           </span>
@@ -233,16 +200,9 @@ function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
 
       {/* Risk flags */}
       {riskCount > 0 && (
-        <span style={{
-          background: 'var(--err-tint)',
-          color: 'var(--err)',
-          fontWeight: 700,
-          padding: '0.125rem 0.4375rem',
-          borderRadius: 3,
-          flexShrink: 0,
-        }}>
+        <Badge variant="destructive" className="text-[0.625rem] px-1.5 py-0 rounded-sm shrink-0">
           {riskCount} risk{riskCount !== 1 ? 's' : ''}
-        </span>
+        </Badge>
       )}
     </div>
   )
@@ -264,66 +224,50 @@ function StatsStrip({ report, summary }: { report: IntelReport | null; summary: 
   const overall = summary?.overall
   const mood = overall && isStructuredOverall(overall) ? overall.sentiment?.overall_mood : null
   const moodColors: Record<string, string> = {
-    bullish: 'var(--ok)',
-    bearish: 'var(--err)',
-    mixed: 'var(--warn)',
-    neutral: 'var(--ink-faint)',
+    bullish: 'text-ok',
+    bearish: 'text-err',
+    mixed: 'text-warn',
+    neutral: 'text-muted-foreground',
   }
 
-  const stats: { value: string; label: string; color?: string }[] = [
+  const stats: { value: string; label: string; colorClass?: string }[] = [
     { value: totalItems.toLocaleString(), label: 'Items' },
     { value: String(sourcesOk), label: 'Sources' },
     { value: positivePct != null ? `${positivePct}%` : '--', label: 'Positive' },
-    { value: mood ?? '--', label: 'Mood', color: mood ? moodColors[mood] : undefined },
+    { value: mood ?? '--', label: 'Mood', colorClass: mood ? moodColors[mood] : undefined },
   ]
 
   return (
-    <div className="dashboard-stats-strip" style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(4, 1fr)',
-      background: 'var(--surface)',
-      borderRadius: 12,
-      border: '1px solid var(--border)',
-      overflow: 'hidden',
-      boxShadow: 'var(--shadow-xs)',
-    }}>
-      {stats.map((stat, i) => (
-        <div key={stat.label} className="stat-cell" style={{
-          padding: '1.125rem 1.25rem',
-          borderRight: i < 3 ? '1px solid var(--border-soft)' : 'none',
-          textAlign: 'center',
-        }}>
-          <motion.div
-            key={stat.value}
-            className="stat-value"
-            initial={{ opacity: 0.4, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3 }}
-            style={{
-              fontSize: '1.75rem',
-              fontWeight: 700,
-              color: stat.color ?? 'var(--ink)',
-              lineHeight: 1.15,
-              letterSpacing: '-0.03em',
-              fontFamily: stat.label === 'Mood' ? 'inherit' : 'ui-monospace, monospace',
-              textTransform: stat.label === 'Mood' ? 'capitalize' : 'none',
-            }}
-          >
-            {stat.value}
-          </motion.div>
-          <div style={{
-            fontSize: '0.5625rem',
-            fontWeight: 600,
-            color: 'var(--ink-faint)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            marginTop: '0.25rem',
-          }}>
-            {stat.label}
+    <Card className="dashboard-stats-strip py-0 gap-0 overflow-hidden">
+      <div className="grid grid-cols-4">
+        {stats.map((stat, i) => (
+          <div key={stat.label} className={cn(
+            'stat-cell py-4 px-5 text-center',
+            i < 3 && 'border-r border-border/50',
+          )}>
+            <motion.div
+              key={stat.value}
+              className="stat-value"
+              initial={{ opacity: 0.4, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <span className={cn(
+                'text-[1.75rem] font-bold leading-tight tracking-tight',
+                stat.label !== 'Mood' && 'font-mono',
+                stat.label === 'Mood' && 'capitalize',
+                stat.colorClass ?? 'text-foreground',
+              )}>
+                {stat.value}
+              </span>
+            </motion.div>
+            <div className="text-[0.5625rem] font-semibold text-muted-foreground uppercase tracking-wider mt-1">
+              {stat.label}
+            </div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </Card>
   )
 }
 
@@ -336,45 +280,18 @@ function ExecSummaryWidget({ summary }: { summary: BriefingSummary }) {
   if (!isStructuredOverall(overall) || !overall.executive_summary) return null
 
   return (
-    <div style={{
-      background: 'var(--accent-wash)',
-      borderLeft: '3px solid var(--accent)',
-      borderRadius: '0 12px 12px 0',
-      padding: '1.25rem 1.5rem',
-    }}>
-      <SectionLabel style={{ color: 'var(--accent)', marginBottom: '0.75rem' }}>
-        Executive Summary
-      </SectionLabel>
-      <div style={{
-        fontSize: '0.875rem',
-        color: 'var(--ink)',
-        lineHeight: 1.8,
-        whiteSpace: 'pre-wrap',
-      }}>
+    <div className="bg-[var(--accent-wash)] border-l-[3px] border-l-primary rounded-r-xl py-5 px-6">
+      <SectionLabel className="text-primary mb-3">Executive Summary</SectionLabel>
+      <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
         <InlineRefs text={overall.executive_summary} globalSources={overall.sources} />
       </div>
       {overall.quick_scan && overall.quick_scan.length > 0 && (
-        <div style={{ marginTop: '1rem', paddingTop: '0.875rem', borderTop: '1px solid var(--accent-dim)' }}>
-          <SectionLabel style={{ color: 'var(--accent)', marginBottom: '0.5rem' }}>
-            Quick Scan
-          </SectionLabel>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+        <div className="mt-4 pt-3.5 border-t border-[var(--accent-dim)]">
+          <SectionLabel className="text-primary mb-2">Quick Scan</SectionLabel>
+          <div className="flex flex-col gap-1.5">
             {overall.quick_scan.map((entry, i) => (
-              <div key={i} style={{
-                display: 'flex',
-                gap: '0.5rem',
-                fontSize: '0.8125rem',
-                color: 'var(--ink)',
-                lineHeight: 1.6,
-              }}>
-                <span style={{
-                  width: 4,
-                  height: 4,
-                  borderRadius: '50%',
-                  background: 'var(--accent)',
-                  flexShrink: 0,
-                  marginTop: '0.5rem',
-                }} />
+              <div key={i} className="flex gap-2 text-[0.8125rem] text-foreground leading-relaxed">
+                <span className="w-1 h-1 rounded-full bg-primary shrink-0 mt-2" />
                 <span><InlineRefs text={entry.text} globalSources={overall.sources} /></span>
               </div>
             ))}
@@ -395,109 +312,79 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
   const sentiment = overall.sentiment
   if (!sentiment) return null
 
-  const tabs = [
-    { key: 'risk', label: 'Risk', items: sentiment.risk_flags ?? [], color: 'var(--err)' },
-    { key: 'controversies', label: 'Controversies', items: sentiment.controversies ?? [], color: 'var(--warn)' },
-    { key: 'shifts', label: 'Shifts', items: sentiment.opinion_shifts ?? [], color: 'var(--accent)' },
+  const tabData = [
+    { key: 'risk', label: 'Risk', items: sentiment.risk_flags ?? [], color: 'text-err' },
+    { key: 'controversies', label: 'Controversies', items: sentiment.controversies ?? [], color: 'text-warn' },
+    { key: 'shifts', label: 'Shifts', items: sentiment.opinion_shifts ?? [], color: 'text-primary' },
   ] as const
 
-  const totalAlerts = tabs.reduce((n, t) => n + t.items.length, 0)
-
-  const [activeTab, setActiveTab] = useState(
-    // Default to the first tab that has items, or 'risk'
-    () => tabs.find(t => t.items.length > 0)?.key ?? 'risk'
-  )
-
-  const active = tabs.find(t => t.key === activeTab)!
+  const totalAlerts = tabData.reduce((n, t) => n + t.items.length, 0)
+  const defaultTab = tabData.find(t => t.items.length > 0)?.key ?? 'risk'
 
   return (
-    <div style={{ ...CARD, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <SectionLabel>Intelligence</SectionLabel>
-        {totalAlerts > 0 && (
-          <span style={{
-            fontSize: '0.5625rem', fontWeight: 700,
-            color: sentiment.risk_flags?.length ? 'var(--err)' : 'var(--ink-faint)',
-            fontFamily: 'ui-monospace, monospace',
-          }}>
-            {totalAlerts} alert{totalAlerts !== 1 ? 's' : ''}
-          </span>
-        )}
-      </div>
+    <Card className="py-4 gap-3">
+      <CardContent className="px-5 flex flex-col gap-3">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <SectionLabel>Intelligence</SectionLabel>
+          {totalAlerts > 0 && (
+            <span className={cn(
+              'text-[0.5625rem] font-bold font-mono',
+              sentiment.risk_flags?.length ? 'text-err' : 'text-muted-foreground',
+            )}>
+              {totalAlerts} alert{totalAlerts !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--border)' }}>
-        {tabs.map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            style={{
-              padding: '0.375rem 0.75rem',
-              fontSize: '0.6875rem',
-              fontWeight: 600,
-              color: activeTab === tab.key ? 'var(--ink)' : 'var(--ink-faint)',
-              borderBottom: activeTab === tab.key ? `2px solid ${tab.color}` : '2px solid transparent',
-              marginBottom: -1,
-              transition: 'color 150ms, border-color 150ms',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            {tab.label}
-            {tab.items.length > 0 && (
-              <span style={{
-                marginLeft: '0.25rem',
-                fontSize: '0.5rem',
-                fontFamily: 'ui-monospace, monospace',
-                color: tab.color,
-              }}>
-                {tab.items.length}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+        {/* Tabs */}
+        <Tabs defaultValue={defaultTab}>
+          <TabsList variant="line" className="w-full justify-start">
+            {tabData.map(tab => (
+              <TabsTrigger key={tab.key} value={tab.key} className="text-[0.6875rem] px-3 py-1.5">
+                {tab.label}
+                {tab.items.length > 0 && (
+                  <Badge variant="secondary" className={cn('ml-1 text-[0.5rem] px-1.5 py-0', tab.color)}>
+                    {tab.items.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
-      {/* Content */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', minHeight: 60 }}>
-        {active.items.length === 0 ? (
-          <div style={{
-            fontSize: '0.75rem', color: 'var(--ink-faint)',
-            padding: '1rem 0', textAlign: 'center',
-          }}>
-            None detected
-          </div>
-        ) : (
-          active.items.map((entry: SentimentEntry, i: number) => (
-            <div key={i} style={{
-              padding: '0.5rem 0',
-              borderBottom: i < active.items.length - 1 ? '1px dotted var(--border-soft)' : 'none',
-            }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '0.375rem',
-                marginBottom: '0.25rem',
-              }}>
-                <span style={{
-                  width: 5, height: 5, borderRadius: '50%',
-                  background: active.color, flexShrink: 0,
-                }} />
-                <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)' }}>
-                  {entry.topic}
-                </span>
-              </div>
-              <div style={{
-                fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.6,
-                paddingLeft: '1.125rem',
-              }}>
-                <InlineRefs text={entry.analysis} globalSources={overall.sources} />
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
+          {tabData.map(tab => (
+            <TabsContent key={tab.key} value={tab.key} className="flex flex-col gap-2 min-h-[60px] mt-2">
+              {tab.items.length === 0 ? (
+                <div className="text-xs text-muted-foreground py-4 text-center">
+                  None detected
+                </div>
+              ) : (
+                tab.items.map((entry: SentimentEntry, i: number) => (
+                  <div key={i} className={cn(
+                    'py-2',
+                    i < tab.items.length - 1 && 'border-b border-dotted border-border/50',
+                  )}>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className={cn('w-[5px] h-[5px] rounded-full shrink-0', {
+                        'bg-err': tab.key === 'risk',
+                        'bg-warn': tab.key === 'controversies',
+                        'bg-primary': tab.key === 'shifts',
+                      })} />
+                      <span className="text-[0.8125rem] font-semibold text-foreground">
+                        {entry.topic}
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground leading-relaxed pl-[1.125rem]">
+                      <InlineRefs text={entry.analysis} globalSources={overall.sources} />
+                    </div>
+                  </div>
+                ))
+              )}
+            </TabsContent>
+          ))}
+        </Tabs>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -520,17 +407,14 @@ function SentimentRing({ positive, neutral, negative, size = 140 }: {
   const neuArc = neuPct * circumference
   const negArc = circumference - posArc - neuArc
 
-  // Start at top (12 o'clock position)
   const posOffset = circumference * 0.25
   const neuOffset = posOffset - posArc
   const negOffset = neuOffset - neuArc
 
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" style={{ flexShrink: 0 }}
+    <svg width={size} height={size} viewBox="0 0 100 100" className="shrink-0"
       role="img" aria-label={`Sentiment: ${Math.round(posPct * 100)}% positive, ${Math.round(neuPct * 100)}% neutral, ${Math.round((1 - posPct - neuPct) * 100)}% negative`}>
-      {/* Track */}
       <circle cx="50" cy="50" r="45" fill="none" stroke="var(--border)" strokeWidth="8" />
-      {/* Positive segment */}
       {posArc > 0 && (
         <circle cx="50" cy="50" r="45" fill="none"
           stroke="var(--ok)" strokeWidth="8"
@@ -540,7 +424,6 @@ function SentimentRing({ positive, neutral, negative, size = 140 }: {
           style={{ transition: 'stroke-dasharray 800ms cubic-bezier(0.4, 0, 0.2, 1)' }}
         />
       )}
-      {/* Neutral segment */}
       {neuArc > 0.5 && (
         <circle cx="50" cy="50" r="45" fill="none"
           stroke="var(--ink-faint)" strokeWidth="8"
@@ -549,7 +432,6 @@ function SentimentRing({ positive, neutral, negative, size = 140 }: {
           style={{ transition: 'stroke-dasharray 800ms cubic-bezier(0.4, 0, 0.2, 1)' }}
         />
       )}
-      {/* Negative segment */}
       {negArc > 0.5 && (
         <circle cx="50" cy="50" r="45" fill="none"
           stroke="var(--err)" strokeWidth="8"
@@ -558,13 +440,12 @@ function SentimentRing({ positive, neutral, negative, size = 140 }: {
           style={{ transition: 'stroke-dasharray 800ms cubic-bezier(0.4, 0, 0.2, 1)' }}
         />
       )}
-      {/* Center percentage */}
       <text x="50" y="47" textAnchor="middle" dominantBaseline="central" fill="var(--ink)"
-        style={{ fontSize: '1.375rem', fontWeight: 700, fontFamily: 'ui-monospace, monospace' }}>
+        className="text-[1.375rem] font-bold font-mono">
         {Math.round(posPct * 100)}%
       </text>
       <text x="50" y="62" textAnchor="middle" fill="var(--ink-faint)"
-        style={{ fontSize: '0.4375rem', fontWeight: 600, letterSpacing: '0.08em' }}>
+        className="text-[0.4375rem] font-semibold tracking-wider">
         POSITIVE
       </text>
     </svg>
@@ -582,16 +463,21 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
   if (!sentiment) return null
 
   const moodColors: Record<string, string> = {
-    bullish: 'var(--ok)',
-    bearish: 'var(--err)',
-    mixed: 'var(--warn)',
-    neutral: 'var(--ink-faint)',
+    bullish: 'text-ok',
+    bearish: 'text-err',
+    mixed: 'text-warn',
+    neutral: 'text-muted-foreground',
+  }
+  const moodDotColors: Record<string, string> = {
+    bullish: 'bg-ok',
+    bearish: 'bg-err',
+    mixed: 'bg-warn',
+    neutral: 'bg-muted-foreground',
   }
 
   const allItems: IntelItem[] = report ? Object.values(report.items).flat() : []
   const socialWithSentiment = allItems.filter(i => SOCIAL.has(i.source) && i.sentiment)
 
-  // Aggregate counts for ring gauge
   let totalPos = 0, totalNeu = 0, totalNeg = 0
   const bySource: Record<string, { positive: number; negative: number; neutral: number; total: number }> = {}
   for (const item of socialWithSentiment) {
@@ -612,88 +498,70 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
   }
 
   return (
-    <div style={{ ...CARD, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-      {/* Header: mood indicator */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <SectionLabel>Sentiment</SectionLabel>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-          <span style={{
-            width: 7, height: 7, borderRadius: '50%',
-            background: moodColors[sentiment.overall_mood] ?? 'var(--ink-faint)',
-          }} />
-          <span style={{
-            fontSize: '0.75rem', fontWeight: 700,
-            color: moodColors[sentiment.overall_mood] ?? 'var(--ink-faint)',
-            textTransform: 'capitalize',
-          }}>
-            {sentiment.overall_mood}
-          </span>
+    <Card className="py-4 gap-3">
+      <CardContent className="px-5 flex flex-col gap-3">
+        {/* Header: mood indicator */}
+        <div className="flex items-center justify-between">
+          <SectionLabel>Sentiment</SectionLabel>
+          <div className="flex items-center gap-1.5">
+            <span className={cn('w-[7px] h-[7px] rounded-full', moodDotColors[sentiment.overall_mood] ?? 'bg-muted-foreground')} />
+            <span className={cn('text-xs font-bold capitalize', moodColors[sentiment.overall_mood] ?? 'text-muted-foreground')}>
+              {sentiment.overall_mood}
+            </span>
+          </div>
         </div>
-      </div>
 
-      {/* Ring gauge + mood summary row */}
-      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-        <SentimentRing positive={totalPos} neutral={totalNeu} negative={totalNeg} size={100} />
-        {sentiment.mood_summary && (
-          <p style={{
-            fontSize: '0.75rem', color: 'var(--ink)', lineHeight: 1.65,
-            margin: 0, flex: 1, minWidth: 140,
-          }}>
-            <InlineRefs text={sentiment.mood_summary} globalSources={overall.sources} />
-          </p>
-        )}
-      </div>
+        {/* Ring gauge + mood summary row */}
+        <div className="flex gap-4 items-center flex-wrap">
+          <SentimentRing positive={totalPos} neutral={totalNeu} negative={totalNeg} size={100} />
+          {sentiment.mood_summary && (
+            <p className="text-xs text-foreground leading-relaxed m-0 flex-1 min-w-[140px]">
+              <InlineRefs text={sentiment.mood_summary} globalSources={overall.sources} />
+            </p>
+          )}
+        </div>
 
-      {/* Per-platform sentiment bars */}
-      {Object.keys(bySource).length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {Object.entries(bySource).map(([source, counts]) => {
-            const posPct = Math.round((counts.positive / counts.total) * 100)
-            const negPct = Math.round((counts.negative / counts.total) * 100)
-            const neuPct = 100 - posPct - negPct
-            return (
-              <div key={source}>
-                <div style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  marginBottom: '0.125rem',
-                }}>
-                  <span style={{
-                    fontSize: '0.6875rem', fontWeight: 500,
-                    color: PLATFORM_COLORS[source] ?? 'var(--ink-muted)',
-                  }}>
-                    {SENSOR_LABELS[source] ?? source}
-                  </span>
-                  <div style={{
-                    display: 'flex', gap: '0.5rem',
-                    fontSize: '0.5rem', fontFamily: 'ui-monospace, monospace', color: 'var(--ink-faint)',
-                  }}>
-                    <span style={{ color: 'var(--ok)' }}>{posPct}%</span>
-                    <span>{neuPct}%</span>
-                    <span style={{ color: 'var(--err)' }}>{negPct}%</span>
+        {/* Per-platform sentiment bars */}
+        {Object.keys(bySource).length > 0 && (
+          <div className="flex flex-col gap-2">
+            {Object.entries(bySource).map(([source, counts]) => {
+              const posPct = Math.round((counts.positive / counts.total) * 100)
+              const negPct = Math.round((counts.negative / counts.total) * 100)
+              const neuPct = 100 - posPct - negPct
+              return (
+                <div key={source}>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-[0.6875rem] font-medium"
+                      style={{ color: PLATFORM_COLORS[source] ?? 'var(--ink-muted)' }}>
+                      {SENSOR_LABELS[source] ?? source}
+                    </span>
+                    <div className="flex gap-2 text-[0.5rem] font-mono text-muted-foreground">
+                      <span className="text-ok">{posPct}%</span>
+                      <span>{neuPct}%</span>
+                      <span className="text-err">{negPct}%</span>
+                    </div>
+                  </div>
+                  <div className="flex h-[3px] rounded-sm overflow-hidden bg-border">
+                    {posPct > 0 && (
+                      <div title={`${counts.positive} positive (${posPct}%)`}
+                        className="bg-ok transition-[width] duration-300" style={{ width: `${posPct}%` }} />
+                    )}
+                    {neuPct > 0 && (
+                      <div title={`${counts.neutral} neutral (${neuPct}%)`}
+                        className="bg-muted-foreground transition-[width] duration-300" style={{ width: `${neuPct}%` }} />
+                    )}
+                    {negPct > 0 && (
+                      <div title={`${counts.negative} negative (${negPct}%)`}
+                        className="bg-err transition-[width] duration-300" style={{ width: `${negPct}%` }} />
+                    )}
                   </div>
                 </div>
-                <div style={{
-                  display: 'flex', height: 3, borderRadius: 2, overflow: 'hidden', background: 'var(--border)',
-                }}>
-                  {posPct > 0 && (
-                    <div title={`${counts.positive} positive (${posPct}%)`}
-                      style={{ width: `${posPct}%`, background: 'var(--ok)', transition: 'width 300ms' }} />
-                  )}
-                  {neuPct > 0 && (
-                    <div title={`${counts.neutral} neutral (${neuPct}%)`}
-                      style={{ width: `${neuPct}%`, background: 'var(--ink-faint)', transition: 'width 300ms' }} />
-                  )}
-                  {negPct > 0 && (
-                    <div title={`${counts.negative} negative (${negPct}%)`}
-                      style={{ width: `${negPct}%`, background: 'var(--err)', transition: 'width 300ms' }} />
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </div>
+              )
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
@@ -720,41 +588,31 @@ function CategoryDistributionWidget({ report }: { report: IntelReport }) {
   ]
 
   return (
-    <div style={CARD}>
-      <SectionLabel style={{ marginBottom: '0.75rem' }}>Distribution</SectionLabel>
-      {/* Segmented bar */}
-      <div style={{ display: 'flex', height: 6, borderRadius: 3, overflow: 'hidden', gap: 1 }}>
-        {segments.map(seg => seg.count > 0 ? (
-          <div key={seg.key} style={{
-            width: `${(seg.count / total) * 100}%`,
-            background: seg.color,
-            transition: 'width 600ms cubic-bezier(0.4, 0, 0.2, 1)',
-          }} />
-        ) : null)}
-      </div>
-      {/* Legend */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr',
-        gap: '0.25rem 0.75rem', marginTop: '0.625rem',
-      }}>
-        {segments.map(seg => (
-          <div key={seg.key} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-            <span style={{
-              width: 6, height: 6, borderRadius: '50%', background: seg.color, flexShrink: 0,
+    <Card className="py-4 gap-3">
+      <CardContent className="px-5 flex flex-col gap-3">
+        <SectionLabel>Distribution</SectionLabel>
+        {/* Segmented bar */}
+        <div className="flex h-1.5 rounded-sm overflow-hidden gap-px">
+          {segments.map(seg => seg.count > 0 ? (
+            <div key={seg.key} style={{
+              width: `${(seg.count / total) * 100}%`,
+              background: seg.color,
+              transition: 'width 600ms cubic-bezier(0.4, 0, 0.2, 1)',
             }} />
-            <span style={{ fontSize: '0.625rem', fontWeight: 500, color: 'var(--ink-muted)' }}>
-              {seg.label}
-            </span>
-            <span style={{
-              fontSize: '0.625rem', fontWeight: 600, color: 'var(--ink)',
-              fontFamily: 'ui-monospace, monospace', marginLeft: 'auto',
-            }}>
-              {seg.count}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
+          ) : null)}
+        </div>
+        {/* Legend */}
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+          {segments.map(seg => (
+            <div key={seg.key} className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: seg.color }} />
+              <span className="text-[0.625rem] font-medium text-muted-foreground">{seg.label}</span>
+              <span className="text-[0.625rem] font-semibold text-foreground font-mono ml-auto">{seg.count}</span>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -763,7 +621,6 @@ function CategoryDistributionWidget({ report }: { report: IntelReport }) {
 // ---------------------------------------------------------------------------
 
 function SourceActivityWidget({ report }: { report: IntelReport }) {
-  // Group items by source and hour
   const sourceHours: Record<string, number[]> = {}
   for (const items of Object.values(report.items)) {
     for (const item of items) {
@@ -775,7 +632,6 @@ function SourceActivityWidget({ report }: { report: IntelReport }) {
     }
   }
 
-  // Sort sources by total items, take top 8
   const sorted = Object.entries(sourceHours)
     .map(([source, hours]) => ({ source, hours, total: hours.reduce((a, b) => a + b, 0) }))
     .sort((a, b) => b.total - a.total)
@@ -791,53 +647,43 @@ function SourceActivityWidget({ report }: { report: IntelReport }) {
   }
 
   return (
-    <div style={CARD}>
-      <SectionLabel style={{ marginBottom: '0.625rem' }}>Source Activity (24h)</SectionLabel>
-      <div style={{ overflowX: 'auto' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 320 }}>
-          {sorted.map(({ source, hours }) => (
-            <div key={source} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{
-                width: 56, fontSize: '0.5rem', fontWeight: 600,
-                color: 'var(--ink-faint)', fontFamily: 'ui-monospace, monospace',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0,
-              }}>
-                {(SENSOR_LABELS[source] ?? source).slice(0, 8)}
-              </span>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(24, 1fr)', gap: 2, flex: 1 }}>
-                {hours.map((count, h) => (
-                  <div key={h} title={`${SENSOR_LABELS[source] ?? source} — ${h}:00: ${count} items`}
-                    style={{
-                      width: '100%', aspectRatio: '1', minWidth: 5,
-                      borderRadius: 2, background: cellColor(count),
-                      transition: 'background 300ms',
-                    }}
-                  />
-                ))}
+    <Card className="py-4 gap-3">
+      <CardContent className="px-5 flex flex-col gap-3">
+        <SectionLabel>Source Activity (24h)</SectionLabel>
+        <div className="overflow-x-auto">
+          <div className="flex flex-col gap-[3px] min-w-[320px]">
+            {sorted.map(({ source, hours }) => (
+              <div key={source} className="flex items-center gap-1.5">
+                <span className="w-14 text-[0.5rem] font-semibold text-muted-foreground font-mono truncate shrink-0">
+                  {(SENSOR_LABELS[source] ?? source).slice(0, 8)}
+                </span>
+                <div className="grid grid-cols-[repeat(24,1fr)] gap-0.5 flex-1">
+                  {hours.map((count, h) => (
+                    <div key={h} title={`${SENSOR_LABELS[source] ?? source} — ${h}:00: ${count} items`}
+                      className="w-full aspect-square min-w-[5px] rounded-sm transition-colors duration-300"
+                      style={{ background: cellColor(count) }}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
+            ))}
+          </div>
+        </div>
+        {/* Legend */}
+        <div className="flex gap-2.5 text-[0.5rem] text-muted-foreground">
+          {[
+            { bg: 'var(--border-soft)', label: '0' },
+            { bg: 'var(--accent-lo)', label: '1-5' },
+            { bg: 'var(--accent-mid)', label: '6-15' },
+            { bg: 'var(--accent)', label: '16+' },
+          ].map(({ bg, label }) => (
+            <span key={label} className="inline-flex items-center gap-[3px]">
+              <span className="w-[5px] h-[5px] rounded-[1px]" style={{ background: bg }} /> {label}
+            </span>
           ))}
         </div>
-      </div>
-      {/* Legend */}
-      <div style={{
-        display: 'flex', gap: '0.625rem', marginTop: '0.375rem',
-        fontSize: '0.5rem', color: 'var(--ink-faint)',
-      }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          <span style={{ width: 5, height: 5, borderRadius: 1, background: 'var(--border-soft)' }} /> 0
-        </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          <span style={{ width: 5, height: 5, borderRadius: 1, background: 'var(--accent-lo)' }} /> 1-5
-        </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          <span style={{ width: 5, height: 5, borderRadius: 1, background: 'var(--accent-mid)' }} /> 6-15
-        </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          <span style={{ width: 5, height: 5, borderRadius: 1, background: 'var(--accent)' }} /> 16+
-        </span>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -851,33 +697,27 @@ function SourceHealthWidget({ report }: { report: IntelReport }) {
   if (all.length === 0) return null
 
   return (
-    <div style={CARD}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-        <SectionLabel>Source Health</SectionLabel>
-        <span style={{
-          fontSize: '0.5rem', fontFamily: 'ui-monospace, monospace',
-          color: 'var(--ink-faint)',
-        }}>
-          {report.sources_ok.length}/{all.length} ok
-        </span>
-      </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
-        {all.map(source => (
-          <div key={source} title={`${SENSOR_LABELS[source] ?? source}: ${okSet.has(source) ? 'OK' : 'Failed'}`}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.1875rem' }}>
-            <span style={{
-              width: 5, height: 5, borderRadius: '50%',
-              background: okSet.has(source) ? 'var(--ok)' : 'var(--err)',
-            }} />
-            <span style={{
-              fontSize: '0.5rem', color: 'var(--ink-faint)', fontFamily: 'ui-monospace, monospace',
-            }}>
-              {(SENSOR_LABELS[source] ?? source).slice(0, 8)}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
+    <Card className="py-4 gap-3">
+      <CardContent className="px-5 flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <SectionLabel>Source Health</SectionLabel>
+          <span className="text-[0.5rem] font-mono text-muted-foreground">
+            {report.sources_ok.length}/{all.length} ok
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {all.map(source => (
+            <div key={source} title={`${SENSOR_LABELS[source] ?? source}: ${okSet.has(source) ? 'OK' : 'Failed'}`}
+              className="flex items-center gap-[3px]">
+              <span className={cn('w-[5px] h-[5px] rounded-full', okSet.has(source) ? 'bg-ok' : 'bg-err')} />
+              <span className="text-[0.5rem] text-muted-foreground font-mono">
+                {(SENSOR_LABELS[source] ?? source).slice(0, 8)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -905,98 +745,80 @@ function TrendingWidget({ report }: { report: IntelReport }) {
   if (top.length === 0) return null
 
   return (
-    <div style={CARD}>
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: '0.625rem',
-      }}>
-        <SectionLabel>Trending</SectionLabel>
-        <Link href="/data" style={{
-          fontSize: '0.625rem', fontWeight: 500, color: 'var(--accent)', textDecoration: 'none',
-        }}>
-          View all &#8250;
-        </Link>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        {top.map((item, idx) => {
-          const v = item.velocity!
-          const pctStr = v.changePercent != null ? `${v.changePercent > 0 ? '+' : ''}${v.changePercent}%` : null
-          const pctColor = v.changePercent != null
-            ? v.changePercent > 0 ? 'var(--ok)' : v.changePercent < 0 ? 'var(--err)' : 'var(--ink-faint)'
-            : 'var(--ink-faint)'
-          const displayTitle = item.source === 'github'
-            ? item.title.split(' — ')[0]
-            : item.title
+    <Card className="py-4 gap-3">
+      <CardContent className="px-5 flex flex-col gap-0">
+        <div className="flex items-center justify-between mb-2.5">
+          <SectionLabel>Trending</SectionLabel>
+          <Link href="/data" className="text-[0.625rem] font-medium text-primary no-underline hover:underline">
+            View all &#8250;
+          </Link>
+        </div>
+        <div className="flex flex-col">
+          {top.map((item, idx) => {
+            const v = item.velocity!
+            const pctStr = v.changePercent != null ? `${v.changePercent > 0 ? '+' : ''}${v.changePercent}%` : null
+            const pctColor = v.changePercent != null
+              ? v.changePercent > 0 ? 'text-ok' : v.changePercent < 0 ? 'text-err' : 'text-muted-foreground'
+              : 'text-muted-foreground'
+            const displayTitle = item.source === 'github'
+              ? item.title.split(' — ')[0]
+              : item.title
 
-          return (
-            <a
-              key={item.id}
-              href={item.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'flex', alignItems: 'center', gap: '0.625rem',
-                padding: '0.4375rem 0', textDecoration: 'none',
-                borderBottom: idx < top.length - 1 ? '1px dotted var(--border-soft)' : 'none',
-              }}
-            >
-              {/* Rank number — top 3 in accent */}
-              <span style={{
-                fontSize: '0.9375rem', fontWeight: 700,
-                color: idx < 3 ? 'var(--accent-dim)' : 'var(--border)',
-                width: 20, textAlign: 'right', flexShrink: 0,
-                fontFamily: 'ui-monospace, monospace',
-              }}>
-                {idx + 1}
-              </span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink)',
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
-                  {displayTitle}
-                </div>
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: '0.25rem',
-                  fontSize: '0.5rem', color: 'var(--ink-faint)', marginTop: '0.0625rem',
-                }}>
-                  <span style={{
-                    padding: '0 0.25rem', borderRadius: 2,
-                    background: 'var(--surface-alt)', fontWeight: 500,
-                  }}>
-                    {SENSOR_LABELS[item.source] ?? item.source}
-                  </span>
-                  {item.heat && <span>{item.heat}</span>}
-                  {v.hoursOnTrend != null && (
-                    <span style={{
-                      padding: '0 0.1875rem', borderRadius: 2,
-                      background: v.hoursOnTrend <= 6 ? 'var(--cat-trend-tint)' : 'var(--surface-alt)',
-                      color: v.hoursOnTrend <= 6 ? 'var(--cat-trend)' : 'var(--ink-faint)',
-                      fontWeight: 600,
-                    }}>
-                      {v.hoursOnTrend}h
-                    </span>
-                  )}
-                </div>
-              </div>
-              {pctStr && (
-                <span style={{
-                  fontSize: '0.75rem', fontWeight: 700, color: pctColor,
-                  fontFamily: 'ui-monospace, monospace', flexShrink: 0,
-                }}>
-                  {pctStr}
+            return (
+              <a
+                key={item.id}
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  'flex items-center gap-2.5 py-[7px] no-underline',
+                  idx < top.length - 1 && 'border-b border-dotted border-border/50',
+                )}
+              >
+                {/* Rank number */}
+                <span className={cn(
+                  'text-[0.9375rem] font-bold w-5 text-right shrink-0 font-mono',
+                  idx < 3 ? 'text-[var(--accent-dim)]' : 'text-border',
+                )}>
+                  {idx + 1}
                 </span>
-              )}
-            </a>
-          )
-        })}
-      </div>
-    </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium text-foreground truncate">
+                    {displayTitle}
+                  </div>
+                  <div className="flex items-center gap-1 text-[0.5rem] text-muted-foreground mt-px">
+                    <span className="px-1 rounded-sm bg-secondary font-medium">
+                      {SENSOR_LABELS[item.source] ?? item.source}
+                    </span>
+                    {item.heat && <span>{item.heat}</span>}
+                    {v.hoursOnTrend != null && (
+                      <span className={cn(
+                        'px-[3px] rounded-sm font-semibold',
+                        v.hoursOnTrend <= 6
+                          ? 'bg-[var(--cat-trend-tint)] text-[var(--cat-trend)]'
+                          : 'bg-secondary text-muted-foreground',
+                      )}>
+                        {v.hoursOnTrend}h
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {pctStr && (
+                  <span className={cn('text-xs font-bold font-mono shrink-0', pctColor)}>
+                    {pctStr}
+                  </span>
+                )}
+              </a>
+            )
+          })}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
 // ---------------------------------------------------------------------------
-// Widget: Section Summaries (collapsible with AnimatePresence)
+// Widget: Section Summaries (Accordion)
 // ---------------------------------------------------------------------------
 
 function SectionSummariesWidget({ summary }: { summary: BriefingSummary }) {
@@ -1005,82 +827,34 @@ function SectionSummariesWidget({ summary }: { summary: BriefingSummary }) {
   const sections = overall.sections
   if (!sections || sections.length === 0) return null
 
-  const [expanded, setExpanded] = useState<Set<number>>(() => new Set([0]))
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-      {sections.map((section, i) => {
-        const isOpen = expanded.has(i)
-        return (
-          <div key={i} style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: 12,
-            overflow: 'hidden',
-            boxShadow: 'var(--shadow-xs)',
-          }}>
-            <button
-              onClick={() => setExpanded(prev => {
-                const next = new Set(prev)
-                if (next.has(i)) next.delete(i)
-                else next.add(i)
-                return next
-              })}
-              aria-expanded={isOpen}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                width: '100%', padding: '0.75rem 1.25rem',
-                background: 'none', border: 'none', cursor: 'pointer',
-                color: 'var(--ink)', fontSize: '0.75rem', fontWeight: 600, textAlign: 'left',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span>{section.title}</span>
-                <span style={{
-                  fontSize: '0.5rem', fontWeight: 600, color: 'var(--ink-faint)',
-                  background: 'var(--surface-alt)', padding: '0.0625rem 0.375rem',
-                  borderRadius: 3, fontFamily: 'ui-monospace, monospace',
-                }}>
-                  {section.entries.length}
-                </span>
-              </div>
-              <span style={{
-                fontSize: '0.5625rem', color: 'var(--ink-faint)',
-                transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: 'transform 200ms', display: 'inline-block',
-              }}>
-                &#9662;
-              </span>
-            </button>
-            <AnimatePresence>
-              {isOpen && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ height: { duration: 0.25 }, opacity: { duration: 0.15 } }}
-                  style={{ overflow: 'hidden' }}
-                >
-                  <div style={{
-                    padding: '0 1.25rem 1rem',
-                    display: 'flex', flexDirection: 'column', gap: '0.5rem',
-                  }}>
-                    {section.entries.map((entry, j) => (
-                      <div key={j} style={{
-                        fontSize: '0.75rem', color: 'var(--ink)', lineHeight: 1.7,
-                        paddingLeft: '0.75rem', borderLeft: '2px solid var(--border)',
-                      }}>
-                        <InlineRefs text={entry.text} globalSources={overall.sources} />
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )
-      })}
-    </div>
+    <Card className="py-2 gap-0">
+      <CardContent className="px-5">
+        <Accordion type="multiple" defaultValue={['section-0']}>
+          {sections.map((section, i) => (
+            <AccordionItem key={i} value={`section-${i}`} className="border-border/50">
+              <AccordionTrigger className="py-3 text-xs font-semibold hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <span>{section.title}</span>
+                  <Badge variant="secondary" className="text-[0.5rem] px-1.5 py-0 font-mono">
+                    {section.entries.length}
+                  </Badge>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pb-3">
+                <div className="flex flex-col gap-2">
+                  {section.entries.map((entry, j) => (
+                    <div key={j} className="text-xs text-foreground leading-relaxed pl-3 border-l-2 border-border">
+                      <InlineRefs text={entry.text} globalSources={overall.sources} />
+                    </div>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -1092,58 +866,74 @@ function DashboardSkeleton() {
   return (
     <div className="dashboard-grid">
       {/* Ticker skeleton */}
-      <div className="dashboard-span-full" style={{
-        background: 'var(--surface-alt)', borderRadius: 10,
-        padding: '0.5rem 1.25rem', display: 'flex', gap: '1rem',
-      }}>
-        <Skeleton width={80} height={10} />
-        <Skeleton width={100} height={10} />
-        <Skeleton width={60} height={10} />
+      <div className="dashboard-span-full bg-secondary rounded-[10px] px-5 py-2 flex gap-4">
+        <Skeleton className="w-20 h-2.5" />
+        <Skeleton className="w-24 h-2.5" />
+        <Skeleton className="w-16 h-2.5" />
       </div>
       {/* Stats strip skeleton */}
-      <div className="dashboard-span-full" style={{
-        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
-        background: 'var(--surface)', border: '1px solid var(--border)',
-        borderRadius: 12, overflow: 'hidden',
-      }}>
-        {[0, 1, 2, 3].map(i => (
-          <div key={i} style={{
-            padding: '1.125rem 1.25rem',
-            borderRight: i < 3 ? '1px solid var(--border-soft)' : 'none',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.375rem',
-          }}>
-            <Skeleton width={50} height={24} />
-            <Skeleton width={36} height={8} />
-          </div>
-        ))}
-      </div>
+      <Card className="dashboard-span-full py-0 gap-0 overflow-hidden">
+        <div className="grid grid-cols-4">
+          {[0, 1, 2, 3].map(i => (
+            <div key={i} className={cn(
+              'py-4 px-5 flex flex-col items-center gap-1.5',
+              i < 3 && 'border-r border-border/50',
+            )}>
+              <Skeleton className="w-12 h-6" />
+              <Skeleton className="w-9 h-2" />
+            </div>
+          ))}
+        </div>
+      </Card>
       {/* Exec summary skeleton */}
-      <div className="dashboard-span-2" style={{
-        background: 'var(--accent-wash)',
-        borderLeft: '3px solid var(--accent-dim)',
-        borderRadius: '0 12px 12px 0',
-        padding: '1.25rem 1.5rem',
-        display: 'flex', flexDirection: 'column', gap: '0.5rem',
-      }}>
-        <Skeleton width={100} height={10} />
-        <Skeleton width="95%" height={12} />
-        <Skeleton width="100%" height={12} />
-        <Skeleton width="70%" height={12} />
+      <div className="dashboard-span-2 bg-[var(--accent-wash)] border-l-[3px] border-l-[var(--accent-dim)] rounded-r-xl py-5 px-6 flex flex-col gap-2">
+        <Skeleton className="w-24 h-2.5" />
+        <Skeleton className="w-[95%] h-3" />
+        <Skeleton className="w-full h-3" />
+        <Skeleton className="w-[70%] h-3" />
       </div>
       {/* Intel panel skeleton */}
-      <SkeletonCard lines={5} style={{ borderRadius: 12 }} />
+      <Card className="py-4"><CardContent className="px-5 flex flex-col gap-2">
+        <Skeleton className="w-20 h-2.5" />
+        <Skeleton className="w-full h-4" />
+        <Skeleton className="w-[80%] h-3" />
+        <Skeleton className="w-[90%] h-3" />
+        <Skeleton className="w-[60%] h-3" />
+      </CardContent></Card>
       {/* Cards */}
-      <SkeletonCard lines={4} style={{ borderRadius: 12 }} />
-      <SkeletonCard lines={3} style={{ borderRadius: 12 }} />
-      <SkeletonCard lines={6} style={{ borderRadius: 12 }} />
+      <Card className="py-4"><CardContent className="px-5 flex flex-col gap-2">
+        <Skeleton className="w-20 h-2.5" />
+        <Skeleton className="w-full h-3" />
+        <Skeleton className="w-[80%] h-3" />
+        <Skeleton className="w-[60%] h-3" />
+      </CardContent></Card>
+      <Card className="py-4"><CardContent className="px-5 flex flex-col gap-2">
+        <Skeleton className="w-16 h-2.5" />
+        <Skeleton className="w-full h-3" />
+        <Skeleton className="w-[70%] h-3" />
+      </CardContent></Card>
+      <Card className="py-4"><CardContent className="px-5 flex flex-col gap-2">
+        <Skeleton className="w-20 h-2.5" />
+        <Skeleton className="w-full h-3" />
+        <Skeleton className="w-full h-3" />
+        <Skeleton className="w-full h-3" />
+        <Skeleton className="w-[80%] h-3" />
+        <Skeleton className="w-full h-3" />
+      </CardContent></Card>
       {/* Heatmap skeleton */}
-      <div className="dashboard-span-2">
-        <SkeletonCard lines={5} style={{ borderRadius: 12 }} />
-      </div>
+      <Card className="dashboard-span-2 py-4"><CardContent className="px-5 flex flex-col gap-2">
+        <Skeleton className="w-28 h-2.5" />
+        <Skeleton className="w-full h-3" />
+        <Skeleton className="w-full h-3" />
+        <Skeleton className="w-full h-3" />
+        <Skeleton className="w-full h-3" />
+      </CardContent></Card>
       {/* Section skeletons */}
-      <div className="dashboard-span-full">
-        <SkeletonCard lines={3} style={{ borderRadius: 12 }} />
-      </div>
+      <Card className="dashboard-span-full py-4"><CardContent className="px-5 flex flex-col gap-2">
+        <Skeleton className="w-32 h-2.5" />
+        <Skeleton className="w-full h-3" />
+        <Skeleton className="w-[90%] h-3" />
+      </CardContent></Card>
     </div>
   )
 }
@@ -1170,7 +960,6 @@ export function Dashboard() {
     ]).finally(() => setLoading(false))
   }, [])
 
-  // Derive whether any job is active
   const isActive = !!(summaryProgress?.running) || !!(pipelineStatus?.running && pipelineStatus.alive !== false)
 
   // Poll pipeline + summary status — fast when active, slow when idle
@@ -1204,12 +993,11 @@ export function Dashboard() {
     return () => { clearTimeout(timeout); clearInterval(iv) }
   }, [isActive])
 
-  // No data state
   const hasReport = report && Object.values(report.items).some(arr => arr.length > 0)
   const hasSummary = summary && isStructuredOverall(summary.overall) && !!summary.overall.executive_summary
 
   return (
-    <div className="dashboard-root" style={{ padding: '1.25rem', maxWidth: 1280, margin: '0 auto' }}>
+    <div className="dashboard-root p-5 max-w-[1280px] mx-auto">
       <style>{PULSE_CSS}</style>
 
       <AnimatePresence mode="wait">
@@ -1219,22 +1007,20 @@ export function Dashboard() {
           </motion.div>
         ) : !hasSummary && !hasReport ? (
           <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <div style={{
-              padding: '5rem 2rem', textAlign: 'center', color: 'var(--ink-faint)',
-              fontSize: '0.875rem', background: 'var(--surface)',
-              border: '1px solid var(--border)', borderRadius: 12,
-            }}>
-              <div style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink-muted)', marginBottom: '0.5rem' }}>
-                No briefing data yet
-              </div>
-              <p style={{ margin: 0, lineHeight: 1.6 }}>
-                Run the pipeline from the{' '}
-                <Link href="/status" style={{ color: 'var(--accent)', textDecoration: 'underline', textUnderlineOffset: '2px' }}>
-                  Status page
-                </Link>
-                {' '}to fetch data and generate your first briefing.
-              </p>
-            </div>
+            <Card className="py-20 text-center">
+              <CardContent className="flex flex-col items-center gap-2">
+                <div className="text-lg font-semibold text-muted-foreground">
+                  No briefing data yet
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Run the pipeline from the{' '}
+                  <Link href="/status" className="text-primary underline underline-offset-2">
+                    Status page
+                  </Link>
+                  {' '}to fetch data and generate your first briefing.
+                </p>
+              </CardContent>
+            </Card>
           </motion.div>
         ) : (
           <motion.div key="content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
@@ -1311,10 +1097,8 @@ export function Dashboard() {
               )}
 
               {/* Link to full feed */}
-              <div className="dashboard-span-full" style={{ textAlign: 'center', paddingTop: '0.125rem', paddingBottom: '0.25rem' }}>
-                <Link href="/data" style={{
-                  fontSize: '0.75rem', fontWeight: 500, color: 'var(--accent)', textDecoration: 'none',
-                }}>
+              <div className="dashboard-span-full text-center pt-0.5 pb-1">
+                <Link href="/data" className="text-xs font-medium text-primary no-underline hover:underline">
                   View full feed &#8250;
                 </Link>
               </div>

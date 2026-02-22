@@ -1,11 +1,11 @@
-// ABOUTME: Dashboard home page — executive summary, sentiment ring, trending, category distribution, source heatmap.
-// ABOUTME: Premium Bloomberg-style layout with Framer Motion animations and SVG infographics.
+// ABOUTME: Dashboard home page — fluid grid data terminal with sentiment, trending, heatmap, risk/intel panel.
+// ABOUTME: Grafana-style tile layout with responsive 3-col / 4-col breakpoints and Framer Motion animations.
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { api } from '@/api/client'
-import type { IntelReport, IntelItem, BriefingSummary, PipelineStatus, SummaryProgress, OverallBriefing, BriefingSource } from '@/api/client'
+import type { IntelReport, IntelItem, BriefingSummary, PipelineStatus, SummaryProgress, OverallBriefing, BriefingSource, SentimentEntry } from '@/api/client'
 import { SENSOR_LABELS, SENSOR_DISPLAY_MAP, CATEGORY_TO_DISPLAY } from '@/lib/sensors/taxonomy'
 import type { CategoryKey, DisplayCategoryKey } from '@/lib/sensors/taxonomy'
 import { Skeleton, SkeletonCard } from './Skeleton'
@@ -108,7 +108,7 @@ function StaggerChild({ index, children }: { index: number; children: React.Reac
         type: 'spring',
         stiffness: 300,
         damping: 30,
-        delay: index * 0.08,
+        delay: index * 0.06,
       }}
     >
       {children}
@@ -116,8 +116,136 @@ function StaggerChild({ index, children }: { index: number; children: React.Reac
   )
 }
 
+/** Standard card chrome shared by all widget panels. */
+const CARD: React.CSSProperties = {
+  background: 'var(--surface)',
+  border: '1px solid var(--border)',
+  borderRadius: 12,
+  padding: '1rem 1.25rem',
+  boxShadow: 'var(--shadow-xs)',
+}
+
 /** Social platform set for sentiment computation. */
 const SOCIAL = new Set(['x', 'bluesky', 'mastodon', 'weibo', 'xiaohongshu'])
+
+// ---------------------------------------------------------------------------
+// Widget: Status Ticker Bar
+// ---------------------------------------------------------------------------
+
+function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
+  report: IntelReport | null
+  summary: BriefingSummary | null
+  pipelineStatus: PipelineStatus | null
+  summaryProgress: SummaryProgress | null
+}) {
+  const isActive = !!(summaryProgress?.running) || !!(pipelineStatus?.running && pipelineStatus.alive !== false)
+
+  const allItems: IntelItem[] = report ? Object.values(report.items).flat() : []
+  const sourcesOk = report ? report.sources_ok.length : 0
+  const sourcesTotal = report ? report.sources_ok.length + report.sources_failed.length : 0
+
+  const overall = summary?.overall
+  const mood = overall && isStructuredOverall(overall) ? overall.sentiment?.overall_mood : null
+  const riskCount = overall && isStructuredOverall(overall) ? (overall.sentiment?.risk_flags?.length ?? 0) : 0
+
+  const moodColors: Record<string, string> = {
+    bullish: 'var(--ok)',
+    bearish: 'var(--err)',
+    mixed: 'var(--warn)',
+    neutral: 'var(--ink-faint)',
+  }
+
+  return (
+    <div className="dashboard-ticker" style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '1.25rem',
+      padding: '0.5rem 1.25rem',
+      background: 'var(--surface-alt)',
+      borderRadius: 10,
+      fontSize: '0.6875rem',
+      fontFamily: 'ui-monospace, monospace',
+      color: 'var(--ink-faint)',
+      flexWrap: 'nowrap',
+      overflow: 'hidden',
+    }}>
+      {/* Pipeline state */}
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
+        <span style={{
+          width: 6, height: 6, borderRadius: '50%',
+          background: isActive ? 'var(--accent)' : 'var(--ink-faint)',
+          animation: isActive ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
+        }} />
+        <span style={{ color: isActive ? 'var(--accent)' : 'var(--ink-faint)', fontWeight: 600 }}>
+          {isActive ? 'Updating' : 'Idle'}
+        </span>
+      </span>
+
+      <span style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
+
+      {/* Last fetch */}
+      <span className="dashboard-ticker-hide-mobile" style={{ flexShrink: 0 }}>
+        {report ? `Fetched ${timeAgo(report.fetched_at)}` : 'No data'}
+      </span>
+
+      {/* Last summary */}
+      {summary && (
+        <span className="dashboard-ticker-hide-mobile" style={{ flexShrink: 0 }}>
+          Summary {timeAgo(summary.generated_at)}
+        </span>
+      )}
+
+      <span style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
+
+      {/* Sources */}
+      <span style={{ flexShrink: 0 }}>
+        <span style={{ color: sourcesOk === sourcesTotal ? 'var(--ok)' : 'var(--warn)' }}>
+          {sourcesOk}/{sourcesTotal}
+        </span>
+        {' '}sources
+      </span>
+
+      {/* Items */}
+      <span className="dashboard-ticker-hide-mobile" style={{ flexShrink: 0 }}>
+        {allItems.length} items
+      </span>
+
+      {/* Mood */}
+      {mood && (
+        <>
+          <span style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', flexShrink: 0 }}>
+            <span style={{
+              width: 6, height: 6, borderRadius: '50%',
+              background: moodColors[mood] ?? 'var(--ink-faint)',
+            }} />
+            <span style={{
+              color: moodColors[mood] ?? 'var(--ink-faint)',
+              fontWeight: 600,
+              textTransform: 'capitalize',
+            }}>
+              {mood}
+            </span>
+          </span>
+        </>
+      )}
+
+      {/* Risk flags */}
+      {riskCount > 0 && (
+        <span style={{
+          background: 'var(--err-tint)',
+          color: 'var(--err)',
+          fontWeight: 700,
+          padding: '0.125rem 0.4375rem',
+          borderRadius: 3,
+          flexShrink: 0,
+        }}>
+          {riskCount} risk{riskCount !== 1 ? 's' : ''}
+        </span>
+      )}
+    </div>
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Widget: Stats Strip
@@ -160,7 +288,7 @@ function StatsStrip({ report, summary }: { report: IntelReport | null; summary: 
     }}>
       {stats.map((stat, i) => (
         <div key={stat.label} className="stat-cell" style={{
-          padding: '1.25rem 1.5rem',
+          padding: '1.125rem 1.25rem',
           borderRight: i < 3 ? '1px solid var(--border-soft)' : 'none',
           textAlign: 'center',
         }}>
@@ -171,7 +299,7 @@ function StatsStrip({ report, summary }: { report: IntelReport | null; summary: 
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3 }}
             style={{
-              fontSize: '2rem',
+              fontSize: '1.75rem',
               fontWeight: 700,
               color: stat.color ?? 'var(--ink)',
               lineHeight: 1.15,
@@ -183,12 +311,12 @@ function StatsStrip({ report, summary }: { report: IntelReport | null; summary: 
             {stat.value}
           </motion.div>
           <div style={{
-            fontSize: '0.625rem',
+            fontSize: '0.5625rem',
             fontWeight: 600,
             color: 'var(--ink-faint)',
             textTransform: 'uppercase',
             letterSpacing: '0.08em',
-            marginTop: '0.375rem',
+            marginTop: '0.25rem',
           }}>
             {stat.label}
           </div>
@@ -211,36 +339,36 @@ function ExecSummaryWidget({ summary }: { summary: BriefingSummary }) {
       background: 'var(--accent-wash)',
       borderLeft: '3px solid var(--accent)',
       borderRadius: '0 12px 12px 0',
-      padding: '1.5rem 2rem',
+      padding: '1.25rem 1.5rem',
     }}>
-      <SectionLabel style={{ color: 'var(--accent)', marginBottom: '0.875rem' }}>
+      <SectionLabel style={{ color: 'var(--accent)', marginBottom: '0.75rem' }}>
         Executive Summary
       </SectionLabel>
       <div style={{
-        fontSize: '0.9375rem',
+        fontSize: '0.875rem',
         color: 'var(--ink)',
-        lineHeight: 1.85,
+        lineHeight: 1.8,
         whiteSpace: 'pre-wrap',
       }}>
         <InlineRefs text={overall.executive_summary} globalSources={overall.sources} />
       </div>
       {overall.quick_scan && overall.quick_scan.length > 0 && (
-        <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--accent-dim)' }}>
-          <SectionLabel style={{ color: 'var(--accent)', marginBottom: '0.625rem' }}>
+        <div style={{ marginTop: '1rem', paddingTop: '0.875rem', borderTop: '1px solid var(--accent-dim)' }}>
+          <SectionLabel style={{ color: 'var(--accent)', marginBottom: '0.5rem' }}>
             Quick Scan
           </SectionLabel>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
             {overall.quick_scan.map((entry, i) => (
               <div key={i} style={{
                 display: 'flex',
-                gap: '0.625rem',
+                gap: '0.5rem',
                 fontSize: '0.8125rem',
                 color: 'var(--ink)',
-                lineHeight: 1.65,
+                lineHeight: 1.6,
               }}>
                 <span style={{
-                  width: 5,
-                  height: 5,
+                  width: 4,
+                  height: 4,
                   borderRadius: '50%',
                   background: 'var(--accent)',
                   flexShrink: 0,
@@ -257,70 +385,117 @@ function ExecSummaryWidget({ summary }: { summary: BriefingSummary }) {
 }
 
 // ---------------------------------------------------------------------------
-// Widget: Risk Alert (conditional)
+// Widget: Risk & Intelligence Panel (tabbed)
 // ---------------------------------------------------------------------------
 
-function RiskAlertWidget({ summary }: { summary: BriefingSummary }) {
+function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
   const overall = summary.overall
   if (!isStructuredOverall(overall)) return null
-  const flags = overall.sentiment?.risk_flags
-  if (!flags || flags.length === 0) return null
+  const sentiment = overall.sentiment
+  if (!sentiment) return null
 
-  const topFlag = flags[0]
+  const tabs = [
+    { key: 'risk', label: 'Risk', items: sentiment.risk_flags ?? [], color: 'var(--err)' },
+    { key: 'controversies', label: 'Controversies', items: sentiment.controversies ?? [], color: 'var(--warn)' },
+    { key: 'shifts', label: 'Shifts', items: sentiment.opinion_shifts ?? [], color: 'var(--accent)' },
+  ] as const
+
+  const totalAlerts = tabs.reduce((n, t) => n + t.items.length, 0)
+
+  const [activeTab, setActiveTab] = useState(
+    // Default to the first tab that has items, or 'risk'
+    () => tabs.find(t => t.items.length > 0)?.key ?? 'risk'
+  )
+
+  const active = tabs.find(t => t.key === activeTab)!
 
   return (
-    <div style={{
-      background: 'var(--err-bg)',
-      border: '1px solid var(--err)',
-      borderLeft: '3px solid var(--err)',
-      borderRadius: '0 12px 12px 0',
-      padding: '1rem 1.25rem',
-      display: 'flex',
-      alignItems: 'flex-start',
-      gap: '0.75rem',
-    }}>
-      <span style={{
-        fontSize: '0.625rem',
-        fontWeight: 700,
-        color: 'var(--err)',
-        textTransform: 'uppercase',
-        letterSpacing: '0.08em',
-        flexShrink: 0,
-        marginTop: '0.125rem',
-      }}>
-        RISK
-      </span>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontSize: '0.8125rem',
-          fontWeight: 600,
-          color: 'var(--ink)',
-          marginBottom: '0.25rem',
-        }}>
-          {topFlag.topic}
-        </div>
-        <div style={{
-          fontSize: '0.75rem',
-          color: 'var(--ink-muted)',
-          lineHeight: 1.6,
-        }}>
-          <InlineRefs text={topFlag.analysis} globalSources={overall.sources} />
-        </div>
+    <div style={{ ...CARD, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <SectionLabel>Intelligence</SectionLabel>
+        {totalAlerts > 0 && (
+          <span style={{
+            fontSize: '0.5625rem', fontWeight: 700,
+            color: sentiment.risk_flags?.length ? 'var(--err)' : 'var(--ink-faint)',
+            fontFamily: 'ui-monospace, monospace',
+          }}>
+            {totalAlerts} alert{totalAlerts !== 1 ? 's' : ''}
+          </span>
+        )}
       </div>
-      {flags.length > 1 && (
-        <span style={{
-          fontSize: '0.5625rem',
-          fontWeight: 600,
-          color: 'var(--err)',
-          background: 'var(--err-tint)',
-          padding: '0.125rem 0.375rem',
-          borderRadius: 3,
-          fontFamily: 'ui-monospace, monospace',
-          flexShrink: 0,
-        }}>
-          +{flags.length - 1}
-        </span>
-      )}
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--border)' }}>
+        {tabs.map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            style={{
+              padding: '0.375rem 0.75rem',
+              fontSize: '0.6875rem',
+              fontWeight: 600,
+              color: activeTab === tab.key ? 'var(--ink)' : 'var(--ink-faint)',
+              borderBottom: activeTab === tab.key ? `2px solid ${tab.color}` : '2px solid transparent',
+              marginBottom: -1,
+              transition: 'color 150ms, border-color 150ms',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            {tab.label}
+            {tab.items.length > 0 && (
+              <span style={{
+                marginLeft: '0.25rem',
+                fontSize: '0.5rem',
+                fontFamily: 'ui-monospace, monospace',
+                color: tab.color,
+              }}>
+                {tab.items.length}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', minHeight: 60 }}>
+        {active.items.length === 0 ? (
+          <div style={{
+            fontSize: '0.75rem', color: 'var(--ink-faint)',
+            padding: '1rem 0', textAlign: 'center',
+          }}>
+            None detected
+          </div>
+        ) : (
+          active.items.map((entry: SentimentEntry, i: number) => (
+            <div key={i} style={{
+              padding: '0.5rem 0',
+              borderBottom: i < active.items.length - 1 ? '1px dotted var(--border-soft)' : 'none',
+            }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '0.375rem',
+                marginBottom: '0.25rem',
+              }}>
+                <span style={{
+                  width: 5, height: 5, borderRadius: '50%',
+                  background: active.color, flexShrink: 0,
+                }} />
+                <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)' }}>
+                  {entry.topic}
+                </span>
+              </div>
+              <div style={{
+                fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.6,
+                paddingLeft: '1.125rem',
+              }}>
+                <InlineRefs text={entry.analysis} globalSources={overall.sources} />
+              </div>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   )
 }
@@ -436,26 +611,17 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
   }
 
   return (
-    <div style={{
-      background: 'var(--surface)',
-      border: '1px solid var(--border)',
-      borderRadius: 12,
-      padding: '1.25rem 1.5rem',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '0.875rem',
-      boxShadow: 'var(--shadow-xs)',
-    }}>
+    <div style={{ ...CARD, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
       {/* Header: mood indicator */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <SectionLabel>Sentiment</SectionLabel>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
           <span style={{
-            width: 8, height: 8, borderRadius: '50%',
+            width: 7, height: 7, borderRadius: '50%',
             background: moodColors[sentiment.overall_mood] ?? 'var(--ink-faint)',
           }} />
           <span style={{
-            fontSize: '0.8125rem', fontWeight: 700,
+            fontSize: '0.75rem', fontWeight: 700,
             color: moodColors[sentiment.overall_mood] ?? 'var(--ink-faint)',
             textTransform: 'capitalize',
           }}>
@@ -465,12 +631,12 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
       </div>
 
       {/* Ring gauge + mood summary row */}
-      <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', flexWrap: 'wrap' }}>
-        <SentimentRing positive={totalPos} neutral={totalNeu} negative={totalNeg} size={120} />
+      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <SentimentRing positive={totalPos} neutral={totalNeu} negative={totalNeg} size={100} />
         {sentiment.mood_summary && (
           <p style={{
-            fontSize: '0.8125rem', color: 'var(--ink)', lineHeight: 1.7,
-            margin: 0, flex: 1, minWidth: 160,
+            fontSize: '0.75rem', color: 'var(--ink)', lineHeight: 1.65,
+            margin: 0, flex: 1, minWidth: 140,
           }}>
             <InlineRefs text={sentiment.mood_summary} globalSources={overall.sources} />
           </p>
@@ -479,7 +645,7 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
 
       {/* Per-platform sentiment bars */}
       {Object.keys(bySource).length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {Object.entries(bySource).map(([source, counts]) => {
             const posPct = Math.round((counts.positive / counts.total) * 100)
             const negPct = Math.round((counts.negative / counts.total) * 100)
@@ -488,17 +654,17 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
               <div key={source}>
                 <div style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  marginBottom: '0.25rem',
+                  marginBottom: '0.125rem',
                 }}>
                   <span style={{
-                    fontSize: '0.75rem', fontWeight: 500,
+                    fontSize: '0.6875rem', fontWeight: 500,
                     color: PLATFORM_COLORS[source] ?? 'var(--ink-muted)',
                   }}>
                     {SENSOR_LABELS[source] ?? source}
                   </span>
                   <div style={{
-                    display: 'flex', gap: '0.625rem',
-                    fontSize: '0.5625rem', fontFamily: 'ui-monospace, monospace', color: 'var(--ink-faint)',
+                    display: 'flex', gap: '0.5rem',
+                    fontSize: '0.5rem', fontFamily: 'ui-monospace, monospace', color: 'var(--ink-faint)',
                   }}>
                     <span style={{ color: 'var(--ok)' }}>{posPct}%</span>
                     <span>{neuPct}%</span>
@@ -506,7 +672,7 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
                   </div>
                 </div>
                 <div style={{
-                  display: 'flex', height: 4, borderRadius: 2, overflow: 'hidden', background: 'var(--border)',
+                  display: 'flex', height: 3, borderRadius: 2, overflow: 'hidden', background: 'var(--border)',
                 }}>
                   {posPct > 0 && (
                     <div title={`${counts.positive} positive (${posPct}%)`}
@@ -553,14 +719,8 @@ function CategoryDistributionWidget({ report }: { report: IntelReport }) {
   ]
 
   return (
-    <div style={{
-      background: 'var(--surface)',
-      border: '1px solid var(--border)',
-      borderRadius: 12,
-      padding: '1.25rem 1.5rem',
-      boxShadow: 'var(--shadow-xs)',
-    }}>
-      <SectionLabel style={{ marginBottom: '0.875rem' }}>Distribution</SectionLabel>
+    <div style={CARD}>
+      <SectionLabel style={{ marginBottom: '0.75rem' }}>Distribution</SectionLabel>
       {/* Segmented bar */}
       <div style={{ display: 'flex', height: 6, borderRadius: 3, overflow: 'hidden', gap: 1 }}>
         {segments.map(seg => seg.count > 0 ? (
@@ -574,18 +734,18 @@ function CategoryDistributionWidget({ report }: { report: IntelReport }) {
       {/* Legend */}
       <div style={{
         display: 'grid', gridTemplateColumns: '1fr 1fr',
-        gap: '0.375rem 1rem', marginTop: '0.75rem',
+        gap: '0.25rem 0.75rem', marginTop: '0.625rem',
       }}>
         {segments.map(seg => (
           <div key={seg.key} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
             <span style={{
               width: 6, height: 6, borderRadius: '50%', background: seg.color, flexShrink: 0,
             }} />
-            <span style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--ink-muted)' }}>
+            <span style={{ fontSize: '0.625rem', fontWeight: 500, color: 'var(--ink-muted)' }}>
               {seg.label}
             </span>
             <span style={{
-              fontSize: '0.6875rem', fontWeight: 600, color: 'var(--ink)',
+              fontSize: '0.625rem', fontWeight: 600, color: 'var(--ink)',
               fontFamily: 'ui-monospace, monospace', marginLeft: 'auto',
             }}>
               {seg.count}
@@ -614,11 +774,11 @@ function SourceActivityWidget({ report }: { report: IntelReport }) {
     }
   }
 
-  // Sort sources by total items, take top 6
+  // Sort sources by total items, take top 8
   const sorted = Object.entries(sourceHours)
     .map(([source, hours]) => ({ source, hours, total: hours.reduce((a, b) => a + b, 0) }))
     .sort((a, b) => b.total - a.total)
-    .slice(0, 6)
+    .slice(0, 8)
 
   if (sorted.length === 0) return null
 
@@ -630,20 +790,14 @@ function SourceActivityWidget({ report }: { report: IntelReport }) {
   }
 
   return (
-    <div style={{
-      background: 'var(--surface)',
-      border: '1px solid var(--border)',
-      borderRadius: 12,
-      padding: '1.25rem 1.5rem',
-      boxShadow: 'var(--shadow-xs)',
-    }}>
-      <SectionLabel style={{ marginBottom: '0.75rem' }}>Source Activity (24h)</SectionLabel>
+    <div style={CARD}>
+      <SectionLabel style={{ marginBottom: '0.625rem' }}>Source Activity (24h)</SectionLabel>
       <div style={{ overflowX: 'auto' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 320 }}>
           {sorted.map(({ source, hours }) => (
             <div key={source} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{
-                width: 56, fontSize: '0.5625rem', fontWeight: 600,
+                width: 56, fontSize: '0.5rem', fontWeight: 600,
                 color: 'var(--ink-faint)', fontFamily: 'ui-monospace, monospace',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0,
               }}>
@@ -653,7 +807,7 @@ function SourceActivityWidget({ report }: { report: IntelReport }) {
                 {hours.map((count, h) => (
                   <div key={h} title={`${SENSOR_LABELS[source] ?? source} — ${h}:00: ${count} items`}
                     style={{
-                      width: '100%', aspectRatio: '1', minWidth: 6,
+                      width: '100%', aspectRatio: '1', minWidth: 5,
                       borderRadius: 2, background: cellColor(count),
                       transition: 'background 300ms',
                     }}
@@ -666,20 +820,20 @@ function SourceActivityWidget({ report }: { report: IntelReport }) {
       </div>
       {/* Legend */}
       <div style={{
-        display: 'flex', gap: '0.75rem', marginTop: '0.5rem',
+        display: 'flex', gap: '0.625rem', marginTop: '0.375rem',
         fontSize: '0.5rem', color: 'var(--ink-faint)',
       }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          <span style={{ width: 6, height: 6, borderRadius: 1, background: 'var(--border-soft)' }} /> 0
+          <span style={{ width: 5, height: 5, borderRadius: 1, background: 'var(--border-soft)' }} /> 0
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          <span style={{ width: 6, height: 6, borderRadius: 1, background: 'var(--accent-lo)' }} /> 1-5
+          <span style={{ width: 5, height: 5, borderRadius: 1, background: 'var(--accent-lo)' }} /> 1-5
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          <span style={{ width: 6, height: 6, borderRadius: 1, background: 'var(--accent-mid)' }} /> 6-15
+          <span style={{ width: 5, height: 5, borderRadius: 1, background: 'var(--accent-mid)' }} /> 6-15
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          <span style={{ width: 6, height: 6, borderRadius: 1, background: 'var(--accent)' }} /> 16+
+          <span style={{ width: 5, height: 5, borderRadius: 1, background: 'var(--accent)' }} /> 16+
         </span>
       </div>
     </div>
@@ -696,32 +850,26 @@ function SourceHealthWidget({ report }: { report: IntelReport }) {
   if (all.length === 0) return null
 
   return (
-    <div style={{
-      background: 'var(--surface)',
-      border: '1px solid var(--border)',
-      borderRadius: 12,
-      padding: '1rem 1.25rem',
-      boxShadow: 'var(--shadow-xs)',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
+    <div style={CARD}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
         <SectionLabel>Source Health</SectionLabel>
         <span style={{
-          fontSize: '0.5625rem', fontFamily: 'ui-monospace, monospace',
+          fontSize: '0.5rem', fontFamily: 'ui-monospace, monospace',
           color: 'var(--ink-faint)',
         }}>
           {report.sources_ok.length}/{all.length} ok
         </span>
       </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
         {all.map(source => (
           <div key={source} title={`${SENSOR_LABELS[source] ?? source}: ${okSet.has(source) ? 'OK' : 'Failed'}`}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: '0.1875rem' }}>
             <span style={{
-              width: 6, height: 6, borderRadius: '50%',
+              width: 5, height: 5, borderRadius: '50%',
               background: okSet.has(source) ? 'var(--ok)' : 'var(--err)',
             }} />
             <span style={{
-              fontSize: '0.5625rem', color: 'var(--ink-faint)', fontFamily: 'ui-monospace, monospace',
+              fontSize: '0.5rem', color: 'var(--ink-faint)', fontFamily: 'ui-monospace, monospace',
             }}>
               {(SENSOR_LABELS[source] ?? source).slice(0, 8)}
             </span>
@@ -752,24 +900,18 @@ function TrendingWidget({ report }: { report: IntelReport }) {
     return bv - av
   })
 
-  const top = trendItems.slice(0, 6)
+  const top = trendItems.slice(0, 8)
   if (top.length === 0) return null
 
   return (
-    <div style={{
-      background: 'var(--surface)',
-      border: '1px solid var(--border)',
-      borderRadius: 12,
-      padding: '1.25rem 1.5rem',
-      boxShadow: 'var(--shadow-xs)',
-    }}>
+    <div style={CARD}>
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: '0.875rem',
+        marginBottom: '0.625rem',
       }}>
         <SectionLabel>Trending</SectionLabel>
         <Link href="/data" style={{
-          fontSize: '0.6875rem', fontWeight: 500, color: 'var(--accent)', textDecoration: 'none',
+          fontSize: '0.625rem', fontWeight: 500, color: 'var(--accent)', textDecoration: 'none',
         }}>
           View all &#8250;
         </Link>
@@ -792,33 +934,33 @@ function TrendingWidget({ report }: { report: IntelReport }) {
               target="_blank"
               rel="noopener noreferrer"
               style={{
-                display: 'flex', alignItems: 'center', gap: '0.75rem',
-                padding: '0.625rem 0', textDecoration: 'none',
+                display: 'flex', alignItems: 'center', gap: '0.625rem',
+                padding: '0.4375rem 0', textDecoration: 'none',
                 borderBottom: idx < top.length - 1 ? '1px dotted var(--border-soft)' : 'none',
               }}
             >
               {/* Rank number — top 3 in accent */}
               <span style={{
-                fontSize: '1.125rem', fontWeight: 700,
+                fontSize: '0.9375rem', fontWeight: 700,
                 color: idx < 3 ? 'var(--accent-dim)' : 'var(--border)',
-                width: 24, textAlign: 'right', flexShrink: 0,
+                width: 20, textAlign: 'right', flexShrink: 0,
                 fontFamily: 'ui-monospace, monospace',
               }}>
                 {idx + 1}
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{
-                  fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)',
+                  fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink)',
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>
                   {displayTitle}
                 </div>
                 <div style={{
-                  display: 'flex', alignItems: 'center', gap: '0.375rem',
-                  fontSize: '0.5625rem', color: 'var(--ink-faint)', marginTop: '0.125rem',
+                  display: 'flex', alignItems: 'center', gap: '0.25rem',
+                  fontSize: '0.5rem', color: 'var(--ink-faint)', marginTop: '0.0625rem',
                 }}>
                   <span style={{
-                    padding: '0.0625rem 0.3125rem', borderRadius: 3,
+                    padding: '0 0.25rem', borderRadius: 2,
                     background: 'var(--surface-alt)', fontWeight: 500,
                   }}>
                     {SENSOR_LABELS[item.source] ?? item.source}
@@ -826,7 +968,7 @@ function TrendingWidget({ report }: { report: IntelReport }) {
                   {item.heat && <span>{item.heat}</span>}
                   {v.hoursOnTrend != null && (
                     <span style={{
-                      padding: '0.0625rem 0.25rem', borderRadius: 3,
+                      padding: '0 0.1875rem', borderRadius: 2,
                       background: v.hoursOnTrend <= 6 ? 'var(--cat-trend-tint)' : 'var(--surface-alt)',
                       color: v.hoursOnTrend <= 6 ? 'var(--cat-trend)' : 'var(--ink-faint)',
                       fontWeight: 600,
@@ -838,7 +980,7 @@ function TrendingWidget({ report }: { report: IntelReport }) {
               </div>
               {pctStr && (
                 <span style={{
-                  fontSize: '0.8125rem', fontWeight: 700, color: pctColor,
+                  fontSize: '0.75rem', fontWeight: 700, color: pctColor,
                   fontFamily: 'ui-monospace, monospace', flexShrink: 0,
                 }}>
                   {pctStr}
@@ -865,7 +1007,7 @@ function SectionSummariesWidget({ summary }: { summary: BriefingSummary }) {
   const [expanded, setExpanded] = useState<Set<number>>(() => new Set([0]))
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
       {sections.map((section, i) => {
         const isOpen = expanded.has(i)
         return (
@@ -886,23 +1028,23 @@ function SectionSummariesWidget({ summary }: { summary: BriefingSummary }) {
               aria-expanded={isOpen}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                width: '100%', padding: '0.875rem 1.5rem',
+                width: '100%', padding: '0.75rem 1.25rem',
                 background: 'none', border: 'none', cursor: 'pointer',
-                color: 'var(--ink)', fontSize: '0.8125rem', fontWeight: 600, textAlign: 'left',
+                color: 'var(--ink)', fontSize: '0.75rem', fontWeight: 600, textAlign: 'left',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span>{section.title}</span>
                 <span style={{
-                  fontSize: '0.5625rem', fontWeight: 600, color: 'var(--ink-faint)',
-                  background: 'var(--surface-alt)', padding: '0.125rem 0.4375rem',
+                  fontSize: '0.5rem', fontWeight: 600, color: 'var(--ink-faint)',
+                  background: 'var(--surface-alt)', padding: '0.0625rem 0.375rem',
                   borderRadius: 3, fontFamily: 'ui-monospace, monospace',
                 }}>
                   {section.entries.length}
                 </span>
               </div>
               <span style={{
-                fontSize: '0.625rem', color: 'var(--ink-faint)',
+                fontSize: '0.5625rem', color: 'var(--ink-faint)',
                 transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
                 transition: 'transform 200ms', display: 'inline-block',
               }}>
@@ -919,13 +1061,13 @@ function SectionSummariesWidget({ summary }: { summary: BriefingSummary }) {
                   style={{ overflow: 'hidden' }}
                 >
                   <div style={{
-                    padding: '0 1.5rem 1.25rem',
-                    display: 'flex', flexDirection: 'column', gap: '0.625rem',
+                    padding: '0 1.25rem 1rem',
+                    display: 'flex', flexDirection: 'column', gap: '0.5rem',
                   }}>
                     {section.entries.map((entry, j) => (
                       <div key={j} style={{
-                        fontSize: '0.8125rem', color: 'var(--ink)', lineHeight: 1.75,
-                        paddingLeft: '0.875rem', borderLeft: '2px solid var(--border)',
+                        fontSize: '0.75rem', color: 'var(--ink)', lineHeight: 1.7,
+                        paddingLeft: '0.75rem', borderLeft: '2px solid var(--border)',
                       }}>
                         <InlineRefs text={entry.text} globalSources={overall.sources} />
                       </div>
@@ -947,51 +1089,60 @@ function SectionSummariesWidget({ summary }: { summary: BriefingSummary }) {
 
 function DashboardSkeleton() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <div className="dashboard-grid">
+      {/* Ticker skeleton */}
+      <div className="dashboard-span-full" style={{
+        background: 'var(--surface-alt)', borderRadius: 10,
+        padding: '0.5rem 1.25rem', display: 'flex', gap: '1rem',
+      }}>
+        <Skeleton width={80} height={10} />
+        <Skeleton width={100} height={10} />
+        <Skeleton width={60} height={10} />
+      </div>
       {/* Stats strip skeleton */}
-      <div style={{
+      <div className="dashboard-span-full" style={{
         display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
         background: 'var(--surface)', border: '1px solid var(--border)',
         borderRadius: 12, overflow: 'hidden',
       }}>
         {[0, 1, 2, 3].map(i => (
           <div key={i} style={{
-            padding: '1.25rem 1.5rem',
+            padding: '1.125rem 1.25rem',
             borderRight: i < 3 ? '1px solid var(--border-soft)' : 'none',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.375rem',
           }}>
-            <Skeleton width={60} height={28} />
-            <Skeleton width={40} height={8} />
+            <Skeleton width={50} height={24} />
+            <Skeleton width={36} height={8} />
           </div>
         ))}
       </div>
       {/* Exec summary skeleton */}
-      <div style={{
+      <div className="dashboard-span-2" style={{
         background: 'var(--accent-wash)',
         borderLeft: '3px solid var(--accent-dim)',
         borderRadius: '0 12px 12px 0',
-        padding: '1.5rem 2rem',
-        display: 'flex', flexDirection: 'column', gap: '0.625rem',
+        padding: '1.25rem 1.5rem',
+        display: 'flex', flexDirection: 'column', gap: '0.5rem',
       }}>
-        <Skeleton width={120} height={10} />
-        <Skeleton width="95%" height={14} />
-        <Skeleton width="100%" height={14} />
-        <Skeleton width="80%" height={14} />
-        <Skeleton width="55%" height={14} />
+        <Skeleton width={100} height={10} />
+        <Skeleton width="95%" height={12} />
+        <Skeleton width="100%" height={12} />
+        <Skeleton width="70%" height={12} />
       </div>
-      {/* Two-column cards */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-        gap: '0.75rem',
-      }}>
-        <SkeletonCard lines={5} style={{ borderRadius: 12 }} />
-        <SkeletonCard lines={4} style={{ borderRadius: 12 }} />
-      </div>
-      {/* Heatmap skeleton */}
+      {/* Intel panel skeleton */}
+      <SkeletonCard lines={5} style={{ borderRadius: 12 }} />
+      {/* Cards */}
       <SkeletonCard lines={4} style={{ borderRadius: 12 }} />
-      {/* Section skeletons */}
       <SkeletonCard lines={3} style={{ borderRadius: 12 }} />
-      <SkeletonCard lines={2} style={{ borderRadius: 12 }} />
+      <SkeletonCard lines={6} style={{ borderRadius: 12 }} />
+      {/* Heatmap skeleton */}
+      <div className="dashboard-span-2">
+        <SkeletonCard lines={5} style={{ borderRadius: 12 }} />
+      </div>
+      {/* Section skeletons */}
+      <div className="dashboard-span-full">
+        <SkeletonCard lines={3} style={{ borderRadius: 12 }} />
+      </div>
     </div>
   )
 }
@@ -1052,51 +1203,13 @@ export function Dashboard() {
     return () => { clearTimeout(timeout); clearInterval(iv) }
   }, [isActive])
 
-  const isRunning = isActive
-
   // No data state
   const hasReport = report && Object.values(report.items).some(arr => arr.length > 0)
   const hasSummary = summary && isStructuredOverall(summary.overall) && !!summary.overall.executive_summary
 
   return (
-    <div className="dashboard-root" style={{ padding: '2rem 2.5rem', maxWidth: 1060, margin: '0 auto' }}>
+    <div className="dashboard-root" style={{ padding: '1.25rem' }}>
       <style>{PULSE_CSS}</style>
-
-      {/* Header */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: '1.5rem',
-      }}>
-        <h1 style={{
-          fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink-muted)',
-          margin: 0, letterSpacing: '-0.01em',
-        }}>
-          Intel Briefing
-        </h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          {isRunning && (
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
-              fontSize: '0.6875rem', fontWeight: 500, color: 'var(--accent)',
-              background: 'var(--accent-tint)', padding: '0.3rem 0.75rem', borderRadius: 4,
-            }}>
-              <span style={{
-                width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)',
-                animation: 'pulseDot 1.6s ease-in-out infinite',
-              }} />
-              Updating
-            </span>
-          )}
-          {summary && (
-            <span style={{
-              fontSize: '0.6875rem', color: 'var(--ink-faint)',
-              fontFamily: 'ui-monospace, monospace',
-            }}>
-              {timeAgo(summary.generated_at)}
-            </span>
-          )}
-        </div>
-      </div>
 
       <AnimatePresence mode="wait">
         {loading ? (
@@ -1124,60 +1237,76 @@ export function Dashboard() {
           </motion.div>
         ) : (
           <motion.div key="content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {/* Stats Strip */}
+            <div className="dashboard-grid">
+              {/* Status Ticker */}
               <StaggerChild index={0}>
-                <StatsStrip report={report} summary={summary} />
-              </StaggerChild>
-
-              {/* Executive Summary */}
-              <StaggerChild index={1}>
-                {summary && <ExecSummaryWidget summary={summary} />}
-              </StaggerChild>
-
-              {/* Risk Alert (conditional) */}
-              {summary && isStructuredOverall(summary.overall) && summary.overall.sentiment?.risk_flags?.length > 0 && (
-                <StaggerChild index={2}>
-                  <RiskAlertWidget summary={summary} />
-                </StaggerChild>
-              )}
-
-              {/* Trending */}
-              <StaggerChild index={3}>
-                {report && <TrendingWidget report={report} />}
-              </StaggerChild>
-
-              {/* Infographics row: Sentiment + Distribution */}
-              <StaggerChild index={4}>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                  gap: '0.75rem',
-                }}>
-                  {summary && <SentimentWidget summary={summary} report={report} />}
-                  {report && <CategoryDistributionWidget report={report} />}
+                <div className="dashboard-span-full">
+                  <StatusTicker
+                    report={report}
+                    summary={summary}
+                    pipelineStatus={pipelineStatus}
+                    summaryProgress={summaryProgress}
+                  />
                 </div>
               </StaggerChild>
 
-              {/* Source Activity Heatmap */}
-              <StaggerChild index={5}>
-                {report && <SourceActivityWidget report={report} />}
+              {/* Stats Strip */}
+              <StaggerChild index={1}>
+                <div className="dashboard-span-full">
+                  <StatsStrip report={report} summary={summary} />
+                </div>
               </StaggerChild>
 
-              {/* Section Summaries (collapsible) */}
+              {/* Executive Summary (span 2) */}
+              <StaggerChild index={2}>
+                <div className="dashboard-span-2">
+                  {summary && <ExecSummaryWidget summary={summary} />}
+                </div>
+              </StaggerChild>
+
+              {/* Risk & Intel Panel */}
+              <StaggerChild index={3}>
+                {summary && <RiskIntelPanel summary={summary} />}
+              </StaggerChild>
+
+              {/* Sentiment */}
+              <StaggerChild index={4}>
+                {summary && <SentimentWidget summary={summary} report={report} />}
+              </StaggerChild>
+
+              {/* Category Distribution */}
+              <StaggerChild index={5}>
+                {report && <CategoryDistributionWidget report={report} />}
+              </StaggerChild>
+
+              {/* Trending */}
               <StaggerChild index={6}>
-                {summary && <SectionSummariesWidget summary={summary} />}
+                {report && <TrendingWidget report={report} />}
+              </StaggerChild>
+
+              {/* Source Activity Heatmap (span 2) */}
+              <StaggerChild index={7}>
+                <div className="dashboard-span-2">
+                  {report && <SourceActivityWidget report={report} />}
+                </div>
+              </StaggerChild>
+
+              {/* Section Summaries (full span) */}
+              <StaggerChild index={8}>
+                <div className="dashboard-span-full">
+                  {summary && <SectionSummariesWidget summary={summary} />}
+                </div>
               </StaggerChild>
 
               {/* Source Health */}
-              <StaggerChild index={7}>
+              <StaggerChild index={9}>
                 {report && <SourceHealthWidget report={report} />}
               </StaggerChild>
 
               {/* Link to full feed */}
-              <div style={{ textAlign: 'center', paddingTop: '0.25rem', paddingBottom: '0.5rem' }}>
+              <div className="dashboard-span-full" style={{ textAlign: 'center', paddingTop: '0.125rem', paddingBottom: '0.25rem' }}>
                 <Link href="/data" style={{
-                  fontSize: '0.8125rem', fontWeight: 500, color: 'var(--accent)', textDecoration: 'none',
+                  fontSize: '0.75rem', fontWeight: 500, color: 'var(--accent)', textDecoration: 'none',
                 }}>
                   View full feed &#8250;
                 </Link>

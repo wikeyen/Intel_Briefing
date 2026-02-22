@@ -1,5 +1,5 @@
 // ABOUTME: Dashboard home page — fluid grid data terminal with sentiment, trending, heatmap, risk/intel panel.
-// ABOUTME: Grafana-style tile layout using shadcn/ui components, Tailwind, and Framer Motion animations.
+// ABOUTME: Premium data platform aesthetic using shadcn/ui, Tailwind, and Framer Motion animations.
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
@@ -11,9 +11,8 @@ import type { CategoryKey, DisplayCategoryKey } from '@/lib/sensors/taxonomy'
 import { cn } from '@/lib/utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
+// Badge removed — replaced with styled spans for premium pill treatment
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
-import { Skeleton } from '@/components/ui/skeleton'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -80,9 +79,10 @@ const PULSE_CSS = `
 `
 
 /** Section label — consistent uppercase treatment across all widgets. */
-function SectionLabel({ children, className }: { children: React.ReactNode; className?: string }) {
+function SectionLabel({ children, className, style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
   return (
-    <div className={cn('text-[0.625rem] font-bold text-muted-foreground uppercase tracking-wider', className)}>
+    <div className={cn('text-[0.6875rem] font-semibold uppercase tracking-wider', className)}
+      style={{ color: 'var(--ink-tertiary)', ...style }}>
       {children}
     </div>
   )
@@ -93,13 +93,13 @@ function StaggerChild({ index, children, className }: { index: number; children:
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
         type: 'spring',
         stiffness: 300,
-        damping: 30,
-        delay: index * 0.06,
+        damping: 28,
+        delay: index * 0.04,
       }}
     >
       {children}
@@ -131,32 +131,46 @@ function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
   const riskCount = overall && isStructuredOverall(overall) ? (overall.sentiment?.risk_flags?.length ?? 0) : 0
 
   const moodColors: Record<string, string> = {
-    bullish: 'text-ok',
-    bearish: 'text-err',
-    mixed: 'text-warn',
-    neutral: 'text-muted-foreground',
+    bullish: 'var(--ok-text)',
+    bearish: 'var(--err-text)',
+    mixed: 'var(--warn-text)',
+    neutral: 'var(--ink-tertiary)',
   }
   const moodDotColors: Record<string, string> = {
-    bullish: 'bg-ok',
-    bearish: 'bg-err',
-    mixed: 'bg-warn',
-    neutral: 'bg-muted-foreground',
+    bullish: 'var(--ok)',
+    bearish: 'var(--err)',
+    mixed: 'var(--warn)',
+    neutral: 'var(--ink-tertiary)',
   }
 
   return (
-    <div className="dashboard-ticker flex items-center gap-5 px-5 py-2 bg-secondary rounded-[10px] text-[0.6875rem] font-mono text-muted-foreground overflow-hidden flex-nowrap">
+    <div
+      className="dashboard-ticker flex items-center gap-5 px-5 font-mono overflow-hidden flex-nowrap"
+      style={{
+        height: 40,
+        background: 'var(--surface)',
+        borderRadius: 12,
+        boxShadow: 'var(--shadow-xs)',
+        border: '1px solid var(--border-subtle)',
+        fontSize: '0.625rem',
+        color: 'var(--ink-tertiary)',
+      }}
+    >
       {/* Pipeline state */}
       <span className="inline-flex items-center gap-1.5 shrink-0">
         <span
-          className={cn('w-1.5 h-1.5 rounded-full', isActive ? 'bg-primary' : 'bg-muted-foreground')}
-          style={isActive ? { animation: 'pulseDot 1.6s ease-in-out infinite' } : undefined}
+          className="w-1.5 h-1.5 rounded-full"
+          style={{
+            background: isActive ? 'var(--accent)' : 'var(--ink-tertiary)',
+            ...(isActive ? { animation: 'pulseDot 1.6s ease-in-out infinite' } : {}),
+          }}
         />
-        <span className={cn('font-semibold', isActive ? 'text-primary' : 'text-muted-foreground')}>
+        <span className="font-semibold" style={{ color: isActive ? 'var(--accent)' : 'var(--ink-tertiary)' }}>
           {isActive ? 'Updating' : 'Idle'}
         </span>
       </span>
 
-      <span className="w-px h-3.5 bg-border shrink-0" />
+      <span className="shrink-0" style={{ width: 1, height: 16, background: 'var(--border-subtle)' }} />
 
       {/* Last fetch */}
       <span className="dashboard-ticker-hide-mobile shrink-0">
@@ -170,11 +184,11 @@ function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
         </span>
       )}
 
-      <span className="w-px h-3.5 bg-border shrink-0" />
+      <span className="shrink-0" style={{ width: 1, height: 16, background: 'var(--border-subtle)' }} />
 
       {/* Sources */}
       <span className="shrink-0">
-        <span className={sourcesOk === sourcesTotal ? 'text-ok' : 'text-warn'}>
+        <span style={{ color: sourcesOk === sourcesTotal ? 'var(--ok-text)' : 'var(--warn-text)' }}>
           {sourcesOk}/{sourcesTotal}
         </span>
         {' '}sources
@@ -188,10 +202,10 @@ function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
       {/* Mood */}
       {mood && (
         <>
-          <span className="w-px h-3.5 bg-border shrink-0" />
+          <span className="shrink-0" style={{ width: 1, height: 16, background: 'var(--border-subtle)' }} />
           <span className="inline-flex items-center gap-1 shrink-0">
-            <span className={cn('w-1.5 h-1.5 rounded-full', moodDotColors[mood] ?? 'bg-muted-foreground')} />
-            <span className={cn('font-semibold capitalize', moodColors[mood] ?? 'text-muted-foreground')}>
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: moodDotColors[mood] ?? 'var(--ink-tertiary)' }} />
+            <span className="font-semibold capitalize" style={{ color: moodColors[mood] ?? 'var(--ink-tertiary)' }}>
               {mood}
             </span>
           </span>
@@ -200,9 +214,18 @@ function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
 
       {/* Risk flags */}
       {riskCount > 0 && (
-        <Badge variant="destructive" className="text-[0.625rem] px-1.5 py-0 rounded-sm shrink-0">
+        <span
+          className="shrink-0 font-semibold"
+          style={{
+            background: 'var(--err)',
+            color: '#fff',
+            borderRadius: 4,
+            padding: '2px 6px',
+            fontSize: '0.625rem',
+          }}
+        >
           {riskCount} risk{riskCount !== 1 ? 's' : ''}
-        </Badge>
+        </span>
       )}
     </div>
   )
@@ -223,51 +246,74 @@ function StatsStrip({ report, summary }: { report: IntelReport | null; summary: 
 
   const overall = summary?.overall
   const mood = overall && isStructuredOverall(overall) ? overall.sentiment?.overall_mood : null
-  const moodColors: Record<string, string> = {
-    bullish: 'text-ok',
-    bearish: 'text-err',
-    mixed: 'text-warn',
-    neutral: 'text-muted-foreground',
+  const moodStyles: Record<string, string> = {
+    bullish: 'var(--ok-text)',
+    bearish: 'var(--err-text)',
+    mixed: 'var(--warn-text)',
+    neutral: 'var(--ink-tertiary)',
   }
 
-  const stats: { value: string; label: string; colorClass?: string }[] = [
+  const stats: { value: string; label: string; colorStyle?: string }[] = [
     { value: totalItems.toLocaleString(), label: 'Items' },
     { value: String(sourcesOk), label: 'Sources' },
     { value: positivePct != null ? `${positivePct}%` : '--', label: 'Positive' },
-    { value: mood ?? '--', label: 'Mood', colorClass: mood ? moodColors[mood] : undefined },
+    { value: mood ?? '--', label: 'Mood', colorStyle: mood ? moodStyles[mood] : undefined },
   ]
 
   return (
-    <Card className="dashboard-stats-strip py-0 gap-0 overflow-hidden">
+    <div
+      className="dashboard-stats-strip overflow-hidden"
+      style={{
+        background: 'var(--surface)',
+        borderRadius: 12,
+        boxShadow: 'var(--shadow-card)',
+      }}
+    >
       <div className="grid grid-cols-4">
         {stats.map((stat, i) => (
           <div key={stat.label} className={cn(
-            'stat-cell py-4 px-5 text-center',
-            i < 3 && 'border-r border-border/50',
-          )}>
+            'stat-cell text-center cursor-default',
+            i < 3 && 'border-r',
+          )}
+            style={{
+              padding: '16px 0',
+              borderColor: 'var(--border-subtle)',
+              transition: 'background 150ms ease',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-inset)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
+          >
             <motion.div
               key={stat.value}
               className="stat-value"
-              initial={{ opacity: 0.4, scale: 0.95 }}
+              initial={{ opacity: 0.4, scale: 0.97 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
             >
-              <span className={cn(
-                'text-[1.75rem] font-bold leading-tight tracking-tight',
-                stat.label !== 'Mood' && 'font-mono',
-                stat.label === 'Mood' && 'capitalize',
-                stat.colorClass ?? 'text-foreground',
-              )}>
+              <span
+                className={cn(
+                  'font-bold leading-tight tracking-tight font-mono',
+                  stat.label === 'Mood' && 'capitalize',
+                )}
+                style={{
+                  fontSize: '1.75rem',
+                  letterSpacing: '-0.03em',
+                  color: stat.colorStyle ?? 'var(--ink)',
+                }}
+              >
                 {stat.value}
               </span>
             </motion.div>
-            <div className="text-[0.5625rem] font-semibold text-muted-foreground uppercase tracking-wider mt-1">
+            <div
+              className="font-semibold uppercase tracking-wider mt-1"
+              style={{ fontSize: '0.6875rem', color: 'var(--ink-tertiary)' }}
+            >
               {stat.label}
             </div>
           </div>
         ))}
       </div>
-    </Card>
+    </div>
   )
 }
 
@@ -280,18 +326,24 @@ function ExecSummaryWidget({ summary }: { summary: BriefingSummary }) {
   if (!isStructuredOverall(overall) || !overall.executive_summary) return null
 
   return (
-    <div className="bg-[var(--accent-wash)] border-l-[3px] border-l-primary rounded-r-xl py-5 px-6">
-      <SectionLabel className="text-primary mb-3">Executive Summary</SectionLabel>
-      <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+    <div style={{
+      background: 'var(--surface)',
+      borderRadius: 12,
+      boxShadow: 'var(--shadow-card)',
+      borderLeft: '3px solid var(--accent)',
+      padding: '20px 24px',
+    }}>
+      <SectionLabel className="mb-3" style={{ color: 'var(--accent)' }}>Executive Summary</SectionLabel>
+      <div style={{ fontSize: '0.875rem', lineHeight: 1.6, color: 'var(--ink)' }} className="whitespace-pre-wrap">
         <InlineRefs text={overall.executive_summary} globalSources={overall.sources} />
       </div>
       {overall.quick_scan && overall.quick_scan.length > 0 && (
-        <div className="mt-4 pt-3.5 border-t border-[var(--accent-dim)]">
-          <SectionLabel className="text-primary mb-2">Quick Scan</SectionLabel>
+        <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border-subtle)' }}>
+          <SectionLabel className="mb-2" style={{ color: 'var(--accent)' }}>Quick Scan</SectionLabel>
           <div className="flex flex-col gap-1.5">
             {overall.quick_scan.map((entry, i) => (
-              <div key={i} className="flex gap-2 text-[0.8125rem] text-foreground leading-relaxed">
-                <span className="w-1 h-1 rounded-full bg-primary shrink-0 mt-2" />
+              <div key={i} className="flex gap-2" style={{ fontSize: '0.8125rem', color: 'var(--ink-secondary)', lineHeight: 1.6 }}>
+                <span className="shrink-0 mt-2 rounded-full" style={{ width: 4, height: 4, background: 'var(--accent)' }} />
                 <span><InlineRefs text={entry.text} globalSources={overall.sources} /></span>
               </div>
             ))}
@@ -313,68 +365,76 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
   if (!sentiment) return null
 
   const tabData = [
-    { key: 'risk', label: 'Risk', items: sentiment.risk_flags ?? [], color: 'text-err' },
-    { key: 'controversies', label: 'Controversies', items: sentiment.controversies ?? [], color: 'text-warn' },
-    { key: 'shifts', label: 'Shifts', items: sentiment.opinion_shifts ?? [], color: 'text-primary' },
+    { key: 'risk', label: 'Risk', items: sentiment.risk_flags ?? [], color: 'var(--err-text)' },
+    { key: 'controversies', label: 'Controversies', items: sentiment.controversies ?? [], color: 'var(--warn-text)' },
+    { key: 'shifts', label: 'Shifts', items: sentiment.opinion_shifts ?? [], color: 'var(--accent)' },
   ] as const
 
   const totalAlerts = tabData.reduce((n, t) => n + t.items.length, 0)
   const defaultTab = tabData.find(t => t.items.length > 0)?.key ?? 'risk'
 
   return (
-    <Card className="py-4 gap-3">
+    <Card className="dashboard-card py-4 gap-3" style={{ borderRadius: 12 }}>
       <CardContent className="px-5 flex flex-col gap-3">
         {/* Header */}
         <div className="flex items-center justify-between">
           <SectionLabel>Intelligence</SectionLabel>
           {totalAlerts > 0 && (
-            <span className={cn(
-              'text-[0.5625rem] font-bold font-mono',
-              sentiment.risk_flags?.length ? 'text-err' : 'text-muted-foreground',
-            )}>
+            <span className="font-bold font-mono" style={{
+              fontSize: '0.625rem',
+              color: sentiment.risk_flags?.length ? 'var(--err-text)' : 'var(--ink-tertiary)',
+            }}>
               {totalAlerts} alert{totalAlerts !== 1 ? 's' : ''}
             </span>
           )}
         </div>
 
-        {/* Tabs */}
+        {/* Pill-style Tabs */}
         <Tabs defaultValue={defaultTab}>
-          <TabsList variant="line" className="w-full justify-start">
+          <TabsList className="bg-transparent h-auto p-0 gap-1 w-full justify-start">
             {tabData.map(tab => (
-              <TabsTrigger key={tab.key} value={tab.key} className="text-[0.6875rem] px-3 py-1.5">
+              <TabsTrigger
+                key={tab.key}
+                value={tab.key}
+                className="text-[0.6875rem] px-3 py-1 rounded-[6px] data-[state=active]:shadow-none"
+                style={{ transition: 'background 150ms ease' }}
+              >
                 {tab.label}
                 {tab.items.length > 0 && (
-                  <Badge variant="secondary" className={cn('ml-1 text-[0.5rem] px-1.5 py-0', tab.color)}>
+                  <span
+                    className="ml-1 font-semibold"
+                    style={{ fontSize: '0.625rem', color: tab.color }}
+                  >
                     {tab.items.length}
-                  </Badge>
+                  </span>
                 )}
               </TabsTrigger>
             ))}
           </TabsList>
 
           {tabData.map(tab => (
-            <TabsContent key={tab.key} value={tab.key} className="flex flex-col gap-2 min-h-[60px] mt-2">
+            <TabsContent key={tab.key} value={tab.key} className="flex flex-col min-h-[60px] mt-2">
               {tab.items.length === 0 ? (
-                <div className="text-xs text-muted-foreground py-4 text-center">
+                <div className="py-4 text-center" style={{ fontSize: '0.75rem', color: 'var(--ink-tertiary)' }}>
                   None detected
                 </div>
               ) : (
                 tab.items.map((entry: SentimentEntry, i: number) => (
-                  <div key={i} className={cn(
-                    'py-2',
-                    i < tab.items.length - 1 && 'border-b border-dotted border-border/50',
-                  )}>
+                  <div key={i} style={{
+                    padding: '10px 0',
+                    ...(i < tab.items.length - 1 ? { borderBottom: '1px solid var(--border-subtle)' } : {}),
+                  }}>
                     <div className="flex items-center gap-1.5 mb-1">
-                      <span className={cn('w-[5px] h-[5px] rounded-full shrink-0', {
-                        'bg-err': tab.key === 'risk',
-                        'bg-warn': tab.key === 'controversies',
-                        'bg-primary': tab.key === 'shifts',
-                      })} />
-                      <span className="text-[0.8125rem] font-semibold text-foreground">
+                      <span className="shrink-0 rounded-full" style={{
+                        width: 5,
+                        height: 5,
+                        background: tab.key === 'risk' ? 'var(--err)' : tab.key === 'controversies' ? 'var(--warn)' : 'var(--accent)',
+                      }} />
+                      <span className="font-semibold" style={{ fontSize: '0.8125rem', color: 'var(--ink)' }}>
                         {entry.topic}
                       </span>
                     </div>
-                    <div className="text-xs text-muted-foreground leading-relaxed pl-[1.125rem]">
+                    <div style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.5, paddingLeft: '1.125rem' }}>
                       <InlineRefs text={entry.analysis} globalSources={overall.sources} />
                     </div>
                   </div>
@@ -392,7 +452,7 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
 // Widget: Sentiment Ring Gauge (SVG)
 // ---------------------------------------------------------------------------
 
-function SentimentRing({ positive, neutral, negative, size = 140 }: {
+function SentimentRing({ positive, neutral, negative, size = 96 }: {
   positive: number; neutral: number; negative: number; size?: number
 }) {
   const total = positive + neutral + negative
@@ -414,38 +474,38 @@ function SentimentRing({ positive, neutral, negative, size = 140 }: {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" className="shrink-0"
       role="img" aria-label={`Sentiment: ${Math.round(posPct * 100)}% positive, ${Math.round(neuPct * 100)}% neutral, ${Math.round((1 - posPct - neuPct) * 100)}% negative`}>
-      <circle cx="50" cy="50" r="45" fill="none" stroke="var(--border)" strokeWidth="8" />
+      <circle cx="50" cy="50" r="45" fill="none" stroke="var(--border-subtle)" strokeWidth="6" />
       {posArc > 0 && (
         <circle cx="50" cy="50" r="45" fill="none"
-          stroke="var(--ok)" strokeWidth="8"
+          stroke="var(--ok)" strokeWidth="6"
           strokeDasharray={`${posArc} ${circumference - posArc}`}
           strokeDashoffset={posOffset}
           strokeLinecap="round"
-          style={{ transition: 'stroke-dasharray 800ms cubic-bezier(0.4, 0, 0.2, 1)' }}
+          style={{ transition: 'stroke-dasharray 600ms cubic-bezier(0.4, 0, 0.2, 1)' }}
         />
       )}
       {neuArc > 0.5 && (
         <circle cx="50" cy="50" r="45" fill="none"
-          stroke="var(--ink-faint)" strokeWidth="8"
+          stroke="var(--ink-tertiary)" strokeWidth="6" strokeOpacity={0.5}
           strokeDasharray={`${neuArc} ${circumference - neuArc}`}
           strokeDashoffset={neuOffset}
-          style={{ transition: 'stroke-dasharray 800ms cubic-bezier(0.4, 0, 0.2, 1)' }}
+          style={{ transition: 'stroke-dasharray 600ms cubic-bezier(0.4, 0, 0.2, 1)' }}
         />
       )}
       {negArc > 0.5 && (
         <circle cx="50" cy="50" r="45" fill="none"
-          stroke="var(--err)" strokeWidth="8"
+          stroke="var(--err)" strokeWidth="6"
           strokeDasharray={`${negArc} ${circumference - negArc}`}
           strokeDashoffset={negOffset}
-          style={{ transition: 'stroke-dasharray 800ms cubic-bezier(0.4, 0, 0.2, 1)' }}
+          style={{ transition: 'stroke-dasharray 600ms cubic-bezier(0.4, 0, 0.2, 1)' }}
         />
       )}
       <text x="50" y="47" textAnchor="middle" dominantBaseline="central" fill="var(--ink)"
-        className="text-[1.375rem] font-bold font-mono">
+        style={{ fontSize: '1.25rem', fontWeight: 700, fontFamily: 'var(--font-mono, ui-monospace, monospace)', letterSpacing: '-0.02em' }}>
         {Math.round(posPct * 100)}%
       </text>
-      <text x="50" y="62" textAnchor="middle" fill="var(--ink-faint)"
-        className="text-[0.4375rem] font-semibold tracking-wider">
+      <text x="50" y="62" textAnchor="middle" fill="var(--ink-tertiary)"
+        style={{ fontSize: '0.5rem', fontWeight: 600, letterSpacing: '0.08em' }}>
         POSITIVE
       </text>
     </svg>
@@ -463,16 +523,16 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
   if (!sentiment) return null
 
   const moodColors: Record<string, string> = {
-    bullish: 'text-ok',
-    bearish: 'text-err',
-    mixed: 'text-warn',
-    neutral: 'text-muted-foreground',
+    bullish: 'var(--ok-text)',
+    bearish: 'var(--err-text)',
+    mixed: 'var(--warn-text)',
+    neutral: 'var(--ink-tertiary)',
   }
   const moodDotColors: Record<string, string> = {
-    bullish: 'bg-ok',
-    bearish: 'bg-err',
-    mixed: 'bg-warn',
-    neutral: 'bg-muted-foreground',
+    bullish: 'var(--ok)',
+    bearish: 'var(--err)',
+    mixed: 'var(--warn)',
+    neutral: 'var(--ink-tertiary)',
   }
 
   const allItems: IntelItem[] = report ? Object.values(report.items).flat() : []
@@ -498,14 +558,17 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
   }
 
   return (
-    <Card className="py-4 gap-3">
+    <Card className="dashboard-card py-4 gap-3" style={{ borderRadius: 12 }}>
       <CardContent className="px-5 flex flex-col gap-3">
         {/* Header: mood indicator */}
         <div className="flex items-center justify-between">
           <SectionLabel>Sentiment</SectionLabel>
           <div className="flex items-center gap-1.5">
-            <span className={cn('w-[7px] h-[7px] rounded-full', moodDotColors[sentiment.overall_mood] ?? 'bg-muted-foreground')} />
-            <span className={cn('text-xs font-bold capitalize', moodColors[sentiment.overall_mood] ?? 'text-muted-foreground')}>
+            <span className="rounded-full" style={{ width: 6, height: 6, background: moodDotColors[sentiment.overall_mood] ?? 'var(--ink-tertiary)' }} />
+            <span className="font-semibold capitalize" style={{
+              fontSize: '0.75rem',
+              color: moodColors[sentiment.overall_mood] ?? 'var(--ink-tertiary)',
+            }}>
               {sentiment.overall_mood}
             </span>
           </div>
@@ -513,9 +576,9 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
 
         {/* Ring gauge + mood summary row */}
         <div className="flex gap-4 items-center flex-wrap">
-          <SentimentRing positive={totalPos} neutral={totalNeu} negative={totalNeg} size={100} />
+          <SentimentRing positive={totalPos} neutral={totalNeu} negative={totalNeg} size={96} />
           {sentiment.mood_summary && (
-            <p className="text-xs text-foreground leading-relaxed m-0 flex-1 min-w-[140px]">
+            <p className="m-0 flex-1 min-w-[140px]" style={{ fontSize: '0.8125rem', color: 'var(--ink)', lineHeight: 1.5 }}>
               <InlineRefs text={sentiment.mood_summary} globalSources={overall.sources} />
             </p>
           )}
@@ -531,28 +594,28 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
               return (
                 <div key={source}>
                   <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-[0.6875rem] font-medium"
-                      style={{ color: PLATFORM_COLORS[source] ?? 'var(--ink-muted)' }}>
+                    <span className="font-mono font-medium"
+                      style={{ fontSize: '0.625rem', color: PLATFORM_COLORS[source] ?? 'var(--ink-secondary)' }}>
                       {SENSOR_LABELS[source] ?? source}
                     </span>
-                    <div className="flex gap-2 text-[0.5rem] font-mono text-muted-foreground">
-                      <span className="text-ok">{posPct}%</span>
+                    <div className="flex gap-2 font-mono" style={{ fontSize: '0.625rem', color: 'var(--ink-tertiary)' }}>
+                      <span style={{ color: 'var(--ok-text)' }}>{posPct}%</span>
                       <span>{neuPct}%</span>
-                      <span className="text-err">{negPct}%</span>
+                      <span style={{ color: 'var(--err-text)' }}>{negPct}%</span>
                     </div>
                   </div>
-                  <div className="flex h-[3px] rounded-sm overflow-hidden bg-border">
+                  <div className="flex overflow-hidden" style={{ height: 6, borderRadius: 3, background: 'var(--border-subtle)', gap: 1 }}>
                     {posPct > 0 && (
                       <div title={`${counts.positive} positive (${posPct}%)`}
-                        className="bg-ok transition-[width] duration-300" style={{ width: `${posPct}%` }} />
+                        style={{ width: `${posPct}%`, background: 'var(--ok)', transition: 'width 400ms ease' }} />
                     )}
                     {neuPct > 0 && (
                       <div title={`${counts.neutral} neutral (${neuPct}%)`}
-                        className="bg-muted-foreground transition-[width] duration-300" style={{ width: `${neuPct}%` }} />
+                        style={{ width: `${neuPct}%`, background: 'var(--ink-tertiary)', opacity: 0.3, transition: 'width 400ms ease' }} />
                     )}
                     {negPct > 0 && (
                       <div title={`${counts.negative} negative (${negPct}%)`}
-                        className="bg-err transition-[width] duration-300" style={{ width: `${negPct}%` }} />
+                        style={{ width: `${negPct}%`, background: 'var(--err)', transition: 'width 400ms ease' }} />
                     )}
                   </div>
                 </div>
@@ -588,16 +651,16 @@ function CategoryDistributionWidget({ report }: { report: IntelReport }) {
   ]
 
   return (
-    <Card className="py-4 gap-3">
+    <Card className="dashboard-card py-4 gap-3" style={{ borderRadius: 12 }}>
       <CardContent className="px-5 flex flex-col gap-3">
         <SectionLabel>Distribution</SectionLabel>
         {/* Segmented bar */}
-        <div className="flex h-1.5 rounded-sm overflow-hidden gap-px">
+        <div className="flex overflow-hidden" style={{ height: 8, borderRadius: 4, gap: 1 }}>
           {segments.map(seg => seg.count > 0 ? (
             <div key={seg.key} style={{
               width: `${(seg.count / total) * 100}%`,
               background: seg.color,
-              transition: 'width 600ms cubic-bezier(0.4, 0, 0.2, 1)',
+              transition: 'width 500ms cubic-bezier(0.4, 0, 0.2, 1)',
             }} />
           ) : null)}
         </div>
@@ -605,9 +668,9 @@ function CategoryDistributionWidget({ report }: { report: IntelReport }) {
         <div className="grid grid-cols-2 gap-x-3 gap-y-1">
           {segments.map(seg => (
             <div key={seg.key} className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: seg.color }} />
-              <span className="text-[0.625rem] font-medium text-muted-foreground">{seg.label}</span>
-              <span className="text-[0.625rem] font-semibold text-foreground font-mono ml-auto">{seg.count}</span>
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: seg.color }} />
+              <span style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)' }}>{seg.label}</span>
+              <span className="font-semibold font-mono ml-auto" style={{ fontSize: '0.625rem', color: 'var(--ink)' }}>{seg.count}</span>
             </div>
           ))}
         </div>
@@ -640,28 +703,54 @@ function SourceActivityWidget({ report }: { report: IntelReport }) {
   if (sorted.length === 0) return null
 
   const cellColor = (count: number): string => {
-    if (count === 0) return 'var(--border-soft)'
-    if (count <= 5) return 'var(--accent-lo)'
-    if (count <= 15) return 'var(--accent-mid)'
-    return 'var(--accent)'
+    if (count === 0) return 'var(--heat-0)'
+    if (count <= 3) return 'var(--heat-1)'
+    if (count <= 8) return 'var(--heat-2)'
+    if (count <= 15) return 'var(--heat-3)'
+    return 'var(--heat-4)'
   }
 
   return (
-    <Card className="py-4 gap-3">
+    <Card className="dashboard-card py-4 gap-3" style={{ borderRadius: 12 }}>
       <CardContent className="px-5 flex flex-col gap-3">
         <SectionLabel>Source Activity (24h)</SectionLabel>
         <div className="overflow-x-auto">
-          <div className="flex flex-col gap-[3px] min-w-[320px]">
+          <div className="flex flex-col gap-0.5 min-w-[400px]">
+            {/* Hour labels */}
+            <div className="flex items-center gap-1.5">
+              <span className="shrink-0" style={{ width: 56 }} />
+              <div className="grid grid-cols-[repeat(24,1fr)] gap-0.5 flex-1">
+                {Array.from({ length: 24 }, (_, h) => (
+                  <div key={h} className="text-center" style={{ fontSize: '0.625rem', fontFamily: 'var(--font-mono, ui-monospace, monospace)', color: 'var(--ink-tertiary)' }}>
+                    {h % 6 === 0 ? `${h}h` : ''}
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Source rows */}
             {sorted.map(({ source, hours }) => (
               <div key={source} className="flex items-center gap-1.5">
-                <span className="w-14 text-[0.5rem] font-semibold text-muted-foreground font-mono truncate shrink-0">
-                  {(SENSOR_LABELS[source] ?? source).slice(0, 8)}
+                <span className="font-mono truncate shrink-0" style={{
+                  width: 56,
+                  fontSize: '0.625rem',
+                  fontWeight: 500,
+                  color: 'var(--ink-secondary)',
+                }}>
+                  {(SENSOR_LABELS[source] ?? source).slice(0, 12)}
                 </span>
                 <div className="grid grid-cols-[repeat(24,1fr)] gap-0.5 flex-1">
                   {hours.map((count, h) => (
                     <div key={h} title={`${SENSOR_LABELS[source] ?? source} — ${h}:00: ${count} items`}
-                      className="w-full aspect-square min-w-[5px] rounded-sm transition-colors duration-300"
-                      style={{ background: cellColor(count) }}
+                      className="w-full aspect-square"
+                      style={{
+                        minWidth: 8,
+                        borderRadius: 2,
+                        background: cellColor(count),
+                        transition: 'background 200ms ease',
+                        cursor: 'default',
+                      }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.outline = '1px solid var(--accent)'; (e.currentTarget as HTMLElement).style.zIndex = '1' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.outline = ''; (e.currentTarget as HTMLElement).style.zIndex = '' }}
                     />
                   ))}
                 </div>
@@ -670,15 +759,16 @@ function SourceActivityWidget({ report }: { report: IntelReport }) {
           </div>
         </div>
         {/* Legend */}
-        <div className="flex gap-2.5 text-[0.5rem] text-muted-foreground">
+        <div className="flex gap-2.5 font-mono" style={{ fontSize: '0.625rem', color: 'var(--ink-tertiary)' }}>
           {[
-            { bg: 'var(--border-soft)', label: '0' },
-            { bg: 'var(--accent-lo)', label: '1-5' },
-            { bg: 'var(--accent-mid)', label: '6-15' },
-            { bg: 'var(--accent)', label: '16+' },
+            { bg: 'var(--heat-0)', label: '0' },
+            { bg: 'var(--heat-1)', label: '1-3' },
+            { bg: 'var(--heat-2)', label: '4-8' },
+            { bg: 'var(--heat-3)', label: '9-15' },
+            { bg: 'var(--heat-4)', label: '16+' },
           ].map(({ bg, label }) => (
             <span key={label} className="inline-flex items-center gap-[3px]">
-              <span className="w-[5px] h-[5px] rounded-[1px]" style={{ background: bg }} /> {label}
+              <span style={{ width: 10, height: 10, borderRadius: 2, background: bg }} /> {label}
             </span>
           ))}
         </div>
@@ -693,25 +783,36 @@ function SourceActivityWidget({ report }: { report: IntelReport }) {
 
 function SourceHealthWidget({ report }: { report: IntelReport }) {
   const okSet = new Set(report.sources_ok)
-  const all = [...report.sources_ok, ...report.sources_failed].sort()
+  const failedSorted = [...report.sources_failed].sort()
+  const okSorted = [...report.sources_ok].sort()
+  const all = [...failedSorted, ...okSorted]
   if (all.length === 0) return null
 
+  const hasFailed = report.sources_failed.length > 0
+
   return (
-    <Card className="py-4 gap-3">
+    <Card className="dashboard-card py-4 gap-3" style={{ borderRadius: 12 }}>
       <CardContent className="px-5 flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <SectionLabel>Source Health</SectionLabel>
-          <span className="text-[0.5rem] font-mono text-muted-foreground">
-            {report.sources_ok.length}/{all.length} ok
+          <span className="font-mono" style={{
+            fontSize: '0.625rem',
+            color: hasFailed ? 'var(--err-text)' : 'var(--ok-text)',
+          }}>
+            {report.sources_ok.length}/{all.length} operational
           </span>
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           {all.map(source => (
             <div key={source} title={`${SENSOR_LABELS[source] ?? source}: ${okSet.has(source) ? 'OK' : 'Failed'}`}
-              className="flex items-center gap-[3px]">
-              <span className={cn('w-[5px] h-[5px] rounded-full', okSet.has(source) ? 'bg-ok' : 'bg-err')} />
-              <span className="text-[0.5rem] text-muted-foreground font-mono">
-                {(SENSOR_LABELS[source] ?? source).slice(0, 8)}
+              className="flex items-center gap-1">
+              <span className="rounded-full" style={{
+                width: 8,
+                height: 8,
+                background: okSet.has(source) ? 'var(--ok)' : 'var(--err)',
+              }} />
+              <span className="font-mono" style={{ fontSize: '0.625rem', color: 'var(--ink-secondary)' }}>
+                {(SENSOR_LABELS[source] ?? source).slice(0, 12)}
               </span>
             </div>
           ))}
@@ -745,11 +846,11 @@ function TrendingWidget({ report }: { report: IntelReport }) {
   if (top.length === 0) return null
 
   return (
-    <Card className="py-4 gap-3">
+    <Card className="dashboard-card py-4 gap-3" style={{ borderRadius: 12 }}>
       <CardContent className="px-5 flex flex-col gap-0">
         <div className="flex items-center justify-between mb-2.5">
           <SectionLabel>Trending</SectionLabel>
-          <Link href="/data" className="text-[0.625rem] font-medium text-primary no-underline hover:underline">
+          <Link href="/data" className="font-medium no-underline hover:underline" style={{ fontSize: '0.75rem', color: 'var(--accent)' }}>
             View all &#8250;
           </Link>
         </div>
@@ -758,8 +859,8 @@ function TrendingWidget({ report }: { report: IntelReport }) {
             const v = item.velocity!
             const pctStr = v.changePercent != null ? `${v.changePercent > 0 ? '+' : ''}${v.changePercent}%` : null
             const pctColor = v.changePercent != null
-              ? v.changePercent > 0 ? 'text-ok' : v.changePercent < 0 ? 'text-err' : 'text-muted-foreground'
-              : 'text-muted-foreground'
+              ? v.changePercent > 0 ? 'var(--ok-text)' : v.changePercent < 0 ? 'var(--err-text)' : 'var(--ink-tertiary)'
+              : 'var(--ink-tertiary)'
             const displayTitle = item.source === 'github'
               ? item.title.split(' — ')[0]
               : item.title
@@ -770,41 +871,50 @@ function TrendingWidget({ report }: { report: IntelReport }) {
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={cn(
-                  'flex items-center gap-2.5 py-[7px] no-underline',
-                  idx < top.length - 1 && 'border-b border-dotted border-border/50',
-                )}
+                className="flex items-center gap-2.5 no-underline rounded-lg"
+                style={{
+                  padding: '10px 8px',
+                  margin: '0 -8px',
+                  transition: 'background 150ms ease',
+                  ...(idx < top.length - 1 ? { borderBottom: '1px solid var(--border-subtle)' } : {}),
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-inset)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
               >
                 {/* Rank number */}
-                <span className={cn(
-                  'text-[0.9375rem] font-bold w-5 text-right shrink-0 font-mono',
-                  idx < 3 ? 'text-[var(--accent-dim)]' : 'text-border',
-                )}>
+                <span className="w-5 text-right shrink-0 font-mono font-bold" style={{
+                  fontSize: '0.6875rem',
+                  color: idx < 3 ? 'var(--accent)' : 'var(--ink-disabled)',
+                }}>
                   {idx + 1}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium text-foreground truncate">
+                  <div className="font-medium truncate" style={{ fontSize: '0.8125rem', color: 'var(--ink)' }}>
                     {displayTitle}
                   </div>
-                  <div className="flex items-center gap-1 text-[0.5rem] text-muted-foreground mt-px">
-                    <span className="px-1 rounded-sm bg-secondary font-medium">
+                  <div className="flex items-center gap-1 mt-px" style={{ fontSize: '0.625rem', color: 'var(--ink-tertiary)' }}>
+                    <span className="font-medium" style={{
+                      padding: '1px 6px',
+                      borderRadius: 4,
+                      background: 'var(--surface-inset)',
+                    }}>
                       {SENSOR_LABELS[item.source] ?? item.source}
                     </span>
                     {item.heat && <span>{item.heat}</span>}
                     {v.hoursOnTrend != null && (
-                      <span className={cn(
-                        'px-[3px] rounded-sm font-semibold',
-                        v.hoursOnTrend <= 6
-                          ? 'bg-[var(--cat-trend-tint)] text-[var(--cat-trend)]'
-                          : 'bg-secondary text-muted-foreground',
-                      )}>
+                      <span className="font-semibold" style={{
+                        padding: '0 3px',
+                        borderRadius: 4,
+                        background: v.hoursOnTrend <= 6 ? 'var(--cat-trend-bg)' : 'var(--surface-inset)',
+                        color: v.hoursOnTrend <= 6 ? 'var(--cat-trend)' : 'var(--ink-tertiary)',
+                      }}>
                         {v.hoursOnTrend}h
                       </span>
                     )}
                   </div>
                 </div>
                 {pctStr && (
-                  <span className={cn('text-xs font-bold font-mono shrink-0', pctColor)}>
+                  <span className="shrink-0 font-bold font-mono" style={{ fontSize: '0.6875rem', color: pctColor }}>
                     {pctStr}
                   </span>
                 )}
@@ -828,23 +938,34 @@ function SectionSummariesWidget({ summary }: { summary: BriefingSummary }) {
   if (!sections || sections.length === 0) return null
 
   return (
-    <Card className="py-2 gap-0">
+    <Card className="dashboard-card py-2 gap-0" style={{ borderRadius: 12 }}>
       <CardContent className="px-5">
         <Accordion type="multiple" defaultValue={['section-0']}>
           {sections.map((section, i) => (
-            <AccordionItem key={i} value={`section-${i}`} className="border-border/50">
-              <AccordionTrigger className="py-3 text-xs font-semibold hover:no-underline">
+            <AccordionItem key={i} value={`section-${i}`} style={{ borderColor: 'var(--border-subtle)' }}>
+              <AccordionTrigger className="hover:no-underline" style={{ padding: '14px 0', fontSize: '0.8125rem', fontWeight: 600 }}>
                 <div className="flex items-center gap-2">
                   <span>{section.title}</span>
-                  <Badge variant="secondary" className="text-[0.5rem] px-1.5 py-0 font-mono">
+                  <span className="font-mono font-semibold" style={{
+                    fontSize: '0.625rem',
+                    background: 'var(--surface-inset)',
+                    borderRadius: 4,
+                    padding: '1px 6px',
+                  }}>
                     {section.entries.length}
-                  </Badge>
+                  </span>
                 </div>
               </AccordionTrigger>
               <AccordionContent className="pb-3">
                 <div className="flex flex-col gap-2">
                   {section.entries.map((entry, j) => (
-                    <div key={j} className="text-xs text-foreground leading-relaxed pl-3 border-l-2 border-border">
+                    <div key={j} style={{
+                      fontSize: '0.8125rem',
+                      color: 'var(--ink-secondary)',
+                      lineHeight: 1.6,
+                      paddingLeft: 12,
+                      borderLeft: '2px solid var(--accent-subtle)',
+                    }}>
                       <InlineRefs text={entry.text} globalSources={overall.sources} />
                     </div>
                   ))}
@@ -866,73 +987,90 @@ function DashboardSkeleton() {
   return (
     <div className="dashboard-grid">
       {/* Ticker skeleton */}
-      <div className="dashboard-span-full bg-secondary rounded-[10px] px-5 py-2 flex gap-4">
-        <Skeleton className="w-20 h-2.5" />
-        <Skeleton className="w-24 h-2.5" />
-        <Skeleton className="w-16 h-2.5" />
+      <div className="dashboard-span-full flex gap-4 px-5" style={{
+        height: 40,
+        alignItems: 'center',
+        background: 'var(--surface)',
+        borderRadius: 12,
+        boxShadow: 'var(--shadow-xs)',
+        border: '1px solid var(--border-subtle)',
+      }}>
+        <div className="skeleton-shimmer" style={{ width: 80, height: 10 }} />
+        <div className="skeleton-shimmer" style={{ width: 96, height: 10 }} />
+        <div className="skeleton-shimmer" style={{ width: 64, height: 10 }} />
       </div>
       {/* Stats strip skeleton */}
-      <Card className="dashboard-span-full py-0 gap-0 overflow-hidden">
+      <div className="dashboard-span-full overflow-hidden" style={{
+        background: 'var(--surface)',
+        borderRadius: 12,
+        boxShadow: 'var(--shadow-card)',
+      }}>
         <div className="grid grid-cols-4">
           {[0, 1, 2, 3].map(i => (
-            <div key={i} className={cn(
-              'py-4 px-5 flex flex-col items-center gap-1.5',
-              i < 3 && 'border-r border-border/50',
-            )}>
-              <Skeleton className="w-12 h-6" />
-              <Skeleton className="w-9 h-2" />
+            <div key={i} className="flex flex-col items-center gap-1.5" style={{
+              padding: '16px 20px',
+              ...(i < 3 ? { borderRight: '1px solid var(--border-subtle)' } : {}),
+            }}>
+              <div className="skeleton-shimmer" style={{ width: 48, height: 24 }} />
+              <div className="skeleton-shimmer" style={{ width: 36, height: 8 }} />
             </div>
           ))}
         </div>
-      </Card>
+      </div>
       {/* Exec summary skeleton */}
-      <div className="dashboard-span-2 bg-[var(--accent-wash)] border-l-[3px] border-l-[var(--accent-dim)] rounded-r-xl py-5 px-6 flex flex-col gap-2">
-        <Skeleton className="w-24 h-2.5" />
-        <Skeleton className="w-[95%] h-3" />
-        <Skeleton className="w-full h-3" />
-        <Skeleton className="w-[70%] h-3" />
+      <div className="dashboard-span-2 flex flex-col gap-2" style={{
+        background: 'var(--surface)',
+        borderRadius: 12,
+        boxShadow: 'var(--shadow-card)',
+        borderLeft: '3px solid var(--accent)',
+        padding: '20px 24px',
+      }}>
+        <div className="skeleton-shimmer" style={{ width: 96, height: 10 }} />
+        <div className="skeleton-shimmer" style={{ width: '95%', height: 12 }} />
+        <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+        <div className="skeleton-shimmer" style={{ width: '70%', height: 12 }} />
       </div>
       {/* Intel panel skeleton */}
-      <Card className="py-4"><CardContent className="px-5 flex flex-col gap-2">
-        <Skeleton className="w-20 h-2.5" />
-        <Skeleton className="w-full h-4" />
-        <Skeleton className="w-[80%] h-3" />
-        <Skeleton className="w-[90%] h-3" />
-        <Skeleton className="w-[60%] h-3" />
+      <Card className="py-4" style={{ borderRadius: 12 }}><CardContent className="px-5 flex flex-col gap-2">
+        <div className="skeleton-shimmer" style={{ width: 80, height: 10 }} />
+        <div className="skeleton-shimmer" style={{ width: '100%', height: 16 }} />
+        <div className="skeleton-shimmer" style={{ width: '80%', height: 12 }} />
+        <div className="skeleton-shimmer" style={{ width: '90%', height: 12 }} />
+        <div className="skeleton-shimmer" style={{ width: '60%', height: 12 }} />
       </CardContent></Card>
       {/* Cards */}
-      <Card className="py-4"><CardContent className="px-5 flex flex-col gap-2">
-        <Skeleton className="w-20 h-2.5" />
-        <Skeleton className="w-full h-3" />
-        <Skeleton className="w-[80%] h-3" />
-        <Skeleton className="w-[60%] h-3" />
+      <Card className="py-4" style={{ borderRadius: 12 }}><CardContent className="px-5 flex flex-col gap-2">
+        <div className="skeleton-shimmer" style={{ width: 80, height: 10 }} />
+        <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+        <div className="skeleton-shimmer" style={{ width: '80%', height: 12 }} />
+        <div className="skeleton-shimmer" style={{ width: '60%', height: 12 }} />
       </CardContent></Card>
-      <Card className="py-4"><CardContent className="px-5 flex flex-col gap-2">
-        <Skeleton className="w-16 h-2.5" />
-        <Skeleton className="w-full h-3" />
-        <Skeleton className="w-[70%] h-3" />
+      <Card className="py-4" style={{ borderRadius: 12 }}><CardContent className="px-5 flex flex-col gap-2">
+        <div className="skeleton-shimmer" style={{ width: 64, height: 10 }} />
+        <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+        <div className="skeleton-shimmer" style={{ width: '70%', height: 12 }} />
       </CardContent></Card>
-      <Card className="py-4"><CardContent className="px-5 flex flex-col gap-2">
-        <Skeleton className="w-20 h-2.5" />
-        <Skeleton className="w-full h-3" />
-        <Skeleton className="w-full h-3" />
-        <Skeleton className="w-full h-3" />
-        <Skeleton className="w-[80%] h-3" />
-        <Skeleton className="w-full h-3" />
+      <Card className="py-4" style={{ borderRadius: 12 }}><CardContent className="px-5 flex flex-col gap-2">
+        <div className="skeleton-shimmer" style={{ width: 80, height: 10 }} />
+        <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+        <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+        <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+        <div className="skeleton-shimmer" style={{ width: '80%', height: 12 }} />
+        <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
       </CardContent></Card>
       {/* Heatmap skeleton */}
-      <Card className="dashboard-span-2 py-4"><CardContent className="px-5 flex flex-col gap-2">
-        <Skeleton className="w-28 h-2.5" />
-        <Skeleton className="w-full h-3" />
-        <Skeleton className="w-full h-3" />
-        <Skeleton className="w-full h-3" />
-        <Skeleton className="w-full h-3" />
+      <Card className="dashboard-span-2 py-4" style={{ borderRadius: 12 }}><CardContent className="px-5 flex flex-col gap-2">
+        <div className="skeleton-shimmer" style={{ width: 112, height: 10 }} />
+        <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+        <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+        <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+        <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
       </CardContent></Card>
       {/* Section skeletons */}
-      <Card className="dashboard-span-full py-4"><CardContent className="px-5 flex flex-col gap-2">
-        <Skeleton className="w-32 h-2.5" />
-        <Skeleton className="w-full h-3" />
-        <Skeleton className="w-[90%] h-3" />
+      <Card className="dashboard-span-full py-4" style={{ borderRadius: 12 }}><CardContent className="px-5 flex flex-col gap-2">
+        <div className="skeleton-shimmer" style={{ width: 128, height: 10 }} />
+        <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+        <div className="skeleton-shimmer" style={{ width: '90%', height: 12 }} />
       </CardContent></Card>
     </div>
   )
@@ -997,7 +1135,7 @@ export function Dashboard() {
   const hasSummary = summary && isStructuredOverall(summary.overall) && !!summary.overall.executive_summary
 
   return (
-    <div className="dashboard-root p-5 max-w-[1280px] mx-auto">
+    <div className="dashboard-root mx-auto" style={{ padding: 24, maxWidth: 1440 }}>
       <style>{PULSE_CSS}</style>
 
       <AnimatePresence mode="wait">
@@ -1007,14 +1145,14 @@ export function Dashboard() {
           </motion.div>
         ) : !hasSummary && !hasReport ? (
           <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <Card className="py-20 text-center">
+            <Card className="py-20 text-center" style={{ borderRadius: 12 }}>
               <CardContent className="flex flex-col items-center gap-2">
-                <div className="text-lg font-semibold text-muted-foreground">
+                <div className="text-lg font-semibold" style={{ color: 'var(--ink-tertiary)' }}>
                   No briefing data yet
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm" style={{ color: 'var(--ink-secondary)' }}>
                   Run the pipeline from the{' '}
-                  <Link href="/status" className="text-primary underline underline-offset-2">
+                  <Link href="/status" className="underline underline-offset-2" style={{ color: 'var(--accent)' }}>
                     Status page
                   </Link>
                   {' '}to fetch data and generate your first briefing.
@@ -1098,7 +1236,7 @@ export function Dashboard() {
 
               {/* Link to full feed */}
               <div className="dashboard-span-full text-center pt-0.5 pb-1">
-                <Link href="/data" className="text-xs font-medium text-primary no-underline hover:underline">
+                <Link href="/data" className="font-medium no-underline hover:underline" style={{ fontSize: '0.75rem', color: 'var(--accent)' }}>
                   View full feed &#8250;
                 </Link>
               </div>

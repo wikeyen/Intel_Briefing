@@ -1011,7 +1011,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
 
               {/* Per-item Sentiment Distribution (from local classifier) */}
               {report && (() => {
-                const SOCIAL = new Set(['x', 'bluesky', 'mastodon'])
+                const SOCIAL = new Set(['x', 'bluesky', 'mastodon', 'weibo', 'xiaohongshu'])
                 const allItems: IntelItem[] = Object.values(report.items).flat()
                 const socialWithSentiment = allItems.filter(i => SOCIAL.has(i.source) && i.sentiment)
                 if (socialWithSentiment.length === 0) return null

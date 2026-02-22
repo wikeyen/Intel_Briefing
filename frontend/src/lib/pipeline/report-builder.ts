@@ -15,7 +15,13 @@ import { decodeItemEntities } from '../utils/decode-entities'
 import { suppressItems, boostItems } from './keyword-filter'
 import { writeReport } from './cache'
 import { SENSOR_CATEGORY_MAP } from '../sensors/taxonomy'
+import type { LlmConfig } from '../summary/llm'
 import { enrichSentiment } from './sentiment'
+
+export interface AssembleReportOptions {
+  llmConfig?: LlmConfig | null
+  signal?: AbortSignal
+}
 
 /**
  * Assemble a report from sensor results: dedup, filter, post-process, then write to cache.
@@ -23,6 +29,7 @@ import { enrichSentiment } from './sentiment'
 export async function assembleReport(
   results: SensorResult[],
   config: ConfigSettings,
+  opts?: AssembleReportOptions,
 ): Promise<IntelReport> {
   // Apply per-sensor lookback time filtering
   for (const result of results) {
@@ -71,10 +78,10 @@ export async function assembleReport(
     }
   }
 
-  // Sentiment enrichment: classify social items using local transformer
+  // Sentiment enrichment: classify social items via LLM
   const allItems = Object.values(dedupedSections).flat()
   try {
-    await enrichSentiment(allItems)
+    await enrichSentiment(allItems, opts?.llmConfig, opts?.signal)
   } catch (err) {
     console.error('Sentiment enrichment failed (non-fatal):', err)
   }

@@ -1,86 +1,139 @@
-// ABOUTME: Local sentiment classifier using Transformers.js — classifies social post text.
-// ABOUTME: Singleton model loaded once; exposes classifyBatch() for pipeline enrichment.
+// ABOUTME: LLM-based sentiment classifier for social posts — classifies in batches via chatCompletion.
+// ABOUTME: Replaces local Transformers.js model for better accuracy across languages and post lengths.
 import type { IntelItem } from '../models'
+import type { LlmConfig } from '../summary/llm'
+import { chatCompletion } from '../summary/llm'
+import { jsonrepair } from 'jsonrepair'
 
-const SOCIAL_SOURCES = new Set(['x', 'bluesky', 'mastodon'])
-const MODEL_ID = 'Xenova/twitter-roberta-base-sentiment-latest'
+const SOCIAL_SOURCES = new Set(['x', 'bluesky', 'mastodon', 'weibo', 'xiaohongshu'])
 
 type SentimentLabel = 'positive' | 'negative' | 'neutral'
 
-interface ClassifierResult {
+const BATCH_SIZE = 30
+
+const SYSTEM_PROMPT = `You are a sentiment classifier. You will receive a numbered list of social media posts.
+For each post, classify its sentiment as exactly one of: positive, negative, neutral.
+Also provide a confidence score between 0 and 1 (e.g. 0.85).
+
+Respond with ONLY a JSON array, no markdown fences, no explanation:
+[{"i":0,"label":"positive","score":0.92},{"i":1,"label":"negative","score":0.78}]
+
+Rules:
+- "i" must match the post number exactly
+- "label" must be exactly "positive", "negative", or "neutral"
+- "score" is your confidence in the classification (0.0 to 1.0)
+- Classify based on the actual sentiment expressed, not the topic
+- Handle any language (English, Chinese, etc.)`
+
+interface SentimentResult {
+  i: number
   label: string
   score: number
 }
 
-// Remap model labels to our canonical labels
-const LABEL_MAP: Record<string, SentimentLabel> = {
-  positive: 'positive',
-  POSITIVE: 'positive',
-  LABEL_2: 'positive',
-  negative: 'negative',
-  NEGATIVE: 'negative',
-  LABEL_0: 'negative',
-  neutral: 'neutral',
-  NEUTRAL: 'neutral',
-  LABEL_1: 'neutral',
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let pipelineInstance: any = null
-let loading: Promise<void> | null = null
-
-async function ensureLoaded(): Promise<void> {
-  if (pipelineInstance) return
-  if (loading) { await loading; return }
-  loading = (async () => {
-    const { pipeline } = await import('@huggingface/transformers')
-    pipelineInstance = await pipeline('sentiment-analysis', MODEL_ID)
-  })()
-  await loading
-}
-
 /**
- * Classify an array of texts and return sentiment labels with confidence scores.
- * Returns results in the same order as the input texts.
+ * Classify a batch of texts using the LLM. Returns results keyed by index.
  */
-async function classifyTexts(
+async function classifyBatch(
   texts: string[],
-): Promise<Array<{ label: SentimentLabel; score: number }>> {
-  if (texts.length === 0) return []
-  await ensureLoaded()
+  llmConfig: LlmConfig,
+  signal?: AbortSignal,
+): Promise<Map<number, { label: SentimentLabel; score: number }>> {
+  const results = new Map<number, { label: SentimentLabel; score: number }>()
+  if (texts.length === 0) return results
 
-  // Truncate long texts to avoid model token limits (RoBERTa max ~512 tokens)
-  const truncated = texts.map(t => t.slice(0, 512))
+  const numbered = texts.map((t, i) => `[${i}] ${t}`).join('\n\n')
 
-  const results: ClassifierResult[] = await pipelineInstance(truncated, {
-    top_k: 1,
-  })
+  const raw = await chatCompletion(
+    [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: numbered },
+    ],
+    llmConfig,
+    signal,
+  )
 
-  // Pipeline returns nested arrays for batch input
-  const flat: ClassifierResult[] = Array.isArray(results[0])
-    ? (results as unknown as ClassifierResult[][]).map(r => r[0])
-    : results
+  const parsed = parseResponse(raw, texts.length)
+  for (const r of parsed) {
+    results.set(r.i, { label: r.label, score: r.score })
+  }
 
-  return flat.map(r => ({
-    label: LABEL_MAP[r.label] ?? 'neutral',
-    score: Math.round(r.score * 1000) / 1000,
-  }))
+  return results
 }
 
 /**
- * Enrich social items with sentiment labels in-place.
- * Only processes items from social sources (x, bluesky, mastodon).
- * Non-social items are left untouched.
+ * Parse the LLM response into validated sentiment results.
  */
-export async function enrichSentiment(items: IntelItem[]): Promise<void> {
+function parseResponse(raw: string, expectedCount: number): Array<{ i: number; label: SentimentLabel; score: number }> {
+  const validLabels = new Set<SentimentLabel>(['positive', 'negative', 'neutral'])
+
+  // Strip markdown fences if present
+  const cleaned = raw.replace(/```(?:json)?\s*\n?/g, '').replace(/```/g, '').trim()
+
+  let arr: SentimentResult[]
+  try {
+    arr = JSON.parse(cleaned)
+  } catch {
+    // Try extracting array from response
+    const match = cleaned.match(/\[[\s\S]*\]/)
+    if (!match) return []
+    try {
+      arr = JSON.parse(match[0])
+    } catch {
+      try {
+        arr = JSON.parse(jsonrepair(match[0]))
+      } catch {
+        return []
+      }
+    }
+  }
+
+  if (!Array.isArray(arr)) return []
+
+  return arr
+    .filter(r =>
+      r && typeof r === 'object' &&
+      typeof r.i === 'number' && r.i >= 0 && r.i < expectedCount &&
+      typeof r.label === 'string' && validLabels.has(r.label as SentimentLabel) &&
+      typeof r.score === 'number',
+    )
+    .map(r => ({
+      i: r.i,
+      label: r.label as SentimentLabel,
+      score: Math.round(Math.min(1, Math.max(0, r.score)) * 1000) / 1000,
+    }))
+}
+
+/**
+ * Enrich social items with sentiment labels in-place using LLM classification.
+ * Items are batched to keep prompt sizes manageable and maintain per-item accuracy.
+ * Skips silently if no LLM config is provided.
+ */
+export async function enrichSentiment(
+  items: IntelItem[],
+  llmConfig?: LlmConfig | null,
+  signal?: AbortSignal,
+): Promise<void> {
+  if (!llmConfig) return
+
   const socialItems = items.filter(item => SOCIAL_SOURCES.has(item.source))
   if (socialItems.length === 0) return
 
-  const texts = socialItems.map(item => item.title || '')
-  const sentiments = await classifyTexts(texts)
+  // Process in batches to keep prompts focused
+  for (let start = 0; start < socialItems.length; start += BATCH_SIZE) {
+    if (signal?.aborted) return
 
-  for (let i = 0; i < socialItems.length; i++) {
-    socialItems[i].sentiment = sentiments[i]
+    const batch = socialItems.slice(start, start + BATCH_SIZE)
+    const texts = batch.map(item => item.title || '')
+
+    const results = await classifyBatch(texts, llmConfig, signal)
+
+    for (let i = 0; i < batch.length; i++) {
+      const sentiment = results.get(i)
+      if (sentiment) {
+        batch[i].sentiment = sentiment
+      }
+    }
   }
 }
 
@@ -105,6 +158,6 @@ export function aggregateSentiment(items: IntelItem[]): string {
   }
 
   return lines.length > 0
-    ? `Sentiment distribution from local classifier:\n${lines.join('\n')}`
+    ? `Sentiment distribution from per-item classifier:\n${lines.join('\n')}`
     : ''
 }

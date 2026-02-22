@@ -10,6 +10,7 @@ export interface SensorCardProps {
   label: string
   category: string
   isRunning: boolean
+  isPaused: boolean
   liveSensor?: SensorJobProgress
   itemCount: number
   lastFetchAgo?: string
@@ -23,6 +24,7 @@ export interface SensorCardProps {
   isSelected: boolean
   onToggleSelect: () => void
   onRetry?: () => void
+  onSkip?: () => void
   onDismiss?: () => void
 }
 
@@ -45,14 +47,17 @@ type CardState =
   | 'waiting'
   | 'done'
   | 'failed-mid-run'
+  | 'paused-failed'
 
 function deriveState(props: SensorCardProps): CardState {
-  const { isRunning, liveSensor, isDisabled, isConfigError, isFailed, isSelected } = props
+  const { isRunning, isPaused, liveSensor, isDisabled, isConfigError, isFailed, isSelected } = props
 
   if (isDisabled) return 'disabled'
 
   if (isRunning) {
     if (!liveSensor) return 'waiting'
+    // During pause, failed sensors get special interactive state
+    if (isPaused && (liveSensor.fetch === 'failed' || liveSensor.summary === 'failed')) return 'paused-failed'
     if (liveSensor.fetch === 'failed' || liveSensor.summary === 'failed') return 'failed-mid-run'
     if (liveSensor.fetch === 'ok' && (liveSensor.summary === 'ok' || liveSensor.summary === 'skipped')) return 'done'
     if (liveSensor.summary === 'running') return 'summarizing'
@@ -83,6 +88,7 @@ function Dot({ state }: { state: CardState }) {
       return <span style={{ ...base, background: 'var(--ok)' }} />
     case 'failed':
     case 'failed-mid-run':
+    case 'paused-failed':
       return <span style={{ ...base, background: 'var(--err)' }} />
     case 'config-error':
       return <span style={{ ...base, background: 'var(--warn)' }} />
@@ -121,6 +127,15 @@ function cardContainerStyle(state: CardState, hovered: boolean): React.CSSProper
 
   if (state === 'disabled') {
     return { ...base, opacity: 0.45, cursor: 'default' }
+  }
+
+  if (state === 'paused-failed') {
+    return {
+      ...base,
+      borderLeftWidth: 3,
+      borderLeftColor: 'var(--err)',
+      cursor: 'default',
+    }
   }
 
   if (state === 'fetching' || state === 'summarizing' || state === 'waiting' || state === 'done' || state === 'failed-mid-run') {
@@ -297,6 +312,7 @@ function PrimaryMetric({ state, props }: { state: CardState; props: SensorCardPr
       )
 
     case 'failed-mid-run':
+    case 'paused-failed':
       return (
         <span style={errorTextStyle}>
           {liveSensor?.fetch_error || liveSensor?.summary_error || 'Failed'}
@@ -306,7 +322,7 @@ function PrimaryMetric({ state, props }: { state: CardState; props: SensorCardPr
 }
 
 function SecondaryContent({ state, props }: { state: CardState; props: SensorCardProps }) {
-  const { liveSensor, lastFetchAgo, onRetry, onDismiss } = props
+  const { liveSensor, lastFetchAgo, onRetry, onSkip, onDismiss } = props
 
   switch (state) {
     case 'healthy':
@@ -334,6 +350,28 @@ function SecondaryContent({ state, props }: { state: CardState; props: SensorCar
           )}
         </div>
       ) : null
+
+    case 'paused-failed':
+      return (
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+          {onRetry && (
+            <button
+              style={retryButtonStyle}
+              onClick={(e) => { e.stopPropagation(); onRetry() }}
+            >
+              Retry
+            </button>
+          )}
+          {onSkip && (
+            <button
+              style={dismissButtonStyle}
+              onClick={(e) => { e.stopPropagation(); onSkip() }}
+            >
+              Skip
+            </button>
+          )}
+        </div>
+      )
 
     case 'fetching':
       return liveSensor?.fetch_detail
@@ -367,9 +405,9 @@ function SecondaryContent({ state, props }: { state: CardState; props: SensorCar
 }
 
 export const SensorCard = memo(function SensorCard(props: SensorCardProps) {
-  const { label, category, isDisabled, isRunning, onToggleSelect } = props
+  const { label, category, isDisabled, isRunning, isPaused, onToggleSelect } = props
   const state = deriveState(props)
-  const isClickable = !isDisabled && !isRunning
+  const isClickable = !isDisabled && !isRunning && !isPaused
 
   function handleClick() {
     if (isClickable) onToggleSelect()

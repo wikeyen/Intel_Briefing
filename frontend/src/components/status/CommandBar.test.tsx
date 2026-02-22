@@ -21,6 +21,7 @@ function buildProps(overrides: Partial<CommandBarProps> = {}): CommandBarProps {
     onSelectAll: vi.fn(),
     onSelectNone: vi.fn(),
     onSelectFailed: vi.fn(),
+    onGenerateOverall: vi.fn(),
     fetching: false,
     isStopping: false,
     ...overrides,
@@ -170,30 +171,33 @@ describe('CommandBar', () => {
   })
 
   // --- Paused state ---
-  it('shows warning and Skip & Continue when paused', () => {
+  it('shows warning and Generate Summary when paused', () => {
+    const onGenerateOverall = vi.fn()
     render(<CommandBar {...buildProps({
       isRunning: true,
       isPaused: true,
       failedCount: 3,
-      phase: 'fetching',
+      phase: 'paused',
       progress: { done: 7, total: 13 },
+      onGenerateOverall,
     })} />)
-    expect(screen.getByText(/3 sensors failed/)).toBeInTheDocument()
-    expect(screen.getByText(/Skip/)).toBeInTheDocument()
+    expect(screen.getByText(/3 failed/)).toBeInTheDocument()
+    expect(screen.getByText(/retry or skip above/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /generate summary/i })).toBeInTheDocument()
   })
 
-  it('calls onSkipRetries when Skip & Continue is clicked', () => {
-    const onSkipRetries = vi.fn()
+  it('calls onGenerateOverall when Generate Summary is clicked', () => {
+    const onGenerateOverall = vi.fn()
     render(<CommandBar {...buildProps({
       isRunning: true,
       isPaused: true,
       failedCount: 2,
-      phase: 'fetching',
+      phase: 'paused',
       progress: { done: 5, total: 13 },
-      onSkipRetries,
+      onGenerateOverall,
     })} />)
-    fireEvent.click(screen.getByText(/Skip/))
-    expect(onSkipRetries).toHaveBeenCalledOnce()
+    fireEvent.click(screen.getByRole('button', { name: /generate summary/i }))
+    expect(onGenerateOverall).toHaveBeenCalledOnce()
   })
 
   it('shows detail text when running with detail', () => {

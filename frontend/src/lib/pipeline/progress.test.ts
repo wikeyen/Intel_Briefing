@@ -172,6 +172,55 @@ describe('PipelineProgressTracker', () => {
     expect(snap.paused_stage).toBeNull()
   })
 
+  it('pause() sets paused state with stage', () => {
+    const onChange = vi.fn()
+    const tracker = new PipelineProgressTracker(sensors, 'fetch_summarize', 4, 4, onChange)
+    onChange.mockClear()
+
+    tracker.pause('pre_overall')
+    const snap = tracker.snapshot()
+    expect(snap.paused).toBe(true)
+    expect(snap.paused_stage).toBe('pre_overall')
+    expect(onChange).toHaveBeenCalledTimes(1)
+  })
+
+  it('unpause() clears paused state', () => {
+    const tracker = new PipelineProgressTracker(sensors, 'fetch_summarize', 4, 4)
+    tracker.pause('pre_overall')
+    tracker.unpause()
+    const snap = tracker.snapshot()
+    expect(snap.paused).toBe(false)
+    expect(snap.paused_stage).toBeNull()
+  })
+
+  it('resetFetchState() resets sensor fetch state to queued', () => {
+    const tracker = new PipelineProgressTracker(sensors, 'fetch_summarize', 4, 4)
+    tracker.setFetchState('arxiv', 'failed', 0, 'timeout', 'api')
+
+    tracker.resetFetchState('arxiv')
+    const snap = tracker.snapshot()
+    const sensor = snap.sensors.find(s => s.name === 'arxiv')!
+    expect(sensor.fetch).toBe('queued')
+    expect(sensor.fetch_error).toBeNull()
+    expect(sensor.fetch_error_kind).toBeNull()
+    expect(sensor.fetch_detail).toBeNull()
+    expect(sensor.item_count).toBe(0)
+  })
+
+  it('resetSummaryState() resets sensor summary state to queued', () => {
+    const tracker = new PipelineProgressTracker(sensors, 'fetch_summarize', 4, 4)
+    tracker.setSummaryState('arxiv', 'failed', 'LLM error')
+    tracker.setSummaryChunks('arxiv', 10, 5)
+
+    tracker.resetSummaryState('arxiv')
+    const snap = tracker.snapshot()
+    const sensor = snap.sensors.find(s => s.name === 'arxiv')!
+    expect(sensor.summary).toBe('queued')
+    expect(sensor.summary_error).toBeNull()
+    expect(sensor.summary_chunks_total).toBe(0)
+    expect(sensor.summary_chunks_done).toBe(0)
+  })
+
   it('setRetryProgress() and clearRetryProgress() update retry fields', () => {
     const onChange = vi.fn()
     const tracker = new PipelineProgressTracker(sensors, 'fetch_summarize', 4, 4, onChange)

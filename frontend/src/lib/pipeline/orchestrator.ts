@@ -12,9 +12,9 @@ import type {
 import { sensorResultSucceeded, sensorLimit } from '../models'
 import { Semaphore } from './semaphore'
 import { PipelineProgressTracker } from './progress'
-import { readReport, writePipelineStatus } from './cache'
+import { readReport, writeReport, writePipelineStatus } from './cache'
 import { writeSummary, writeSummaryProgress, invalidateAllSensorSummaries } from '../summary/cache'
-import { summarizeReport, type SummaryProgressCallback } from '../summary/summarizer'
+import { summarizeReport, summarizeSingleSensor, generateOverallBriefing, type SummaryProgressCallback } from '../summary/summarizer'
 import type { LlmConfig } from '../summary/llm'
 import { SENSOR_REGISTRY } from '../sensors'
 import { SENSOR_LABELS } from '../sensors/taxonomy'
@@ -29,11 +29,22 @@ export interface PipelineResult {
 
 const MAX_AUTO_RETRIES = 3
 
+export type PauseAction =
+  | { type: 'retry_sensor'; sensor: string }
+  | { type: 'skip_sensor'; sensor: string }
+  | { type: 'generate_overall' }
+  | { type: 'cancel' }
+
 // Store on globalThis so it survives Next.js HMR module re-evaluation.
 const g = globalThis as unknown as {
   __pipelineAbortController?: AbortController | null
   __pipelineTracker?: PipelineProgressTracker | null
   __pipelineSkipRetries?: boolean
+  // Pause-before-overall state
+  __pipelinePauseResolve?: ((action: PauseAction) => void) | null
+  __pipelineReport?: IntelReport | null
+  __pipelineFailedSensors?: Set<string> | null
+  __pipelineConfig?: ConfigSettings | null
 }
 
 /** Cancel the running pipeline, if any. Returns true if a pipeline was cancelled. */
@@ -55,6 +66,35 @@ export function isPipelineRunning(): boolean {
 export function skipPipelineRetries(): boolean {
   if (!isPipelineRunning()) return false
   g.__pipelineSkipRetries = true
+  return true
+}
+
+/** Check whether the pipeline is currently paused at pre-overall. */
+export function isPipelinePaused(): boolean {
+  return g.__pipelinePauseResolve != null
+}
+
+/** Retry a failed sensor during pre-overall pause. */
+export function retrySensor(sensorName: string): boolean {
+  if (!g.__pipelinePauseResolve) return false
+  g.__pipelinePauseResolve({ type: 'retry_sensor', sensor: sensorName })
+  g.__pipelinePauseResolve = null
+  return true
+}
+
+/** Skip a failed sensor during pre-overall pause. */
+export function skipSensor(sensorName: string): boolean {
+  if (!g.__pipelinePauseResolve) return false
+  g.__pipelinePauseResolve({ type: 'skip_sensor', sensor: sensorName })
+  g.__pipelinePauseResolve = null
+  return true
+}
+
+/** Trigger overall briefing generation with current data during pre-overall pause. */
+export function generateOverall(): boolean {
+  if (!g.__pipelinePauseResolve) return false
+  g.__pipelinePauseResolve({ type: 'generate_overall' })
+  g.__pipelinePauseResolve = null
   return true
 }
 
@@ -287,6 +327,11 @@ export async function runPipeline(
         return { report: null, summary: null }
       }
 
+      // Store report in global state for pause-loop access
+      g.__pipelineReport = sourceReport
+      g.__pipelineFailedSensors = failedSensors
+      g.__pipelineConfig = config
+
       // Build SummaryProgress for cross-page awareness (Feed page polls intel:summary_status)
       const eligibleSensors = trackerSensorNames.filter(n => !failedSensors.has(n))
       summaryStatus = {
@@ -341,6 +386,23 @@ export async function runPipeline(
           }
         }
 
+        // Build shared summarize options for reuse in pause loop
+        const baseSummarizeOpts = {
+          llmConfig,
+          concurrency: effectiveSummaryConcurrency,
+          promptOverrides: config.summary_sensor_prompts,
+          overallPromptOverride: config.summary_overall_prompt,
+          signal,
+          onProgress,
+          enabledSensors,
+          language: config.summary_language,
+          onToken: (sensorName: string, token: string) => summaryBus!.emitToken(sensorName, token),
+          attributionLlmConfig: buildAttributionLlmConfig(config) ?? undefined,
+        }
+
+        // Determine whether to skip overall: if there are fetch failures, defer it
+        const hasFetchFailures = failedSensors.size > 0
+
         // Delegate to the unified summarization engine
         // fetch_summarize uses skipCache:true since we just invalidated caches above
         // summarize-only uses skipCache:false to reuse cached per-sensor summaries
@@ -351,17 +413,9 @@ export async function runPipeline(
           if (summaryAttempt > 0 && g.__pipelineSkipRetries) break
 
           summary = await summarizeReport(sourceReport, {
-            llmConfig,
-            concurrency: effectiveSummaryConcurrency,
-            promptOverrides: config.summary_sensor_prompts,
-            overallPromptOverride: config.summary_overall_prompt,
-            signal,
-            onProgress,
+            ...baseSummarizeOpts,
             skipCache: skipCacheForSummary,
-            enabledSensors,
-            language: config.summary_language,
-            onToken: (sensorName, token) => summaryBus!.emitToken(sensorName, token),
-            attributionLlmConfig: buildAttributionLlmConfig(config) ?? undefined,
+            skipOverall: hasFetchFailures,
           })
 
           if (signal.aborted) break
@@ -382,7 +436,7 @@ export async function runPipeline(
           for (const name of summaryFailures) {
             tracker.setSummaryState(name, 'queued')
           }
-          tracker.setOverallSummary('queued')
+          if (!hasFetchFailures) tracker.setOverallSummary('queued')
 
           // Re-run with skipCache:false — succeeded sensors hit cache, failed retry
           skipCacheForSummary = false
@@ -390,6 +444,87 @@ export async function runPipeline(
 
         tracker.clearRetryProgress()
         g.__pipelineSkipRetries = false
+
+        // ── Pause-before-overall: if fetch failures exist, wait for user actions ──
+        if (hasFetchFailures && !signal.aborted && summary) {
+          tracker.pause('pre_overall')
+
+          // Pause loop: wait for user to resolve each failed sensor or trigger overall
+          let generateNow = false
+          while (failedSensors.size > 0 && !signal.aborted && !generateNow) {
+            const action = await new Promise<PauseAction>(resolve => {
+              g.__pipelinePauseResolve = resolve
+            })
+
+            if (action.type === 'cancel') break
+
+            if (action.type === 'generate_overall') {
+              generateNow = true
+              break
+            }
+
+            if (action.type === 'skip_sensor') {
+              failedSensors.delete(action.sensor)
+              tracker.skipSummaryForSensor(action.sensor)
+              // Already skipped in report — nothing more to do
+            }
+
+            if (action.type === 'retry_sensor') {
+              const sensorName = action.sensor
+              // Reset tracker state for re-fetch
+              tracker.resetFetchState(sensorName)
+              tracker.resetSummaryState(sensorName)
+              tracker.setFetchState(sensorName, 'running')
+
+              // Re-fetch the single sensor
+              const result = await fetchSensor(sensorName, config, (detail) => {
+                tracker.setFetchDetail(sensorName, detail)
+              })
+
+              if (signal.aborted) break
+
+              if (sensorResultSucceeded(result)) {
+                tracker.setFetchState(sensorName, 'ok', result.items.length)
+                failedSensors.delete(sensorName)
+
+                // Merge retry result into report: remove old items by source, add new
+                mergeRetryResult(sourceReport, result)
+                await writeReport(sourceReport).catch(() => {})
+
+                // Update sources_ok / sources_failed
+                if (!sourceReport.sources_ok.includes(sensorName)) {
+                  sourceReport.sources_ok.push(sensorName)
+                }
+                sourceReport.sources_failed = sourceReport.sources_failed.filter(n => n !== sensorName)
+
+                // Summarize just this sensor
+                const sensorSummary = await summarizeSingleSensor(sourceReport, sensorName, {
+                  ...baseSummarizeOpts,
+                  skipCache: true,
+                })
+
+                if (sensorSummary && summary) {
+                  mergeSensorSummary(summary, sensorSummary)
+                }
+              } else {
+                tracker.setFetchState(sensorName, 'failed', 0, result.error, result.error_kind ?? 'api')
+                // Stays in failedSensors — user can retry again or skip
+              }
+            }
+          }
+
+          g.__pipelinePauseResolve = null
+          tracker.unpause()
+        }
+
+        // ── Generate overall briefing ──
+        // When hasFetchFailures was true, summarizeReport ran with skipOverall so we generate it now.
+        // When no failures, summarizeReport already produced the overall — skip this block.
+        if (hasFetchFailures && summary && !signal.aborted) {
+          tracker.setOverallSummary('running')
+          const overall = await generateOverallBriefing(sourceReport, summary.sections, baseSummarizeOpts)
+          summary = { ...summary, overall }
+        }
 
         if (summary && !signal.aborted) {
           try {
@@ -400,6 +535,11 @@ export async function runPipeline(
         }
       }
     }
+
+    // Clean up global pause state
+    g.__pipelineReport = null
+    g.__pipelineFailedSensors = null
+    g.__pipelineConfig = null
 
     if (!signal.aborted) {
       tracker.complete()
@@ -425,6 +565,54 @@ export async function runPipeline(
       g.__pipelineAbortController = null
       g.__pipelineTracker = null
     }
+  }
+}
+
+/**
+ * Merge a retry result into the existing report: remove old items by source, insert new ones.
+ * Mutates the report in place.
+ */
+function mergeRetryResult(report: IntelReport, result: SensorResult): void {
+  for (const section of Object.values(report.items)) {
+    // Remove old items from this sensor
+    for (let i = section.length - 1; i >= 0; i--) {
+      if (section[i].source === result.sensor_name) {
+        section.splice(i, 1)
+      }
+    }
+  }
+  // Insert new items into appropriate sections (the assembleReport already categorized them,
+  // but for simplicity we add to the first non-empty match or the first section)
+  for (const item of result.items) {
+    // Find the section that already has items from this source, or use first section
+    let placed = false
+    for (const [, section] of Object.entries(report.items)) {
+      if (section.some(existing => existing.source === result.sensor_name)) {
+        section.push(item)
+        placed = true
+        break
+      }
+    }
+    if (!placed) {
+      // Place in the first section as fallback
+      const sections = Object.values(report.items)
+      if (sections.length > 0) {
+        sections[0].push(item)
+      }
+    }
+  }
+}
+
+/**
+ * Merge a single sensor's summary into the existing BriefingSummary.
+ * Replaces the matching section by sensor_name, or appends if new.
+ */
+function mergeSensorSummary(summary: BriefingSummary, sensorSummary: import('../models').SensorSummary): void {
+  const idx = summary.sections.findIndex(s => s.sensor_name === sensorSummary.sensor_name)
+  if (idx >= 0) {
+    summary.sections[idx] = sensorSummary
+  } else {
+    summary.sections.push(sensorSummary)
   }
 }
 

@@ -6,7 +6,7 @@ import type { HealthResponse, ConfigSettings } from '@/api/client'
 import { STATUS_META } from './constants'
 import { timeAgo, nextFetchIn } from './time-helpers'
 
-export type Phase = 'idle' | 'fetching' | 'summarizing' | 'briefing' | 'stopping'
+export type Phase = 'idle' | 'fetching' | 'summarizing' | 'briefing' | 'stopping' | 'paused'
 
 export interface StatusStripProps {
   health: HealthResponse | null
@@ -27,6 +27,7 @@ const PHASE_LABELS: Record<Phase, string> = {
   summarizing: 'Summarizing',
   briefing: 'Briefing',
   stopping: 'Stopping',
+  paused: 'Paused',
 }
 
 export const STATUS_STRIP_CSS = `

@@ -19,6 +19,7 @@ export interface CommandBarProps {
   onRun: (mode: RunMode) => void
   onStop: () => void
   onSkipRetries: () => void
+  onGenerateOverall: () => void
   onSelectAll: () => void
   onSelectNone: () => void
   onSelectFailed: () => void
@@ -39,6 +40,7 @@ const PHASE_LABELS: Record<Phase, string> = {
   summarizing: 'Summarizing',
   briefing: 'Briefing',
   stopping: 'Stopping',
+  paused: 'Paused',
 }
 
 const MODE_OPTIONS: { value: RunMode; label: string }[] = [
@@ -168,6 +170,7 @@ export function CommandBar({
   onRun,
   onStop,
   onSkipRetries,
+  onGenerateOverall,
   onSelectAll,
   onSelectNone,
   onSelectFailed,
@@ -196,16 +199,20 @@ export function CommandBar({
           }} />
 
           <span style={{ fontSize: '0.8125rem', color: 'var(--warn)', fontWeight: 600 }}>
-            ⚠ {failedCount} sensors failed
+            {failedCount} failed — retry or skip above
           </span>
 
           <div className="command-bar-center" style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '0 auto' }}>
             <button
               type="button"
-              onClick={onSkipRetries}
-              style={skipBtnStyle}
+              onClick={onGenerateOverall}
+              style={{
+                ...runBtnBase,
+                marginLeft: 0,
+              }}
             >
-              Skip &amp; Continue
+              <span style={{ fontSize: '0.625rem' }}>▶</span>
+              Generate Summary
             </button>
           </div>
 

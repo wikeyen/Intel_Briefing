@@ -62,7 +62,7 @@ vi.mock('../sensors', () => ({
   }),
 }))
 
-const { runPipeline, cancelPipeline, isPipelineRunning, skipPipelineRetries } = await import('./orchestrator')
+const { runPipeline, cancelPipeline, isPipelineRunning, skipPipelineRetries, isPipelinePaused, generateOverall, retrySensor, skipSensor } = await import('./orchestrator')
 
 function makeConfig(overrides: Partial<ConfigSettings> = {}): ConfigSettings {
   return { ...defaultConfig(), ...overrides }
@@ -79,11 +79,26 @@ beforeEach(() => {
   const g = globalThis as unknown as {
     __pipelineAbortController?: unknown
     __pipelineTracker?: unknown
+    __pipelineSkipRetries?: boolean
+    __pipelinePauseResolve?: unknown
+    __pipelineReport?: unknown
+    __pipelineFailedSensors?: unknown
+    __pipelineConfig?: unknown
   }
   g.__pipelineAbortController = null
   g.__pipelineTracker = null
-  ;(globalThis as unknown as { __pipelineSkipRetries?: boolean }).__pipelineSkipRetries = false
+  g.__pipelineSkipRetries = false
+  g.__pipelinePauseResolve = null
+  g.__pipelineReport = null
+  g.__pipelineFailedSensors = null
+  g.__pipelineConfig = null
 })
+
+/** Helper: wait for the pipeline to enter paused state, then trigger generateOverall. */
+async function waitForPauseAndGenerate(): Promise<void> {
+  await vi.waitFor(() => expect(isPipelinePaused()).toBe(true))
+  generateOverall()
+}
 
 describe('runPipeline', () => {
   it('fetch mode: fetches sensors, builds report, skips summaries', async () => {
@@ -287,14 +302,17 @@ describe('runPipeline', () => {
       summary_model: 'model',
     })
 
-    // fetch_summarize with failures auto-retries then proceeds to summary
-    const result = await runPipeline(config, 'fetch_summarize')
+    // fetch_summarize with failures pauses before overall — trigger generate from pause
+    const pipelinePromise = runPipeline(config, 'fetch_summarize')
+    await waitForPauseAndGenerate()
+    const result = await pipelinePromise
+
     expect(result.report!.sources_failed).toContain('bad')
 
     // "bad" sensor: 1 initial + 3 auto-retries = 4 total calls
     expect(mockSensorFns['bad']).toHaveBeenCalledTimes(4)
 
-    // Only "good" sensor should be summarized (1 sensor + 1 overall = 2 LLM calls via streaming)
+    // Only "good" sensor should be summarized (1 sensor call + 1 overall = 2 LLM calls via streaming)
     expect(mockChatCompletionStream.mock.calls.length).toBe(2)
 
     // Verify failed sensor is marked as 'skipped' in summary progress
@@ -351,12 +369,14 @@ describe('pipeline auto-retry', () => {
       summary_model: 'model',
     })
 
-    // Pipeline auto-retries 3 times then proceeds to summary — no pause
-    const result = await runPipeline(config, 'fetch_summarize')
+    // Pipeline pauses after auto-retries when failures exist — trigger generate
+    const pipelinePromise = runPipeline(config, 'fetch_summarize')
+    await waitForPauseAndGenerate()
+    const result = await pipelinePromise
+
     expect(result.report).toBeDefined()
     expect(result.report!.sources_ok).toContain('good')
     expect(result.report!.sources_failed).toContain('bad')
-    // Summary should have been generated (with 'good' sensor only)
     expect(result.summary).toBeDefined()
     // 'bad' sensor: 1 initial + 3 retries = 4 calls
     expect(mockSensorFns['bad']).toHaveBeenCalledTimes(4)
@@ -426,7 +446,11 @@ describe('pipeline auto-retry', () => {
       summary_model: 'model',
     })
 
-    const result = await runPipeline(config, 'fetch_summarize')
+    // Pipeline pauses after abbreviated retries — trigger generate to unblock
+    const pipelinePromise = runPipeline(config, 'fetch_summarize')
+    await waitForPauseAndGenerate()
+    const result = await pipelinePromise
+
     expect(result.report).toBeDefined()
     // 1 initial + 1 retry (flag set during this one) = 2 calls
     // The flag is checked at the START of the next iteration, so attempt 2 is skipped
@@ -449,7 +473,11 @@ describe('pipeline auto-retry', () => {
       summary_model: 'model',
     })
 
-    const result = await runPipeline(config, 'fetch_summarize')
+    // Pipeline pauses due to config error failure — trigger generate to unblock
+    const pipelinePromise = runPipeline(config, 'fetch_summarize')
+    await waitForPauseAndGenerate()
+    const result = await pipelinePromise
+
     // Config errors are not retryable — only called once
     expect(mockSensorFns['misconfigured']).toHaveBeenCalledTimes(1)
     expect(result.report!.sources_failed).toContain('misconfigured')
@@ -568,5 +596,109 @@ describe('cancelPipeline', () => {
     const result = await runPipeline(config, 'fetch')
     expect(result.report).toBeDefined()
     expect(result.report!.sources_ok).toContain('s1')
+  })
+})
+
+describe('pause-before-overall', () => {
+  const summaryConfig = (sensors: Record<string, boolean>) => makeConfig({
+    sensors_enabled: sensors,
+    default_concurrency: 4,
+    local_summary_concurrency: 4,
+    summary_provider: 'openrouter',
+    summary_api_key: 'key',
+    summary_base_url: 'https://openrouter.ai/api/v1',
+    summary_model: 'model',
+  })
+
+  it('isPipelinePaused returns false when not running', () => {
+    expect(isPipelinePaused()).toBe(false)
+  })
+
+  it('pipeline pauses when fetch failures exist in fetch_summarize mode', async () => {
+    mockSensorFns['good'] = vi.fn().mockResolvedValue([makeItem('g1', 'good')])
+    mockSensorFns['bad'] = vi.fn().mockRejectedValue(new Error('fail'))
+
+    const config = summaryConfig({ good: true, bad: true })
+    const pipelinePromise = runPipeline(config, 'fetch_summarize')
+
+    // Wait for pause state
+    await vi.waitFor(() => expect(isPipelinePaused()).toBe(true))
+
+    // Verify tracker reflects paused state
+    const status = mockWritePipelineStatus.mock.calls.at(-1)?.[0]
+    expect(status?.paused).toBe(true)
+    expect(status?.paused_stage).toBe('pre_overall')
+
+    // Unblock
+    generateOverall()
+    await pipelinePromise
+  })
+
+  it('does not pause when all sensors succeed', async () => {
+    mockSensorFns['good'] = vi.fn().mockResolvedValue([makeItem('g1', 'good')])
+    mockSensorFns['also_good'] = vi.fn().mockResolvedValue([makeItem('g2', 'also_good')])
+
+    const config = summaryConfig({ good: true, also_good: true })
+    const result = await runPipeline(config, 'fetch_summarize')
+
+    // Should complete without pausing
+    expect(result.summary).toBeDefined()
+    // isPipelinePaused should have been false throughout (not paused now)
+    expect(isPipelinePaused()).toBe(false)
+  })
+
+  it('skipSensor resolves a failed sensor and auto-generates overall when all resolved', async () => {
+    mockSensorFns['good'] = vi.fn().mockResolvedValue([makeItem('g1', 'good')])
+    mockSensorFns['bad'] = vi.fn().mockRejectedValue(new Error('fail'))
+
+    const config = summaryConfig({ good: true, bad: true })
+    const pipelinePromise = runPipeline(config, 'fetch_summarize')
+
+    await vi.waitFor(() => expect(isPipelinePaused()).toBe(true))
+    // Skip the failed sensor — since it's the only failure, pause loop ends and overall generates
+    skipSensor('bad')
+    const result = await pipelinePromise
+
+    expect(result.summary).toBeDefined()
+    expect(result.report!.sources_failed).toContain('bad')
+  })
+
+  it('retrySensor re-fetches and re-summarizes a failed sensor', async () => {
+    let badCallCount = 0
+    mockSensorFns['good'] = vi.fn().mockResolvedValue([makeItem('g1', 'good')])
+    // Fails on all auto-retry attempts (4 total), then succeeds on the manual retry
+    mockSensorFns['flaky'] = vi.fn().mockImplementation(async () => {
+      badCallCount++
+      if (badCallCount <= 4) throw new Error('temporary fail')
+      return [makeItem('f1', 'flaky')]
+    })
+
+    const config = summaryConfig({ good: true, flaky: true })
+    const pipelinePromise = runPipeline(config, 'fetch_summarize')
+
+    await vi.waitFor(() => expect(isPipelinePaused()).toBe(true))
+    // Manual retry — this is call #5 which succeeds
+    retrySensor('flaky')
+
+    // After successful retry, flaky is resolved — pause loop auto-exits
+    // (no more failed sensors), then overall generates
+    const result = await pipelinePromise
+
+    expect(result.report!.sources_ok).toContain('flaky')
+    expect(result.report!.sources_ok).toContain('good')
+    expect(result.report!.sources_failed).not.toContain('flaky')
+    expect(badCallCount).toBe(5) // 1 initial + 3 auto-retries + 1 manual retry
+  })
+
+  it('retrySensor returns false when not paused', () => {
+    expect(retrySensor('anything')).toBe(false)
+  })
+
+  it('skipSensor returns false when not paused', () => {
+    expect(skipSensor('anything')).toBe(false)
+  })
+
+  it('generateOverall returns false when not paused', () => {
+    expect(generateOverall()).toBe(false)
   })
 })

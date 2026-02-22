@@ -10,6 +10,7 @@ import { timeAgo } from './time-helpers'
 
 export interface SensorGridProps {
   isRunning: boolean
+  isPaused: boolean
   liveSensors: Record<string, SensorJobProgress>
   report: IntelReport | null
   config: ConfigSettings | null
@@ -17,6 +18,7 @@ export interface SensorGridProps {
   selected: Set<string>
   onToggleSelect: (sensor: string) => void
   onRetry?: (sensor: string) => void
+  onSkipSensor?: (sensor: string) => void
   dismissed: Set<string>
   onDismiss: (sensor: string) => void
 }
@@ -33,8 +35,8 @@ function countItemsBySensor(report: IntelReport | null): Record<string, number> 
 }
 
 export function SensorGrid({
-  isRunning, liveSensors, report, config, pipelineStatus,
-  selected, onToggleSelect, onRetry, dismissed, onDismiss,
+  isRunning, isPaused, liveSensors, report, config, pipelineStatus,
+  selected, onToggleSelect, onRetry, onSkipSensor, dismissed, onDismiss,
 }: SensorGridProps) {
   const sensorCounts = useMemo(() => countItemsBySensor(report), [report])
 
@@ -92,6 +94,7 @@ export function SensorGrid({
             label={sensor.label}
             category={sensor.category}
             isRunning={isRunning}
+            isPaused={isPaused}
             liveSensor={liveSensors[sensor.sensorKey]}
             itemCount={sensor.itemCount}
             lastFetchAgo={sensor.lastFetchAgo}
@@ -105,7 +108,8 @@ export function SensorGrid({
             isSelected={selected.has(sensor.sensorKey)}
             onToggleSelect={() => onToggleSelect(sensor.sensorKey)}
             onRetry={sensor.isFailed && onRetry ? () => onRetry(sensor.sensorKey) : undefined}
-            onDismiss={sensor.isFailed ? () => onDismiss(sensor.sensorKey) : undefined}
+            onSkip={isPaused && onSkipSensor ? () => onSkipSensor(sensor.sensorKey) : undefined}
+            onDismiss={sensor.isFailed && !isPaused ? () => onDismiss(sensor.sensorKey) : undefined}
           />
         )
       })}

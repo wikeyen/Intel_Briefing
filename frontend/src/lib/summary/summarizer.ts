@@ -61,6 +61,8 @@ export interface SummarizeOptions {
   attributionLlmConfig?: LlmConfig
   /** Output language for generated summaries. Defaults to 'zh'. */
   language?: SummaryLanguage
+  /** When true, skip the overall briefing generation and return only per-sensor summaries. */
+  skipOverall?: boolean
 }
 
 /**
@@ -227,6 +229,7 @@ export async function summarizeReport(
     enabledSensors,
     onToken,
     language,
+    skipOverall = false,
   } = options
 
   const semaphore = new Semaphore(concurrency)
@@ -303,7 +306,42 @@ export async function summarizeReport(
     if (result) sections.push(result)
   }
 
-  // Overall briefing — build global numbered source list (Perplexity-style)
+  // Skip overall if requested (used by pause-before-overall to defer generation)
+  if (skipOverall) {
+    return buildPartialResult(report, sections)
+  }
+
+  const overall = await generateOverallBriefing(report, sections, options)
+
+  return {
+    generated_at: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
+    report_fetched_at: report.fetched_at,
+    sections,
+    overall,
+  }
+}
+
+function buildPartialResult(report: IntelReport, sections: SensorSummary[]): BriefingSummary {
+  return {
+    generated_at: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
+    report_fetched_at: report.fetched_at,
+    sections,
+    overall: { executive_summary: '', sections: [], sentiment: { ...EMPTY_SENTIMENT } },
+  }
+}
+
+/**
+ * Generate the overall briefing from existing per-sensor sections.
+ * Extracted so the orchestrator can call it independently after the pause loop resolves.
+ */
+export async function generateOverallBriefing(
+  report: IntelReport,
+  sections: SensorSummary[],
+  options: SummarizeOptions,
+): Promise<ReturnType<typeof parseOverallJson> & { sources?: BriefingSource[] }> {
+  const { llmConfig, overallPromptOverride, signal, onProgress, onToken, language } = options
+  const m = msg(language)
+
   await onProgress?.('__overall__', 'Overall', 'running', null)
 
   // Build global source list from all verified per-sensor Notable items
@@ -349,10 +387,7 @@ export async function summarizeReport(
     { role: 'user', content: m.overallUser(overallContext) },
   ]
 
-  let overall: ReturnType<typeof parseOverallJson>
   try {
-    // No per-entry ref verification needed — [N] markers resolve to the global source list
-    // Overall synthesis processes all sources — needs longer timeout than per-sensor calls
     const onTokenOverall = onToken ? (token: string) => onToken('__overall__', token) : undefined
     let rawOverall: string
     if (onTokenOverall) {
@@ -362,8 +397,7 @@ export async function summarizeReport(
     } else {
       rawOverall = await chatCompletion(overallMessages, llmConfig, signal, 300_000)
     }
-    overall = parseOverallJson(rawOverall)
-    // Attach global source list to the result
+    const overall = parseOverallJson(rawOverall)
     overall.sources = globalSources
 
     // Post-hoc citation attribution
@@ -371,25 +405,52 @@ export async function summarizeReport(
     await attributeCitations(overall, globalSources, sections, llmConfig, cheapConfig, signal, language)
 
     await onProgress?.('__overall__', 'Overall', 'ok', null)
+    return overall
   } catch (err) {
     await onProgress?.('__overall__', 'Overall', 'failed', (err as Error).message)
-    overall = { executive_summary: '', sections: [], sentiment: { ...EMPTY_SENTIMENT } }
-  }
-
-  return {
-    generated_at: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
-    report_fetched_at: report.fetched_at,
-    sections,
-    overall,
+    return { executive_summary: '', sections: [], sentiment: { ...EMPTY_SENTIMENT } }
   }
 }
 
-function buildPartialResult(report: IntelReport, sections: SensorSummary[]): BriefingSummary {
-  return {
-    generated_at: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
-    report_fetched_at: report.fetched_at,
-    sections,
-    overall: { executive_summary: '', sections: [], sentiment: { ...EMPTY_SENTIMENT } },
+/**
+ * Summarize a single sensor's items. Used during pause-before-overall for retrying
+ * individual sensors without re-running the full summarization engine.
+ * Returns null if the sensor has no items or summarization fails.
+ */
+export async function summarizeSingleSensor(
+  report: IntelReport,
+  sensorName: string,
+  options: SummarizeOptions,
+): Promise<SensorSummary | null> {
+  const { llmConfig, promptOverrides, signal, onProgress, onToken, language } = options
+  const sensorGroups = groupBySensor(report)
+  const items = sensorGroups.get(sensorName)
+  if (!items || items.length === 0) return null
+
+  const label = SENSOR_LABELS[sensorName] ?? sensorName
+  await onProgress?.(sensorName, label, 'running', null)
+
+  try {
+    const result = await summarizeSensor(
+      sensorName, items, llmConfig, promptOverrides,
+      (total, done) => onProgress?.(sensorName, label, 'running', null, { total, done }),
+      signal,
+      (attempt, maxRetries, failures) => onProgress?.(sensorName, label, 'running', null, undefined, { attempt, maxRetries, failures }),
+      onToken ? (token) => onToken(sensorName, token) : undefined,
+      language,
+    )
+    if (signal?.aborted) return null
+    if (result) {
+      const contentHash = computeContentHash(items)
+      await writeSensorSummary(sensorName, contentHash, result, language).catch(() => {})
+    }
+    await onProgress?.(sensorName, label, 'ok', null)
+    return result
+  } catch (err) {
+    if (signal?.aborted) return null
+    const message = err instanceof Error ? err.message : String(err)
+    await onProgress?.(sensorName, label, 'failed', message)
+    return null
   }
 }
 

@@ -50,6 +50,20 @@
   --warn-tint:     rgba(234, 179, 8, 0.06);
   --warn-border:   rgba(234, 179, 8, 0.3);
 
+  /* Category spectrum */
+  --cat-research:      #1D6B4F;
+  --cat-news:          #2563EB;
+  --cat-trend:         #D97706;
+  --cat-opinion:       #7C3AED;
+  --cat-research-tint: rgba(29, 107, 79, 0.08);
+  --cat-news-tint:     rgba(37, 99, 235, 0.08);
+  --cat-trend-tint:    rgba(217, 119, 6, 0.08);
+  --cat-opinion-tint:  rgba(124, 58, 237, 0.08);
+
+  /* Elevation */
+  --surface-raised:    #FFFFFF;
+  --shadow-xs:         0 1px 2px rgba(0, 0, 0, 0.03);
+
   color-scheme: light dark;
 
   /* Typography */
@@ -114,6 +128,20 @@
     --accent-tint:   rgba(77, 148, 120, 0.12);
     --warn-tint:     rgba(250, 204, 21, 0.08);
     --warn-border:   rgba(250, 204, 21, 0.3);
+
+    /* Category spectrum — brighter for dark bg */
+    --cat-research:      #4D9478;
+    --cat-news:          #60A5FA;
+    --cat-trend:         #FBBF24;
+    --cat-opinion:       #A78BFA;
+    --cat-research-tint: rgba(77, 148, 120, 0.12);
+    --cat-news-tint:     rgba(96, 165, 250, 0.12);
+    --cat-trend-tint:    rgba(251, 191, 36, 0.12);
+    --cat-opinion-tint:  rgba(167, 139, 250, 0.12);
+
+    /* Elevation */
+    --surface-raised:    #2E2D29;
+    --shadow-xs:         0 1px 2px rgba(0, 0, 0, 0.15);
   }
 }
 
@@ -446,6 +474,21 @@ input[type="range"]::-moz-range-thumb {
     gap: 0.25rem !important;
     padding-left: 0.75rem !important;
     padding-right: 0.75rem !important;
+  }
+
+  /* ── Dashboard — tighter stats strip on mobile ── */
+  .dashboard-stats-strip {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+  .dashboard-stats-strip .stat-value {
+    font-size: 1.25rem !important;
+  }
+  .dashboard-stats-strip .stat-cell {
+    padding: 0.875rem 0.25rem !important;
+  }
+  .dashboard-root {
+    padding: 1.25rem !important;
+    padding-top: 1rem !important;
   }
 
   /* ── Touch interactions ── */

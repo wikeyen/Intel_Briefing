@@ -1,7 +1,7 @@
 // ABOUTME: UI shell layout — wraps all dashboard pages with sidebar and toast notifications.
 // ABOUTME: Provides ToastContext so any page component can trigger toasts without prop drilling.
 'use client'
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { Sidebar } from '@/components/Sidebar'
 import { Toaster } from '@/components/Toaster'
@@ -29,6 +29,7 @@ export default function UiLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const pathname = usePathname()
 
+  const mainRef = useRef<HTMLElement>(null)
   const closeSidebar = useCallback(() => setSidebarOpen(false), [])
 
   // Close sidebar on route change
@@ -46,8 +47,8 @@ export default function UiLayout({ children }: { children: React.ReactNode }) {
             className={sidebarOpen ? 'sidebar-open' : ''}
             style={{ display: 'flex', flex: 1, height: '100vh', overflow: 'hidden', background: 'var(--canvas)' }}
           >
-            {/* Mobile top bar — brand + page title + hamburger */}
-            <div className="mobile-top-bar">
+            {/* Mobile top bar — tap to scroll to top, hamburger to toggle menu */}
+            <div className="mobile-top-bar" onClick={() => mainRef.current?.scrollTo({ top: 0 })}>
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0 }}>
                 <span style={{
                   fontSize: sidebarOpen ? '0.625rem' : '0.875rem',
@@ -74,7 +75,7 @@ export default function UiLayout({ children }: { children: React.ReactNode }) {
               </div>
               <button
                 className="mobile-menu-btn"
-                onClick={() => setSidebarOpen(o => !o)}
+                onClick={(e) => { e.stopPropagation(); setSidebarOpen(o => !o) }}
                 aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
               >
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
@@ -90,7 +91,7 @@ export default function UiLayout({ children }: { children: React.ReactNode }) {
             <div className="sidebar-backdrop" onClick={closeSidebar} />
 
             <Sidebar onNavigate={closeSidebar} />
-            <main className="main-content" style={{
+            <main ref={mainRef} className="main-content" style={{
               flex: 1,
               height: '100vh',
               overflowY: 'auto',

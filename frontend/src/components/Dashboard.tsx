@@ -1,4 +1,4 @@
-// ABOUTME: Dashboard home page — fluid grid data terminal with sentiment, trending, heatmap, risk/intel panel.
+// ABOUTME: Dashboard home page — intelligence terminal organized by domain with AI-generated briefs.
 // ABOUTME: Premium data platform aesthetic using shadcn/ui, Tailwind, and Framer Motion animations.
 'use client'
 import { useState, useEffect, useRef } from 'react'
@@ -11,8 +11,6 @@ import type { CategoryKey, DisplayCategoryKey } from '@/lib/sensors/taxonomy'
 import { cn } from '@/lib/utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-// Badge removed — replaced with styled spans for premium pill treatment
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -232,93 +230,6 @@ function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
 }
 
 // ---------------------------------------------------------------------------
-// Widget: Stats Strip
-// ---------------------------------------------------------------------------
-
-function StatsStrip({ report, summary }: { report: IntelReport | null; summary: BriefingSummary | null }) {
-  const totalItems = report ? Object.values(report.items).flat().length : 0
-  const sourcesOk = report ? report.sources_ok.length : 0
-
-  const allItems: IntelItem[] = report ? Object.values(report.items).flat() : []
-  const withSentiment = allItems.filter(i => SOCIAL.has(i.source) && i.sentiment)
-  const positiveCount = withSentiment.filter(i => i.sentiment!.label === 'positive').length
-  const positivePct = withSentiment.length > 0 ? Math.round((positiveCount / withSentiment.length) * 100) : null
-
-  const overall = summary?.overall
-  const mood = overall && isStructuredOverall(overall) ? overall.sentiment?.overall_mood : null
-  const moodStyles: Record<string, string> = {
-    bullish: 'var(--sent-bullish-text)',
-    bearish: 'var(--sent-bearish-text)',
-    mixed: 'var(--sent-mixed-text)',
-    neutral: 'var(--ink-tertiary)',
-  }
-
-  const stats: { value: string; label: string; colorStyle?: string }[] = [
-    { value: totalItems.toLocaleString(), label: 'Items' },
-    { value: String(sourcesOk), label: 'Sources' },
-    { value: positivePct != null ? `${positivePct}%` : '--', label: 'Positive' },
-    { value: mood ?? '--', label: 'Mood', colorStyle: mood ? moodStyles[mood] : undefined },
-  ]
-
-  return (
-    <div
-      className="dashboard-stats-strip overflow-hidden"
-      style={{
-        background: 'var(--surface)',
-        borderRadius: 12,
-        boxShadow: 'var(--shadow-card)',
-      }}
-    >
-      <div className="grid grid-cols-2 md:grid-cols-4">
-        {stats.map((stat, i) => (
-          <div key={stat.label} className={cn(
-            'stat-cell text-center cursor-default',
-            i % 2 === 0 && 'border-r',
-            i < 2 && 'border-b md:border-b-0',
-            i === 2 && 'md:border-r',
-          )}
-            style={{
-              padding: '16px 0',
-              borderColor: 'var(--border-subtle)',
-              transition: 'background 150ms ease',
-            }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-inset)' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
-          >
-            <motion.div
-              key={stat.value}
-              className="stat-value"
-              initial={{ opacity: 0.4, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-            >
-              <span
-                className={cn(
-                  'stat-number font-bold leading-tight tracking-tight font-mono',
-                  stat.label === 'Mood' && 'capitalize',
-                )}
-                style={{
-                  letterSpacing: '-0.03em',
-                  color: stat.colorStyle ?? 'var(--ink)',
-                }}
-              >
-                {stat.value}
-              </span>
-            </motion.div>
-            <div
-              className="font-semibold uppercase tracking-wider mt-1"
-              style={{ fontSize: '0.6875rem', color: 'var(--ink-tertiary)' }}
-            >
-              {stat.label}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
 // Widget: Executive Summary
 // ---------------------------------------------------------------------------
 
@@ -385,6 +296,59 @@ function ExecSummaryWidget({ summary }: { summary: BriefingSummary }) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Widget: Thematic Sections (card grid — replaces accordion)
+// ---------------------------------------------------------------------------
+
+function ThematicSectionsWidget({ summary }: { summary: BriefingSummary }) {
+  const overall = summary.overall
+  if (!isStructuredOverall(overall)) return null
+  const sections = overall.sections
+  if (!sections || sections.length === 0) return null
+
+  return (
+    <div className="flex flex-col gap-3">
+      <SectionLabel>Investment Themes</SectionLabel>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {sections.map((section, i) => (
+          <Card key={i} className="dashboard-card py-4 gap-2" style={{ borderRadius: 12 }}>
+            <CardContent className="px-5 flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold" style={{ fontSize: '0.8125rem', color: 'var(--ink)' }}>
+                  {section.title}
+                </span>
+                <span className="font-mono font-semibold" style={{
+                  fontSize: '0.625rem',
+                  background: 'var(--surface-inset)',
+                  borderRadius: 4,
+                  padding: '1px 6px',
+                  color: 'var(--ink-tertiary)',
+                }}>
+                  {section.entries.length}
+                </span>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                {section.entries.map((entry, j) => (
+                  <div key={j} className="flex gap-2" style={{
+                    fontSize: '0.8125rem',
+                    color: 'var(--ink-secondary)',
+                    lineHeight: 1.6,
+                    overflowWrap: 'break-word',
+                    wordBreak: 'break-word',
+                  }}>
+                    <span className="shrink-0 mt-2 rounded-full" style={{ width: 4, height: 4, background: 'var(--accent)' }} />
+                    <span><InlineRefs text={entry.text} globalSources={overall.sources} /></span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   )
 }
@@ -736,104 +700,6 @@ function CategoryDistributionWidget({ report }: { report: IntelReport }) {
 }
 
 // ---------------------------------------------------------------------------
-// Widget: Source Activity Heatmap
-// ---------------------------------------------------------------------------
-
-function SourceActivityWidget({ report }: { report: IntelReport }) {
-  const sourceHours: Record<string, number[]> = {}
-  for (const items of Object.values(report.items)) {
-    for (const item of items) {
-      if (!sourceHours[item.source]) sourceHours[item.source] = new Array(24).fill(0)
-      const hour = item.published_at
-        ? new Date(item.published_at).getHours()
-        : new Date(report.fetched_at).getHours()
-      sourceHours[item.source][hour]++
-    }
-  }
-
-  const sorted = Object.entries(sourceHours)
-    .map(([source, hours]) => ({ source, hours, total: hours.reduce((a, b) => a + b, 0) }))
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 8)
-
-  if (sorted.length === 0) return null
-
-  const cellColor = (count: number): string => {
-    if (count === 0) return 'var(--heat-0)'
-    if (count <= 3) return 'var(--heat-1)'
-    if (count <= 8) return 'var(--heat-2)'
-    if (count <= 15) return 'var(--heat-3)'
-    return 'var(--heat-4)'
-  }
-
-  return (
-    <Card className="dashboard-card py-4 gap-3" style={{ borderRadius: 12 }}>
-      <CardContent className="px-5 flex flex-col gap-3">
-        <SectionLabel>Source Activity (24h)</SectionLabel>
-        <div className="overflow-x-auto">
-          <div className="flex flex-col gap-0.5 min-w-[400px]">
-            {/* Hour labels */}
-            <div className="flex items-center gap-1.5">
-              <span className="shrink-0" style={{ width: 56 }} />
-              <div className="grid grid-cols-[repeat(24,1fr)] gap-0.5 flex-1">
-                {Array.from({ length: 24 }, (_, h) => (
-                  <div key={h} className="text-center" style={{ fontSize: '0.625rem', fontFamily: 'var(--font-mono, ui-monospace, monospace)', color: 'var(--ink-tertiary)' }}>
-                    {h % 6 === 0 ? `${h}h` : ''}
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* Source rows */}
-            {sorted.map(({ source, hours }) => (
-              <div key={source} className="flex items-center gap-1.5">
-                <span className="font-mono truncate shrink-0" style={{
-                  width: 56,
-                  fontSize: '0.625rem',
-                  fontWeight: 500,
-                  color: 'var(--ink-secondary)',
-                }}>
-                  {(SENSOR_LABELS[source] ?? source).slice(0, 12)}
-                </span>
-                <div className="grid grid-cols-[repeat(24,1fr)] gap-0.5 flex-1">
-                  {hours.map((count, h) => (
-                    <div key={h} title={`${SENSOR_LABELS[source] ?? source} — ${h}:00: ${count} items`}
-                      style={{
-                        minWidth: 8,
-                        height: 12,
-                        borderRadius: 2,
-                        background: cellColor(count),
-                        transition: 'background 200ms ease',
-                        cursor: 'default',
-                      }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.outline = '1px solid var(--accent)'; (e.currentTarget as HTMLElement).style.zIndex = '1' }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.outline = ''; (e.currentTarget as HTMLElement).style.zIndex = '' }}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        {/* Legend */}
-        <div className="flex gap-2.5 font-mono" style={{ fontSize: '0.625rem', color: 'var(--ink-tertiary)' }}>
-          {[
-            { bg: 'var(--heat-0)', label: '0' },
-            { bg: 'var(--heat-1)', label: '1-3' },
-            { bg: 'var(--heat-2)', label: '4-8' },
-            { bg: 'var(--heat-3)', label: '9-15' },
-            { bg: 'var(--heat-4)', label: '16+' },
-          ].map(({ bg, label }) => (
-            <span key={label} className="inline-flex items-center gap-[3px]">
-              <span style={{ width: 10, height: 10, borderRadius: 2, background: bg }} /> {label}
-            </span>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-// ---------------------------------------------------------------------------
 // Widget: Source Health Dots
 // ---------------------------------------------------------------------------
 
@@ -892,10 +758,183 @@ function SourceHealthWidget({ report }: { report: IntelReport }) {
 }
 
 // ---------------------------------------------------------------------------
-// Widget: Trending Items
+// Widget: Sensor Domain Card (shared, reusable)
 // ---------------------------------------------------------------------------
 
-function TrendingWidget({ report }: { report: IntelReport }) {
+function SensorDomainCard({ sectionLabel, accentColor, sensorNames, summary, report, showSentimentBars, moodSummary }: {
+  sectionLabel: string
+  accentColor: string
+  sensorNames: string[]
+  summary: BriefingSummary
+  report?: IntelReport | null
+  showSentimentBars?: boolean
+  moodSummary?: string | null
+}) {
+  const matchingSections = summary.sections.filter(s => sensorNames.includes(s.sensor_name))
+  if (matchingSections.length === 0) return null
+
+  // Compute per-platform sentiment when needed
+  const platformSentiment: Record<string, { positive: number; negative: number; neutral: number; total: number }> = {}
+  if (showSentimentBars && report) {
+    const allItems: IntelItem[] = Object.values(report.items).flat()
+    for (const item of allItems) {
+      if (sensorNames.includes(item.source) && item.sentiment) {
+        if (!platformSentiment[item.source]) platformSentiment[item.source] = { positive: 0, negative: 0, neutral: 0, total: 0 }
+        platformSentiment[item.source][item.sentiment.label]++
+        platformSentiment[item.source].total++
+      }
+    }
+  }
+
+  return (
+    <Card className="dashboard-card py-4 gap-3" style={{ borderRadius: 12 }}>
+      <CardContent className="px-5 flex flex-col gap-4">
+        <SectionLabel style={{ color: accentColor }}>{sectionLabel}</SectionLabel>
+
+        {moodSummary && (
+          <p style={{ fontSize: '0.8125rem', color: 'var(--ink)', lineHeight: 1.6, margin: 0 }}>
+            {moodSummary}
+          </p>
+        )}
+
+        {matchingSections.map((section, sIdx) => (
+          <div key={section.sensor_name} className="flex flex-col gap-2">
+            {/* Source header */}
+            <div className="flex items-center gap-2">
+              <span className="font-semibold" style={{ fontSize: '0.8125rem', color: 'var(--ink)' }}>
+                {section.label}
+              </span>
+              <span className="font-mono font-semibold" style={{
+                fontSize: '0.625rem',
+                background: 'var(--surface-inset)',
+                borderRadius: 4,
+                padding: '1px 6px',
+                color: 'var(--ink-tertiary)',
+              }}>
+                {section.item_count}
+              </span>
+            </div>
+
+            {/* AI summary */}
+            <p style={{
+              fontSize: '0.8125rem',
+              color: 'var(--ink-secondary)',
+              lineHeight: 1.6,
+              margin: 0,
+            }}>
+              {section.summary}
+            </p>
+
+            {/* Sentiment bar for this platform */}
+            {showSentimentBars && platformSentiment[section.sensor_name] && (() => {
+              const counts = platformSentiment[section.sensor_name]
+              const posPct = Math.round((counts.positive / counts.total) * 100)
+              const negPct = Math.round((counts.negative / counts.total) * 100)
+              const neuPct = 100 - posPct - negPct
+              return (
+                <div>
+                  <div className="flex gap-2 font-mono mb-0.5" style={{ fontSize: '0.625rem', color: 'var(--ink-tertiary)' }}>
+                    <span style={{ color: 'var(--sent-pos-text)' }}>{posPct}% pos</span>
+                    <span>{neuPct}% neu</span>
+                    <span style={{ color: 'var(--sent-neg-text)' }}>{negPct}% neg</span>
+                  </div>
+                  <div className="flex overflow-hidden" style={{ height: 4, borderRadius: 2, background: 'var(--border-subtle)', gap: 1 }}>
+                    {posPct > 0 && <div style={{ width: `${posPct}%`, background: 'var(--sent-pos)', transition: 'width 400ms ease' }} />}
+                    {neuPct > 0 && <div style={{ width: `${neuPct}%`, background: 'var(--sent-neu)', opacity: 0.4, transition: 'width 400ms ease' }} />}
+                    {negPct > 0 && <div style={{ width: `${negPct}%`, background: 'var(--sent-neg)', transition: 'width 400ms ease' }} />}
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* Notable items */}
+            {section.items.length > 0 && (
+              <div className="flex flex-col gap-0">
+                {section.items.map((item, idx) => (
+                  <a
+                    key={idx}
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex gap-2 no-underline rounded-md"
+                    style={{
+                      padding: '6px 8px',
+                      margin: '0 -8px',
+                      transition: 'background 150ms ease',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-inset)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
+                  >
+                    <span className="shrink-0 mt-1.5 rounded-full" style={{ width: 4, height: 4, background: accentColor }} />
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium" style={{ fontSize: '0.8125rem', color: 'var(--ink)' }}>
+                        {item.title}
+                      </span>
+                      {item.brief && (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--ink-tertiary)', marginLeft: 6 }}>
+                          &mdash; {item.brief}
+                        </span>
+                      )}
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
+
+            {/* Divider between sources within the same domain */}
+            {sIdx < matchingSections.length - 1 && (
+              <div style={{ borderBottom: '1px solid var(--border-subtle)', marginTop: 4 }} />
+            )}
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Domain Widgets (thin wrappers around SensorDomainCard)
+// ---------------------------------------------------------------------------
+
+function MacroIntelWidget({ summary }: { summary: BriefingSummary }) {
+  return <SensorDomainCard sectionLabel="Macro & Finance" accentColor="var(--cat-news)" sensorNames={['wallstreetcn', 'sources_36kr']} summary={summary} />
+}
+
+function NewsTechWidget({ summary }: { summary: BriefingSummary }) {
+  return <SensorDomainCard sectionLabel="News & Tech" accentColor="var(--cat-news)" sensorNames={['hacker_news', 'product_hunt', 'chrome_radar', 'github']} summary={summary} />
+}
+
+function SocialPulseWidget({ summary, report }: { summary: BriefingSummary; report: IntelReport | null }) {
+  const overall = summary.overall
+  const moodSummary = isStructuredOverall(overall) ? overall.sentiment?.mood_summary ?? null : null
+  return <SensorDomainCard sectionLabel="Social Pulse" accentColor="var(--cat-trend)" sensorNames={['x', 'bluesky', 'mastodon', 'weibo', 'xiaohongshu']} summary={summary} report={report} showSentimentBars moodSummary={moodSummary} />
+}
+
+function ResearchRadarWidget({ summary }: { summary: BriefingSummary }) {
+  return <SensorDomainCard sectionLabel="Research Radar" accentColor="var(--cat-research)" sensorNames={['arxiv']} summary={summary} />
+}
+
+function OpinionDigestWidget({ summary }: { summary: BriefingSummary }) {
+  return <SensorDomainCard sectionLabel="Opinion Digest" accentColor="var(--cat-opinion)" sensorNames={['hn_blogs', 'rss_feeds', 'v2ex', 'zhihu']} summary={summary} />
+}
+
+// ---------------------------------------------------------------------------
+// Widget: Trending & Momentum (enhanced with brief cross-ref + pills)
+// ---------------------------------------------------------------------------
+
+function TrendingWidget({ report, summary }: { report: IntelReport; summary?: BriefingSummary | null }) {
+  // Build brief lookup map from all sensor summaries
+  const briefMap = new Map<string, string>()
+  if (summary) {
+    for (const section of summary.sections) {
+      for (const item of section.items) {
+        if (item.brief && item.url) {
+          briefMap.set(item.url, item.brief)
+        }
+      }
+    }
+  }
+
   const trendItems: IntelItem[] = []
   for (const [cat, items] of Object.entries(report.items)) {
     for (const item of items) {
@@ -911,14 +950,14 @@ function TrendingWidget({ report }: { report: IntelReport }) {
     return bv - av
   })
 
-  const top = trendItems.slice(0, 8)
+  const top = trendItems.slice(0, 10)
   if (top.length === 0) return null
 
   return (
     <Card className="dashboard-card py-4 gap-3" style={{ borderRadius: 12 }}>
       <CardContent className="px-5 flex flex-col gap-0">
         <div className="flex items-center justify-between mb-2.5">
-          <SectionLabel>Trending</SectionLabel>
+          <SectionLabel>Trending & Momentum</SectionLabel>
           <Link href="/data" className="font-medium no-underline hover:underline" style={{ fontSize: '0.75rem', color: 'var(--accent)' }}>
             View all &#8250;
           </Link>
@@ -933,6 +972,8 @@ function TrendingWidget({ report }: { report: IntelReport }) {
             const displayTitle = item.source === 'github'
               ? item.title.split(' — ')[0]
               : item.title
+            const brief = briefMap.get(item.url)
+            const isRapid = v.hoursOnTrend != null && v.hoursOnTrend <= 6
 
             return (
               <a
@@ -940,7 +981,7 @@ function TrendingWidget({ report }: { report: IntelReport }) {
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2.5 no-underline rounded-lg"
+                className="flex items-start gap-2.5 no-underline rounded-lg"
                 style={{
                   padding: '10px 8px',
                   margin: '0 -8px',
@@ -951,7 +992,7 @@ function TrendingWidget({ report }: { report: IntelReport }) {
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
               >
                 {/* Rank number */}
-                <span className="w-5 text-right shrink-0 font-mono font-bold" style={{
+                <span className="w-5 text-right shrink-0 font-mono font-bold mt-0.5" style={{
                   fontSize: '0.6875rem',
                   color: idx < 3 ? 'var(--accent)' : 'var(--ink-disabled)',
                 }}>
@@ -961,6 +1002,11 @@ function TrendingWidget({ report }: { report: IntelReport }) {
                   <div className="font-medium truncate" style={{ fontSize: '0.8125rem', color: 'var(--ink)' }}>
                     {displayTitle}
                   </div>
+                  {brief && (
+                    <div className="mt-0.5" style={{ fontSize: '0.75rem', color: 'var(--ink-tertiary)', lineHeight: 1.4 }}>
+                      {brief}
+                    </div>
+                  )}
                   <div className="flex items-center gap-1 mt-px" style={{ fontSize: '0.625rem', color: 'var(--ink-tertiary)' }}>
                     <span className="font-medium" style={{
                       padding: '1px 6px',
@@ -972,18 +1018,18 @@ function TrendingWidget({ report }: { report: IntelReport }) {
                     {item.heat && <span>{item.heat}</span>}
                     {v.hoursOnTrend != null && (
                       <span className="font-semibold" style={{
-                        padding: '0 3px',
+                        padding: '0 4px',
                         borderRadius: 4,
-                        background: v.hoursOnTrend <= 6 ? 'var(--cat-trend-bg)' : 'var(--surface-inset)',
-                        color: v.hoursOnTrend <= 6 ? 'var(--cat-trend)' : 'var(--ink-tertiary)',
+                        background: isRapid ? 'var(--cat-trend-bg)' : 'var(--surface-inset)',
+                        color: isRapid ? 'var(--cat-trend)' : 'var(--ink-tertiary)',
                       }}>
-                        {v.hoursOnTrend}h
+                        {isRapid ? 'RAPID' : 'SUSTAINED'} &middot; {v.hoursOnTrend}h
                       </span>
                     )}
                   </div>
                 </div>
                 {pctStr && (
-                  <span className="shrink-0 font-bold font-mono" style={{ fontSize: '0.6875rem', color: pctColor }}>
+                  <span className="shrink-0 font-bold font-mono mt-0.5" style={{ fontSize: '0.6875rem', color: pctColor }}>
                     {pctStr}
                   </span>
                 )}
@@ -991,60 +1037,6 @@ function TrendingWidget({ report }: { report: IntelReport }) {
             )
           })}
         </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Widget: Section Summaries (Accordion)
-// ---------------------------------------------------------------------------
-
-function SectionSummariesWidget({ summary }: { summary: BriefingSummary }) {
-  const overall = summary.overall
-  if (!isStructuredOverall(overall)) return null
-  const sections = overall.sections
-  if (!sections || sections.length === 0) return null
-
-  return (
-    <Card className="dashboard-card py-2 gap-0" style={{ borderRadius: 12 }}>
-      <CardContent className="px-5">
-        <Accordion type="multiple" defaultValue={['section-0']}>
-          {sections.map((section, i) => (
-            <AccordionItem key={i} value={`section-${i}`} style={{ borderColor: 'var(--border-subtle)' }}>
-              <AccordionTrigger className="hover:no-underline" style={{ padding: '14px 0', fontSize: '0.8125rem', fontWeight: 600 }}>
-                <div className="flex items-center gap-2">
-                  <span>{section.title}</span>
-                  <span className="font-mono font-semibold" style={{
-                    fontSize: '0.625rem',
-                    background: 'var(--surface-inset)',
-                    borderRadius: 4,
-                    padding: '1px 6px',
-                  }}>
-                    {section.entries.length}
-                  </span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="pb-3">
-                <div className="flex flex-col gap-2">
-                  {section.entries.map((entry, j) => (
-                    <div key={j} style={{
-                      fontSize: '0.8125rem',
-                      color: 'var(--ink-secondary)',
-                      lineHeight: 1.6,
-                      paddingLeft: 12,
-                      borderLeft: '2px solid var(--accent-subtle)',
-                      overflowWrap: 'break-word',
-                      wordBreak: 'break-word',
-                    }}>
-                      <InlineRefs text={entry.text} globalSources={overall.sources} />
-                    </div>
-                  ))}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
       </CardContent>
     </Card>
   )
@@ -1073,29 +1065,6 @@ function DashboardSkeleton() {
       <div className="dashboard-layout" style={{ marginTop: 14 }}>
         {/* Main skeleton */}
         <div className="dashboard-main flex flex-col" style={{ gap: 14 }}>
-          {/* Stats strip skeleton */}
-          <div className="overflow-hidden" style={{
-            background: 'var(--surface)',
-            borderRadius: 12,
-            boxShadow: 'var(--shadow-card)',
-          }}>
-            <div className="grid grid-cols-2 md:grid-cols-4">
-              {[0, 1, 2, 3].map(i => (
-                <div key={i} className={cn(
-                  'flex flex-col items-center gap-1.5',
-                  i % 2 === 0 && 'border-r',
-                  i < 2 && 'border-b md:border-b-0',
-                  i === 2 && 'md:border-r',
-                )} style={{
-                  padding: '16px 20px',
-                  borderColor: 'var(--border-subtle)',
-                }}>
-                  <div className="skeleton-shimmer" style={{ width: 48, height: 24 }} />
-                  <div className="skeleton-shimmer" style={{ width: 36, height: 8 }} />
-                </div>
-              ))}
-            </div>
-          </div>
           {/* Exec summary skeleton */}
           <div className="flex flex-col gap-2" style={{
             background: 'var(--surface)',
@@ -1109,19 +1078,25 @@ function DashboardSkeleton() {
             <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
             <div className="skeleton-shimmer" style={{ width: '70%', height: 12 }} />
           </div>
-          {/* Content cards */}
-          <Card className="py-4" style={{ borderRadius: 12 }}><CardContent className="px-5 flex flex-col gap-2">
-            <div className="skeleton-shimmer" style={{ width: 80, height: 10 }} />
-            <div className="skeleton-shimmer" style={{ width: '100%', height: 16 }} />
-            <div className="skeleton-shimmer" style={{ width: '80%', height: 12 }} />
-            <div className="skeleton-shimmer" style={{ width: '60%', height: 12 }} />
-          </CardContent></Card>
-          <Card className="py-4" style={{ borderRadius: 12 }}><CardContent className="px-5 flex flex-col gap-2">
-            <div className="skeleton-shimmer" style={{ width: 112, height: 10 }} />
-            <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-            <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-            <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-          </CardContent></Card>
+          {/* Investment themes skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {[0, 1].map(i => (
+              <Card key={i} className="py-4" style={{ borderRadius: 12 }}><CardContent className="px-5 flex flex-col gap-2">
+                <div className="skeleton-shimmer" style={{ width: 120, height: 10 }} />
+                <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+                <div className="skeleton-shimmer" style={{ width: '80%', height: 12 }} />
+              </CardContent></Card>
+            ))}
+          </div>
+          {/* Domain cards skeleton */}
+          {[0, 1, 2].map(i => (
+            <Card key={i} className="py-4" style={{ borderRadius: 12 }}><CardContent className="px-5 flex flex-col gap-2">
+              <div className="skeleton-shimmer" style={{ width: 112, height: 10 }} />
+              <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+              <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+              <div className="skeleton-shimmer" style={{ width: '60%', height: 12 }} />
+            </CardContent></Card>
+          ))}
         </div>
         {/* Sidebar skeleton */}
         <div className="dashboard-sidebar flex flex-col" style={{ gap: 14 }}>
@@ -1240,43 +1215,66 @@ export function Dashboard() {
             <div className="dashboard-layout" style={{ marginTop: 14 }}>
               {/* ── Main Content Column ── */}
               <div className="dashboard-main flex flex-col" style={{ gap: 14 }}>
-                {/* Stats Strip */}
-                <StaggerChild index={1}>
-                  <StatsStrip report={report} summary={summary} />
-                </StaggerChild>
-
-                {/* Executive Summary */}
+                {/* 1. Executive Summary */}
                 {summary && (
-                  <StaggerChild index={2}>
+                  <StaggerChild index={1}>
                     <ExecSummaryWidget summary={summary} />
                   </StaggerChild>
                 )}
 
-                {/* Risk & Intel Panel */}
+                {/* 2. Investment Themes */}
+                {summary && (
+                  <StaggerChild index={2}>
+                    <ThematicSectionsWidget summary={summary} />
+                  </StaggerChild>
+                )}
+
+                {/* 3. Intelligence Signals */}
                 {summary && (
                   <StaggerChild index={3}>
                     <RiskIntelPanel summary={summary} />
                   </StaggerChild>
                 )}
 
-                {/* Trending */}
-                {report && (
-                  <StaggerChild index={5}>
-                    <TrendingWidget report={report} />
-                  </StaggerChild>
-                )}
-
-                {/* Source Activity Heatmap */}
-                {report && (
-                  <StaggerChild index={6}>
-                    <SourceActivityWidget report={report} />
-                  </StaggerChild>
-                )}
-
-                {/* Section Summaries */}
+                {/* 4. Macro & Finance */}
                 {summary && (
+                  <StaggerChild index={4}>
+                    <MacroIntelWidget summary={summary} />
+                  </StaggerChild>
+                )}
+
+                {/* 5. News & Tech */}
+                {summary && (
+                  <StaggerChild index={5}>
+                    <NewsTechWidget summary={summary} />
+                  </StaggerChild>
+                )}
+
+                {/* 6. Social Pulse */}
+                {summary && (
+                  <StaggerChild index={6}>
+                    <SocialPulseWidget summary={summary} report={report} />
+                  </StaggerChild>
+                )}
+
+                {/* 7. Trending & Momentum */}
+                {report && (
                   <StaggerChild index={7}>
-                    <SectionSummariesWidget summary={summary} />
+                    <TrendingWidget report={report} summary={summary} />
+                  </StaggerChild>
+                )}
+
+                {/* 8. Research Radar */}
+                {summary && (
+                  <StaggerChild index={8}>
+                    <ResearchRadarWidget summary={summary} />
+                  </StaggerChild>
+                )}
+
+                {/* 9. Opinion Digest */}
+                {summary && (
+                  <StaggerChild index={9}>
+                    <OpinionDigestWidget summary={summary} />
                   </StaggerChild>
                 )}
 
@@ -1292,21 +1290,21 @@ export function Dashboard() {
               <div className="dashboard-sidebar flex flex-col" style={{ gap: 14 }}>
                 {/* Sentiment */}
                 {summary && (
-                  <StaggerChild index={4}>
+                  <StaggerChild index={10}>
                     <SentimentWidget summary={summary} report={report} />
                   </StaggerChild>
                 )}
 
                 {/* Category Distribution */}
                 {report && (
-                  <StaggerChild index={8}>
+                  <StaggerChild index={11}>
                     <CategoryDistributionWidget report={report} />
                   </StaggerChild>
                 )}
 
                 {/* Source Health */}
                 {report && (
-                  <StaggerChild index={9}>
+                  <StaggerChild index={12}>
                     <SourceHealthWidget report={report} />
                   </StaggerChild>
                 )}

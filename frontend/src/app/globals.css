@@ -651,12 +651,6 @@ input[type="range"]::-moz-range-thumb {
   }
 
   /* ── Dashboard mobile overrides ── */
-  .dashboard-stats-strip .stat-cell {
-    padding: 0.75rem 0.5rem !important;
-  }
-  .dashboard-stats-strip .stat-number {
-    font-size: 1.25rem !important;
-  }
   .dashboard-root {
     padding: 0.75rem !important;
   }
@@ -717,9 +711,6 @@ input[type="range"]::-moz-range-thumb {
 }
 .dashboard-main { flex: 1; min-width: 0; }
 .dashboard-sidebar { /* stacks below main by default */ }
-
-/* Stat number — base size, overridden to 1.25rem on mobile via media query above */
-.stat-number { font-size: 1.75rem; }
 
 /* Wide screens: main + right sidebar side-by-side.
    The dashboard-root is 1024px max like other pages, but we expand it

@@ -156,7 +156,7 @@ export function StaleProcessBanner({ stale, onAbort, onResume, onRestart }: {
               width: 8,
               height: 8,
               borderRadius: '50%',
-              background: '#eab308',
+              background: 'var(--warn)',
               flexShrink: 0,
             }} />
             <span style={{

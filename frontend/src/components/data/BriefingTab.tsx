@@ -321,7 +321,7 @@ function SummaryProgressBanner({ progress, pipelineStatus, config, streamTokens,
         }}>
           {pipelineStatus.sensors.map(s => {
             const color = s.fetch === 'ok' ? 'var(--accent)'
-              : s.fetch === 'failed' ? 'var(--error, #c33)'
+              : s.fetch === 'failed' ? 'var(--err)'
               : s.fetch === 'running' ? 'var(--accent)'
               : 'var(--ink-faint)'
             return (
@@ -344,7 +344,7 @@ function SummaryProgressBanner({ progress, pipelineStatus, config, streamTokens,
                   fontSize: '0.6875rem',
                   fontWeight: 500,
                   color: s.fetch === 'ok' ? 'var(--accent)'
-                    : s.fetch === 'failed' ? 'var(--error, #c33)'
+                    : s.fetch === 'failed' ? 'var(--err)'
                     : 'var(--ink-muted)',
                   flex: 1,
                   minWidth: 0,
@@ -371,7 +371,7 @@ function SummaryProgressBanner({ progress, pipelineStatus, config, streamTokens,
                   <span style={{ fontSize: '0.5625rem', color: 'var(--accent)' }}>&#10003;</span>
                 )}
                 {s.fetch === 'failed' && (
-                  <span style={{ fontSize: '0.5625rem', color: 'var(--error, #c33)' }}>&#10007;</span>
+                  <span style={{ fontSize: '0.5625rem', color: 'var(--err)' }}>&#10007;</span>
                 )}
               </div>
             )
@@ -395,7 +395,7 @@ function SummaryProgressBanner({ progress, pipelineStatus, config, streamTokens,
             const chunkPct = chunksTotal > 0 ? Math.round((chunksDone / chunksTotal) * 100) : 0
 
             const color = s.state === 'ok' ? 'var(--accent)'
-              : s.state === 'failed' ? 'var(--error, #c33)'
+              : s.state === 'failed' ? 'var(--err)'
               : s.state === 'running' ? 'var(--accent)'
               : 'var(--ink-faint)'
 
@@ -420,7 +420,7 @@ function SummaryProgressBanner({ progress, pipelineStatus, config, streamTokens,
                   fontSize: '0.6875rem',
                   fontWeight: 500,
                   color: s.state === 'ok' ? 'var(--accent)'
-                    : s.state === 'failed' ? 'var(--error, #c33)'
+                    : s.state === 'failed' ? 'var(--err)'
                     : 'var(--ink-muted)',
                   flex: 1,
                   minWidth: 0,
@@ -465,7 +465,7 @@ function SummaryProgressBanner({ progress, pipelineStatus, config, streamTokens,
                   <span style={{ fontSize: '0.5625rem', color: 'var(--accent)' }}>&#10003;</span>
                 )}
                 {s.state === 'failed' && (
-                  <span style={{ fontSize: '0.5625rem', color: 'var(--error, #c33)' }}>&#10007;</span>
+                  <span style={{ fontSize: '0.5625rem', color: 'var(--err)' }}>&#10007;</span>
                 )}
               </div>
             )
@@ -507,7 +507,7 @@ function SummaryProgressBanner({ progress, pipelineStatus, config, streamTokens,
               height: 5,
               borderRadius: '50%',
               background: overallSensor.state === 'ok' ? 'var(--accent)'
-                : overallSensor.state === 'failed' ? 'var(--error, #c33)'
+                : overallSensor.state === 'failed' ? 'var(--err)'
                 : 'var(--accent)',
               flexShrink: 0,
               animation: overallSensor.state === 'running' ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
@@ -523,7 +523,7 @@ function SummaryProgressBanner({ progress, pipelineStatus, config, streamTokens,
               <span style={{ fontSize: '0.5625rem', color: 'var(--accent)' }}>&#10003;</span>
             )}
             {overallSensor.state === 'failed' && (
-              <span style={{ fontSize: '0.5625rem', color: 'var(--error, #c33)' }}>&#10007;</span>
+              <span style={{ fontSize: '0.5625rem', color: 'var(--err)' }}>&#10007;</span>
             )}
           </div>
           {streamTokens?.['__overall__'] && overallSensor.state === 'running' && (
@@ -538,7 +538,7 @@ function SummaryProgressBanner({ progress, pipelineStatus, config, streamTokens,
           height: '100%',
           width: `${pct}%`,
           background: pct < 100
-            ? 'linear-gradient(90deg, var(--accent) 30%, rgba(29,107,79,0.4) 50%, var(--accent) 70%)'
+            ? 'linear-gradient(90deg, var(--accent) 30%, var(--accent-dim) 50%, var(--accent) 70%)'
             : 'var(--accent)',
           backgroundSize: pct < 100 ? '200% 100%' : 'auto',
           animation: pct < 100 ? 'shimmer 2s linear infinite' : 'none',
@@ -852,7 +852,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                   gap: '1rem',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#eab308', flexShrink: 0 }} />
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--warn)', flexShrink: 0 }} />
                     <span style={{ fontSize: '0.8125rem', color: 'var(--ink-muted)' }}>
                       Overall briefing is incomplete — source summaries are available below.
                     </span>

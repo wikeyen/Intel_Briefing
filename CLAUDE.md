@@ -38,7 +38,7 @@ make test                          # frontend (vitest)
 
 ## Shortcuts
 
-- **"lgtm"** — When the user says "lgtm", immediately: commit all staged/unstaged changes on the feature branch, merge to main, push to remote, and clean up the worktree. No confirmation needed.
+- **"lgtm" / "yolo"** — When the user says "lgtm" or "yolo", immediately: commit all staged/unstaged changes on the feature branch, merge to main, push to remote, and clean up the worktree. No confirmation needed. For "yolo", this happens after the full autonomy workflow (implement → test → verify) completes.
 
 ## Testing
 

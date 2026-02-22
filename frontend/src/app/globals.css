@@ -620,7 +620,7 @@ input[type="range"]::-moz-range-thumb {
 
   /* ── Status page — mission control responsive ── */
   .status-page {
-    padding-top: 0.75rem !important;
+    padding-top: 1.5rem !important;
   }
   .sensor-grid {
     grid-template-columns: repeat(2, 1fr) !important;
@@ -690,7 +690,9 @@ input[type="range"]::-moz-range-thumb {
 
   /* ── Dashboard mobile overrides ── */
   .dashboard-root {
-    padding: 0.75rem !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
   }
   .dashboard-ticker {
     flex-wrap: wrap !important;

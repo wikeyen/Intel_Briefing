@@ -131,15 +131,15 @@ function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
   const riskCount = overall && isStructuredOverall(overall) ? (overall.sentiment?.risk_flags?.length ?? 0) : 0
 
   const moodColors: Record<string, string> = {
-    bullish: 'var(--ok-text)',
-    bearish: 'var(--err-text)',
-    mixed: 'var(--warn-text)',
+    bullish: 'var(--sent-bullish-text)',
+    bearish: 'var(--sent-bearish-text)',
+    mixed: 'var(--sent-mixed-text)',
     neutral: 'var(--ink-tertiary)',
   }
   const moodDotColors: Record<string, string> = {
-    bullish: 'var(--ok)',
-    bearish: 'var(--err)',
-    mixed: 'var(--warn)',
+    bullish: 'var(--sent-bullish)',
+    bearish: 'var(--sent-bearish)',
+    mixed: 'var(--sent-mixed)',
     neutral: 'var(--ink-tertiary)',
   }
 
@@ -217,7 +217,7 @@ function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
         <span
           className="shrink-0 font-semibold"
           style={{
-            background: 'var(--err)',
+            background: 'var(--sent-neg)',
             color: '#fff',
             borderRadius: 4,
             padding: '2px 6px',
@@ -247,9 +247,9 @@ function StatsStrip({ report, summary }: { report: IntelReport | null; summary: 
   const overall = summary?.overall
   const mood = overall && isStructuredOverall(overall) ? overall.sentiment?.overall_mood : null
   const moodStyles: Record<string, string> = {
-    bullish: 'var(--ok-text)',
-    bearish: 'var(--err-text)',
-    mixed: 'var(--warn-text)',
+    bullish: 'var(--sent-bullish-text)',
+    bearish: 'var(--sent-bearish-text)',
+    mixed: 'var(--sent-mixed-text)',
     neutral: 'var(--ink-tertiary)',
   }
 
@@ -326,20 +326,53 @@ function ExecSummaryWidget({ summary }: { summary: BriefingSummary }) {
   const overall = summary.overall
   if (!isStructuredOverall(overall) || !overall.executive_summary) return null
 
+  const [expanded, setExpanded] = useState(false)
+  const isLong = overall.executive_summary.length > 400
+
   return (
     <div style={{
       background: 'var(--surface)',
       borderRadius: 12,
       boxShadow: 'var(--shadow-card)',
       borderLeft: '3px solid var(--accent)',
-      padding: '20px 24px',
+      padding: 20,
       overflow: 'hidden',
     }}>
       <SectionLabel className="mb-3" style={{ color: 'var(--accent)' }}>Executive Summary</SectionLabel>
-      <div style={{ fontSize: '0.875rem', lineHeight: 1.6, color: 'var(--ink)', overflowWrap: 'break-word', wordBreak: 'break-word' }} className="whitespace-pre-wrap">
+      <div
+        className="whitespace-pre-wrap exec-summary-text"
+        style={{
+          fontSize: '0.875rem',
+          lineHeight: 1.6,
+          color: 'var(--ink)',
+          overflowWrap: 'break-word',
+          wordBreak: 'break-word',
+          ...(!expanded && isLong ? {
+            maxHeight: 160,
+            overflow: 'hidden',
+            maskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
+          } : {}),
+        }}
+      >
         <InlineRefs text={overall.executive_summary} globalSources={overall.sources} />
       </div>
-      {overall.quick_scan && overall.quick_scan.length > 0 && (
+      {isLong && (
+        <button
+          onClick={() => setExpanded(prev => !prev)}
+          className="font-semibold mt-2 cursor-pointer"
+          style={{
+            fontSize: '0.75rem',
+            color: 'var(--accent)',
+            background: 'none',
+            border: 'none',
+            padding: 0,
+          }}
+        >
+          {expanded ? 'Show less' : 'Show more'}
+        </button>
+      )}
+      {(expanded || !isLong) && overall.quick_scan && overall.quick_scan.length > 0 && (
         <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border-subtle)' }}>
           <SectionLabel className="mb-2" style={{ color: 'var(--accent)' }}>Quick Scan</SectionLabel>
           <div className="flex flex-col gap-1.5">
@@ -367,9 +400,9 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
   if (!sentiment) return null
 
   const tabData = [
-    { key: 'risk', label: 'Risk', items: sentiment.risk_flags ?? [], color: 'var(--err-text)' },
-    { key: 'controversies', label: 'Controversies', items: sentiment.controversies ?? [], color: 'var(--warn-text)' },
-    { key: 'shifts', label: 'Shifts', items: sentiment.opinion_shifts ?? [], color: 'var(--accent)' },
+    { key: 'risk', label: 'Risk', items: sentiment.risk_flags ?? [], color: 'var(--sent-neg-text)', dot: 'var(--sent-neg)' },
+    { key: 'controversies', label: 'Controversies', items: sentiment.controversies ?? [], color: 'var(--sent-mixed-text)', dot: 'var(--sent-mixed)' },
+    { key: 'shifts', label: 'Shifts', items: sentiment.opinion_shifts ?? [], color: 'var(--accent)', dot: 'var(--accent)' },
   ] as const
 
   const totalAlerts = tabData.reduce((n, t) => n + t.items.length, 0)
@@ -384,7 +417,10 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
           {totalAlerts > 0 && (
             <span className="font-bold font-mono" style={{
               fontSize: '0.625rem',
-              color: sentiment.risk_flags?.length ? 'var(--err-text)' : 'var(--ink-tertiary)',
+              padding: '2px 7px',
+              borderRadius: 5,
+              background: sentiment.risk_flags?.length ? 'var(--sent-neg-bg)' : 'var(--surface-inset)',
+              color: sentiment.risk_flags?.length ? 'var(--sent-neg-text)' : 'var(--ink-tertiary)',
             }}>
               {totalAlerts} alert{totalAlerts !== 1 ? 's' : ''}
             </span>
@@ -430,7 +466,7 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
                       <span className="shrink-0 rounded-full" style={{
                         width: 5,
                         height: 5,
-                        background: tab.key === 'risk' ? 'var(--err)' : tab.key === 'controversies' ? 'var(--warn)' : 'var(--accent)',
+                        background: tab.dot,
                       }} />
                       <span className="font-semibold" style={{ fontSize: '0.8125rem', color: 'var(--ink)' }}>
                         {entry.topic}
@@ -451,7 +487,7 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
 }
 
 // ---------------------------------------------------------------------------
-// Widget: Sentiment Ring Gauge (SVG)
+// Widget: Sentiment Ring Gauge (SVG) — teal/rose/gray palette
 // ---------------------------------------------------------------------------
 
 function SentimentRing({ positive, neutral, negative, size = 96 }: {
@@ -479,7 +515,7 @@ function SentimentRing({ positive, neutral, negative, size = 96 }: {
       <circle cx="50" cy="50" r="45" fill="none" stroke="var(--border-subtle)" strokeWidth="6" />
       {posArc > 0 && (
         <circle cx="50" cy="50" r="45" fill="none"
-          stroke="var(--ok)" strokeWidth="6"
+          stroke="var(--sent-pos)" strokeWidth="6"
           strokeDasharray={`${posArc} ${circumference - posArc}`}
           strokeDashoffset={posOffset}
           strokeLinecap="round"
@@ -488,7 +524,7 @@ function SentimentRing({ positive, neutral, negative, size = 96 }: {
       )}
       {neuArc > 0.5 && (
         <circle cx="50" cy="50" r="45" fill="none"
-          stroke="var(--ink-tertiary)" strokeWidth="6" strokeOpacity={0.5}
+          stroke="var(--sent-neu)" strokeWidth="6" strokeOpacity={0.5}
           strokeDasharray={`${neuArc} ${circumference - neuArc}`}
           strokeDashoffset={neuOffset}
           style={{ transition: 'stroke-dasharray 600ms cubic-bezier(0.4, 0, 0.2, 1)' }}
@@ -496,7 +532,7 @@ function SentimentRing({ positive, neutral, negative, size = 96 }: {
       )}
       {negArc > 0.5 && (
         <circle cx="50" cy="50" r="45" fill="none"
-          stroke="var(--err)" strokeWidth="6"
+          stroke="var(--sent-neg)" strokeWidth="6"
           strokeDasharray={`${negArc} ${circumference - negArc}`}
           strokeDashoffset={negOffset}
           style={{ transition: 'stroke-dasharray 600ms cubic-bezier(0.4, 0, 0.2, 1)' }}
@@ -515,7 +551,7 @@ function SentimentRing({ positive, neutral, negative, size = 96 }: {
 }
 
 // ---------------------------------------------------------------------------
-// Widget: Sentiment Overview (with ring gauge)
+// Widget: Sentiment Overview (ring gauge + per-platform bars)
 // ---------------------------------------------------------------------------
 
 function SentimentWidget({ summary, report }: { summary: BriefingSummary; report: IntelReport | null }) {
@@ -525,15 +561,15 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
   if (!sentiment) return null
 
   const moodColors: Record<string, string> = {
-    bullish: 'var(--ok-text)',
-    bearish: 'var(--err-text)',
-    mixed: 'var(--warn-text)',
+    bullish: 'var(--sent-bullish-text)',
+    bearish: 'var(--sent-bearish-text)',
+    mixed: 'var(--sent-mixed-text)',
     neutral: 'var(--ink-tertiary)',
   }
   const moodDotColors: Record<string, string> = {
-    bullish: 'var(--ok)',
-    bearish: 'var(--err)',
-    mixed: 'var(--warn)',
+    bullish: 'var(--sent-bullish)',
+    bearish: 'var(--sent-bearish)',
+    mixed: 'var(--sent-mixed)',
     neutral: 'var(--ink-tertiary)',
   }
 
@@ -562,13 +598,19 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
   return (
     <Card className="dashboard-card py-4 gap-3" style={{ borderRadius: 12 }}>
       <CardContent className="px-5 flex flex-col gap-3">
-        {/* Header: mood indicator */}
+        {/* Header: mood pill */}
         <div className="flex items-center justify-between">
           <SectionLabel>Sentiment</SectionLabel>
-          <div className="flex items-center gap-1.5">
+          <div className="inline-flex items-center gap-1.5" style={{
+            padding: '2px 8px',
+            borderRadius: 6,
+            background: sentiment.overall_mood !== 'neutral'
+              ? (sentiment.overall_mood === 'bullish' ? 'var(--sent-pos-bg)' : sentiment.overall_mood === 'bearish' ? 'var(--sent-neg-bg)' : 'var(--sent-neu-bg)')
+              : 'var(--surface-inset)',
+          }}>
             <span className="rounded-full" style={{ width: 6, height: 6, background: moodDotColors[sentiment.overall_mood] ?? 'var(--ink-tertiary)' }} />
             <span className="font-semibold capitalize" style={{
-              fontSize: '0.75rem',
+              fontSize: '0.6875rem',
               color: moodColors[sentiment.overall_mood] ?? 'var(--ink-tertiary)',
             }}>
               {sentiment.overall_mood}
@@ -601,23 +643,23 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
                       {SENSOR_LABELS[source] ?? source}
                     </span>
                     <div className="flex gap-2 font-mono" style={{ fontSize: '0.625rem', color: 'var(--ink-tertiary)' }}>
-                      <span style={{ color: 'var(--ok-text)' }}>{posPct}%</span>
+                      <span style={{ color: 'var(--sent-pos-text)' }}>{posPct}%</span>
                       <span>{neuPct}%</span>
-                      <span style={{ color: 'var(--err-text)' }}>{negPct}%</span>
+                      <span style={{ color: 'var(--sent-neg-text)' }}>{negPct}%</span>
                     </div>
                   </div>
                   <div className="flex overflow-hidden" style={{ height: 6, borderRadius: 3, background: 'var(--border-subtle)', gap: 1 }}>
                     {posPct > 0 && (
                       <div title={`${counts.positive} positive (${posPct}%)`}
-                        style={{ width: `${posPct}%`, background: 'var(--ok)', transition: 'width 400ms ease' }} />
+                        style={{ width: `${posPct}%`, background: 'var(--sent-pos)', transition: 'width 400ms ease' }} />
                     )}
                     {neuPct > 0 && (
                       <div title={`${counts.neutral} neutral (${neuPct}%)`}
-                        style={{ width: `${neuPct}%`, background: 'var(--ink-tertiary)', opacity: 0.3, transition: 'width 400ms ease' }} />
+                        style={{ width: `${neuPct}%`, background: 'var(--sent-neu)', opacity: 0.4, transition: 'width 400ms ease' }} />
                     )}
                     {negPct > 0 && (
                       <div title={`${counts.negative} negative (${negPct}%)`}
-                        style={{ width: `${negPct}%`, background: 'var(--err)', transition: 'width 400ms ease' }} />
+                        style={{ width: `${negPct}%`, background: 'var(--sent-neg)', transition: 'width 400ms ease' }} />
                     )}
                   </div>
                 </div>
@@ -655,26 +697,38 @@ function CategoryDistributionWidget({ report }: { report: IntelReport }) {
   return (
     <Card className="dashboard-card py-4 gap-3" style={{ borderRadius: 12 }}>
       <CardContent className="px-5 flex flex-col gap-3">
-        <SectionLabel>Distribution</SectionLabel>
+        <div className="flex items-center justify-between">
+          <SectionLabel>Distribution</SectionLabel>
+          <span className="font-mono" style={{ fontSize: '0.625rem', color: 'var(--ink-tertiary)' }}>{total} items</span>
+        </div>
         {/* Segmented bar */}
-        <div className="flex overflow-hidden" style={{ height: 8, borderRadius: 4, gap: 1 }}>
+        <div className="flex overflow-hidden" style={{ height: 10, borderRadius: 5, gap: 2 }}>
           {segments.map(seg => seg.count > 0 ? (
-            <div key={seg.key} style={{
-              width: `${(seg.count / total) * 100}%`,
-              background: seg.color,
-              transition: 'width 500ms cubic-bezier(0.4, 0, 0.2, 1)',
-            }} />
+            <motion.div key={seg.key}
+              initial={{ width: 0 }}
+              animate={{ width: `${(seg.count / total) * 100}%` }}
+              transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+              style={{
+                background: seg.color,
+                borderRadius: 5,
+              }}
+            />
           ) : null)}
         </div>
-        {/* Legend */}
-        <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-          {segments.map(seg => (
-            <div key={seg.key} className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: seg.color }} />
-              <span style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)' }}>{seg.label}</span>
-              <span className="font-semibold font-mono ml-auto" style={{ fontSize: '0.625rem', color: 'var(--ink)' }}>{seg.count}</span>
-            </div>
-          ))}
+        {/* Legend with percentages */}
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+          {segments.map(seg => {
+            const pct = Math.round((seg.count / total) * 100)
+            return (
+              <div key={seg.key} className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: seg.color }} />
+                <span style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)' }}>{seg.label}</span>
+                <span className="font-semibold font-mono ml-auto" style={{ fontSize: '0.625rem', color: 'var(--ink)' }}>
+                  {seg.count} <span style={{ color: 'var(--ink-tertiary)' }}>({pct}%)</span>
+                </span>
+              </div>
+            )
+          })}
         </div>
       </CardContent>
     </Card>
@@ -791,32 +845,121 @@ function SourceHealthWidget({ report }: { report: IntelReport }) {
   if (all.length === 0) return null
 
   const hasFailed = report.sources_failed.length > 0
+  const healthPct = Math.round((report.sources_ok.length / all.length) * 100)
 
   return (
     <Card className="dashboard-card py-4 gap-3" style={{ borderRadius: 12 }}>
-      <CardContent className="px-5 flex flex-col gap-2">
+      <CardContent className="px-5 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <SectionLabel>Source Health</SectionLabel>
-          <span className="font-mono" style={{
+          <span className="font-mono font-semibold" style={{
             fontSize: '0.625rem',
-            color: hasFailed ? 'var(--err-text)' : 'var(--ok-text)',
+            padding: '2px 7px',
+            borderRadius: 5,
+            background: hasFailed ? 'var(--sent-neg-bg)' : 'var(--sent-pos-bg)',
+            color: hasFailed ? 'var(--sent-neg-text)' : 'var(--sent-pos-text)',
           }}>
-            {report.sources_ok.length}/{all.length} operational
+            {healthPct}% operational
           </span>
         </div>
-        <div className="flex flex-wrap gap-2">
+        {/* Health bar */}
+        <div className="flex overflow-hidden" style={{ height: 4, borderRadius: 2, background: 'var(--border-subtle)' }}>
+          <div style={{
+            width: `${healthPct}%`,
+            background: hasFailed ? 'var(--sent-mixed)' : 'var(--sent-pos)',
+            transition: 'width 400ms ease',
+            borderRadius: 2,
+          }} />
+        </div>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
           {all.map(source => (
             <div key={source} title={`${SENSOR_LABELS[source] ?? source}: ${okSet.has(source) ? 'OK' : 'Failed'}`}
-              className="flex items-center gap-1">
-              <span className="rounded-full" style={{
-                width: 8,
-                height: 8,
-                background: okSet.has(source) ? 'var(--ok)' : 'var(--err)',
+              className="flex items-center gap-1.5">
+              <span className="rounded-full shrink-0" style={{
+                width: 7,
+                height: 7,
+                background: okSet.has(source) ? 'var(--sent-pos)' : 'var(--sent-neg)',
               }} />
-              <span className="font-mono" style={{ fontSize: '0.625rem', color: 'var(--ink-secondary)' }}>
-                {(SENSOR_LABELS[source] ?? source).slice(0, 12)}
+              <span className="font-mono truncate" style={{ fontSize: '0.625rem', color: 'var(--ink-secondary)' }}>
+                {(SENSOR_LABELS[source] ?? source).slice(0, 14)}
               </span>
             </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Widget: Latest Items
+// ---------------------------------------------------------------------------
+
+function LatestItemsWidget({ report }: { report: IntelReport }) {
+  const allItems: IntelItem[] = Object.values(report.items).flat()
+  const sorted = allItems
+    .filter(i => i.published_at)
+    .sort((a, b) => new Date(b.published_at!).getTime() - new Date(a.published_at!).getTime())
+    .slice(0, 5)
+
+  if (sorted.length === 0) return null
+
+  return (
+    <Card className="dashboard-card py-4 gap-3" style={{ borderRadius: 12 }}>
+      <CardContent className="px-5 flex flex-col gap-0">
+        <div className="flex items-center justify-between mb-2">
+          <SectionLabel>Latest</SectionLabel>
+          <span className="font-mono" style={{ fontSize: '0.625rem', color: 'var(--ink-tertiary)' }}>
+            {sorted[0] ? timeAgo(sorted[0].published_at!) : ''}
+          </span>
+        </div>
+        <div className="flex flex-col">
+          {sorted.map((item, idx) => (
+            <a
+              key={item.id}
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-start gap-2.5 no-underline rounded-lg"
+              style={{
+                padding: '8px 6px',
+                margin: '0 -6px',
+                transition: 'background 150ms ease',
+                ...(idx < sorted.length - 1 ? { borderBottom: '1px solid var(--border-subtle)' } : {}),
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-inset)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
+            >
+              <span className="shrink-0 mt-1.5 rounded-full" style={{
+                width: 6,
+                height: 6,
+                background: 'var(--accent)',
+                opacity: 1 - idx * 0.15,
+              }} />
+              <div className="flex-1 min-w-0">
+                <div className="font-medium" style={{
+                  fontSize: '0.8125rem',
+                  color: 'var(--ink)',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  lineHeight: 1.4,
+                }}>
+                  {item.title}
+                </div>
+                <div className="flex items-center gap-1.5 mt-0.5" style={{ fontSize: '0.625rem', color: 'var(--ink-tertiary)' }}>
+                  <span className="font-medium" style={{
+                    padding: '1px 5px',
+                    borderRadius: 3,
+                    background: 'var(--surface-inset)',
+                  }}>
+                    {SENSOR_LABELS[item.source] ?? item.source}
+                  </span>
+                  <span>{item.published_at ? timeAgo(item.published_at) : ''}</span>
+                </div>
+              </div>
+            </a>
           ))}
         </div>
       </CardContent>
@@ -861,7 +1004,7 @@ function TrendingWidget({ report }: { report: IntelReport }) {
             const v = item.velocity!
             const pctStr = v.changePercent != null ? `${v.changePercent > 0 ? '+' : ''}${v.changePercent}%` : null
             const pctColor = v.changePercent != null
-              ? v.changePercent > 0 ? 'var(--ok-text)' : v.changePercent < 0 ? 'var(--err-text)' : 'var(--ink-tertiary)'
+              ? v.changePercent > 0 ? 'var(--sent-pos-text)' : v.changePercent < 0 ? 'var(--sent-neg-text)' : 'var(--ink-tertiary)'
               : 'var(--ink-tertiary)'
             const displayTitle = item.source === 'github'
               ? item.title.split(' — ')[0]
@@ -989,9 +1132,9 @@ function SectionSummariesWidget({ summary }: { summary: BriefingSummary }) {
 
 function DashboardSkeleton() {
   return (
-    <div className="dashboard-grid">
+    <div>
       {/* Ticker skeleton */}
-      <div className="dashboard-span-full flex gap-4 px-5" style={{
+      <div className="flex gap-4 px-5" style={{
         height: 40,
         alignItems: 'center',
         background: 'var(--surface)',
@@ -1003,84 +1146,72 @@ function DashboardSkeleton() {
         <div className="skeleton-shimmer" style={{ width: 96, height: 10 }} />
         <div className="skeleton-shimmer" style={{ width: 64, height: 10 }} />
       </div>
-      {/* Stats strip skeleton */}
-      <div className="dashboard-span-full overflow-hidden" style={{
-        background: 'var(--surface)',
-        borderRadius: 12,
-        boxShadow: 'var(--shadow-card)',
-      }}>
-        <div className="grid grid-cols-2 md:grid-cols-4">
-          {[0, 1, 2, 3].map(i => (
-            <div key={i} className={cn(
-              'flex flex-col items-center gap-1.5',
-              i % 2 === 0 && 'border-r',
-              i < 2 && 'border-b md:border-b-0',
-              i === 2 && 'md:border-r',
-            )} style={{
-              padding: '16px 20px',
-              borderColor: 'var(--border-subtle)',
-            }}>
-              <div className="skeleton-shimmer" style={{ width: 48, height: 24 }} />
-              <div className="skeleton-shimmer" style={{ width: 36, height: 8 }} />
+      <div className="dashboard-layout" style={{ marginTop: 14 }}>
+        {/* Main skeleton */}
+        <div className="dashboard-main flex flex-col" style={{ gap: 14 }}>
+          {/* Stats strip skeleton */}
+          <div className="overflow-hidden" style={{
+            background: 'var(--surface)',
+            borderRadius: 12,
+            boxShadow: 'var(--shadow-card)',
+          }}>
+            <div className="grid grid-cols-2 md:grid-cols-4">
+              {[0, 1, 2, 3].map(i => (
+                <div key={i} className={cn(
+                  'flex flex-col items-center gap-1.5',
+                  i % 2 === 0 && 'border-r',
+                  i < 2 && 'border-b md:border-b-0',
+                  i === 2 && 'md:border-r',
+                )} style={{
+                  padding: '16px 20px',
+                  borderColor: 'var(--border-subtle)',
+                }}>
+                  <div className="skeleton-shimmer" style={{ width: 48, height: 24 }} />
+                  <div className="skeleton-shimmer" style={{ width: 36, height: 8 }} />
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
+          {/* Exec summary skeleton */}
+          <div className="flex flex-col gap-2" style={{
+            background: 'var(--surface)',
+            borderRadius: 12,
+            boxShadow: 'var(--shadow-card)',
+            borderLeft: '3px solid var(--accent)',
+            padding: 20,
+          }}>
+            <div className="skeleton-shimmer" style={{ width: 96, height: 10 }} />
+            <div className="skeleton-shimmer" style={{ width: '95%', height: 12 }} />
+            <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+            <div className="skeleton-shimmer" style={{ width: '70%', height: 12 }} />
+          </div>
+          {/* Content cards */}
+          <Card className="py-4" style={{ borderRadius: 12 }}><CardContent className="px-5 flex flex-col gap-2">
+            <div className="skeleton-shimmer" style={{ width: 80, height: 10 }} />
+            <div className="skeleton-shimmer" style={{ width: '100%', height: 16 }} />
+            <div className="skeleton-shimmer" style={{ width: '80%', height: 12 }} />
+            <div className="skeleton-shimmer" style={{ width: '60%', height: 12 }} />
+          </CardContent></Card>
+          <Card className="py-4" style={{ borderRadius: 12 }}><CardContent className="px-5 flex flex-col gap-2">
+            <div className="skeleton-shimmer" style={{ width: 112, height: 10 }} />
+            <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+            <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+            <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+          </CardContent></Card>
+        </div>
+        {/* Sidebar skeleton */}
+        <div className="dashboard-sidebar flex flex-col" style={{ gap: 14 }}>
+          <Card className="py-4" style={{ borderRadius: 12 }}><CardContent className="px-5 flex flex-col gap-2">
+            <div className="skeleton-shimmer" style={{ width: 64, height: 10 }} />
+            <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+            <div className="skeleton-shimmer" style={{ width: '70%', height: 12 }} />
+          </CardContent></Card>
+          <Card className="py-4" style={{ borderRadius: 12 }}><CardContent className="px-5 flex flex-col gap-2">
+            <div className="skeleton-shimmer" style={{ width: 80, height: 10 }} />
+            <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+          </CardContent></Card>
         </div>
       </div>
-      {/* Exec summary skeleton */}
-      <div className="dashboard-span-2 flex flex-col gap-2" style={{
-        background: 'var(--surface)',
-        borderRadius: 12,
-        boxShadow: 'var(--shadow-card)',
-        borderLeft: '3px solid var(--accent)',
-        padding: '20px 24px',
-      }}>
-        <div className="skeleton-shimmer" style={{ width: 96, height: 10 }} />
-        <div className="skeleton-shimmer" style={{ width: '95%', height: 12 }} />
-        <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-        <div className="skeleton-shimmer" style={{ width: '70%', height: 12 }} />
-      </div>
-      {/* Intel panel skeleton */}
-      <Card className="py-4" style={{ borderRadius: 12 }}><CardContent className="px-5 flex flex-col gap-2">
-        <div className="skeleton-shimmer" style={{ width: 80, height: 10 }} />
-        <div className="skeleton-shimmer" style={{ width: '100%', height: 16 }} />
-        <div className="skeleton-shimmer" style={{ width: '80%', height: 12 }} />
-        <div className="skeleton-shimmer" style={{ width: '90%', height: 12 }} />
-        <div className="skeleton-shimmer" style={{ width: '60%', height: 12 }} />
-      </CardContent></Card>
-      {/* Cards */}
-      <Card className="py-4" style={{ borderRadius: 12 }}><CardContent className="px-5 flex flex-col gap-2">
-        <div className="skeleton-shimmer" style={{ width: 80, height: 10 }} />
-        <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-        <div className="skeleton-shimmer" style={{ width: '80%', height: 12 }} />
-        <div className="skeleton-shimmer" style={{ width: '60%', height: 12 }} />
-      </CardContent></Card>
-      <Card className="py-4" style={{ borderRadius: 12 }}><CardContent className="px-5 flex flex-col gap-2">
-        <div className="skeleton-shimmer" style={{ width: 64, height: 10 }} />
-        <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-        <div className="skeleton-shimmer" style={{ width: '70%', height: 12 }} />
-      </CardContent></Card>
-      <Card className="py-4" style={{ borderRadius: 12 }}><CardContent className="px-5 flex flex-col gap-2">
-        <div className="skeleton-shimmer" style={{ width: 80, height: 10 }} />
-        <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-        <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-        <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-        <div className="skeleton-shimmer" style={{ width: '80%', height: 12 }} />
-        <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-      </CardContent></Card>
-      {/* Heatmap skeleton */}
-      <Card className="dashboard-span-2 py-4" style={{ borderRadius: 12 }}><CardContent className="px-5 flex flex-col gap-2">
-        <div className="skeleton-shimmer" style={{ width: 112, height: 10 }} />
-        <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-        <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-        <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-        <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-      </CardContent></Card>
-      {/* Section skeletons */}
-      <Card className="dashboard-span-full py-4" style={{ borderRadius: 12 }}><CardContent className="px-5 flex flex-col gap-2">
-        <div className="skeleton-shimmer" style={{ width: 128, height: 10 }} />
-        <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-        <div className="skeleton-shimmer" style={{ width: '90%', height: 12 }} />
-      </CardContent></Card>
     </div>
   )
 }
@@ -1144,7 +1275,7 @@ export function Dashboard() {
   const hasSummary = summary && isStructuredOverall(summary.overall) && !!summary.overall.executive_summary
 
   return (
-    <div className="dashboard-root mx-auto" style={{ padding: 24, maxWidth: 1440 }}>
+    <div className="dashboard-root page-padding" style={{ maxWidth: 1024, margin: '0 auto', padding: '0 3rem' }}>
       <style>{PULSE_CSS}</style>
 
       <AnimatePresence mode="wait">
@@ -1171,83 +1302,97 @@ export function Dashboard() {
           </motion.div>
         ) : (
           <motion.div key="content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
-            <div className="dashboard-grid">
-              {/* Status Ticker */}
-              <StaggerChild index={0} className="dashboard-span-full">
-                <StatusTicker
-                  report={report}
-                  summary={summary}
-                  pipelineStatus={pipelineStatus}
-                  summaryProgress={summaryProgress}
-                />
-              </StaggerChild>
+            {/* Status Ticker — full width above the two-column layout */}
+            <StaggerChild index={0}>
+              <StatusTicker
+                report={report}
+                summary={summary}
+                pipelineStatus={pipelineStatus}
+                summaryProgress={summaryProgress}
+              />
+            </StaggerChild>
 
-              {/* Stats Strip */}
-              <StaggerChild index={1} className="dashboard-span-full">
-                <StatsStrip report={report} summary={summary} />
-              </StaggerChild>
-
-              {/* Executive Summary (span 2) */}
-              {summary && (
-                <StaggerChild index={2} className="dashboard-span-2">
-                  <ExecSummaryWidget summary={summary} />
+            {/* Two-column layout: main content + right sidebar on xl screens */}
+            <div className="dashboard-layout" style={{ marginTop: 14 }}>
+              {/* ── Main Content Column ── */}
+              <div className="dashboard-main flex flex-col" style={{ gap: 14 }}>
+                {/* Stats Strip */}
+                <StaggerChild index={1}>
+                  <StatsStrip report={report} summary={summary} />
                 </StaggerChild>
-              )}
 
-              {/* Risk & Intel Panel */}
-              {summary && (
-                <StaggerChild index={3}>
-                  <RiskIntelPanel summary={summary} />
-                </StaggerChild>
-              )}
+                {/* Executive Summary */}
+                {summary && (
+                  <StaggerChild index={2}>
+                    <ExecSummaryWidget summary={summary} />
+                  </StaggerChild>
+                )}
 
-              {/* Sentiment */}
-              {summary && (
-                <StaggerChild index={4}>
-                  <SentimentWidget summary={summary} report={report} />
-                </StaggerChild>
-              )}
+                {/* Risk & Intel Panel */}
+                {summary && (
+                  <StaggerChild index={3}>
+                    <RiskIntelPanel summary={summary} />
+                  </StaggerChild>
+                )}
 
-              {/* Category Distribution */}
-              {report && (
-                <StaggerChild index={5}>
-                  <CategoryDistributionWidget report={report} />
-                </StaggerChild>
-              )}
+                {/* Latest Items */}
+                {report && (
+                  <StaggerChild index={5}>
+                    <LatestItemsWidget report={report} />
+                  </StaggerChild>
+                )}
 
-              {/* Trending */}
-              {report && (
-                <StaggerChild index={6}>
-                  <TrendingWidget report={report} />
-                </StaggerChild>
-              )}
+                {/* Trending */}
+                {report && (
+                  <StaggerChild index={6}>
+                    <TrendingWidget report={report} />
+                  </StaggerChild>
+                )}
 
-              {/* Source Activity Heatmap (span 2) */}
-              {report && (
-                <StaggerChild index={7} className="dashboard-span-2">
-                  <SourceActivityWidget report={report} />
-                </StaggerChild>
-              )}
+                {/* Source Activity Heatmap */}
+                {report && (
+                  <StaggerChild index={7}>
+                    <SourceActivityWidget report={report} />
+                  </StaggerChild>
+                )}
 
-              {/* Section Summaries (full span) */}
-              {summary && (
-                <StaggerChild index={8} className="dashboard-span-full">
-                  <SectionSummariesWidget summary={summary} />
-                </StaggerChild>
-              )}
+                {/* Section Summaries */}
+                {summary && (
+                  <StaggerChild index={8}>
+                    <SectionSummariesWidget summary={summary} />
+                  </StaggerChild>
+                )}
 
-              {/* Source Health */}
-              {report && (
-                <StaggerChild index={9}>
-                  <SourceHealthWidget report={report} />
-                </StaggerChild>
-              )}
+                {/* Link to full feed */}
+                <div className="text-center pt-0.5 pb-1">
+                  <Link href="/data" className="font-medium no-underline hover:underline" style={{ fontSize: '0.75rem', color: 'var(--accent)' }}>
+                    View full feed &#8250;
+                  </Link>
+                </div>
+              </div>
 
-              {/* Link to full feed */}
-              <div className="dashboard-span-full text-center pt-0.5 pb-1">
-                <Link href="/data" className="font-medium no-underline hover:underline" style={{ fontSize: '0.75rem', color: 'var(--accent)' }}>
-                  View full feed &#8250;
-                </Link>
+              {/* ── Right Sidebar (visible on xl screens, stacks below on smaller) ── */}
+              <div className="dashboard-sidebar flex flex-col" style={{ gap: 14 }}>
+                {/* Sentiment */}
+                {summary && (
+                  <StaggerChild index={4}>
+                    <SentimentWidget summary={summary} report={report} />
+                  </StaggerChild>
+                )}
+
+                {/* Category Distribution */}
+                {report && (
+                  <StaggerChild index={9}>
+                    <CategoryDistributionWidget report={report} />
+                  </StaggerChild>
+                )}
+
+                {/* Source Health */}
+                {report && (
+                  <StaggerChild index={10}>
+                    <SourceHealthWidget report={report} />
+                  </StaggerChild>
+                )}
               </div>
             </div>
           </motion.div>

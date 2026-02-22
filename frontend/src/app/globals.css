@@ -665,6 +665,19 @@ input[type="range"]::-moz-range-thumb {
     padding-right: 0.75rem !important;
   }
 
+  /* ── Sources page — sensor row stacks on mobile ── */
+  .sensor-row {
+    flex-wrap: wrap !important;
+    padding: 0.75rem 1rem !important;
+    gap: 0.5rem !important;
+  }
+  .sensor-row-left {
+    flex: 1 1 100% !important;
+  }
+  .sensor-row-right {
+    padding-left: 3.25rem;
+  }
+
   /* ── Dashboard mobile overrides ── */
   .dashboard-root {
     padding: 0.75rem !important;

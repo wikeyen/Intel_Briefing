@@ -146,7 +146,7 @@ export function AiSummary() {
   const isEnabled = summaryProvider !== null
 
   return (
-    <section id="ai-summary" style={{ maxWidth: 1024, margin: '0 auto', padding: '0 3rem' }} className="page-padding">
+    <section id="ai-summary">
 
       {/* ── Page Header ─────────────────────────────────────── */}
       <div className="page-header" style={{ paddingTop: '2.5rem', paddingBottom: '1.5rem' }}>

@@ -248,7 +248,7 @@ export function Status() {
       <style dangerouslySetInnerHTML={{ __html: COMMAND_BAR_CSS + STATUS_STRIP_CSS }} />
 
       {staleInfo && !isRunning && (
-        <div className="page-padding" style={{ maxWidth: 1024, margin: '0 auto', width: '100%', padding: '0.5rem 3rem 0' }}>
+        <div style={{ maxWidth: 1024, margin: '0 auto', width: '100%', padding: '0.5rem 0.75rem 0' }}>
           <StaleProcessBanner
             stale={staleInfo}
             onAbort={handleAbortStale}

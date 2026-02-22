@@ -136,7 +136,7 @@ export function Pipeline() {
   }
 
   return (
-    <section id="pipeline" style={{ maxWidth: 1024, margin: '0 auto', padding: '0 3rem' }} className="page-padding">
+    <section id="pipeline">
 
       <div className="page-header" style={{ paddingTop: '2.5rem', paddingBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

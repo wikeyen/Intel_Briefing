@@ -120,8 +120,8 @@ export function ApiKeys() {
   const inputStyle: React.CSSProperties = { ...inputBase, fontFamily: 'inherit' }
 
   return (
-    <section id="api-keys" style={{ maxWidth: 1024, margin: '0 auto', padding: '0 3rem' }} className="page-padding">
-      <div className="page-padding page-header" style={{ paddingTop: '2.5rem', paddingBottom: '1.5rem' }}>
+    <section id="api-keys">
+      <div className="page-header" style={{ paddingTop: '2.5rem', paddingBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{
             fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink)',

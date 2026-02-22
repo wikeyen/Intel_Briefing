@@ -343,8 +343,8 @@ export function Sensors() {
 
   if (!loaded) {
     return (
-      <div style={{ maxWidth: 1024, margin: '0 auto', width: '100%' }}>
-        <div className="page-padding page-header" style={{ paddingTop: '2.5rem', paddingBottom: '1.5rem', paddingLeft: '3rem', paddingRight: '3rem' }}>
+      <div>
+        <div className="page-header" style={{ paddingTop: '2.5rem', paddingBottom: '1.5rem' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.01em', marginBottom: '0.25rem' }}>
             Sources
           </h2>
@@ -352,7 +352,7 @@ export function Sensors() {
             Active data sources for your pipeline.
           </p>
         </div>
-        <div className="page-padding" style={{ paddingLeft: '3rem', paddingRight: '3rem', paddingBottom: '4rem' }}>
+        <div style={{ paddingBottom: '4rem' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <SkeletonCard lines={4} />
             <SkeletonCard lines={5} />
@@ -364,10 +364,10 @@ export function Sensors() {
   }
 
   return (
-    <div style={{ maxWidth: 1024, margin: '0 auto', width: '100%' }}>
+    <div>
       <style dangerouslySetInnerHTML={{ __html: HIDE_SPINNERS_CSS }} />
 
-      <div className="page-padding page-header" style={{ paddingTop: '2.5rem', paddingBottom: '1.5rem', paddingLeft: '3rem', paddingRight: '3rem' }}>
+      <div className="page-header" style={{ paddingTop: '2.5rem', paddingBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.01em', marginBottom: '0.25rem' }}>
             Sources
@@ -379,7 +379,7 @@ export function Sensors() {
         </p>
       </div>
 
-      <div className="page-padding" style={{ paddingLeft: '3rem', paddingRight: '3rem', paddingBottom: '4rem' }}>
+      <div style={{ paddingBottom: '4rem' }}>
 
         {/* Language tabs */}
         <div style={{
@@ -461,6 +461,7 @@ export function Sensors() {
                     <div key={key}>
                       {/* Sensor row — toggle, label, inline pills, badge */}
                       <div
+                        className="sensor-row"
                         style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -473,7 +474,7 @@ export function Sensors() {
                         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)' }}
                       >
                         {/* Left: toggle + label */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flex: 1, minWidth: 0 }}>
+                        <div className="sensor-row-left" style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flex: 1, minWidth: 0 }}>
                           <Toggle on={isOn} onClick={() => toggle(key)} />
                           <div style={{ minWidth: 0 }}>
                             <div style={{
@@ -491,7 +492,7 @@ export function Sensors() {
                         </div>
 
                         {/* Right: inline pill controls + badge */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                        <div className="sensor-row-right" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
                           {isOn && (
                             <PillInput
                               label="Items"

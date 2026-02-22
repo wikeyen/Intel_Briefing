@@ -140,46 +140,64 @@ export function FeedSkeleton({ count = 5 }: { count?: number }) {
   )
 }
 
-/** Skeleton layout for the status page — action bar + sensor table. */
+/** Skeleton layout for the status page — status strip + sensor card grid. */
 export function StatusSkeleton() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      {/* Action bar skeleton */}
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      {/* Status strip skeleton */}
       <div style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: 8,
-        padding: '1.25rem',
         display: 'flex',
         alignItems: 'center',
-        gap: '1rem',
+        gap: '1.5rem',
+        padding: '0 3rem',
+        minHeight: 52,
+        maxWidth: 1024,
+        margin: '0 auto',
+        width: '100%',
+        borderBottom: '1px solid var(--border)',
       }}>
-        <Skeleton width={10} height={10} borderRadius={5} />
-        <Skeleton width={120} height={14} />
-        <div style={{ flex: 1 }} />
-        <Skeleton width={100} height={32} borderRadius={6} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Skeleton width={8} height={8} borderRadius={4} />
+          <Skeleton width={60} height={12} />
+        </div>
+        <Skeleton width={80} height={12} />
+        <Skeleton width={60} height={12} />
+        <div style={{ marginLeft: 'auto' }}>
+          <Skeleton width={90} height={12} />
+        </div>
       </div>
 
-      {/* Sensor table skeleton */}
-      <div style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: 8,
-        overflow: 'hidden',
+      {/* Sensor card grid skeleton */}
+      <div className="sensor-grid" style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: '0.75rem',
+        flex: 1,
+        alignContent: 'start',
+        padding: '1rem 3rem',
+        maxWidth: 1024,
+        margin: '0 auto',
+        width: '100%',
       }}>
-        {Array.from({ length: 8 }, (_, i) => (
+        {Array.from({ length: 12 }, (_, i) => (
           <div key={i} style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            padding: '1rem',
+            minHeight: 110,
             display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            padding: '0.75rem 1.25rem',
-            borderBottom: i < 7 ? '1px solid var(--border-soft)' : 'none',
+            flexDirection: 'column',
+            gap: '0.5rem',
           }}>
-            <Skeleton width={14} height={14} borderRadius={3} />
-            <Skeleton width={100 + (i % 3) * 30} height={13} />
-            <div style={{ flex: 1 }} />
-            <Skeleton width={50} height={10} />
-            <Skeleton width={40} height={10} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Skeleton width={6} height={6} borderRadius={3} />
+              <Skeleton width={80 + (i % 3) * 20} height={13} />
+            </div>
+            <Skeleton width={60} height={10} />
+            <div style={{ marginTop: 'auto' }}>
+              <Skeleton width={50 + (i % 2) * 20} height={14} />
+            </div>
           </div>
         ))}
       </div>

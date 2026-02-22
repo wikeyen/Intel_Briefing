@@ -618,22 +618,41 @@ input[type="range"]::-moz-range-thumb {
     box-shadow: var(--shadow-md) !important;
   }
 
-  /* ── Status action bar — show run controls on mobile ── */
-  .status-action-bar {
-    display: flex !important;
-    align-items: center !important;
-    margin-bottom: 1rem !important;
+  /* ── Status page — mission control responsive ── */
+  .status-strip {
+    padding-left: 1.25rem !important;
+    padding-right: 1.25rem !important;
+    gap: 0.75rem !important;
+    flex-wrap: wrap;
+    min-height: 44px !important;
   }
-  .status-action-bar > div:first-child h2 {
-    display: none !important;
-  }
-  .status-action-bar > div:first-child p {
-    font-size: 0.75rem !important;
+  .status-strip-metrics {
+    gap: 0.75rem !important;
+    flex-wrap: wrap;
   }
 
-  /* ── Status section top padding ── */
+  .sensor-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    padding: 0.75rem 1.25rem !important;
+    padding-bottom: calc(56px + 1rem + env(safe-area-inset-bottom)) !important;
+  }
+
+  .command-bar {
+    left: 0 !important;
+  }
+  .command-bar-center {
+    display: none !important;
+  }
+  .command-bar-left {
+    max-width: 50%;
+    overflow: hidden;
+  }
+  .command-bar-left span[style*="italic"] {
+    display: none !important;
+  }
+
   #status {
-    padding-top: 1.5rem !important;
+    padding-top: 0 !important;
   }
 
   /* ── Settings/Config mobile grid ── */

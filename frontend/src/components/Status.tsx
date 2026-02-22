@@ -1,15 +1,15 @@
-// ABOUTME: Pipeline status dashboard — shows health, last run results, per-sensor outcomes, and section item counts.
-// ABOUTME: Polls health every 10s; when running, polls /fetch/status every 2s for live sensor progress.
+// ABOUTME: Mission control Status page — fixed-viewport command center with real-time telemetry.
+// ABOUTME: Orchestrates StatusStrip (Zone 1), SensorGrid (Zone 2), and CommandBar (Zone 3).
 'use client'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { api } from '@/api/client'
 import type { HealthResponse, IntelReport, ConfigSettings, PipelineStatus, SensorJobProgress, RunMode } from '@/api/client'
 import { useToast } from '@/lib/toast-context'
-import { ActionBar } from './status/ActionBar'
-import type { Phase } from './status/ActionBar'
-import { SensorTable } from './status/SensorTable'
-import { SENSOR_LABEL_MAP, SECTION_SENSORS } from './status/constants'
-import { ScheduleFooter } from './status/ScheduleFooter'
+import { StatusStrip } from './status/StatusStrip'
+import type { Phase } from './status/StatusStrip'
+import { SensorGrid } from './status/SensorGrid'
+import { CommandBar, COMMAND_BAR_CSS } from './status/CommandBar'
+import { SECTION_SENSORS } from './status/constants'
 import { StaleProcessBanner, detectStale } from './StaleProcessBanner'
 import { StatusSkeleton } from './Skeleton'
 
@@ -24,8 +24,8 @@ export function Status() {
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null)
   const [, setTick]                   = useState(0)
   const [selectedSensors, setSelectedSensors] = useState<Set<string>>(new Set())
+  const [dismissed, setDismissed]     = useState<Set<string>>(new Set())
   const lastFetchedAtRef              = useRef<string | null>(null)
-  // Track when last trigger was sent — prevents clearing `running` before pipeline starts
   const triggerTimeRef                = useRef(0)
 
   const toggleSensorSelect = useCallback((sensor: string) => {
@@ -37,14 +37,12 @@ export function Status() {
     })
   }, [])
 
-  // All enabled sensor keys (flattened from SECTION_SENSORS, excluding disabled)
   const allEnabledSensors = useMemo(() => {
     return SECTION_SENSORS.flatMap(s => s.sensors).filter(
       name => config?.sensors_enabled[name] !== false,
     )
   }, [config])
 
-  // Failed sensor keys — derived from report to match what the table displays
   const failedSensors = useMemo(() => {
     if (!report) return []
     return report.sources_failed
@@ -54,15 +52,10 @@ export function Status() {
   const selectNone = useCallback(() => setSelectedSensors(new Set()), [])
   const selectFailed = useCallback(() => setSelectedSensors(new Set(failedSensors)), [failedSensors])
 
-  const toggleSection = useCallback((sensors: string[]) => {
-    setSelectedSensors(prev => {
-      const allSelected = sensors.every(s => prev.has(s))
+  const dismissSensor = useCallback((sensor: string) => {
+    setDismissed(prev => {
       const next = new Set(prev)
-      if (allSelected) {
-        for (const s of sensors) next.delete(s)
-      } else {
-        for (const s of sensors) next.add(s)
-      }
+      next.add(sensor)
       return next
     })
   }, [])
@@ -73,16 +66,13 @@ export function Status() {
     api.getConfig().then(setConfig).catch(() => {})
   }
 
-  // Tick every second so timeAgo() updates live
   useEffect(() => {
     const iv = setInterval(() => setTick(t => t + 1), 1_000)
     return () => clearInterval(iv)
   }, [])
 
-  // Poll health every 10s; detect new data by comparing fetched_at
   useEffect(() => {
     loadAll()
-
     const iv = setInterval(() => {
       api.health().then(h => {
         setHealth(h)
@@ -94,20 +84,14 @@ export function Status() {
         }
       }).catch(() => {})
     }, 10_000)
-
     return () => clearInterval(iv)
   }, [])
 
-  // Poll pipeline status — fast (3s) when running, slow (15s) when idle.
-  // Idle polling detects jobs triggered from other tabs or scheduled runs.
   const isRunningOrTriggered = running || !!(pipelineStatus?.running && pipelineStatus.alive)
   useEffect(() => {
     const check = () => {
       api.getPipelineStatus().then(s => {
         setPipelineStatus(s)
-        // Clear local running flag when the pipeline has actually stopped.
-        // Grace period after trigger: the pipeline starts via after() so there's
-        // a brief window where the DB shows not-running before the new run begins.
         if (!s.running) {
           const sinceTrigger = Date.now() - triggerTimeRef.current
           if (sinceTrigger > 5_000) {
@@ -131,9 +115,10 @@ export function Status() {
       triggerTimeRef.current = Date.now()
       setRunning(true)
       setSelectedSensors(new Set())
+      setDismissed(new Set())
       const labels = { fetch: 'Fetch', summarize: 'Summarize', fetch_summarize: 'Fetch + Summarize' }
       const suffix = sensors?.length ? ` (${sensors.length} sensor${sensors.length > 1 ? 's' : ''})` : ''
-      showToast(`${labels[mode]}${suffix} triggered — results will appear shortly`)
+      showToast(`${labels[mode]}${suffix} triggered`)
     } catch (e) {
       showToast('Trigger failed: ' + (e as Error).message)
     } finally {
@@ -152,27 +137,31 @@ export function Status() {
     }
   }
 
-  // Detect stale processes (running in DB but no in-memory controller)
+  const handleSkipRetries = async () => {
+    try {
+      await api.resumePipeline('proceed')
+      api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
+    } catch (e) {
+      showToast('Failed: ' + (e as Error).message)
+    }
+  }
+
+  const handleRetrySensor = async (sensor: string) => {
+    const mode: RunMode = 'fetch_summarize'
+    await handleRun(mode, [sensor])
+  }
+
   const staleInfo = detectStale(null, pipelineStatus)
 
   const handleAbortStale = async () => {
-    try {
-      await api.stopPipeline()
-    } catch {
-      // 404 = already cleared
-    }
-    try {
-      const s = await api.getPipelineStatus()
-      setPipelineStatus(s)
-    } catch { /* ignore */ }
+    try { await api.stopPipeline() } catch { /* 404 = already cleared */ }
+    try { const s = await api.getPipelineStatus(); setPipelineStatus(s) } catch { /* ignore */ }
   }
 
   const handleResumeStale = async () => {
     await handleAbortStale()
-    // If fetch was complete, only re-run summaries; otherwise full run
     const mode = staleInfo?.fetchComplete ? 'summarize' as const : (pipelineStatus?.mode ?? 'fetch_summarize')
     await handleRun(mode)
-    // Poll immediately so progress appears without waiting for the 3s interval
     api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
   }
 
@@ -182,11 +171,8 @@ export function Status() {
     api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
   }
 
-  // Pipeline is running when both DB and in-memory controller agree, OR when
-  // we just triggered a run and the poll hasn't caught up yet (optimistic flag)
   const isRunning = running || !!(pipelineStatus?.running && pipelineStatus.alive)
 
-  // Build live-sensor lookup once (used across all sections when running)
   const liveSensors: Record<string, SensorJobProgress> = {}
   if (isRunning && pipelineStatus) {
     for (const sp of pipelineStatus.sensors) {
@@ -194,7 +180,6 @@ export function Status() {
     }
   }
 
-  // Pipeline phase — determines ActionBar label and progress tracking
   const phase: Phase = (() => {
     if (stopping) return 'stopping'
     if (!isRunning) return 'idle'
@@ -205,9 +190,6 @@ export function Status() {
     return 'fetching'
   })()
 
-  // Progress counters — done/total for the current phase.
-  // Skipped sensors are excluded so the bar starts at 0 (e.g. fetch-failed sensors
-  // have summary='skipped' and shouldn't inflate the done count).
   const progress = (() => {
     if (!pipelineStatus) return { done: 0, total: 0 }
     const terminal = ['ok', 'failed', 'cancelled']
@@ -219,66 +201,77 @@ export function Status() {
     return { done: active.filter(s => terminal.includes(s.fetch)).length, total: active.length }
   })()
 
-  // Detail string for the currently-active sensor (shown in ActionBar subtitle)
   const phaseDetail = (() => {
     if (!pipelineStatus) return undefined
     if (phase === 'fetching') {
-      const running = pipelineStatus.sensors.find(s => s.fetch === 'running')
-      if (running?.fetch_detail) return running.fetch_detail
-      if (running) return SENSOR_LABEL_MAP[running.name] ?? running.name
+      const r = pipelineStatus.sensors.find(s => s.fetch === 'running')
+      if (r?.fetch_detail) return r.fetch_detail
+      if (r) return r.name
     }
     if (phase === 'summarizing') {
-      const running = pipelineStatus.sensors.find(s => s.summary === 'running')
-      if (!running) return undefined
-      const label = SENSOR_LABEL_MAP[running.name] ?? running.name
-      if (running.summary_chunks_total > 0) {
-        return `${label} (${running.summary_chunks_done}/${running.summary_chunks_total} chunks)`
-      }
-      return label
+      const r = pipelineStatus.sensors.find(s => s.summary === 'running')
+      if (!r) return undefined
+      if (r.summary_chunks_total > 0) return `${r.name} (${r.summary_chunks_done}/${r.summary_chunks_total})`
+      return r.name
     }
     return undefined
   })()
 
+  const failedCount = pipelineStatus
+    ? pipelineStatus.sensors.filter(s => s.fetch === 'failed' || s.summary === 'failed').length
+    : 0
+
+  const isPaused = !!(pipelineStatus?.paused && isRunning)
+
+  const totalItems = useMemo(() => {
+    if (!report) return 0
+    return Object.values(report.items).reduce((sum, items) => sum + items.length, 0)
+  }, [report])
+
+  const sourcesOk = report?.sources_ok.length ?? 0
+
   if (!health && !report) {
     return (
-      <section id="status" style={{ padding: '4.5rem 0' }}>
+      <section id="status" className="status-page">
         <StatusSkeleton />
       </section>
     )
   }
 
   return (
-    <section id="status" style={{ padding: '4.5rem 0' }}>
+    <section id="status" className="status-page" style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+      overflow: 'hidden',
+    }}>
+      <style dangerouslySetInnerHTML={{ __html: COMMAND_BAR_CSS }} />
+
       {staleInfo && !isRunning && (
-        <StaleProcessBanner
-          stale={staleInfo}
-          onAbort={handleAbortStale}
-          onResume={handleResumeStale}
-          onRestart={handleRestartStale}
-        />
+        <div style={{ maxWidth: 1024, margin: '0 auto', width: '100%', padding: '0.5rem 3rem 0' }}>
+          <StaleProcessBanner
+            stale={staleInfo}
+            onAbort={handleAbortStale}
+            onResume={handleResumeStale}
+            onRestart={handleRestartStale}
+          />
+        </div>
       )}
 
-      <ActionBar
+      <StatusStrip
         health={health}
+        config={config}
+        sourcesOk={sourcesOk}
+        sourcesTotal={allEnabledSensors.length}
+        totalItems={totalItems}
         isRunning={isRunning}
         phase={phase}
         progress={progress}
         detail={phaseDetail}
-        fetching={fetching}
-        isStopping={stopping}
-        onRun={(mode) => {
-          const sensors = selectedSensors.size > 0 ? Array.from(selectedSensors) : undefined
-          handleRun(mode, sensors)
-        }}
-        onStop={handleStop}
-        failures={pipelineStatus ? {
-          fetch: pipelineStatus.sensors.filter(s => s.fetch === 'failed').length,
-          summary: pipelineStatus.sensors.filter(s => s.summary === 'failed').length,
-        } : undefined}
-        selectedCount={selectedSensors.size}
+        failedCount={failedCount}
       />
 
-      <SensorTable
+      <SensorGrid
         isRunning={isRunning}
         liveSensors={liveSensors}
         report={report}
@@ -286,14 +279,33 @@ export function Status() {
         pipelineStatus={pipelineStatus}
         selected={selectedSensors}
         onToggleSelect={toggleSensorSelect}
-        onSelectAll={selectAll}
-        onSelectNone={selectNone}
-        onSelectFailed={failedSensors.length > 0 ? selectFailed : undefined}
-        onToggleSection={toggleSection}
-        failedCount={failedSensors.length}
+        onRetry={handleRetrySensor}
+        dismissed={dismissed}
+        onDismiss={dismissSensor}
       />
 
-      <ScheduleFooter config={config} />
+      <CommandBar
+        isRunning={isRunning}
+        phase={phase}
+        progress={progress}
+        detail={phaseDetail}
+        failedCount={failedCount}
+        isPaused={isPaused}
+        selectedCount={selectedSensors.size}
+        totalSensors={allEnabledSensors.length}
+        hasFailedSensors={failedSensors.length > 0}
+        onRun={(mode) => {
+          const sensors = selectedSensors.size > 0 ? Array.from(selectedSensors) : undefined
+          handleRun(mode, sensors)
+        }}
+        onStop={handleStop}
+        onSkipRetries={handleSkipRetries}
+        onSelectAll={selectAll}
+        onSelectNone={selectNone}
+        onSelectFailed={selectFailed}
+        fetching={fetching}
+        isStopping={stopping}
+      />
     </section>
   )
 }

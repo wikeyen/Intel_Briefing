@@ -3,7 +3,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import type { ConfigSettings, BriefingSummary, SummaryProgress, PipelineStatus, OverallBriefing, BriefingSource } from '@/api/client'
+import type { ConfigSettings, BriefingSummary, SummaryProgress, PipelineStatus, OverallBriefing, BriefingSource, IntelReport, IntelItem } from '@/api/client'
 import { SENSOR_LABELS } from '@/lib/sensors/taxonomy'
 import { Highlight, textHas } from './Highlight'
 import { BriefingSkeleton } from '../Skeleton'
@@ -750,7 +750,7 @@ function isStructuredOverall(overall: OverallBriefing | string): overall is Over
   return typeof overall === 'object' && overall !== null && 'executive_summary' in overall
 }
 
-export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, hasContent, onTrigger, onStop, onStopPipeline, onResume, streamTokens, searchQuery, loading }: {
+export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, hasContent, onTrigger, onStop, onStopPipeline, onResume, streamTokens, searchQuery, loading, report }: {
   summary: BriefingSummary | null
   summaryProgress: SummaryProgress | null
   pipelineStatus: PipelineStatus | null
@@ -763,6 +763,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
   streamTokens?: Record<string, string>
   searchQuery?: string
   loading?: boolean
+  report?: IntelReport | null
 }) {
   const isSummarizing = !!(summaryProgress?.running)
   const isPipelineActive = !!(pipelineStatus?.running && pipelineStatus.alive !== false)
@@ -975,6 +976,117 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                   </div>
                 </div>
               )}
+
+              {/* Per-item Sentiment Distribution (from local classifier) */}
+              {report && (() => {
+                const SOCIAL = new Set(['x', 'bluesky', 'mastodon'])
+                const allItems: IntelItem[] = Object.values(report.items).flat()
+                const socialWithSentiment = allItems.filter(i => SOCIAL.has(i.source) && i.sentiment)
+                if (socialWithSentiment.length === 0) return null
+
+                const bySource: Record<string, { positive: number; negative: number; neutral: number; total: number }> = {}
+                for (const item of socialWithSentiment) {
+                  if (!bySource[item.source]) bySource[item.source] = { positive: 0, negative: 0, neutral: 0, total: 0 }
+                  bySource[item.source][item.sentiment!.label]++
+                  bySource[item.source].total++
+                }
+
+                const PLATFORM_COLORS: Record<string, string> = {
+                  x: 'var(--ink)',
+                  bluesky: '#0085FF',
+                  mastodon: '#6364FF',
+                }
+
+                return (
+                  <div style={{
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 8,
+                    padding: '1rem 1.25rem',
+                  }}>
+                    <div style={{
+                      fontSize: '0.6875rem',
+                      fontWeight: 600,
+                      color: 'var(--ink-faint)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      marginBottom: '0.75rem',
+                    }}>
+                      Social Sentiment
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {Object.entries(bySource).map(([source, counts]) => {
+                        const posPct = Math.round((counts.positive / counts.total) * 100)
+                        const negPct = Math.round((counts.negative / counts.total) * 100)
+                        const neuPct = 100 - posPct - negPct
+                        return (
+                          <div key={source}>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              marginBottom: '0.25rem',
+                            }}>
+                              <span style={{
+                                fontSize: '0.75rem',
+                                fontWeight: 500,
+                                color: PLATFORM_COLORS[source] ?? 'var(--ink-muted)',
+                              }}>
+                                {SENSOR_LABELS[source] ?? source}
+                              </span>
+                              <span style={{
+                                fontSize: '0.625rem',
+                                color: 'var(--ink-faint)',
+                                fontFamily: 'ui-monospace, monospace',
+                              }}>
+                                {counts.total} posts
+                              </span>
+                            </div>
+                            {/* Stacked bar */}
+                            <div style={{
+                              display: 'flex',
+                              height: 6,
+                              borderRadius: 3,
+                              overflow: 'hidden',
+                              background: 'var(--border)',
+                            }}>
+                              {posPct > 0 && (
+                                <div
+                                  title={`${counts.positive} positive (${posPct}%)`}
+                                  style={{ width: `${posPct}%`, background: '#22c55e', transition: 'width 300ms' }}
+                                />
+                              )}
+                              {neuPct > 0 && (
+                                <div
+                                  title={`${counts.neutral} neutral (${neuPct}%)`}
+                                  style={{ width: `${neuPct}%`, background: '#9ca3af', transition: 'width 300ms' }}
+                                />
+                              )}
+                              {negPct > 0 && (
+                                <div
+                                  title={`${counts.negative} negative (${negPct}%)`}
+                                  style={{ width: `${negPct}%`, background: '#ef4444', transition: 'width 300ms' }}
+                                />
+                              )}
+                            </div>
+                            <div style={{
+                              display: 'flex',
+                              gap: '0.75rem',
+                              marginTop: '0.25rem',
+                              fontSize: '0.625rem',
+                              color: 'var(--ink-faint)',
+                            }}>
+                              <span><span style={{ color: '#22c55e' }}>{posPct}%</span> positive</span>
+                              <span><span style={{ color: '#9ca3af' }}>{neuPct}%</span> neutral</span>
+                              <span><span style={{ color: '#ef4444' }}>{negPct}%</span> negative</span>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* Sentiment Analysis */}
               {summary.overall.sentiment && (summary.overall.sentiment.mood_summary || summary.overall.sentiment.controversies.length > 0 || summary.overall.sentiment.opinion_shifts.length > 0 || summary.overall.sentiment.risk_flags.length > 0) && (() => {

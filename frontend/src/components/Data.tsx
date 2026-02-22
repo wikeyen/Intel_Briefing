@@ -623,6 +623,7 @@ export function Data() {
               streamTokens={streamTokens}
               searchQuery={searchQuery}
               loading={loading}
+              report={report}
             />
           ) : loading ? (
             <FeedSkeleton />

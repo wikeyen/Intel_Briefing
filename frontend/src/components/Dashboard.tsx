@@ -415,24 +415,24 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
           </TabsList>
 
           {tabData.map(tab => (
-            <TabsContent key={tab.key} value={tab.key} className="flex flex-col gap-2.5 min-h-[60px] mt-3">
+            <TabsContent key={tab.key} value={tab.key} className="risk-grid min-h-[60px] mt-3">
               {tab.items.length === 0 ? (
-                <div className="py-4 text-center" style={{ fontSize: '0.75rem', color: 'var(--ink-tertiary)' }}>
+                <div className="col-span-full py-4 text-center" style={{ fontSize: '0.75rem', color: 'var(--ink-tertiary)' }}>
                   None detected
                 </div>
               ) : (
                 tab.items.map((entry: SentimentEntry, i: number) => (
-                  <div key={i} style={{
+                  <div key={i} className="flex flex-col" style={{
                     padding: '14px 16px',
                     borderRadius: 10,
                     background: 'var(--surface-inset)',
                     borderLeft: `3px solid ${tab.dot}`,
                   }}>
                     <div className="flex items-center gap-2 mb-1.5">
-                      <span className="font-semibold" style={{ fontSize: '0.8125rem', color: 'var(--ink)' }}>
+                      <span className="font-semibold" style={{ fontSize: '0.8125rem', color: 'var(--ink)', lineHeight: 1.3 }}>
                         {entry.topic}
                       </span>
-                      <span className="font-mono font-semibold uppercase" style={{
+                      <span className="font-mono font-semibold uppercase shrink-0" style={{
                         fontSize: '0.5625rem',
                         padding: '1px 6px',
                         borderRadius: 4,
@@ -447,6 +447,7 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
                       fontSize: '0.8125rem',
                       color: 'var(--ink-secondary)',
                       lineHeight: 1.6,
+                      flex: 1,
                     }}>
                       <InlineRefs text={entry.analysis} globalSources={overall.sources} />
                     </div>

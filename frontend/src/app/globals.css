@@ -528,10 +528,10 @@ input[type="range"]::-moz-range-thumb {
     display: none !important;
   }
 
-  /* ── Page padding ── */
+  /* ── Page padding — matches dashboard 0.75rem side gap ── */
   .page-padding {
-    padding-left: 1.25rem !important;
-    padding-right: 1.25rem !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
     padding-top: 1.5rem !important;
   }
 
@@ -545,8 +545,8 @@ input[type="range"]::-moz-range-thumb {
   }
 
   .data-content {
-    padding-left: 1.25rem !important;
-    padding-right: 1.25rem !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
     /* Compensate for removed main-content padding so content clears top bar */
     padding-top: calc(56px + env(safe-area-inset-top, 0) + 0.75rem) !important;
     padding-bottom: 6rem !important;
@@ -622,7 +622,7 @@ input[type="range"]::-moz-range-thumb {
   .sensor-grid {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 0.5rem !important;
-    padding: 0.5rem !important;
+    padding: 0.75rem !important;
     padding-bottom: calc(56px + 0.75rem + env(safe-area-inset-bottom)) !important;
   }
   .sensor-grid > div {
@@ -754,6 +754,18 @@ input[type="range"]::-moz-range-thumb {
 .dashboard-card:hover {
   box-shadow: var(--shadow-card-hover) !important;
   border-color: var(--border-strong);
+}
+
+/* Risk/Intelligence grid — 2-column on desktop, single column on narrow screens */
+.risk-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.625rem;
+}
+@media (max-width: 768px) {
+  .risk-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ─── Animations ────────────────────────────────────────────────────────── */

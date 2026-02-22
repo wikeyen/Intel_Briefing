@@ -1,6 +1,6 @@
 // ABOUTME: Tests for StatusStrip — the dense top bar showing health, metrics, and schedule.
 // ABOUTME: Covers idle/running states, health dot, metrics display, schedule, and progress bar.
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import { StatusStrip } from './StatusStrip'
 import type { StatusStripProps } from './StatusStrip'
@@ -23,6 +23,14 @@ function buildProps(overrides: Partial<StatusStripProps> = {}): StatusStripProps
   }
 }
 
+/** Helper to scope queries to the desktop layout (jsdom has no media queries). */
+function getDesktop() {
+  // Desktop layout has data-testid elements — use the health dot to find it
+  const dot = screen.getByTestId('strip-health-dot')
+  // Walk up to the .status-strip-desktop container
+  return dot.closest('.status-strip-desktop') as HTMLElement
+}
+
 describe('StatusStrip', () => {
   it('renders health dot when idle', () => {
     render(<StatusStrip {...buildProps()} />)
@@ -32,14 +40,16 @@ describe('StatusStrip', () => {
 
   it('shows sources count when idle', () => {
     render(<StatusStrip {...buildProps()} />)
-    expect(screen.getByText('10/13')).toBeInTheDocument()
-    expect(screen.getByText('sources')).toBeInTheDocument()
+    const desktop = getDesktop()
+    expect(within(desktop).getByText('10/13')).toBeInTheDocument()
+    expect(within(desktop).getByText('sources')).toBeInTheDocument()
   })
 
   it('shows total items when idle', () => {
     render(<StatusStrip {...buildProps()} />)
-    expect(screen.getByText('42')).toBeInTheDocument()
-    expect(screen.getByText('items')).toBeInTheDocument()
+    const desktop = getDesktop()
+    expect(within(desktop).getByText('42')).toBeInTheDocument()
+    expect(within(desktop).getByText('items')).toBeInTheDocument()
   })
 
   it('shows schedule when idle with config', () => {
@@ -70,8 +80,9 @@ describe('StatusStrip', () => {
       phase: 'fetching',
       progress: { done: 5, total: 13 },
     })} />)
-    expect(screen.getByText('5/13')).toBeInTheDocument()
-    expect(screen.getByText('sensors')).toBeInTheDocument()
+    const desktop = getDesktop()
+    expect(within(desktop).getByText('5/13')).toBeInTheDocument()
+    expect(within(desktop).getByText('sensors')).toBeInTheDocument()
   })
 
   it('shows failed count when running with failures', () => {
@@ -81,8 +92,9 @@ describe('StatusStrip', () => {
       progress: { done: 10, total: 13 },
       failedCount: 2,
     })} />)
-    expect(screen.getByText('2')).toBeInTheDocument()
-    expect(screen.getByText('failed')).toBeInTheDocument()
+    const desktop = getDesktop()
+    expect(within(desktop).getByText('2')).toBeInTheDocument()
+    expect(within(desktop).getByText('failed')).toBeInTheDocument()
   })
 
   it('shows detail text when running with detail', () => {
@@ -92,7 +104,8 @@ describe('StatusStrip', () => {
       progress: { done: 3, total: 13 },
       detail: 'hacker_news',
     })} />)
-    expect(screen.getByText('hacker_news')).toBeInTheDocument()
+    const desktop = getDesktop()
+    expect(within(desktop).getByText('hacker_news')).toBeInTheDocument()
   })
 
   it('shows "Fetching" label when in fetching phase', () => {
@@ -101,7 +114,8 @@ describe('StatusStrip', () => {
       phase: 'fetching',
       progress: { done: 0, total: 13 },
     })} />)
-    expect(screen.getByText('Fetching')).toBeInTheDocument()
+    const desktop = getDesktop()
+    expect(within(desktop).getByText('Fetching')).toBeInTheDocument()
   })
 
   it('shows "Summarizing" label when in summarizing phase', () => {
@@ -110,7 +124,8 @@ describe('StatusStrip', () => {
       phase: 'summarizing',
       progress: { done: 5, total: 13 },
     })} />)
-    expect(screen.getByText('Summarizing')).toBeInTheDocument()
+    const desktop = getDesktop()
+    expect(within(desktop).getByText('Summarizing')).toBeInTheDocument()
   })
 
   it('does not show failed count when failedCount is 0', () => {
@@ -120,6 +135,28 @@ describe('StatusStrip', () => {
       progress: { done: 3, total: 13 },
       failedCount: 0,
     })} />)
-    expect(screen.queryByText('failed')).not.toBeInTheDocument()
+    const desktop = getDesktop()
+    expect(within(desktop).queryByText('failed')).not.toBeInTheDocument()
+  })
+
+  // Mobile layout tests
+  it('renders mobile stat cells with sources, items, last fetch', () => {
+    render(<StatusStrip {...buildProps()} />)
+    const mobile = document.querySelector('.status-strip-mobile') as HTMLElement
+    expect(mobile).toBeTruthy()
+    expect(within(mobile).getByText('sources')).toBeInTheDocument()
+    expect(within(mobile).getByText('items')).toBeInTheDocument()
+    expect(within(mobile).getByText('last fetch')).toBeInTheDocument()
+  })
+
+  it('renders mobile running state with sensors and progress', () => {
+    render(<StatusStrip {...buildProps({
+      isRunning: true,
+      phase: 'fetching',
+      progress: { done: 5, total: 13 },
+    })} />)
+    const mobile = document.querySelector('.status-strip-mobile') as HTMLElement
+    expect(within(mobile).getByText('5/13')).toBeInTheDocument()
+    expect(within(mobile).getByText('sensors')).toBeInTheDocument()
   })
 })

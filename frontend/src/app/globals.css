@@ -619,20 +619,6 @@ input[type="range"]::-moz-range-thumb {
   }
 
   /* ── Status page — mission control responsive ── */
-  .status-strip {
-    padding-top: 0.5rem !important;
-    padding-bottom: 0.5rem !important;
-    padding-left: 0.75rem !important;
-    padding-right: 0.75rem !important;
-    gap: 0.375rem 0.625rem !important;
-    flex-wrap: wrap;
-    min-height: auto !important;
-  }
-  .status-strip-metrics {
-    gap: 0.625rem !important;
-    flex-wrap: wrap;
-  }
-
   .sensor-grid {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 0.5rem !important;

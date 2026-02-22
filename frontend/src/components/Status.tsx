@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { api } from '@/api/client'
 import type { HealthResponse, IntelReport, ConfigSettings, PipelineStatus, SensorJobProgress, RunMode } from '@/api/client'
 import { useToast } from '@/lib/toast-context'
-import { StatusStrip } from './status/StatusStrip'
+import { StatusStrip, STATUS_STRIP_CSS } from './status/StatusStrip'
 import type { Phase } from './status/StatusStrip'
 import { SensorGrid } from './status/SensorGrid'
 import { CommandBar, COMMAND_BAR_CSS } from './status/CommandBar'
@@ -245,7 +245,7 @@ export function Status() {
       height: '100%',
       overflow: 'hidden',
     }}>
-      <style dangerouslySetInnerHTML={{ __html: COMMAND_BAR_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: COMMAND_BAR_CSS + STATUS_STRIP_CSS }} />
 
       {staleInfo && !isRunning && (
         <div style={{ maxWidth: 1024, margin: '0 auto', width: '100%', padding: '0.5rem 3rem 0' }}>

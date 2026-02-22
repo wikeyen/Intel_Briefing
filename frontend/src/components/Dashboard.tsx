@@ -246,7 +246,7 @@ function ExecSummaryWidget({ summary }: { summary: BriefingSummary }) {
       borderRadius: 12,
       boxShadow: 'var(--shadow-card)',
       borderLeft: '3px solid var(--accent)',
-      padding: '20px 24px',
+      padding: '24px',
       overflow: 'hidden',
     }}>
       <SectionLabel className="mb-3" style={{ color: 'var(--accent)' }}>Executive Summary</SectionLabel>
@@ -315,7 +315,7 @@ function ThematicSectionsWidget({ summary }: { summary: BriefingSummary }) {
       <SectionLabel>Investment Themes</SectionLabel>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {sections.map((section, i) => (
-          <Card key={i} className="dashboard-card py-4 gap-3" style={{ borderRadius: 12 }}>
+          <Card key={i} className="dashboard-card py-5 gap-3" style={{ borderRadius: 12 }}>
             <CardContent className="px-6 flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <span className="font-semibold" style={{ fontSize: '0.8125rem', color: 'var(--ink)' }}>
@@ -373,7 +373,7 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
   const defaultTab = tabData.find(t => t.items.length > 0)?.key ?? 'risk'
 
   return (
-    <Card className="dashboard-card py-5 gap-4" style={{ borderRadius: 12 }}>
+    <Card className="dashboard-card py-6 gap-4" style={{ borderRadius: 12 }}>
       <CardContent className="px-6 flex flex-col gap-3">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -560,7 +560,7 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
   }
 
   return (
-    <Card className="dashboard-card py-5 gap-4" style={{ borderRadius: 12 }}>
+    <Card className="dashboard-card py-6 gap-4" style={{ borderRadius: 12 }}>
       <CardContent className="px-6 flex flex-col gap-3">
         {/* Header: mood pill */}
         <div className="flex items-center justify-between">
@@ -659,7 +659,7 @@ function CategoryDistributionWidget({ report }: { report: IntelReport }) {
   ]
 
   return (
-    <Card className="dashboard-card py-5 gap-4" style={{ borderRadius: 12 }}>
+    <Card className="dashboard-card py-6 gap-4" style={{ borderRadius: 12 }}>
       <CardContent className="px-6 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <SectionLabel>Distribution</SectionLabel>
@@ -714,7 +714,7 @@ function SourceHealthWidget({ report }: { report: IntelReport }) {
   const healthPct = Math.round((report.sources_ok.length / all.length) * 100)
 
   return (
-    <Card className="dashboard-card py-5 gap-4" style={{ borderRadius: 12 }}>
+    <Card className="dashboard-card py-6 gap-4" style={{ borderRadius: 12 }}>
       <CardContent className="px-6 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <SectionLabel>Source Health</SectionLabel>
@@ -787,7 +787,7 @@ function SensorDomainCard({ sectionLabel, accentColor, sensorNames, summary, rep
   }
 
   return (
-    <Card className="dashboard-card py-5 gap-4" style={{ borderRadius: 12 }}>
+    <Card className="dashboard-card py-6 gap-4" style={{ borderRadius: 12 }}>
       <CardContent className="px-6 flex flex-col gap-4">
         <SectionLabel style={{ color: accentColor }}>{sectionLabel}</SectionLabel>
 
@@ -954,7 +954,7 @@ function TrendingWidget({ report, summary }: { report: IntelReport; summary?: Br
   if (top.length === 0) return null
 
   return (
-    <Card className="dashboard-card py-5 gap-4" style={{ borderRadius: 12 }}>
+    <Card className="dashboard-card py-6 gap-4" style={{ borderRadius: 12 }}>
       <CardContent className="px-6 flex flex-col gap-0">
         <div className="flex items-center justify-between mb-2.5">
           <SectionLabel>Trending & Momentum</SectionLabel>

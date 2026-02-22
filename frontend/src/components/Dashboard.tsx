@@ -312,7 +312,7 @@ function RiskAlertWidget({ summary }: { summary: BriefingSummary }) {
           fontSize: '0.5625rem',
           fontWeight: 600,
           color: 'var(--err)',
-          background: 'rgba(185, 28, 28, 0.08)',
+          background: 'var(--err-tint)',
           padding: '0.125rem 0.375rem',
           borderRadius: 3,
           fontFamily: 'ui-monospace, monospace',
@@ -350,7 +350,8 @@ function SentimentRing({ positive, neutral, negative, size = 140 }: {
   const negOffset = neuOffset - neuArc
 
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" style={{ flexShrink: 0 }}>
+    <svg width={size} height={size} viewBox="0 0 100 100" style={{ flexShrink: 0 }}
+      role="img" aria-label={`Sentiment: ${Math.round(posPct * 100)}% positive, ${Math.round(neuPct * 100)}% neutral, ${Math.round((1 - posPct - neuPct) * 100)}% negative`}>
       {/* Track */}
       <circle cx="50" cy="50" r="45" fill="none" stroke="var(--border)" strokeWidth="8" />
       {/* Positive segment */}
@@ -427,6 +428,7 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
     bySource[item.source].total++
   }
 
+  // Brand colors — intentionally static, meet WCAG AA on both light/dark surfaces
   const PLATFORM_COLORS: Record<string, string> = {
     x: 'var(--ink)',
     bluesky: '#0085FF',
@@ -622,8 +624,8 @@ function SourceActivityWidget({ report }: { report: IntelReport }) {
 
   const cellColor = (count: number): string => {
     if (count === 0) return 'var(--border-soft)'
-    if (count <= 5) return 'rgba(29, 107, 79, 0.25)'
-    if (count <= 15) return 'rgba(29, 107, 79, 0.55)'
+    if (count <= 5) return 'var(--accent-lo)'
+    if (count <= 15) return 'var(--accent-mid)'
     return 'var(--accent)'
   }
 
@@ -671,10 +673,10 @@ function SourceActivityWidget({ report }: { report: IntelReport }) {
           <span style={{ width: 6, height: 6, borderRadius: 1, background: 'var(--border-soft)' }} /> 0
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          <span style={{ width: 6, height: 6, borderRadius: 1, background: 'rgba(29, 107, 79, 0.25)' }} /> 1-5
+          <span style={{ width: 6, height: 6, borderRadius: 1, background: 'var(--accent-lo)' }} /> 1-5
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          <span style={{ width: 6, height: 6, borderRadius: 1, background: 'rgba(29, 107, 79, 0.55)' }} /> 6-15
+          <span style={{ width: 6, height: 6, borderRadius: 1, background: 'var(--accent-mid)' }} /> 6-15
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
           <span style={{ width: 6, height: 6, borderRadius: 1, background: 'var(--accent)' }} /> 16+
@@ -881,6 +883,7 @@ function SectionSummariesWidget({ summary }: { summary: BriefingSummary }) {
                 else next.add(i)
                 return next
               })}
+              aria-expanded={isOpen}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 width: '100%', padding: '0.875rem 1.5rem',

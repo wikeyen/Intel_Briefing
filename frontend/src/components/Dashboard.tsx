@@ -99,9 +99,10 @@ function SectionLabel({ children, style }: { children: React.ReactNode; style?: 
 }
 
 /** Stagger-fade each dashboard widget on mount. */
-function StaggerChild({ index, children }: { index: number; children: React.ReactNode }) {
+function StaggerChild({ index, children, className }: { index: number; children: React.ReactNode; className?: string }) {
   return (
     <motion.div
+      className={className}
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
@@ -1208,7 +1209,7 @@ export function Dashboard() {
   const hasSummary = summary && isStructuredOverall(summary.overall) && !!summary.overall.executive_summary
 
   return (
-    <div className="dashboard-root" style={{ padding: '1.25rem' }}>
+    <div className="dashboard-root" style={{ padding: '1.25rem', maxWidth: 1280, margin: '0 auto' }}>
       <style>{PULSE_CSS}</style>
 
       <AnimatePresence mode="wait">
@@ -1239,69 +1240,75 @@ export function Dashboard() {
           <motion.div key="content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
             <div className="dashboard-grid">
               {/* Status Ticker */}
-              <StaggerChild index={0}>
-                <div className="dashboard-span-full">
-                  <StatusTicker
-                    report={report}
-                    summary={summary}
-                    pipelineStatus={pipelineStatus}
-                    summaryProgress={summaryProgress}
-                  />
-                </div>
+              <StaggerChild index={0} className="dashboard-span-full">
+                <StatusTicker
+                  report={report}
+                  summary={summary}
+                  pipelineStatus={pipelineStatus}
+                  summaryProgress={summaryProgress}
+                />
               </StaggerChild>
 
               {/* Stats Strip */}
-              <StaggerChild index={1}>
-                <div className="dashboard-span-full">
-                  <StatsStrip report={report} summary={summary} />
-                </div>
+              <StaggerChild index={1} className="dashboard-span-full">
+                <StatsStrip report={report} summary={summary} />
               </StaggerChild>
 
               {/* Executive Summary (span 2) */}
-              <StaggerChild index={2}>
-                <div className="dashboard-span-2">
-                  {summary && <ExecSummaryWidget summary={summary} />}
-                </div>
-              </StaggerChild>
+              {summary && (
+                <StaggerChild index={2} className="dashboard-span-2">
+                  <ExecSummaryWidget summary={summary} />
+                </StaggerChild>
+              )}
 
               {/* Risk & Intel Panel */}
-              <StaggerChild index={3}>
-                {summary && <RiskIntelPanel summary={summary} />}
-              </StaggerChild>
+              {summary && (
+                <StaggerChild index={3}>
+                  <RiskIntelPanel summary={summary} />
+                </StaggerChild>
+              )}
 
               {/* Sentiment */}
-              <StaggerChild index={4}>
-                {summary && <SentimentWidget summary={summary} report={report} />}
-              </StaggerChild>
+              {summary && (
+                <StaggerChild index={4}>
+                  <SentimentWidget summary={summary} report={report} />
+                </StaggerChild>
+              )}
 
               {/* Category Distribution */}
-              <StaggerChild index={5}>
-                {report && <CategoryDistributionWidget report={report} />}
-              </StaggerChild>
+              {report && (
+                <StaggerChild index={5}>
+                  <CategoryDistributionWidget report={report} />
+                </StaggerChild>
+              )}
 
               {/* Trending */}
-              <StaggerChild index={6}>
-                {report && <TrendingWidget report={report} />}
-              </StaggerChild>
+              {report && (
+                <StaggerChild index={6}>
+                  <TrendingWidget report={report} />
+                </StaggerChild>
+              )}
 
               {/* Source Activity Heatmap (span 2) */}
-              <StaggerChild index={7}>
-                <div className="dashboard-span-2">
-                  {report && <SourceActivityWidget report={report} />}
-                </div>
-              </StaggerChild>
+              {report && (
+                <StaggerChild index={7} className="dashboard-span-2">
+                  <SourceActivityWidget report={report} />
+                </StaggerChild>
+              )}
 
               {/* Section Summaries (full span) */}
-              <StaggerChild index={8}>
-                <div className="dashboard-span-full">
-                  {summary && <SectionSummariesWidget summary={summary} />}
-                </div>
-              </StaggerChild>
+              {summary && (
+                <StaggerChild index={8} className="dashboard-span-full">
+                  <SectionSummariesWidget summary={summary} />
+                </StaggerChild>
+              )}
 
               {/* Source Health */}
-              <StaggerChild index={9}>
-                {report && <SourceHealthWidget report={report} />}
-              </StaggerChild>
+              {report && (
+                <StaggerChild index={9}>
+                  <SourceHealthWidget report={report} />
+                </StaggerChild>
+              )}
 
               {/* Link to full feed */}
               <div className="dashboard-span-full" style={{ textAlign: 'center', paddingTop: '0.125rem', paddingBottom: '0.25rem' }}>

@@ -315,8 +315,8 @@ function ThematicSectionsWidget({ summary }: { summary: BriefingSummary }) {
       <SectionLabel>Investment Themes</SectionLabel>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {sections.map((section, i) => (
-          <Card key={i} className="dashboard-card py-5 gap-3" style={{ borderRadius: 12 }}>
-            <CardContent className="px-6 flex flex-col gap-2">
+          <Card key={i} className="dashboard-card py-7 gap-3" style={{ borderRadius: 12 }}>
+            <CardContent className="px-6 py-1 flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <span className="font-semibold" style={{ fontSize: '0.8125rem', color: 'var(--ink)' }}>
                   {section.title}
@@ -373,8 +373,8 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
   const defaultTab = tabData.find(t => t.items.length > 0)?.key ?? 'risk'
 
   return (
-    <Card className="dashboard-card py-6 gap-4" style={{ borderRadius: 12 }}>
-      <CardContent className="px-6 flex flex-col gap-3">
+    <Card className="dashboard-card py-7 gap-4" style={{ borderRadius: 12 }}>
+      <CardContent className="px-6 py-1 flex flex-col gap-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <SectionLabel>Intelligence</SectionLabel>
@@ -415,7 +415,7 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
           </TabsList>
 
           {tabData.map(tab => (
-            <TabsContent key={tab.key} value={tab.key} className="flex flex-col min-h-[60px] mt-2">
+            <TabsContent key={tab.key} value={tab.key} className="flex flex-col gap-2.5 min-h-[60px] mt-3">
               {tab.items.length === 0 ? (
                 <div className="py-4 text-center" style={{ fontSize: '0.75rem', color: 'var(--ink-tertiary)' }}>
                   None detected
@@ -423,20 +423,31 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
               ) : (
                 tab.items.map((entry: SentimentEntry, i: number) => (
                   <div key={i} style={{
-                    padding: '10px 0',
-                    ...(i < tab.items.length - 1 ? { borderBottom: '1px solid var(--border-subtle)' } : {}),
+                    padding: '14px 16px',
+                    borderRadius: 10,
+                    background: 'var(--surface-inset)',
+                    borderLeft: `3px solid ${tab.dot}`,
                   }}>
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <span className="shrink-0 rounded-full" style={{
-                        width: 5,
-                        height: 5,
-                        background: tab.dot,
-                      }} />
+                    <div className="flex items-center gap-2 mb-1.5">
                       <span className="font-semibold" style={{ fontSize: '0.8125rem', color: 'var(--ink)' }}>
                         {entry.topic}
                       </span>
+                      <span className="font-mono font-semibold uppercase" style={{
+                        fontSize: '0.5625rem',
+                        padding: '1px 6px',
+                        borderRadius: 4,
+                        background: tab.key === 'risk' ? 'var(--sent-neg-bg)' : tab.key === 'controversies' ? 'var(--sent-neu-bg)' : 'var(--accent-subtle)',
+                        color: tab.color,
+                        letterSpacing: '0.04em',
+                      }}>
+                        {tab.label}
+                      </span>
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.5, paddingLeft: '1.125rem' }}>
+                    <div style={{
+                      fontSize: '0.8125rem',
+                      color: 'var(--ink-secondary)',
+                      lineHeight: 1.6,
+                    }}>
                       <InlineRefs text={entry.analysis} globalSources={overall.sources} />
                     </div>
                   </div>
@@ -560,8 +571,8 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
   }
 
   return (
-    <Card className="dashboard-card py-6 gap-4" style={{ borderRadius: 12 }}>
-      <CardContent className="px-6 flex flex-col gap-3">
+    <Card className="dashboard-card py-7 gap-4" style={{ borderRadius: 12 }}>
+      <CardContent className="px-6 py-1 flex flex-col gap-3">
         {/* Header: mood pill */}
         <div className="flex items-center justify-between">
           <SectionLabel>Sentiment</SectionLabel>
@@ -659,8 +670,8 @@ function CategoryDistributionWidget({ report }: { report: IntelReport }) {
   ]
 
   return (
-    <Card className="dashboard-card py-6 gap-4" style={{ borderRadius: 12 }}>
-      <CardContent className="px-6 flex flex-col gap-3">
+    <Card className="dashboard-card py-7 gap-4" style={{ borderRadius: 12 }}>
+      <CardContent className="px-6 py-1 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <SectionLabel>Distribution</SectionLabel>
           <span className="font-mono" style={{ fontSize: '0.625rem', color: 'var(--ink-tertiary)' }}>{total} items</span>
@@ -714,8 +725,8 @@ function SourceHealthWidget({ report }: { report: IntelReport }) {
   const healthPct = Math.round((report.sources_ok.length / all.length) * 100)
 
   return (
-    <Card className="dashboard-card py-6 gap-4" style={{ borderRadius: 12 }}>
-      <CardContent className="px-6 flex flex-col gap-3">
+    <Card className="dashboard-card py-7 gap-4" style={{ borderRadius: 12 }}>
+      <CardContent className="px-6 py-1 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <SectionLabel>Source Health</SectionLabel>
           <span className="font-mono font-semibold" style={{
@@ -787,8 +798,8 @@ function SensorDomainCard({ sectionLabel, accentColor, sensorNames, summary, rep
   }
 
   return (
-    <Card className="dashboard-card py-6 gap-4" style={{ borderRadius: 12 }}>
-      <CardContent className="px-6 flex flex-col gap-4">
+    <Card className="dashboard-card py-7 gap-4" style={{ borderRadius: 12 }}>
+      <CardContent className="px-6 py-1 flex flex-col gap-4">
         <SectionLabel style={{ color: accentColor }}>{sectionLabel}</SectionLabel>
 
         {moodSummary && (
@@ -954,8 +965,8 @@ function TrendingWidget({ report, summary }: { report: IntelReport; summary?: Br
   if (top.length === 0) return null
 
   return (
-    <Card className="dashboard-card py-6 gap-4" style={{ borderRadius: 12 }}>
-      <CardContent className="px-6 flex flex-col gap-0">
+    <Card className="dashboard-card py-7 gap-4" style={{ borderRadius: 12 }}>
+      <CardContent className="px-6 py-1 flex flex-col gap-0">
         <div className="flex items-center justify-between mb-2.5">
           <SectionLabel>Trending & Momentum</SectionLabel>
           <Link href="/data" className="font-medium no-underline hover:underline" style={{ fontSize: '0.75rem', color: 'var(--accent)' }}>

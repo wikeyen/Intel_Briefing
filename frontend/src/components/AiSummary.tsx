@@ -58,6 +58,7 @@ export function AiSummary() {
   const [summaryModel, setSummaryModel] = useState('anthropic/claude-sonnet-4')
   const [attributionModel, setAttributionModel] = useState('')
   const [testingLlm, setTestingLlm] = useState(false)
+  const [testBtnHover, setTestBtnHover] = useState(false)
 
   const [sensorPrompts, setSensorPrompts] = useState<Record<string, string>>({})
   const [overallPrompt, setOverallPrompt] = useState('')
@@ -145,26 +146,42 @@ export function AiSummary() {
   const isEnabled = summaryProvider !== null
 
   return (
-    <section id="ai-summary" style={{ padding: '4.5rem 0' }}>
+    <section id="ai-summary" style={{ maxWidth: 1024, margin: '0 auto', padding: '0 3rem' }} className="page-padding">
 
-      <div className="page-header" style={{ marginBottom: '2rem' }}>
+      {/* ── Page Header ─────────────────────────────────────── */}
+      <div className="page-header" style={{ paddingTop: '2.5rem', paddingBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.375rem' }}>
+          <h2 style={{
+            fontSize: '1.25rem',
+            fontWeight: 600,
+            color: 'var(--ink)',
+            letterSpacing: '-0.01em',
+            marginBottom: '0.25rem',
+          }}>
             AI Summary
           </h2>
           <AutoSaveIndicator status={saveStatus} />
         </div>
-        <p style={{ fontSize: '0.875rem', color: 'var(--ink-muted)', lineHeight: 1.6 }}>
+        <p style={{ fontSize: '0.8125rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
           Generate per-source summaries and an executive briefing after each fetch using an LLM.
         </p>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '4rem' }}>
 
         {/* ── Connection ─────────────────────────────────────── */}
         <div>
           <SubLabel>Connection</SubLabel>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            boxShadow: 'var(--shadow-card)',
+            padding: '1.5rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem',
+          }}>
 
             {/* Provider + Model — side by side */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }} className="settings-grid-2col">
@@ -345,10 +362,8 @@ export function AiSummary() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '0.75rem 1rem',
-                background: 'var(--surface)',
-                border: '1px solid var(--border)',
-                borderRadius: 6,
+                padding: '0.75rem 0 0',
+                borderTop: '1px solid var(--border-soft)',
               }}>
                 <div>
                   <span style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
@@ -361,22 +376,24 @@ export function AiSummary() {
                 <button
                   onClick={testLlm}
                   disabled={testingLlm}
+                  onMouseEnter={() => setTestBtnHover(true)}
+                  onMouseLeave={() => setTestBtnHover(false)}
                   style={{
                     fontSize: '0.75rem',
                     fontWeight: 500,
                     padding: '0.375rem 0.875rem',
-                    borderRadius: 4,
-                    border: '1px solid var(--border)',
-                    color: testingLlm ? 'var(--ink-faint)' : 'var(--ink-muted)',
-                    background: 'var(--surface)',
+                    borderRadius: 6,
+                    border: `1px solid ${!testingLlm && testBtnHover ? 'var(--accent-dim)' : 'var(--border)'}`,
+                    color: testingLlm ? 'var(--ink-faint)' : testBtnHover ? 'var(--accent)' : 'var(--ink-muted)',
+                    background: !testingLlm && testBtnHover ? 'var(--accent-wash)' : 'var(--surface)',
                     cursor: testingLlm ? 'not-allowed' : 'pointer',
                     whiteSpace: 'nowrap',
                     flexShrink: 0,
                     marginLeft: '1.5rem',
-                    transition: 'color 120ms, border-color 120ms',
+                    transition: 'color 120ms, border-color 120ms, background 120ms',
                   }}
                 >
-                  {testingLlm ? 'Testing…' : 'Test Now'}
+                  {testingLlm ? 'Testing\u2026' : 'Test Now'}
                 </button>
               </div>
             )}
@@ -385,177 +402,183 @@ export function AiSummary() {
 
         {/* ── Prompt Customization ──────────────────────────── */}
         {isEnabled && (
-          <>
-            <div style={{ height: 1, background: 'var(--border-soft)' }} />
+          <div>
+            <SubLabel>Prompts</SubLabel>
+            <div style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              boxShadow: 'var(--shadow-card)',
+              padding: '1.5rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1.25rem',
+            }}>
 
-            <div>
-              <SubLabel>Prompts</SubLabel>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-
-                {/* Overall Prompt */}
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <FieldLabel>Executive Summary Prompt</FieldLabel>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <StatusBadge isCustom={!!overallPrompt} />
-                      {overallPrompt && (
-                        <button
-                          onClick={() => { setOverallPrompt(''); trigger() }}
-                          style={{
-                            fontSize: '0.75rem',
-                            fontWeight: 500,
-                            color: 'var(--accent)',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: 0,
-                          }}
-                        >
-                          Reset
-                        </button>
-                      )}
-                    </div>
+              {/* Overall Prompt */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <FieldLabel>Executive Summary Prompt</FieldLabel>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <StatusBadge isCustom={!!overallPrompt} />
+                    {overallPrompt && (
+                      <button
+                        onClick={() => { setOverallPrompt(''); trigger() }}
+                        style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 500,
+                          color: 'var(--accent)',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: 0,
+                        }}
+                      >
+                        Reset
+                      </button>
+                    )}
                   </div>
-                  <textarea
-                    value={overallPrompt}
-                    onChange={(e) => { setOverallPrompt(e.target.value); trigger() }}
-                    placeholder={DEFAULT_OVERALL_PROMPT.slice(0, 200) + '…'}
-                    rows={5}
-                    style={{
-                      ...inputBase,
-                      width: '100%',
-                      resize: 'vertical',
-                      lineHeight: 1.6,
-                    }}
-                    onFocus={focus}
-                    onBlur={blur}
-                  />
-                  <HelpText>
-                    System prompt for the final executive summary that synthesizes all sensor summaries.
-                  </HelpText>
                 </div>
+                <textarea
+                  value={overallPrompt}
+                  onChange={(e) => { setOverallPrompt(e.target.value); trigger() }}
+                  placeholder={DEFAULT_OVERALL_PROMPT.slice(0, 200) + '\u2026'}
+                  rows={5}
+                  style={{
+                    ...inputBase,
+                    width: '100%',
+                    resize: 'vertical',
+                    lineHeight: 1.6,
+                  }}
+                  onFocus={focus}
+                  onBlur={blur}
+                />
+                <HelpText>
+                  System prompt for the final executive summary that synthesizes all sensor summaries.
+                </HelpText>
+              </div>
 
-                {/* Per-Sensor Prompts — collapsible list */}
-                <div>
-                  <button
-                    onClick={() => setPromptsExpanded(!promptsExpanded)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      width: '100%',
-                      padding: 0,
-                      marginBottom: promptsExpanded ? '0.75rem' : 0,
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: 'var(--ink)',
-                    }}
-                  >
-                    <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>
-                      Per-Sensor Prompts
-                    </span>
-                    <span style={{
-                      fontSize: '0.625rem',
-                      color: 'var(--ink-faint)',
-                      transition: 'transform 200ms',
-                      transform: promptsExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                    }}>
-                      ▾
-                    </span>
-                  </button>
+              {/* Per-Sensor Prompts — collapsible list */}
+              <div>
+                <button
+                  onClick={() => setPromptsExpanded(!promptsExpanded)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    width: '100%',
+                    padding: 0,
+                    marginBottom: promptsExpanded ? '0.75rem' : 0,
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--ink)',
+                  }}
+                >
+                  <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>
+                    Per-Sensor Prompts
+                  </span>
+                  <span style={{
+                    fontSize: '0.625rem',
+                    color: 'var(--ink-faint)',
+                    transition: 'transform 200ms',
+                    transform: promptsExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                  }}>
+                    ▾
+                  </span>
+                </button>
 
-                  {promptsExpanded && (
-                    <div style={{
-                      background: 'var(--surface)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 6,
-                      overflow: 'hidden',
-                    }}>
-                      {PROMPT_SENSORS.map((sensor, idx) => {
-                        const isExpanded = expandedSensor === sensor.key
-                        const isCustom = !!sensorPrompts[sensor.key]
-                        const defaultPrompt = DEFAULT_SENSOR_PROMPTS[sensor.key] ?? ''
+                {promptsExpanded && (
+                  <div style={{
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 6,
+                    boxShadow: 'var(--shadow-card)',
+                    overflow: 'hidden',
+                  }}>
+                    {PROMPT_SENSORS.map((sensor, idx) => {
+                      const isExpanded = expandedSensor === sensor.key
+                      const isCustom = !!sensorPrompts[sensor.key]
+                      const defaultPrompt = DEFAULT_SENSOR_PROMPTS[sensor.key] ?? ''
 
-                        return (
-                          <div key={sensor.key} style={{
-                            borderBottom: idx < PROMPT_SENSORS.length - 1 ? '1px solid var(--border-soft)' : 'none',
-                          }}>
-                            <button
-                              onClick={() => setExpandedSensor(isExpanded ? null : sensor.key)}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                width: '100%',
-                                padding: '0.625rem 1rem',
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                color: 'var(--ink)',
-                              }}
-                            >
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <span style={{
-                                  fontSize: '0.625rem',
-                                  color: 'var(--ink-faint)',
-                                  transition: 'transform 200ms',
-                                  transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-                                }}>
-                                  ▸
-                                </span>
-                                <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>
-                                  {sensor.label}
-                                </span>
-                              </div>
-                              <StatusBadge isCustom={isCustom} />
-                            </button>
+                      return (
+                        <div key={sensor.key} style={{
+                          borderBottom: idx < PROMPT_SENSORS.length - 1 ? '1px solid var(--border-soft)' : 'none',
+                        }}>
+                          <button
+                            onClick={() => setExpandedSensor(isExpanded ? null : sensor.key)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              width: '100%',
+                              padding: '0.625rem 1rem',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              color: 'var(--ink)',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <span style={{
+                                fontSize: '0.625rem',
+                                color: 'var(--ink-faint)',
+                                transition: 'transform 200ms',
+                                transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                              }}>
+                                ▸
+                              </span>
+                              <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>
+                                {sensor.label}
+                              </span>
+                            </div>
+                            <StatusBadge isCustom={isCustom} />
+                          </button>
 
-                            {isExpanded && (
-                              <div style={{ padding: '0 1rem 0.875rem' }}>
-                                <textarea
-                                  value={sensorPrompts[sensor.key] ?? ''}
-                                  onChange={(e) => updateSensorPrompt(sensor.key, e.target.value)}
-                                  placeholder={defaultPrompt.slice(0, 120) + '…'}
-                                  rows={4}
+                          {isExpanded && (
+                            <div style={{ padding: '0 1rem 0.875rem' }}>
+                              <textarea
+                                value={sensorPrompts[sensor.key] ?? ''}
+                                onChange={(e) => updateSensorPrompt(sensor.key, e.target.value)}
+                                placeholder={defaultPrompt.slice(0, 120) + '\u2026'}
+                                rows={4}
+                                style={{
+                                  ...inputBase,
+                                  width: '100%',
+                                  resize: 'vertical',
+                                  lineHeight: 1.6,
+                                  fontSize: '0.875rem',
+                                }}
+                                onFocus={focus}
+                                onBlur={blur}
+                              />
+                              {isCustom && (
+                                <button
+                                  onClick={() => updateSensorPrompt(sensor.key, '')}
                                   style={{
-                                    ...inputBase,
-                                    width: '100%',
-                                    resize: 'vertical',
-                                    lineHeight: 1.6,
-                                    fontSize: '0.875rem',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 500,
+                                    color: 'var(--accent)',
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: 0,
+                                    marginTop: '0.375rem',
                                   }}
-                                  onFocus={focus}
-                                  onBlur={blur}
-                                />
-                                {isCustom && (
-                                  <button
-                                    onClick={() => updateSensorPrompt(sensor.key, '')}
-                                    style={{
-                                      fontSize: '0.75rem',
-                                      fontWeight: 500,
-                                      color: 'var(--accent)',
-                                      background: 'none',
-                                      border: 'none',
-                                      cursor: 'pointer',
-                                      padding: 0,
-                                      marginTop: '0.375rem',
-                                    }}
-                                  >
-                                    Reset to default
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
+                                >
+                                  Reset to default
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             </div>
-          </>
+          </div>
         )}
       </div>
     </section>

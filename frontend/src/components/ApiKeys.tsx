@@ -50,6 +50,15 @@ const KEY_FIELDS = KEY_GROUPS.flatMap(g => g.secrets)
 
 const inputBase: React.CSSProperties = { ..._inputBase, width: '100%', fontFamily: 'ui-monospace, monospace' }
 
+const GROUP_CARD_BASE: React.CSSProperties = {
+  border: '1px solid var(--border)',
+  borderRadius: 8,
+  padding: '1.5rem 1.75rem',
+  background: 'var(--surface)',
+  boxShadow: 'var(--shadow-card)',
+  transition: 'box-shadow 200ms ease, border-color 200ms ease',
+}
+
 export function ApiKeys() {
   const showToast = useToast()
   // savedFlags: which fields have a key stored server-side
@@ -111,37 +120,44 @@ export function ApiKeys() {
   const inputStyle: React.CSSProperties = { ...inputBase, fontFamily: 'inherit' }
 
   return (
-    <section id="api-keys" style={{ padding: '2rem 0' }}>
-      <div className="page-header" style={{ marginBottom: '2rem' }}>
+    <section id="api-keys" style={{ maxWidth: 1024, margin: '0 auto', padding: '0 3rem' }} className="page-padding">
+      <div className="page-padding page-header" style={{ paddingTop: '2.5rem', paddingBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{
             fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink)',
+            letterSpacing: '-0.01em',
             marginBottom: '0.25rem',
           }}>Credentials</h2>
           <AutoSaveIndicator status={saveStatus} />
         </div>
         <p style={{
-          fontSize: '0.8125rem', color: 'var(--ink-muted)',
+          fontSize: '0.8125rem', color: 'var(--ink-muted)', lineHeight: 1.5,
         }}>
           Credentials for external data sources and AI providers. Saved keys can be revealed on demand.
         </p>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', paddingBottom: '4rem' }}>
         {KEY_GROUPS.map((group) => (
-          <div key={group.title} style={{
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            padding: '1.25rem 1.5rem',
-            background: 'var(--surface)',
-          }}>
+          <div
+            key={group.title}
+            style={GROUP_CARD_BASE}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)'
+              e.currentTarget.style.borderColor = 'var(--border-strong)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = 'var(--shadow-card)'
+              e.currentTarget.style.borderColor = 'var(--border)'
+            }}
+          >
             <div style={{
               fontSize: '0.6875rem',
               fontWeight: 700,
               letterSpacing: '0.09em',
               textTransform: 'uppercase',
               color: 'var(--ink-faint)',
-              marginBottom: '1.25rem',
+              marginBottom: '1.5rem',
             }}>
               {group.title}
             </div>

@@ -31,6 +31,29 @@ const TIMEZONES = [
   'Australia/Sydney',
 ]
 
+const cardStyle: React.CSSProperties = {
+  background: 'var(--surface)',
+  border: '1px solid var(--border)',
+  borderRadius: 8,
+  boxShadow: 'var(--shadow-card)',
+  padding: '1.5rem',
+  transition: 'box-shadow 200ms ease, border-color 200ms ease',
+}
+
+const actionBtnBase: React.CSSProperties = {
+  fontSize: '0.75rem',
+  fontWeight: 500,
+  padding: '0.375rem 0.875rem',
+  borderRadius: 6,
+  border: '1px solid var(--border)',
+  background: 'var(--surface)',
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+  flexShrink: 0,
+  marginLeft: '1rem',
+  transition: 'color 200ms ease, border-color 200ms ease, background 200ms ease',
+}
+
 export function Pipeline() {
   const showToast = useToast()
   const [fetchTime, setFetchTime] = useState('07:00')
@@ -45,6 +68,8 @@ export function Pipeline() {
   const [sectionLimits, setSectionLimits] = useState<Record<string, number>>({})
   const [invalidating, setInvalidating] = useState(false)
   const [cleaning, setCleaning] = useState(false)
+  const [hoverInvalidate, setHoverInvalidate] = useState(false)
+  const [hoverCleanup, setHoverCleanup] = useState(false)
 
   const { status: saveStatus, trigger } = useAutoSave(
     () => ({
@@ -111,24 +136,24 @@ export function Pipeline() {
   }
 
   return (
-    <section id="pipeline" style={{ padding: '4.5rem 0' }}>
+    <section id="pipeline" style={{ maxWidth: 1024, margin: '0 auto', padding: '0 3rem' }} className="page-padding">
 
-      <div className="page-header" style={{ marginBottom: '2rem' }}>
+      <div className="page-header" style={{ paddingTop: '2.5rem', paddingBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.375rem' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ink)', marginBottom: '0.25rem' }}>
             Pipeline
           </h2>
           <AutoSaveIndicator status={saveStatus} />
         </div>
-        <p style={{ fontSize: '0.875rem', color: 'var(--ink-muted)', lineHeight: 1.6 }}>
+        <p style={{ fontSize: '0.8125rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
           Scheduling, ranking filters, and output limits for the generated briefing.
         </p>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '2.5rem' }}>
 
         {/* ── Schedule ── */}
-        <div>
+        <div style={cardStyle}>
           <SubLabel>Schedule</SubLabel>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -249,22 +274,17 @@ export function Pipeline() {
                 <button
                   onClick={handleInvalidate}
                   disabled={invalidating}
+                  onMouseEnter={() => !invalidating && setHoverInvalidate(true)}
+                  onMouseLeave={() => setHoverInvalidate(false)}
                   style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 500,
-                    padding: '0.375rem 0.875rem',
-                    borderRadius: 4,
-                    border: '1px solid var(--border)',
-                    color: invalidating ? 'var(--ink-faint)' : 'var(--ink-muted)',
-                    background: 'var(--surface)',
+                    ...actionBtnBase,
+                    color: invalidating ? 'var(--ink-faint)' : hoverInvalidate ? 'var(--accent)' : 'var(--ink-muted)',
+                    borderColor: invalidating ? 'var(--border)' : hoverInvalidate ? 'var(--accent-dim)' : 'var(--border)',
+                    background: hoverInvalidate && !invalidating ? 'var(--accent-wash)' : 'var(--surface)',
                     cursor: invalidating ? 'not-allowed' : 'pointer',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0,
-                    marginLeft: '1rem',
-                    transition: 'color 120ms, border-color 120ms',
                   }}
                 >
-                  {invalidating ? 'Marking…' : 'Mark Stale Now'}
+                  {invalidating ? 'Marking...' : 'Mark Stale Now'}
                 </button>
               </div>
             </div>
@@ -292,33 +312,25 @@ export function Pipeline() {
                 <button
                   onClick={handleCleanup}
                   disabled={cleaning}
+                  onMouseEnter={() => !cleaning && setHoverCleanup(true)}
+                  onMouseLeave={() => setHoverCleanup(false)}
                   style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 500,
-                    padding: '0.375rem 0.875rem',
-                    borderRadius: 4,
-                    border: '1px solid var(--border)',
-                    color: cleaning ? 'var(--ink-faint)' : 'var(--ink-muted)',
-                    background: 'var(--surface)',
+                    ...actionBtnBase,
+                    color: cleaning ? 'var(--ink-faint)' : hoverCleanup ? 'var(--accent)' : 'var(--ink-muted)',
+                    borderColor: cleaning ? 'var(--border)' : hoverCleanup ? 'var(--accent-dim)' : 'var(--border)',
+                    background: hoverCleanup && !cleaning ? 'var(--accent-wash)' : 'var(--surface)',
                     cursor: cleaning ? 'not-allowed' : 'pointer',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0,
-                    marginLeft: '1rem',
-                    transition: 'color 120ms, border-color 120ms',
                   }}
                 >
-                  {cleaning ? 'Cleaning…' : 'Delete Expired Now'}
+                  {cleaning ? 'Cleaning...' : 'Delete Expired Now'}
                 </button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Divider */}
-        <div style={{ height: 1, background: 'var(--border-soft)' }} />
-
         {/* ── Filters ── */}
-        <div>
+        <div style={cardStyle}>
           <SubLabel>Filters</SubLabel>
           <div style={{
             background: 'var(--surface)',
@@ -353,11 +365,8 @@ export function Pipeline() {
           </div>
         </div>
 
-        {/* Divider */}
-        <div style={{ height: 1, background: 'var(--border-soft)' }} />
-
         {/* ── Output ── */}
-        <div>
+        <div style={cardStyle}>
           <SubLabel>Output</SubLabel>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
@@ -388,6 +397,7 @@ export function Pipeline() {
                 border: '1px solid var(--border)',
                 borderRadius: 6,
                 overflow: 'hidden',
+                boxShadow: 'var(--shadow-card)',
               }}>
                 {OUTPUT_SECTIONS.map(({ key, label }, i) => {
                   const val = sectionLimits[key] ?? defaultLimit

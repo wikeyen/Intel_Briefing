@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback, Fragment } from 'react'
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
 import { api } from '@/api/client'
-import type { IntelReport, IntelItem, ConfigSettings, BriefingSummary, SummaryProgress, PipelineStatus } from '@/api/client'
+import type { IntelReport, IntelItem, ConfigSettings, BriefingSummary, SummaryProgress, PipelineStatus, SummaryLanguage } from '@/api/client'
 import { SENSOR_TOKEN_FIELD } from '@/lib/sensors/constants'
 import { ALL_CATEGORIES, CATEGORY_META, SENSOR_LABELS, sensorsForCategory } from '@/lib/sensors/taxonomy'
 import { useToast } from '@/lib/toast-context'
@@ -231,6 +231,18 @@ export function Data() {
       await api.triggerSummary()
       // Immediately poll so summaryProgress.running is set without waiting for the 2s interval.
       // This also survives tab switches since the state comes from the server, not local React state.
+      const s = await api.getSummaryStatus()
+      setSummaryProgress(s)
+    } catch (e) {
+      showToast('Failed: ' + (e as Error).message)
+    }
+  }
+
+  const handleLanguageChange = async (lang: SummaryLanguage) => {
+    try {
+      const updated = await api.updateConfig({ summary_language: lang })
+      setConfig(updated)
+      await api.triggerSummary()
       const s = await api.getSummaryStatus()
       setSummaryProgress(s)
     } catch (e) {
@@ -620,6 +632,7 @@ export function Data() {
               onStop={handleStopSummary}
               onStopPipeline={handleStopPipeline}
               onResume={handleResumePipeline}
+              onLanguageChange={handleLanguageChange}
               streamTokens={streamTokens}
               searchQuery={searchQuery}
               loading={loading}

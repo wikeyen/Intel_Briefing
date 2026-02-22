@@ -3,7 +3,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import type { ConfigSettings, BriefingSummary, SummaryProgress, PipelineStatus, OverallBriefing, BriefingSource, IntelReport, IntelItem } from '@/api/client'
+import type { ConfigSettings, BriefingSummary, SummaryProgress, PipelineStatus, OverallBriefing, BriefingSource, IntelReport, IntelItem, SummaryLanguage } from '@/api/client'
 import { SENSOR_LABELS } from '@/lib/sensors/taxonomy'
 import { Highlight, textHas } from './Highlight'
 import { BriefingSkeleton } from '../Skeleton'
@@ -750,7 +750,7 @@ function isStructuredOverall(overall: OverallBriefing | string): overall is Over
   return typeof overall === 'object' && overall !== null && 'executive_summary' in overall
 }
 
-export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, hasContent, onTrigger, onStop, onStopPipeline, onResume, streamTokens, searchQuery, loading, report }: {
+export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, config, hasContent, onTrigger, onStop, onStopPipeline, onResume, onLanguageChange, streamTokens, searchQuery, loading, report }: {
   summary: BriefingSummary | null
   summaryProgress: SummaryProgress | null
   pipelineStatus: PipelineStatus | null
@@ -760,6 +760,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
   onStop: () => void
   onStopPipeline: () => void
   onResume: (action: 'retry' | 'proceed', sensors?: string[]) => void
+  onLanguageChange: (lang: SummaryLanguage) => void
   streamTokens?: Record<string, string>
   searchQuery?: string
   loading?: boolean
@@ -866,22 +867,53 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
             )}
           </div>
           {hasProvider && hasContent && !showProgressBanner && !isPaused && (
-            <button
-              onClick={onTrigger}
-              style={{
-                fontSize: '0.75rem',
-                fontWeight: 500,
-                color: 'var(--accent)',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '0.25rem 0',
-                textDecoration: 'underline',
-                textUnderlineOffset: '2px',
-              }}
-            >
-              Regenerate
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              {/* Language toggle pill */}
+              <div style={{
+                display: 'inline-flex',
+                borderRadius: 4,
+                border: '1px solid var(--border)',
+                overflow: 'hidden',
+              }}>
+                {([['en', 'EN'], ['zh', '中文']] as const).map(([lang, label]) => {
+                  const active = (config?.summary_language ?? 'en') === lang
+                  return (
+                    <button
+                      key={lang}
+                      onClick={() => { if (!active) onLanguageChange(lang) }}
+                      style={{
+                        fontSize: '0.6875rem',
+                        fontWeight: active ? 600 : 400,
+                        padding: '0.2rem 0.5rem',
+                        border: 'none',
+                        cursor: active ? 'default' : 'pointer',
+                        color: active ? 'var(--canvas)' : 'var(--ink-muted)',
+                        background: active ? 'var(--accent)' : 'transparent',
+                        transition: 'all 120ms',
+                      }}
+                    >
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
+              <button
+                onClick={onTrigger}
+                style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 500,
+                  color: 'var(--accent)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.25rem 0',
+                  textDecoration: 'underline',
+                  textUnderlineOffset: '2px',
+                }}
+              >
+                Regenerate
+              </button>
+            </div>
           )}
         </div>
       )}

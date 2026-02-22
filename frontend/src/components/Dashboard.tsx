@@ -995,8 +995,8 @@ function TrendingWidget({ report, summary }: { report: IntelReport; summary?: Br
                 rel="noopener noreferrer"
                 className="flex items-start gap-2.5 no-underline rounded-lg"
                 style={{
-                  padding: '10px 12px',
-                  margin: '0 -12px',
+                  padding: '10px 24px',
+                  margin: '0 -24px',
                   transition: 'background 150ms ease',
                   ...(idx < top.length - 1 ? { borderBottom: '1px solid var(--border-subtle)' } : {}),
                 }}

@@ -622,21 +622,26 @@ input[type="range"]::-moz-range-thumb {
   .status-strip {
     padding-top: 0.5rem !important;
     padding-bottom: 0.5rem !important;
-    padding-left: 1.25rem !important;
-    padding-right: 1.25rem !important;
-    gap: 0.5rem 0.75rem !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    gap: 0.375rem 0.625rem !important;
     flex-wrap: wrap;
     min-height: auto !important;
   }
   .status-strip-metrics {
-    gap: 0.75rem !important;
+    gap: 0.625rem !important;
     flex-wrap: wrap;
   }
 
   .sensor-grid {
     grid-template-columns: repeat(2, 1fr) !important;
-    padding: 0.75rem 1.25rem !important;
-    padding-bottom: calc(56px + 1rem + env(safe-area-inset-bottom)) !important;
+    gap: 0.5rem !important;
+    padding: 0.5rem !important;
+    padding-bottom: calc(56px + 0.75rem + env(safe-area-inset-bottom)) !important;
+  }
+  .sensor-grid > div {
+    padding: 0.75rem !important;
+    min-height: 96px !important;
   }
 
   .command-bar {

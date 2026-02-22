@@ -333,9 +333,10 @@ function ExecSummaryWidget({ summary }: { summary: BriefingSummary }) {
       boxShadow: 'var(--shadow-card)',
       borderLeft: '3px solid var(--accent)',
       padding: '20px 24px',
+      overflow: 'hidden',
     }}>
       <SectionLabel className="mb-3" style={{ color: 'var(--accent)' }}>Executive Summary</SectionLabel>
-      <div style={{ fontSize: '0.875rem', lineHeight: 1.6, color: 'var(--ink)' }} className="whitespace-pre-wrap">
+      <div style={{ fontSize: '0.875rem', lineHeight: 1.6, color: 'var(--ink)', overflowWrap: 'break-word', wordBreak: 'break-word' }} className="whitespace-pre-wrap">
         <InlineRefs text={overall.executive_summary} globalSources={overall.sources} />
       </div>
       {overall.quick_scan && overall.quick_scan.length > 0 && (
@@ -742,9 +743,9 @@ function SourceActivityWidget({ report }: { report: IntelReport }) {
                 <div className="grid grid-cols-[repeat(24,1fr)] gap-0.5 flex-1">
                   {hours.map((count, h) => (
                     <div key={h} title={`${SENSOR_LABELS[source] ?? source} — ${h}:00: ${count} items`}
-                      className="w-full aspect-square"
                       style={{
                         minWidth: 8,
+                        height: 12,
                         borderRadius: 2,
                         background: cellColor(count),
                         transition: 'background 200ms ease',
@@ -966,6 +967,8 @@ function SectionSummariesWidget({ summary }: { summary: BriefingSummary }) {
                       lineHeight: 1.6,
                       paddingLeft: 12,
                       borderLeft: '2px solid var(--accent-subtle)',
+                      overflowWrap: 'break-word',
+                      wordBreak: 'break-word',
                     }}>
                       <InlineRefs text={entry.text} globalSources={overall.sources} />
                     </div>

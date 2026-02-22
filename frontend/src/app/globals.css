@@ -616,9 +616,10 @@ input[type="range"]::-moz-range-thumb {
     padding-right: 0.75rem !important;
   }
 
-  /* ── Dashboard grid — single column on mobile ── */
+  /* ── Dashboard grid — single column on mobile, minmax(0,1fr) prevents
+       grid items with wide content (e.g. heatmap) from blowing out the track ── */
   .dashboard-grid {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: minmax(0, 1fr) !important;
   }
   .dashboard-stats-strip .stat-cell {
     padding: 0.75rem 0.5rem !important;

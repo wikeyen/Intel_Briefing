@@ -1,6 +1,6 @@
 // ABOUTME: Tests for CommandBar — the fixed bottom control bar on the Status page.
-// ABOUTME: Covers idle/running/paused states, run/stop buttons, mode selector, and selection helpers.
-import { render, screen, fireEvent } from '@testing-library/react'
+// ABOUTME: Covers idle/running/paused states, run/stop buttons, mode selector, selection helpers, and mobile status.
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { CommandBar } from './CommandBar'
 import type { CommandBarProps } from './CommandBar'
@@ -204,5 +204,34 @@ describe('CommandBar', () => {
       detail: 'hacker_news',
     })} />)
     expect(screen.getByText('hacker_news')).toBeInTheDocument()
+  })
+
+  // --- Mobile status info ---
+  it('renders mobile status row with health info when idle', () => {
+    render(<CommandBar {...buildProps({
+      statusColor: 'var(--ok)',
+      statusLabel: 'Healthy',
+      sourcesOk: 10,
+      sourcesTotal: 13,
+      totalItems: 847,
+      lastFetchAgo: '3m ago',
+    })} />)
+    const statusRow = document.querySelector('.command-bar-status') as HTMLElement
+    expect(statusRow).toBeTruthy()
+    expect(within(statusRow).getByText('Healthy')).toBeInTheDocument()
+    expect(within(statusRow).getByText('10/13')).toBeInTheDocument()
+    expect(within(statusRow).getByText('847')).toBeInTheDocument()
+    expect(within(statusRow).getByText('3m ago')).toBeInTheDocument()
+  })
+
+  it('does not render mobile status row when running', () => {
+    render(<CommandBar {...buildProps({
+      isRunning: true,
+      phase: 'fetching',
+      progress: { done: 3, total: 13 },
+      statusColor: 'var(--ok)',
+      statusLabel: 'Healthy',
+    })} />)
+    expect(document.querySelector('.command-bar-status')).toBeNull()
   })
 })

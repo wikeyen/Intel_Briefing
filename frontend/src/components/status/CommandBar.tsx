@@ -1,5 +1,5 @@
 // ABOUTME: Command bar — Zone 3 of the mission control Status page.
-// ABOUTME: Fixed bottom bar with run controls, mode selector, selection helpers, and progress display.
+// ABOUTME: Fixed bottom bar with run controls, mode selector, selection helpers, progress, and mobile status info.
 'use client'
 
 import { useState } from 'react'
@@ -24,6 +24,12 @@ export interface CommandBarProps {
   onSelectFailed: () => void
   fetching: boolean
   isStopping: boolean
+  statusColor?: string
+  statusLabel?: string
+  sourcesOk?: number
+  sourcesTotal?: number
+  totalItems?: number
+  lastFetchAgo?: string | null
 }
 
 export const COMMAND_BAR_CSS = `
@@ -53,7 +59,6 @@ const barStyle: React.CSSProperties = {
   right: 0,
   left: 220,
   zIndex: 20,
-  minHeight: 56,
   background: 'var(--surface)',
   borderTop: '1px solid var(--border)',
   boxShadow: '0 -2px 8px rgba(0,0,0,0.04)',
@@ -155,6 +160,69 @@ const monoStyle: React.CSSProperties = {
   fontWeight: 600,
 }
 
+const statusRowDot: React.CSSProperties = {
+  width: 6,
+  height: 6,
+  borderRadius: '50%',
+  flexShrink: 0,
+}
+
+const statusRowLabel: React.CSSProperties = {
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  fontSize: '0.625rem',
+  letterSpacing: '0.06em',
+}
+
+const statusRowMono: React.CSSProperties = {
+  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+  fontWeight: 600,
+  fontSize: '0.75rem',
+  color: 'var(--ink)',
+}
+
+const statusRowMuted: React.CSSProperties = {
+  fontSize: '0.6875rem',
+  color: 'var(--ink-faint)',
+}
+
+function MobileStatusRow({
+  statusColor,
+  statusLabel,
+  sourcesOk,
+  sourcesTotal,
+  totalItems,
+  lastFetchAgo,
+}: Pick<CommandBarProps, 'statusColor' | 'statusLabel' | 'sourcesOk' | 'sourcesTotal' | 'totalItems' | 'lastFetchAgo'>) {
+  return (
+    <div
+      className="command-bar-status"
+      style={{
+        display: 'none',
+        alignItems: 'center',
+        gap: '0.5rem',
+      }}
+    >
+      <span style={{ ...statusRowDot, background: statusColor || 'var(--ink-faint)' }} />
+      <span style={{ ...statusRowLabel, color: statusColor || 'var(--ink-faint)' }}>
+        {statusLabel || 'No Data'}
+      </span>
+      <span style={{ color: 'var(--border)' }}>&middot;</span>
+      <span style={statusRowMono}>{sourcesOk ?? 0}/{sourcesTotal ?? 0}</span>
+      <span style={statusRowMuted}>src</span>
+      <span style={{ color: 'var(--border)' }}>&middot;</span>
+      <span style={statusRowMono}>{totalItems ?? 0}</span>
+      <span style={statusRowMuted}>items</span>
+      {lastFetchAgo && (
+        <>
+          <span style={{ color: 'var(--border)' }}>&middot;</span>
+          <span style={{ ...statusRowMono, fontWeight: 400, color: 'var(--ink-faint)' }}>{lastFetchAgo}</span>
+        </>
+      )}
+    </div>
+  )
+}
+
 export function CommandBar({
   isRunning,
   phase,
@@ -173,6 +241,12 @@ export function CommandBar({
   onSelectFailed,
   fetching,
   isStopping,
+  statusColor,
+  statusLabel,
+  sourcesOk,
+  sourcesTotal,
+  totalItems,
+  lastFetchAgo,
 }: CommandBarProps) {
   const [mode, setMode] = useState<RunMode>('fetch_summarize')
   const [stopHovered, setStopHovered] = useState(false)
@@ -187,7 +261,7 @@ export function CommandBar({
   if (isPaused) {
     return (
       <div className="command-bar" style={barStyle}>
-        <div style={innerStyle}>
+        <div className="command-bar-inner" style={innerStyle}>
           <div style={{
             ...progressTrackStyle,
             background: 'repeating-linear-gradient(45deg, var(--warn) 0 10px, var(--warn-subtle) 10px 20px)',
@@ -199,7 +273,7 @@ export function CommandBar({
             ⚠ {failedCount} sensors failed
           </span>
 
-          <div className="command-bar-center" style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '0 auto' }}>
+          <div className="command-bar-pause-actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '0 auto' }}>
             <button
               type="button"
               onClick={onSkipRetries}
@@ -225,7 +299,7 @@ export function CommandBar({
 
     return (
       <div className="command-bar" style={barStyle}>
-        <div style={innerStyle}>
+        <div className="command-bar-inner" style={innerStyle}>
           <div style={progressTrackStyle}>
             <div style={{
               height: '100%',
@@ -246,7 +320,7 @@ export function CommandBar({
             )}
           </div>
 
-          <div className="command-bar-center" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0 auto' }}>
+          <div className="command-bar-run-stats" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0 auto' }}>
             <span style={monoStyle}>{progress.done}/{progress.total}</span>
             <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>sensors</span>
             {failedCount > 0 && (
@@ -271,7 +345,16 @@ export function CommandBar({
 
   return (
     <div className="command-bar" style={barStyle}>
-      <div style={innerStyle}>
+      <div className="command-bar-inner" style={innerStyle}>
+        <MobileStatusRow
+          statusColor={statusColor}
+          statusLabel={statusLabel}
+          sourcesOk={sourcesOk}
+          sourcesTotal={sourcesTotal}
+          totalItems={totalItems}
+          lastFetchAgo={lastFetchAgo}
+        />
+
         <select
           value={mode}
           onChange={(e) => setMode(e.target.value as RunMode)}
@@ -282,7 +365,7 @@ export function CommandBar({
           ))}
         </select>
 
-        <div className="command-bar-center" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+        <div className="command-bar-idle-center" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
           <button type="button" onClick={onSelectAll} style={quickLinkStyle} className="command-bar-link">All</button>
           <button type="button" onClick={onSelectNone} style={quickLinkStyle} className="command-bar-link">None</button>
           {hasFailedSensors && (

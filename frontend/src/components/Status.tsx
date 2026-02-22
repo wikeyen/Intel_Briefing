@@ -9,9 +9,10 @@ import { StatusStrip, STATUS_STRIP_CSS } from './status/StatusStrip'
 import type { Phase } from './status/StatusStrip'
 import { SensorGrid } from './status/SensorGrid'
 import { CommandBar, COMMAND_BAR_CSS } from './status/CommandBar'
-import { SECTION_SENSORS } from './status/constants'
+import { STATUS_META, SECTION_SENSORS } from './status/constants'
 import { StaleProcessBanner, detectStale } from './StaleProcessBanner'
 import { StatusSkeleton } from './Skeleton'
+import { timeAgo } from './status/time-helpers'
 
 export function Status() {
   const showToast = useToast()
@@ -22,6 +23,7 @@ export function Status() {
   const [running, setRunning]         = useState(false)
   const [stopping, setStopping]       = useState(false)
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null)
+  const [pipelineChecked, setPipelineChecked] = useState(false)
   const [, setTick]                   = useState(0)
   const [selectedSensors, setSelectedSensors] = useState<Set<string>>(new Set())
   const [dismissed, setDismissed]     = useState<Set<string>>(new Set())
@@ -64,6 +66,10 @@ export function Status() {
     api.health().then(setHealth).catch(() => setHealth({ status: 'error', last_fetch: null }))
     api.getLatest().then(setReport).catch(() => {})
     api.getConfig().then(setConfig).catch(() => {})
+    api.getPipelineStatus().then(s => {
+      setPipelineStatus(s)
+      setPipelineChecked(true)
+    }).catch(() => { setPipelineChecked(true) })
   }
 
   useEffect(() => {
@@ -92,6 +98,7 @@ export function Status() {
     const check = () => {
       api.getPipelineStatus().then(s => {
         setPipelineStatus(s)
+        setPipelineChecked(true)
         if (!s.running) {
           const sinceTrigger = Date.now() - triggerTimeRef.current
           if (sinceTrigger > 5_000) {
@@ -102,10 +109,8 @@ export function Status() {
       }).catch(() => {})
     }
     const interval = isRunningOrTriggered ? 3_000 : 15_000
-    const delay = isRunningOrTriggered ? 0 : 3_000
-    const timeout = setTimeout(() => { check() }, delay)
     const iv = setInterval(check, interval)
-    return () => { clearTimeout(timeout); clearInterval(iv) }
+    return () => { clearInterval(iv) }
   }, [isRunningOrTriggered])
 
   const handleRun = async (mode: RunMode, sensors?: string[]) => {
@@ -230,7 +235,10 @@ export function Status() {
 
   const sourcesOk = report?.sources_ok.length ?? 0
 
-  if (!health && !report) {
+  const statusMeta = STATUS_META[health?.status ?? 'no_data'] ?? STATUS_META.no_data
+  const lastFetchAgo = health?.last_fetch ? timeAgo(health.last_fetch) : null
+
+  if (!health && !report && !pipelineChecked) {
     return (
       <section id="status" className="status-page">
         <StatusSkeleton />
@@ -305,6 +313,12 @@ export function Status() {
         onSelectFailed={selectFailed}
         fetching={fetching}
         isStopping={stopping}
+        statusColor={statusMeta.color}
+        statusLabel={statusMeta.label}
+        sourcesOk={sourcesOk}
+        sourcesTotal={allEnabledSensors.length}
+        totalItems={totalItems}
+        lastFetchAgo={lastFetchAgo}
       />
     </section>
   )

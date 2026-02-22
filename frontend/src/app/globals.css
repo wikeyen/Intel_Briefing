@@ -620,11 +620,10 @@ input[type="range"]::-moz-range-thumb {
 
   /* ── Status page — mission control responsive ── */
   .status-strip {
-    padding-left: 1.25rem !important;
-    padding-right: 1.25rem !important;
-    gap: 0.75rem !important;
+    padding: 0.5rem 1.25rem !important;
+    gap: 0.5rem 0.75rem !important;
     flex-wrap: wrap;
-    min-height: 44px !important;
+    min-height: auto !important;
   }
   .status-strip-metrics {
     gap: 0.75rem !important;

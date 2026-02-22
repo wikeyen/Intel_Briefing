@@ -1,7 +1,16 @@
 // ABOUTME: GitHub sensor using the GitHub GraphQL API to find recently-created trending repos.
-// ABOUTME: Requires a valid GitHub token in config.github_token; skips gracefully without one.
+// ABOUTME: Tracks star velocity across runs via per-repo cache snapshots in the kv store.
 import type { ConfigSettings, IntelItem } from '../models'
+import { kvGet, kvSet } from '../db'
 import { SensorConfigError } from './errors'
+
+const STAR_CACHE_PREFIX = 'github_stars:'
+const STAR_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60 // 7 days
+
+interface StarSnapshot {
+  count: number
+  firstSeenAt: string
+}
 
 const GRAPHQL_URL = 'https://api.github.com/graphql'
 
@@ -54,6 +63,8 @@ export async function fetchGitHub(config: ConfigSettings, limit: number): Promis
     }
 
     const items: IntelItem[] = []
+    // Maps item.id → { starCount, nameWithOwner } for velocity tracking
+    const repoMeta = new Map<string, { stars: number; nameWithOwner: string }>()
     const edges = ((data.data as Record<string, unknown>)?.search as Record<string, unknown>)?.edges as Array<Record<string, unknown>> ?? []
 
     for (const edge of edges) {
@@ -66,18 +77,81 @@ export async function fetchGitHub(config: ConfigSettings, limit: number): Promis
       const title = safeName + (description ? ` — ${description}` : '')
       const createdAt = String(node.createdAt ?? '')
       const publishedAt = createdAt ? createdAt.slice(0, 10) : null
+      const currentStars = typeof node.stargazerCount === 'number' ? node.stargazerCount : 0
+      const itemId = `gh-${safeName.replace(/\//g, '-')}`
 
+      repoMeta.set(itemId, { stars: currentStars, nameWithOwner: rawName })
       items.push({
-        id: `gh-${safeName.replace(/\//g, '-')}`,
+        id: itemId,
         source: 'github',
         title,
         url: String(node.url ?? ''),
-        heat: `${node.stargazerCount ?? 0} stars`,
+        heat: `${currentStars} stars`,
         published_at: publishedAt,
       })
     }
-    return items.slice(0, limit)
+
+    const result = items.slice(0, limit)
+
+    // Velocity tracking is best-effort — never fail the sensor over cache errors
+    try {
+      await attachStarVelocity(result, repoMeta)
+    } catch {
+      // Silently continue without velocity data
+    }
+
+    return result
   } catch (err) {
     throw err instanceof Error ? err : new Error(String(err))
+  }
+}
+
+/**
+ * Attach velocity data to each item by comparing current star counts
+ * against cached snapshots from the previous run. Mutates items in-place.
+ * Writes updated snapshots back to the cache for the next run.
+ */
+async function attachStarVelocity(
+  items: IntelItem[],
+  repoMeta: Map<string, { stars: number; nameWithOwner: string }>,
+): Promise<void> {
+  const now = new Date().toISOString()
+
+  for (const item of items) {
+    const meta = repoMeta.get(item.id)
+    if (!meta) continue
+
+    const currentCount = meta.stars
+    const cacheKey = `${STAR_CACHE_PREFIX}${meta.nameWithOwner}`
+    const previous = await kvGet<StarSnapshot>(cacheKey)
+
+    if (!previous) {
+      // First time seeing this repo — record it, no delta available
+      item.velocity = {
+        previousCount: null,
+        currentCount,
+        changePercent: null,
+        firstSeenAt: now,
+        hoursOnTrend: null,
+      }
+      await kvSet(cacheKey, { count: currentCount, firstSeenAt: now } satisfies StarSnapshot, STAR_CACHE_TTL_SECONDS)
+    } else {
+      const hoursOnTrend = Math.round(
+        (Date.now() - new Date(previous.firstSeenAt).getTime()) / (1000 * 60 * 60) * 10,
+      ) / 10
+      const changePercent = previous.count > 0
+        ? Math.round(((currentCount - previous.count) / previous.count) * 1000) / 10
+        : null
+
+      item.velocity = {
+        previousCount: previous.count,
+        currentCount,
+        changePercent,
+        firstSeenAt: previous.firstSeenAt,
+        hoursOnTrend,
+      }
+      // Update the snapshot count but preserve the firstSeenAt timestamp
+      await kvSet(cacheKey, { count: currentCount, firstSeenAt: previous.firstSeenAt } satisfies StarSnapshot, STAR_CACHE_TTL_SECONDS)
+    }
   }
 }

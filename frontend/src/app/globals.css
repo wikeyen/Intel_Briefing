@@ -620,14 +620,11 @@ input[type="range"]::-moz-range-thumb {
   .dashboard-grid {
     grid-template-columns: 1fr !important;
   }
-  .dashboard-stats-strip {
-    grid-template-columns: repeat(2, 1fr) !important;
-  }
-  .dashboard-stats-strip .stat-value {
-    font-size: 1.25rem !important;
-  }
   .dashboard-stats-strip .stat-cell {
     padding: 0.75rem 0.5rem !important;
+  }
+  .dashboard-stats-strip .stat-number {
+    font-size: 1.25rem !important;
   }
   .dashboard-root {
     padding: 1rem !important;
@@ -640,6 +637,9 @@ input[type="range"]::-moz-range-thumb {
   .dashboard-ticker {
     flex-wrap: wrap !important;
     gap: 0.5rem !important;
+    height: auto !important;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
   }
   .dashboard-ticker-hide-mobile {
     display: none !important;
@@ -686,6 +686,9 @@ input[type="range"]::-moz-range-thumb {
 .dashboard-span-2 { grid-column: span 1; }
 .dashboard-span-3 { grid-column: span 1; }
 .dashboard-span-full { grid-column: 1 / -1; }
+
+/* Stat number — base size, overridden to 1.25rem on mobile via media query above */
+.stat-number { font-size: 1.75rem; }
 
 @media (min-width: 768px) {
   .dashboard-grid {

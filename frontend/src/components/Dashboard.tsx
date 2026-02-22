@@ -269,11 +269,13 @@ function StatsStrip({ report, summary }: { report: IntelReport | null; summary: 
         boxShadow: 'var(--shadow-card)',
       }}
     >
-      <div className="grid grid-cols-4">
+      <div className="grid grid-cols-2 md:grid-cols-4">
         {stats.map((stat, i) => (
           <div key={stat.label} className={cn(
             'stat-cell text-center cursor-default',
-            i < 3 && 'border-r',
+            i % 2 === 0 && 'border-r',
+            i < 2 && 'border-b md:border-b-0',
+            i === 2 && 'md:border-r',
           )}
             style={{
               padding: '16px 0',
@@ -292,11 +294,10 @@ function StatsStrip({ report, summary }: { report: IntelReport | null; summary: 
             >
               <span
                 className={cn(
-                  'font-bold leading-tight tracking-tight font-mono',
+                  'stat-number font-bold leading-tight tracking-tight font-mono',
                   stat.label === 'Mood' && 'capitalize',
                 )}
                 style={{
-                  fontSize: '1.75rem',
                   letterSpacing: '-0.03em',
                   color: stat.colorStyle ?? 'var(--ink)',
                 }}
@@ -1005,11 +1006,16 @@ function DashboardSkeleton() {
         borderRadius: 12,
         boxShadow: 'var(--shadow-card)',
       }}>
-        <div className="grid grid-cols-4">
+        <div className="grid grid-cols-2 md:grid-cols-4">
           {[0, 1, 2, 3].map(i => (
-            <div key={i} className="flex flex-col items-center gap-1.5" style={{
+            <div key={i} className={cn(
+              'flex flex-col items-center gap-1.5',
+              i % 2 === 0 && 'border-r',
+              i < 2 && 'border-b md:border-b-0',
+              i === 2 && 'md:border-r',
+            )} style={{
               padding: '16px 20px',
-              ...(i < 3 ? { borderRight: '1px solid var(--border-subtle)' } : {}),
+              borderColor: 'var(--border-subtle)',
             }}>
               <div className="skeleton-shimmer" style={{ width: 48, height: 24 }} />
               <div className="skeleton-shimmer" style={{ width: 36, height: 8 }} />

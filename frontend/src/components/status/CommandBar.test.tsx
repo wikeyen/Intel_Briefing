@@ -64,23 +64,22 @@ describe('CommandBar', () => {
     expect(onSelectNone).toHaveBeenCalledOnce()
   })
 
-  it('disables Run button when no sensors selected', () => {
+  it('shows "Run All" when no sensors selected (runs all by default)', () => {
     render(<CommandBar {...buildProps({ selectedCount: 0 })} />)
-    const btn = screen.getByRole('button', { name: /run/i })
-    expect(btn).toBeDisabled()
+    const btn = screen.getByRole('button', { name: /run all/i })
+    expect(btn).toBeEnabled()
   })
 
-  it('enables Run button when sensors are selected', () => {
+  it('shows "Run N" when some sensors are selected', () => {
     render(<CommandBar {...buildProps({ selectedCount: 3 })} />)
     const btn = screen.getByRole('button', { name: /run 3/i })
     expect(btn).toBeEnabled()
   })
 
-  it('shows "Run" when all sensors are selected', () => {
+  it('shows "Run All" when all sensors are selected', () => {
     render(<CommandBar {...buildProps({ selectedCount: 13, totalSensors: 13 })} />)
-    const btn = screen.getByRole('button', { name: /run/i })
-    expect(btn).toHaveTextContent('Run')
-    expect(btn).not.toHaveTextContent('Run 13')
+    const btn = screen.getByRole('button', { name: /run all/i })
+    expect(btn).toHaveTextContent('Run All')
   })
 
   it('calls onRun with selected mode when Run is clicked', () => {

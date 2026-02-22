@@ -178,10 +178,11 @@ export function CommandBar({
   const [stopHovered, setStopHovered] = useState(false)
 
   const pct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0
-  const runDisabled = fetching || selectedCount === 0
+  const runDisabled = fetching
+  const noneSelected = selectedCount === 0
   const allSelected = selectedCount === totalSensors
 
-  const runLabel = allSelected ? 'Run' : `Run ${selectedCount}`
+  const runLabel = noneSelected || allSelected ? 'Run All' : `Run ${selectedCount}`
 
   if (isPaused) {
     return (

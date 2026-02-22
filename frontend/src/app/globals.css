@@ -661,10 +661,6 @@ input[type="range"]::-moz-range-thumb {
     display: none !important;
   }
 
-  #status {
-    padding-top: 0 !important;
-  }
-
   /* ── Settings/Config mobile grid ── */
   .settings-grid-2col {
     grid-template-columns: 1fr !important;

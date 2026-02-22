@@ -690,7 +690,7 @@ input[type="range"]::-moz-range-thumb {
     display: none !important;
   }
   /* Card internal padding tighter on mobile */
-  .dashboard-card .px-5 {
+  .dashboard-card [data-slot="card-content"] {
     padding-left: 1rem !important;
     padding-right: 1rem !important;
   }

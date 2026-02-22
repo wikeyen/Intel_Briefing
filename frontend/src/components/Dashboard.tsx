@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { api } from '@/api/client'
 import type { IntelReport, IntelItem, BriefingSummary, PipelineStatus, SummaryProgress, OverallBriefing, BriefingSource } from '@/api/client'
-import { SENSOR_LABELS, DISPLAY_CATEGORY_META, SENSOR_DISPLAY_MAP, CATEGORY_TO_DISPLAY } from '@/lib/sensors/taxonomy'
+import { SENSOR_LABELS, SENSOR_DISPLAY_MAP, CATEGORY_TO_DISPLAY } from '@/lib/sensors/taxonomy'
 import type { CategoryKey, DisplayCategoryKey } from '@/lib/sensors/taxonomy'
 import { Skeleton, SkeletonCard } from './Skeleton'
 
@@ -81,6 +81,94 @@ const PULSE_CSS = `
 }
 `
 
+/** Section label — consistent uppercase treatment across all widgets. */
+function SectionLabel({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  return (
+    <div style={{
+      fontSize: '0.625rem',
+      fontWeight: 700,
+      color: 'var(--ink-faint)',
+      textTransform: 'uppercase',
+      letterSpacing: '0.08em',
+      ...style,
+    }}>
+      {children}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Widget: Stats Strip
+// ---------------------------------------------------------------------------
+
+function StatsStrip({ report, summary }: { report: IntelReport | null; summary: BriefingSummary | null }) {
+  const totalItems = report ? Object.values(report.items).flat().length : 0
+  const sourcesOk = report ? report.sources_ok.length : 0
+
+  // Compute positive sentiment %
+  const SOCIAL = new Set(['x', 'bluesky', 'mastodon', 'weibo', 'xiaohongshu'])
+  const allItems: IntelItem[] = report ? Object.values(report.items).flat() : []
+  const withSentiment = allItems.filter(i => SOCIAL.has(i.source) && i.sentiment)
+  const positiveCount = withSentiment.filter(i => i.sentiment!.label === 'positive').length
+  const positivePct = withSentiment.length > 0 ? Math.round((positiveCount / withSentiment.length) * 100) : null
+
+  const overall = summary?.overall
+  const mood = overall && isStructuredOverall(overall) ? overall.sentiment?.overall_mood : null
+  const moodColors: Record<string, string> = {
+    bullish: 'var(--ok)',
+    bearish: 'var(--err)',
+    mixed: 'var(--warn)',
+    neutral: 'var(--ink-faint)',
+  }
+
+  const stats: { value: string; label: string; color?: string }[] = [
+    { value: totalItems.toLocaleString(), label: 'Items' },
+    { value: String(sourcesOk), label: 'Sources' },
+    { value: positivePct != null ? `${positivePct}%` : '--', label: 'Positive' },
+    { value: mood ?? '--', label: 'Mood', color: mood ? moodColors[mood] : undefined },
+  ]
+
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(4, 1fr)',
+      background: 'var(--surface)',
+      borderRadius: 10,
+      border: '1px solid var(--border)',
+      overflow: 'hidden',
+    }}>
+      {stats.map((stat, i) => (
+        <div key={stat.label} style={{
+          padding: '1.25rem 1.5rem',
+          borderRight: i < 3 ? '1px solid var(--border-soft)' : 'none',
+          textAlign: 'center',
+        }}>
+          <div style={{
+            fontSize: '1.5rem',
+            fontWeight: 700,
+            color: stat.color ?? 'var(--ink)',
+            lineHeight: 1.2,
+            letterSpacing: '-0.02em',
+            textTransform: stat.label === 'Mood' ? 'capitalize' : 'none',
+          }}>
+            {stat.value}
+          </div>
+          <div style={{
+            fontSize: '0.625rem',
+            fontWeight: 600,
+            color: 'var(--ink-faint)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            marginTop: '0.375rem',
+          }}>
+            {stat.label}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Widget: Executive Summary
 // ---------------------------------------------------------------------------
@@ -91,48 +179,48 @@ function ExecSummaryWidget({ summary }: { summary: BriefingSummary }) {
 
   return (
     <div style={{
-      background: 'var(--accent-wash, var(--surface-alt))',
-      border: '1px solid var(--accent-dim, var(--border))',
-      borderRadius: 8,
-      padding: '1.25rem 1.5rem',
+      background: 'var(--accent-wash)',
+      borderLeft: '3px solid var(--accent)',
+      borderRadius: '0 10px 10px 0',
+      padding: '1.5rem 2rem',
     }}>
-      <div style={{
-        fontSize: '0.6875rem',
-        fontWeight: 600,
-        color: 'var(--accent)',
-        textTransform: 'uppercase',
-        letterSpacing: '0.06em',
-        marginBottom: '0.75rem',
-      }}>
+      <SectionLabel style={{ color: 'var(--accent)', marginBottom: '0.875rem' }}>
         Executive Summary
-      </div>
+      </SectionLabel>
       <div style={{
-        fontSize: '0.875rem',
+        fontSize: '0.9375rem',
         color: 'var(--ink)',
-        lineHeight: 1.8,
+        lineHeight: 1.85,
         whiteSpace: 'pre-wrap',
       }}>
         <InlineRefs text={overall.executive_summary} globalSources={overall.sources} />
       </div>
       {overall.quick_scan && overall.quick_scan.length > 0 && (
-        <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid var(--accent-dim, var(--border))' }}>
-          <div style={{
-            fontSize: '0.625rem',
-            fontWeight: 600,
-            color: 'var(--accent)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em',
-            marginBottom: '0.5rem',
-          }}>
+        <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--accent-dim)' }}>
+          <SectionLabel style={{ color: 'var(--accent)', marginBottom: '0.625rem' }}>
             Quick Scan
-          </div>
-          <ul style={{ margin: 0, paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+          </SectionLabel>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {overall.quick_scan.map((entry, i) => (
-              <li key={i} style={{ fontSize: '0.8125rem', color: 'var(--ink)', lineHeight: 1.6 }}>
-                <InlineRefs text={entry.text} globalSources={overall.sources} />
-              </li>
+              <div key={i} style={{
+                display: 'flex',
+                gap: '0.625rem',
+                fontSize: '0.8125rem',
+                color: 'var(--ink)',
+                lineHeight: 1.65,
+              }}>
+                <span style={{
+                  width: 5,
+                  height: 5,
+                  borderRadius: '50%',
+                  background: 'var(--accent)',
+                  flexShrink: 0,
+                  marginTop: '0.5rem',
+                }} />
+                <span><InlineRefs text={entry.text} globalSources={overall.sources} /></span>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       )}
     </div>
@@ -149,7 +237,6 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
   const sentiment = overall.sentiment
   if (!sentiment) return null
 
-  // LLM-generated mood analysis
   const moodColors: Record<string, string> = {
     bullish: 'var(--ok)',
     bearish: 'var(--err)',
@@ -157,7 +244,6 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
     neutral: 'var(--ink-faint)',
   }
 
-  // Per-item sentiment bars from report data
   const SOCIAL = new Set(['x', 'bluesky', 'mastodon', 'weibo', 'xiaohongshu'])
   const allItems: IntelItem[] = report ? Object.values(report.items).flat() : []
   const socialWithSentiment = allItems.filter(i => SOCIAL.has(i.source) && i.sentiment)
@@ -179,33 +265,35 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
     <div style={{
       background: 'var(--surface)',
       border: '1px solid var(--border)',
-      borderRadius: 8,
+      borderRadius: 10,
       padding: '1.25rem 1.5rem',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '0.875rem',
     }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: '0.75rem',
-      }}>
+      {/* Header: mood indicator as hero */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <SectionLabel>Sentiment</SectionLabel>
         <div style={{
-          fontSize: '0.6875rem',
-          fontWeight: 600,
-          color: 'var(--ink-faint)',
-          textTransform: 'uppercase',
-          letterSpacing: '0.06em',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.375rem',
         }}>
-          Sentiment
+          <span style={{
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            background: moodColors[sentiment.overall_mood] ?? 'var(--ink-faint)',
+          }} />
+          <span style={{
+            fontSize: '0.8125rem',
+            fontWeight: 700,
+            color: moodColors[sentiment.overall_mood] ?? 'var(--ink-faint)',
+            textTransform: 'capitalize',
+          }}>
+            {sentiment.overall_mood}
+          </span>
         </div>
-        <span style={{
-          fontSize: '0.6875rem',
-          fontWeight: 600,
-          color: moodColors[sentiment.overall_mood] ?? 'var(--ink-faint)',
-          textTransform: 'uppercase',
-          letterSpacing: '0.04em',
-        }}>
-          {sentiment.overall_mood}
-        </span>
       </div>
 
       {/* Mood summary */}
@@ -214,7 +302,7 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
           fontSize: '0.8125rem',
           color: 'var(--ink)',
           lineHeight: 1.7,
-          margin: '0 0 0.75rem',
+          margin: 0,
         }}>
           <InlineRefs text={sentiment.mood_summary} globalSources={overall.sources} />
         </p>
@@ -222,38 +310,32 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
 
       {/* Risk flags */}
       {sentiment.risk_flags.length > 0 && (
-        <div style={{ marginBottom: '0.75rem' }}>
-          <div style={{
-            fontSize: '0.625rem',
-            fontWeight: 600,
-            color: 'var(--err)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em',
-            marginBottom: '0.375rem',
-          }}>
+        <div>
+          <SectionLabel style={{ color: 'var(--err)', marginBottom: '0.375rem' }}>
             Risk Flags
+          </SectionLabel>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+            {sentiment.risk_flags.map((flag, i) => (
+              <div key={i} style={{
+                fontSize: '0.8125rem',
+                color: 'var(--ink)',
+                lineHeight: 1.6,
+                paddingLeft: '0.75rem',
+                borderLeft: '2px solid var(--err)',
+              }}>
+                <strong style={{ fontSize: '0.75rem' }}>{flag.topic}</strong>
+                <span style={{ color: 'var(--ink-muted)', marginLeft: '0.375rem' }}>
+                  <InlineRefs text={flag.analysis} globalSources={overall.sources} />
+                </span>
+              </div>
+            ))}
           </div>
-          {sentiment.risk_flags.map((flag, i) => (
-            <div key={i} style={{
-              fontSize: '0.8125rem',
-              color: 'var(--ink)',
-              lineHeight: 1.6,
-              marginBottom: '0.25rem',
-              paddingLeft: '0.75rem',
-              borderLeft: '2px solid var(--err)',
-            }}>
-              <strong style={{ fontSize: '0.75rem' }}>{flag.topic}</strong>
-              <span style={{ color: 'var(--ink-muted)', marginLeft: '0.375rem' }}>
-                <InlineRefs text={flag.analysis} globalSources={overall.sources} />
-              </span>
-            </div>
-          ))}
         </div>
       )}
 
       {/* Per-platform sentiment bars */}
       {Object.keys(bySource).length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
           {Object.entries(bySource).map(([source, counts]) => {
             const posPct = Math.round((counts.positive / counts.total) * 100)
             const negPct = Math.round((counts.negative / counts.total) * 100)
@@ -273,17 +355,21 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
                   }}>
                     {SENSOR_LABELS[source] ?? source}
                   </span>
-                  <span style={{
-                    fontSize: '0.625rem',
-                    color: 'var(--ink-faint)',
+                  <div style={{
+                    display: 'flex',
+                    gap: '0.625rem',
+                    fontSize: '0.5625rem',
                     fontFamily: 'ui-monospace, monospace',
+                    color: 'var(--ink-faint)',
                   }}>
-                    {counts.total} posts
-                  </span>
+                    <span><span style={{ color: '#22c55e' }}>{posPct}%</span></span>
+                    <span><span style={{ color: '#9ca3af' }}>{neuPct}%</span></span>
+                    <span><span style={{ color: '#ef4444' }}>{negPct}%</span></span>
+                  </div>
                 </div>
                 <div style={{
                   display: 'flex',
-                  height: 6,
+                  height: 5,
                   borderRadius: 3,
                   overflow: 'hidden',
                   background: 'var(--border)',
@@ -321,7 +407,6 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
 // ---------------------------------------------------------------------------
 
 function TrendingWidget({ report }: { report: IntelReport }) {
-  // Collect items from the "trend" display category that have velocity data
   const trendItems: IntelItem[] = []
   for (const [cat, items] of Object.entries(report.items)) {
     for (const item of items) {
@@ -331,54 +416,45 @@ function TrendingWidget({ report }: { report: IntelReport }) {
     }
   }
 
-  // Sort by absolute change percent (highest velocity first), nulls last
   trendItems.sort((a, b) => {
     const av = Math.abs(a.velocity?.changePercent ?? 0)
     const bv = Math.abs(b.velocity?.changePercent ?? 0)
     return bv - av
   })
 
-  const top = trendItems.slice(0, 8)
+  const top = trendItems.slice(0, 6)
   if (top.length === 0) return null
 
   return (
     <div style={{
       background: 'var(--surface)',
       border: '1px solid var(--border)',
-      borderRadius: 8,
+      borderRadius: 10,
       padding: '1.25rem 1.5rem',
     }}>
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: '0.75rem',
+        marginBottom: '0.875rem',
       }}>
-        <div style={{
-          fontSize: '0.6875rem',
-          fontWeight: 600,
-          color: 'var(--ink-faint)',
-          textTransform: 'uppercase',
-          letterSpacing: '0.06em',
-        }}>
-          Trending
-        </div>
+        <SectionLabel>Trending</SectionLabel>
         <Link href="/data" style={{
           fontSize: '0.6875rem',
+          fontWeight: 500,
           color: 'var(--accent)',
           textDecoration: 'none',
         }}>
-          View all
+          View all &#8250;
         </Link>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        {top.map(item => {
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {top.map((item, idx) => {
           const v = item.velocity!
           const pctStr = v.changePercent != null ? `${v.changePercent > 0 ? '+' : ''}${v.changePercent}%` : null
           const pctColor = v.changePercent != null
             ? v.changePercent > 0 ? 'var(--ok)' : v.changePercent < 0 ? 'var(--err)' : 'var(--ink-faint)'
             : 'var(--ink-faint)'
-          // Clean title: strip the "owner/repo — description" format for GitHub
           const displayTitle = item.source === 'github'
             ? item.title.split(' — ')[0]
             : item.title
@@ -393,11 +469,23 @@ function TrendingWidget({ report }: { report: IntelReport }) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.75rem',
-                padding: '0.375rem 0',
+                padding: '0.625rem 0',
                 textDecoration: 'none',
-                borderBottom: '1px solid var(--border-soft)',
+                borderBottom: idx < top.length - 1 ? '1px dotted var(--border-soft)' : 'none',
               }}
             >
+              {/* Rank number */}
+              <span style={{
+                fontSize: '1.125rem',
+                fontWeight: 700,
+                color: 'var(--border)',
+                width: 24,
+                textAlign: 'right',
+                flexShrink: 0,
+                fontFamily: 'ui-monospace, monospace',
+              }}>
+                {idx + 1}
+              </span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{
                   fontSize: '0.8125rem',
@@ -410,19 +498,29 @@ function TrendingWidget({ report }: { report: IntelReport }) {
                   {displayTitle}
                 </div>
                 <div style={{
-                  fontSize: '0.625rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.375rem',
+                  fontSize: '0.5625rem',
                   color: 'var(--ink-faint)',
                   marginTop: '0.125rem',
                 }}>
-                  {SENSOR_LABELS[item.source] ?? item.source}
-                  {item.heat && <> · {item.heat}</>}
-                  {v.hoursOnTrend != null && <> · {v.hoursOnTrend}h on trend</>}
+                  <span style={{
+                    padding: '0.0625rem 0.3125rem',
+                    borderRadius: 3,
+                    background: 'var(--surface-alt)',
+                    fontWeight: 500,
+                  }}>
+                    {SENSOR_LABELS[item.source] ?? item.source}
+                  </span>
+                  {item.heat && <span>{item.heat}</span>}
+                  {v.hoursOnTrend != null && <span>{v.hoursOnTrend}h trending</span>}
                 </div>
               </div>
               {pctStr && (
                 <span style={{
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
+                  fontSize: '0.8125rem',
+                  fontWeight: 700,
                   color: pctColor,
                   fontFamily: 'ui-monospace, monospace',
                   flexShrink: 0,
@@ -451,23 +549,14 @@ function SectionSummariesWidget({ summary }: { summary: BriefingSummary }) {
   const [expanded, setExpanded] = useState<Set<number>>(() => new Set([0]))
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-      <div style={{
-        fontSize: '0.6875rem',
-        fontWeight: 600,
-        color: 'var(--ink-faint)',
-        textTransform: 'uppercase',
-        letterSpacing: '0.06em',
-      }}>
-        Sections
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
       {sections.map((section, i) => {
         const isOpen = expanded.has(i)
         return (
           <div key={i} style={{
             background: 'var(--surface)',
             border: '1px solid var(--border)',
-            borderRadius: 8,
+            borderRadius: 10,
             overflow: 'hidden',
           }}>
             <button
@@ -482,7 +571,7 @@ function SectionSummariesWidget({ summary }: { summary: BriefingSummary }) {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 width: '100%',
-                padding: '0.75rem 1.25rem',
+                padding: '0.875rem 1.5rem',
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
@@ -492,29 +581,43 @@ function SectionSummariesWidget({ summary }: { summary: BriefingSummary }) {
                 textAlign: 'left',
               }}
             >
-              <span>{section.title}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                <span>{section.title}</span>
+                <span style={{
+                  fontSize: '0.5625rem',
+                  fontWeight: 600,
+                  color: 'var(--ink-faint)',
+                  background: 'var(--surface-alt)',
+                  padding: '0.125rem 0.4375rem',
+                  borderRadius: 3,
+                  fontFamily: 'ui-monospace, monospace',
+                }}>
+                  {section.entries.length}
+                </span>
+              </div>
               <span style={{
-                fontSize: '0.75rem',
+                fontSize: '0.625rem',
                 color: 'var(--ink-faint)',
                 transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
                 transition: 'transform 200ms',
+                display: 'inline-block',
               }}>
                 &#9662;
               </span>
             </button>
             {isOpen && (
               <div style={{
-                padding: '0 1.25rem 1rem',
+                padding: '0 1.5rem 1.25rem',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '0.5rem',
+                gap: '0.625rem',
               }}>
                 {section.entries.map((entry, j) => (
                   <div key={j} style={{
                     fontSize: '0.8125rem',
                     color: 'var(--ink)',
-                    lineHeight: 1.7,
-                    paddingLeft: '0.75rem',
+                    lineHeight: 1.75,
+                    paddingLeft: '0.875rem',
                     borderLeft: '2px solid var(--border)',
                   }}>
                     <InlineRefs text={entry.text} globalSources={overall.sources} />
@@ -530,127 +633,63 @@ function SectionSummariesWidget({ summary }: { summary: BriefingSummary }) {
 }
 
 // ---------------------------------------------------------------------------
-// Widget: Display Category Summary Cards
-// ---------------------------------------------------------------------------
-
-function CategoryCardsWidget({ summary }: { summary: BriefingSummary }) {
-  const categories = Object.entries(DISPLAY_CATEGORY_META) as [DisplayCategoryKey, { label: string; desc: string }][]
-
-  // Group sensor summaries by display category
-  const byCat: Record<DisplayCategoryKey, typeof summary.sections> = {
-    'high-trust': [],
-    'news': [],
-    'trend': [],
-    'opinions': [],
-  }
-  for (const section of summary.sections) {
-    const cat = SENSOR_DISPLAY_MAP[section.sensor_name] ?? 'news'
-    byCat[cat].push(section)
-  }
-
-  return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-      gap: '0.75rem',
-    }}>
-      {categories.map(([key, meta]) => {
-        const sections = byCat[key]
-        const totalItems = sections.reduce((sum, s) => sum + s.item_count, 0)
-        if (totalItems === 0) return null
-
-        return (
-          <div key={key} style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            padding: '1rem 1.25rem',
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '0.5rem',
-            }}>
-              <span style={{
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                color: 'var(--ink)',
-              }}>
-                {meta.label}
-              </span>
-              <span style={{
-                fontSize: '0.625rem',
-                color: 'var(--ink-faint)',
-                fontFamily: 'ui-monospace, monospace',
-              }}>
-                {totalItems} items
-              </span>
-            </div>
-            <p style={{
-              fontSize: '0.6875rem',
-              color: 'var(--ink-muted)',
-              margin: '0 0 0.5rem',
-              lineHeight: 1.5,
-            }}>
-              {meta.desc}
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-              {sections.map(s => (
-                <span key={s.sensor_name} style={{
-                  fontSize: '0.5625rem',
-                  fontWeight: 500,
-                  padding: '0.125rem 0.375rem',
-                  borderRadius: 3,
-                  border: '1px solid var(--border)',
-                  color: 'var(--ink-muted)',
-                  whiteSpace: 'nowrap',
-                }}>
-                  {SENSOR_LABELS[s.sensor_name] ?? s.sensor_name}
-                </span>
-              ))}
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
 // Dashboard Skeleton
 // ---------------------------------------------------------------------------
 
 function DashboardSkeleton() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-      {/* Exec summary skeleton */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {/* Stats strip skeleton */}
       <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
         background: 'var(--surface)',
         border: '1px solid var(--border)',
-        borderRadius: 8,
-        padding: '1.25rem',
+        borderRadius: 10,
+        overflow: 'hidden',
+      }}>
+        {[0, 1, 2, 3].map(i => (
+          <div key={i} style={{
+            padding: '1.25rem 1.5rem',
+            borderRight: i < 3 ? '1px solid var(--border-soft)' : 'none',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '0.5rem',
+          }}>
+            <Skeleton width={60} height={24} />
+            <Skeleton width={40} height={8} />
+          </div>
+        ))}
+      </div>
+      {/* Exec summary skeleton */}
+      <div style={{
+        background: 'var(--accent-wash)',
+        borderLeft: '3px solid var(--accent-dim)',
+        borderRadius: '0 10px 10px 0',
+        padding: '1.5rem 2rem',
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.5rem',
+        gap: '0.625rem',
       }}>
-        <Skeleton width={140} height={10} />
-        <Skeleton width="95%" height={13} />
-        <Skeleton width="100%" height={13} />
-        <Skeleton width="80%" height={13} />
-        <Skeleton width="60%" height={13} />
+        <Skeleton width={120} height={10} />
+        <Skeleton width="95%" height={14} />
+        <Skeleton width="100%" height={14} />
+        <Skeleton width="80%" height={14} />
+        <Skeleton width="55%" height={14} />
       </div>
       {/* Two-column cards */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
         gap: '0.75rem',
       }}>
-        <SkeletonCard lines={4} />
-        <SkeletonCard lines={3} />
-        <SkeletonCard lines={5} />
-        <SkeletonCard lines={3} />
+        <SkeletonCard lines={5} style={{ borderRadius: 10 }} />
+        <SkeletonCard lines={4} style={{ borderRadius: 10 }} />
       </div>
+      {/* Section skeletons */}
+      <SkeletonCard lines={3} style={{ borderRadius: 10 }} />
+      <SkeletonCard lines={2} style={{ borderRadius: 10 }} />
     </div>
   )
 }
@@ -718,7 +757,7 @@ export function Dashboard() {
   const hasSummary = summary && isStructuredOverall(summary.overall) && !!summary.overall.executive_summary
 
   return (
-    <div style={{ padding: '2rem', maxWidth: 960, margin: '0 auto' }}>
+    <div style={{ padding: '2rem 2.5rem', maxWidth: 1060, margin: '0 auto' }}>
       <style>{PULSE_CSS}</style>
 
       {/* Header */}
@@ -729,13 +768,13 @@ export function Dashboard() {
         marginBottom: '1.5rem',
       }}>
         <h1 style={{
-          fontSize: '1.25rem',
-          fontWeight: 700,
-          color: 'var(--ink)',
+          fontSize: '1.125rem',
+          fontWeight: 600,
+          color: 'var(--ink-muted)',
           margin: 0,
           letterSpacing: '-0.01em',
         }}>
-          Dashboard
+          Intel Briefing
         </h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           {isRunning && (
@@ -747,7 +786,7 @@ export function Dashboard() {
               fontWeight: 500,
               color: 'var(--accent)',
               background: 'var(--accent-tint)',
-              padding: '0.25rem 0.625rem',
+              padding: '0.3rem 0.75rem',
               borderRadius: 4,
             }}>
               <span style={{
@@ -766,7 +805,7 @@ export function Dashboard() {
               color: 'var(--ink-faint)',
               fontFamily: 'ui-monospace, monospace',
             }}>
-              {summary.generated_at.slice(0, 16).replace('T', ' ')} · {timeAgo(summary.generated_at)}
+              {timeAgo(summary.generated_at)}
             </span>
           )}
         </div>
@@ -776,18 +815,18 @@ export function Dashboard() {
         <DashboardSkeleton />
       ) : !hasSummary && !hasReport ? (
         <div style={{
-          padding: '4rem 2rem',
+          padding: '5rem 2rem',
           textAlign: 'center',
           color: 'var(--ink-faint)',
           fontSize: '0.875rem',
           background: 'var(--surface)',
           border: '1px solid var(--border)',
-          borderRadius: 8,
+          borderRadius: 10,
         }}>
           <div style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink-muted)', marginBottom: '0.5rem' }}>
             No briefing data yet
           </div>
-          <p style={{ margin: 0 }}>
+          <p style={{ margin: 0, lineHeight: 1.6 }}>
             Run the pipeline from the{' '}
             <Link href="/status" style={{ color: 'var(--accent)', textDecoration: 'underline', textUnderlineOffset: '2px' }}>
               Status page
@@ -796,35 +835,35 @@ export function Dashboard() {
           </p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {/* Stats Strip */}
+          <StatsStrip report={report} summary={summary} />
+
           {/* Executive Summary */}
           {summary && <ExecSummaryWidget summary={summary} />}
 
           {/* Two-column layout: Sentiment + Trending */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
             gap: '0.75rem',
           }}>
             {summary && <SentimentWidget summary={summary} report={report} />}
             {report && <TrendingWidget report={report} />}
           </div>
 
-          {/* Category overview cards */}
-          {summary && <CategoryCardsWidget summary={summary} />}
-
           {/* Section Summaries (collapsible) */}
           {summary && <SectionSummariesWidget summary={summary} />}
 
           {/* Link to full feed */}
-          <div style={{ textAlign: 'center', paddingTop: '0.5rem' }}>
+          <div style={{ textAlign: 'center', paddingTop: '0.25rem', paddingBottom: '0.5rem' }}>
             <Link href="/data" style={{
               fontSize: '0.8125rem',
+              fontWeight: 500,
               color: 'var(--accent)',
-              textDecoration: 'underline',
-              textUnderlineOffset: '2px',
+              textDecoration: 'none',
             }}>
-              View full feed and raw items
+              View full feed &#8250;
             </Link>
           </div>
         </div>

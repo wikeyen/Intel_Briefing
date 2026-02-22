@@ -8,6 +8,7 @@ import { Toaster } from '@/components/Toaster'
 import { ToastContext } from '@/lib/toast-context'
 
 const PAGE_TITLES: Record<string, string> = {
+  '/dashboard': 'Dashboard',
   '/status': 'Status',
   '/api-keys': 'Credentials',
   '/settings': 'Settings',
@@ -17,6 +18,7 @@ const PAGE_TITLES: Record<string, string> = {
 }
 
 const PAGE_DESCS: Record<string, string> = {
+  '/dashboard': 'Executive summary, sentiment, and trending',
   '/status': 'Pipeline health, briefing, and sensor errors',
   '/api-keys': 'Credentials for data sources and AI',
   '/settings': 'Sources, limits, scheduling, and filters',

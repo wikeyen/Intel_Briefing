@@ -158,6 +158,9 @@ export function Sidebar({ onNavigate }: Props) {
       {/* Nav */}
       <div style={{ flex: 1, padding: '1rem 0' }}>
         <SideLabel>Overview</SideLabel>
+        <NavLink href="/dashboard" active={pathname === '/dashboard'} onClick={onNavigate}>
+          Dashboard
+        </NavLink>
         <NavLink href="/status" active={pathname === '/status'} onClick={onNavigate}>
           Status
           {showBadge && (

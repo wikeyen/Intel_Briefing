@@ -892,82 +892,6 @@ function SourceHealthWidget({ report }: { report: IntelReport }) {
 }
 
 // ---------------------------------------------------------------------------
-// Widget: Latest Items
-// ---------------------------------------------------------------------------
-
-function LatestItemsWidget({ report }: { report: IntelReport }) {
-  const allItems: IntelItem[] = Object.values(report.items).flat()
-  const sorted = allItems
-    .filter(i => i.published_at)
-    .sort((a, b) => new Date(b.published_at!).getTime() - new Date(a.published_at!).getTime())
-    .slice(0, 5)
-
-  if (sorted.length === 0) return null
-
-  return (
-    <Card className="dashboard-card py-4 gap-3" style={{ borderRadius: 12 }}>
-      <CardContent className="px-5 flex flex-col gap-0">
-        <div className="flex items-center justify-between mb-2">
-          <SectionLabel>Latest</SectionLabel>
-          <span className="font-mono" style={{ fontSize: '0.625rem', color: 'var(--ink-tertiary)' }}>
-            {sorted[0] ? timeAgo(sorted[0].published_at!) : ''}
-          </span>
-        </div>
-        <div className="flex flex-col">
-          {sorted.map((item, idx) => (
-            <a
-              key={item.id}
-              href={item.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-start gap-2.5 no-underline rounded-lg"
-              style={{
-                padding: '8px 6px',
-                margin: '0 -6px',
-                transition: 'background 150ms ease',
-                ...(idx < sorted.length - 1 ? { borderBottom: '1px solid var(--border-subtle)' } : {}),
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-inset)' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
-            >
-              <span className="shrink-0 mt-1.5 rounded-full" style={{
-                width: 6,
-                height: 6,
-                background: 'var(--accent)',
-                opacity: 1 - idx * 0.15,
-              }} />
-              <div className="flex-1 min-w-0">
-                <div className="font-medium" style={{
-                  fontSize: '0.8125rem',
-                  color: 'var(--ink)',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                  lineHeight: 1.4,
-                }}>
-                  {item.title}
-                </div>
-                <div className="flex items-center gap-1.5 mt-0.5" style={{ fontSize: '0.625rem', color: 'var(--ink-tertiary)' }}>
-                  <span className="font-medium" style={{
-                    padding: '1px 5px',
-                    borderRadius: 3,
-                    background: 'var(--surface-inset)',
-                  }}>
-                    {SENSOR_LABELS[item.source] ?? item.source}
-                  </span>
-                  <span>{item.published_at ? timeAgo(item.published_at) : ''}</span>
-                </div>
-              </div>
-            </a>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-// ---------------------------------------------------------------------------
 // Widget: Trending Items
 // ---------------------------------------------------------------------------
 
@@ -1335,30 +1259,23 @@ export function Dashboard() {
                   </StaggerChild>
                 )}
 
-                {/* Latest Items */}
-                {report && (
-                  <StaggerChild index={5}>
-                    <LatestItemsWidget report={report} />
-                  </StaggerChild>
-                )}
-
                 {/* Trending */}
                 {report && (
-                  <StaggerChild index={6}>
+                  <StaggerChild index={5}>
                     <TrendingWidget report={report} />
                   </StaggerChild>
                 )}
 
                 {/* Source Activity Heatmap */}
                 {report && (
-                  <StaggerChild index={7}>
+                  <StaggerChild index={6}>
                     <SourceActivityWidget report={report} />
                   </StaggerChild>
                 )}
 
                 {/* Section Summaries */}
                 {summary && (
-                  <StaggerChild index={8}>
+                  <StaggerChild index={7}>
                     <SectionSummariesWidget summary={summary} />
                   </StaggerChild>
                 )}
@@ -1382,14 +1299,14 @@ export function Dashboard() {
 
                 {/* Category Distribution */}
                 {report && (
-                  <StaggerChild index={9}>
+                  <StaggerChild index={8}>
                     <CategoryDistributionWidget report={report} />
                   </StaggerChild>
                 )}
 
                 {/* Source Health */}
                 {report && (
-                  <StaggerChild index={10}>
+                  <StaggerChild index={9}>
                     <SourceHealthWidget report={report} />
                   </StaggerChild>
                 )}

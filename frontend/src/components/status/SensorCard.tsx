@@ -106,7 +106,9 @@ function cardContainerStyle(state: CardState, hovered: boolean): React.CSSProper
     minHeight: 110,
     padding: '1rem',
     background: 'var(--surface)',
-    border: '1px solid var(--border)',
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: 'var(--border)',
     borderRadius: 8,
     boxShadow: 'var(--shadow-card)',
     transition: 'all 200ms ease',
@@ -122,7 +124,7 @@ function cardContainerStyle(state: CardState, hovered: boolean): React.CSSProper
     return {
       ...base,
       cursor: 'default',
-      ...(state === 'failed-mid-run' && { borderLeft: '3px solid var(--err)' }),
+      ...(state === 'failed-mid-run' && { borderLeftWidth: 3, borderLeftColor: 'var(--err)' }),
     }
   }
 
@@ -138,7 +140,8 @@ function cardContainerStyle(state: CardState, hovered: boolean): React.CSSProper
   if (state === 'failed') {
     return {
       ...base,
-      borderLeft: '3px solid var(--err)',
+      borderLeftWidth: 3,
+      borderLeftColor: 'var(--err)',
       ...(hovered && { boxShadow: 'var(--shadow-card-hover)', borderColor: 'var(--border-strong)' }),
     }
   }
@@ -146,7 +149,8 @@ function cardContainerStyle(state: CardState, hovered: boolean): React.CSSProper
   if (state === 'config-error') {
     return {
       ...base,
-      borderLeft: '3px solid var(--warn)',
+      borderLeftWidth: 3,
+      borderLeftColor: 'var(--warn)',
       ...(hovered && { boxShadow: 'var(--shadow-card-hover)', borderColor: 'var(--border-strong)' }),
     }
   }

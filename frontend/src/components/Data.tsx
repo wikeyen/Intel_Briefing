@@ -6,7 +6,8 @@ import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
 import { api } from '@/api/client'
 import type { IntelReport, IntelItem, ConfigSettings, BriefingSummary, SummaryProgress, PipelineStatus, SummaryLanguage } from '@/api/client'
 import { SENSOR_TOKEN_FIELD } from '@/lib/sensors/constants'
-import { ALL_CATEGORIES, CATEGORY_META, SENSOR_LABELS, sensorsForCategory } from '@/lib/sensors/taxonomy'
+import { ALL_CATEGORIES, SENSOR_LABELS, sensorsForCategory, DISPLAY_CATEGORIES, DISPLAY_CATEGORY_META, SENSOR_DISPLAY_MAP, CATEGORY_TO_DISPLAY, itemsByDisplayCategory } from '@/lib/sensors/taxonomy'
+import type { CategoryKey, DisplayCategoryKey } from '@/lib/sensors/taxonomy'
 import { useToast } from '@/lib/toast-context'
 import { Pagination } from './Pagination'
 import { StaleProcessBanner, detectStale } from './StaleProcessBanner'
@@ -18,17 +19,22 @@ const PAGE_SIZE = 20
 
 const SECTIONS: { key: string; label: string }[] = [
   { key: 'briefing', label: 'Briefing' },
-  ...ALL_CATEGORIES.map(cat => ({
+  ...DISPLAY_CATEGORIES.map(cat => ({
     key: cat,
-    label: CATEGORY_META[cat].label,
+    label: DISPLAY_CATEGORY_META[cat].label,
   })),
 ]
 
 const SOURCE_LABELS: Record<string, string> = { ...SENSOR_LABELS }
 
-/** Maps each section to the sensors that feed it. */
+/** Maps each display-category section to the sensors that feed it. */
 const SECTION_SENSORS: Record<string, string[]> = Object.fromEntries(
-  ALL_CATEGORIES.map(cat => [cat, sensorsForCategory(cat)])
+  DISPLAY_CATEGORIES.map(dc => [
+    dc,
+    ALL_CATEGORIES
+      .filter(cat => CATEGORY_TO_DISPLAY[cat] === dc)
+      .flatMap(cat => sensorsForCategory(cat)),
+  ]),
 )
 
 /** Check if a section is empty because every sensor feeding it lacks a required token. */
@@ -340,8 +346,14 @@ export function Data() {
 
   const hasContent = Object.values(report?.items ?? {}).some(arr => arr.length > 0)
 
+  // Group report items by display category for the tab view
+  const displayItems = useMemo(() => {
+    if (!report) return null
+    return itemsByDisplayCategory(report.items as Record<CategoryKey, IntelItem[]>)
+  }, [report])
+
   // Derive the unique filter keys present in the current section
-  const sectionItems = report?.items[activeSection] ?? []
+  const sectionItems = (displayItems && activeSection !== 'briefing' ? displayItems[activeSection as DisplayCategoryKey] : null) ?? []
   const availableFilters = useMemo(() => {
     const seen = new Set<string>()
     for (const item of sectionItems) seen.add(filterKey(item, activeSection))
@@ -437,7 +449,7 @@ export function Data() {
               scrollbarWidth: 'none',
             }}>
               {SECTIONS.map(({ key, label }, idx) => {
-                const count = report.items[key]?.length ?? 0
+                const count = key === 'briefing' ? 0 : (displayItems?.[key as DisplayCategoryKey]?.length ?? 0)
                 const active = activeSection === key
                 return (
                   <Fragment key={key}>

@@ -92,6 +92,27 @@ export function Sidebar({ onNavigate }: Props) {
   const isJobRunning = !!(pipelineStatus?.running || summaryProgress?.running)
   const showBadge = hasErrors && !!runId && runId !== seenRun
 
+  // Pipeline progress percentage for the mini bar
+  const pipelinePct = (() => {
+    if (!isJobRunning) return null
+    if (pipelineStatus?.running) {
+      const total = pipelineStatus.sensors.length
+      if (total === 0) return 0
+      const done = pipelineStatus.sensors.filter(s =>
+        s.fetch === 'ok' || s.fetch === 'failed' || s.fetch === 'skipped',
+      ).length
+      return Math.round((done / total) * 100)
+    }
+    if (summaryProgress?.running) {
+      const sensors = summaryProgress.sensors.filter(s => s.sensor_name !== '__overall__')
+      const total = sensors.length
+      if (total === 0) return 0
+      const done = sensors.filter(s => s.state === 'ok' || s.state === 'failed').length
+      return Math.round((done / total) * 100)
+    }
+    return null
+  })()
+
   const statusColor =
     !health                      ? 'var(--ink-faint)' :
     health.status === 'ok'       ? 'var(--ok)'        :
@@ -151,6 +172,24 @@ export function Sidebar({ onNavigate }: Props) {
             {statusLabel}
           </span>
         </div>
+        {/* Mini progress bar — visible only when pipeline or summary is running */}
+        {pipelinePct != null && (
+          <div style={{
+            height: 2,
+            background: 'var(--sb-border)',
+            borderRadius: 1,
+            overflow: 'hidden',
+            marginTop: '0.5rem',
+          }}>
+            <div style={{
+              height: '100%',
+              width: `${pipelinePct}%`,
+              background: 'var(--accent)',
+              borderRadius: 1,
+              transition: 'width 400ms ease',
+            }} />
+          </div>
+        )}
       </div>
 
       <div className="sidebar-brand-divider" style={{ height: 1, background: 'var(--sb-border)', margin: '0 1.75rem' }} />

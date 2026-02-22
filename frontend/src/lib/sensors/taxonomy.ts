@@ -175,7 +175,9 @@ export function itemsByDisplayCategory(
 ): Record<DisplayCategoryKey, import('../models').IntelItem[]> {
   const result = emptyDisplayCategoryMap<import('../models').IntelItem>()
   for (const cat of ALL_CATEGORIES) {
-    for (const item of items[cat]) {
+    const catItems = items[cat]
+    if (!catItems) continue
+    for (const item of catItems) {
       const display = SENSOR_DISPLAY_MAP[item.source] ?? CATEGORY_TO_DISPLAY[cat]
       result[display].push(item)
     }

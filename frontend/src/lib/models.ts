@@ -132,7 +132,7 @@ export interface PipelineStatus {
   running: boolean
   cancelled: boolean
   paused: boolean
-  paused_stage: 'fetch' | 'summary' | null
+  paused_stage: 'fetch' | 'summary' | 'pre_overall' | null
   retry_attempt: number
   retry_max: number
   mode: RunMode

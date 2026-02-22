@@ -105,7 +105,7 @@ export interface PipelineStatus {
   running: boolean
   cancelled: boolean
   paused: boolean
-  paused_stage: 'fetch' | 'summary' | null
+  paused_stage: 'fetch' | 'summary' | 'pre_overall' | null
   retry_attempt: number
   retry_max: number
   mode: RunMode
@@ -301,7 +301,7 @@ export const api = {
   stopPipeline: () =>
     apiFetch<{ status: string }>('/fetch/stop', { method: 'POST' }),
 
-  resumePipeline: (action: 'retry' | 'proceed', sensors?: string[]) =>
+  resumePipeline: (action: 'proceed' | 'retry_sensor' | 'skip_sensor' | 'generate_overall', sensors?: string[]) =>
     apiFetch<{ status: string }>('/fetch/resume', {
       method: 'POST',
       body: JSON.stringify({ action, ...(sensors?.length ? { sensors } : {}) }),

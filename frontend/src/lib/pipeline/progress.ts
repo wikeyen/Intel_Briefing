@@ -19,7 +19,7 @@ export class PipelineProgressTracker {
   private running = true
   private cancelled = false
   private paused = false
-  private pausedStage: 'fetch' | 'summary' | null = null
+  private pausedStage: 'fetch' | 'summary' | 'pre_overall' | null = null
   private retryAttempt = 0
   private retryMax = 0
   private overallSummary: StageState
@@ -140,6 +140,44 @@ export class PipelineProgressTracker {
   clearRetryProgress(): void {
     this.retryAttempt = 0
     this.retryMax = 0
+    this.notify()
+  }
+
+  /** Enter paused state at a given stage. Pipeline remains running but awaits user action. */
+  pause(stage: 'fetch' | 'summary' | 'pre_overall'): void {
+    this.paused = true
+    this.pausedStage = stage
+    this.notify()
+  }
+
+  /** Exit paused state and resume normal execution. */
+  unpause(): void {
+    this.paused = false
+    this.pausedStage = null
+    this.notify()
+  }
+
+  /** Reset a sensor's fetch state to queued for re-fetch during pause. */
+  resetFetchState(name: string): void {
+    const s = this.find(name)
+    s.fetch = 'queued'
+    s.fetch_error = null
+    s.fetch_error_kind = null
+    s.fetch_detail = null
+    s.item_count = 0
+    this.notify()
+  }
+
+  /** Reset a sensor's summary state to queued for re-summarization during pause. */
+  resetSummaryState(name: string): void {
+    const s = this.find(name)
+    s.summary = 'queued'
+    s.summary_error = null
+    s.summary_chunks_total = 0
+    s.summary_chunks_done = 0
+    s.verify_attempt = 0
+    s.verify_max_retries = 0
+    s.verify_failures = 0
     this.notify()
   }
 

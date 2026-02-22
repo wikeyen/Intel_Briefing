@@ -152,8 +152,37 @@ export function Status() {
   }
 
   const handleRetrySensor = async (sensor: string) => {
-    const mode: RunMode = 'fetch_summarize'
-    await handleRun(mode, [sensor])
+    if (isPaused) {
+      // During pause: retry within the running pipeline
+      try {
+        await api.resumePipeline('retry_sensor', [sensor])
+        showToast(`Retrying ${sensor}`)
+      } catch (e) {
+        showToast('Retry failed: ' + (e as Error).message)
+      }
+    } else {
+      // Not paused: start a new pipeline for this sensor
+      const mode: RunMode = 'fetch_summarize'
+      await handleRun(mode, [sensor])
+    }
+  }
+
+  const handleSkipSensor = async (sensor: string) => {
+    try {
+      await api.resumePipeline('skip_sensor', [sensor])
+      showToast(`Skipped ${sensor}`)
+    } catch (e) {
+      showToast('Skip failed: ' + (e as Error).message)
+    }
+  }
+
+  const handleGenerateOverall = async () => {
+    try {
+      await api.resumePipeline('generate_overall')
+      showToast('Generating summary')
+    } catch (e) {
+      showToast('Failed: ' + (e as Error).message)
+    }
   }
 
   const staleInfo = detectStale(null, pipelineStatus)
@@ -189,6 +218,7 @@ export function Status() {
     if (stopping) return 'stopping'
     if (!isRunning) return 'idle'
     if (!pipelineStatus) return 'fetching'
+    if (isPaused) return 'paused'
     if (pipelineStatus.overall_summary === 'running') return 'briefing'
     const anySummary = pipelineStatus.sensors.some(s => s.summary === 'running')
     if (anySummary) return 'summarizing'
@@ -281,6 +311,7 @@ export function Status() {
 
       <SensorGrid
         isRunning={isRunning}
+        isPaused={isPaused}
         liveSensors={liveSensors}
         report={report}
         config={config}
@@ -288,6 +319,7 @@ export function Status() {
         selected={selectedSensors}
         onToggleSelect={toggleSensorSelect}
         onRetry={handleRetrySensor}
+        onSkipSensor={handleSkipSensor}
         dismissed={dismissed}
         onDismiss={dismissSensor}
       />
@@ -308,6 +340,7 @@ export function Status() {
         }}
         onStop={handleStop}
         onSkipRetries={handleSkipRetries}
+        onGenerateOverall={handleGenerateOverall}
         onSelectAll={selectAll}
         onSelectNone={selectNone}
         onSelectFailed={selectFailed}

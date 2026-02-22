@@ -1,10 +1,10 @@
-// ABOUTME: Intel feed page — shows fetched items grouped by section with section tabs.
-// ABOUTME: Briefing tab shows AI-generated summary; other tabs show card-per-item news reader with source filtering and pagination.
+// ABOUTME: Intel feed page — shows fetched items grouped by display-category tabs.
+// ABOUTME: Card-per-item news reader with source filtering, search, and pagination.
 'use client'
-import { useState, useEffect, useMemo, useRef, useCallback, Fragment } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
 import { api } from '@/api/client'
-import type { IntelReport, IntelItem, ConfigSettings, BriefingSummary, SummaryProgress, PipelineStatus, SummaryLanguage } from '@/api/client'
+import type { IntelReport, IntelItem, ConfigSettings, PipelineStatus } from '@/api/client'
 import { SENSOR_TOKEN_FIELD } from '@/lib/sensors/constants'
 import { ALL_CATEGORIES, SENSOR_LABELS, sensorsForCategory, DISPLAY_CATEGORIES, DISPLAY_CATEGORY_META, SENSOR_DISPLAY_MAP, CATEGORY_TO_DISPLAY, itemsByDisplayCategory } from '@/lib/sensors/taxonomy'
 import type { CategoryKey, DisplayCategoryKey } from '@/lib/sensors/taxonomy'
@@ -12,18 +12,14 @@ import { useToast } from '@/lib/toast-context'
 import { Pagination } from './Pagination'
 import { StaleProcessBanner, detectStale } from './StaleProcessBanner'
 import { ItemCard, LINE_CLAMP_CSS } from './data/ItemCard'
-import { BriefingTabContent, PULSE_CSS } from './data/BriefingTab'
-import { BriefingSkeleton, FeedSkeleton } from './Skeleton'
+import { FeedSkeleton } from './Skeleton'
 
 const PAGE_SIZE = 20
 
-const SECTIONS: { key: string; label: string }[] = [
-  { key: 'briefing', label: 'Briefing' },
-  ...DISPLAY_CATEGORIES.map(cat => ({
-    key: cat,
-    label: DISPLAY_CATEGORY_META[cat].label,
-  })),
-]
+const SECTIONS: { key: string; label: string }[] = DISPLAY_CATEGORIES.map(cat => ({
+  key: cat,
+  label: DISPLAY_CATEGORY_META[cat].label,
+}))
 
 const SOURCE_LABELS: Record<string, string> = { ...SENSOR_LABELS }
 
@@ -118,10 +114,7 @@ export function Data() {
   const [activeSection, setActiveSection] = useState(SECTIONS[0].key)
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set())
   const [page, setPage] = useState(1)
-  const [summary, setSummary] = useState<BriefingSummary | null>(null)
-  const [summaryProgress, setSummaryProgress] = useState<SummaryProgress | null>(null)
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null)
-  const [streamTokens, setStreamTokens] = useState<Record<string, string>>({})
   const [searchQuery, setSearchQuery] = useState('')
 
   const prevSectionIdx = useRef(0)
@@ -138,40 +131,26 @@ export function Data() {
 
   useEffect(() => {
     api.getConfig().then(setConfig).catch(() => {})
-    api.getSummary().then(r => setSummary(r.summary)).catch(() => {})
     api.getLatest().then(setReport).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
-  // Track last-seen timestamps so we can detect new completions from any source
-  const lastSummaryAt = useRef<string | null>(null)
+  // Track last-seen pipeline completion so we can refresh when it finishes
   const lastPipelineCompletedAt = useRef<string | null>(null)
 
-  // Derive whether any job is active — drives polling frequency.
+  // Derive whether the pipeline is active — drives polling frequency.
   // Paused pipelines are still active (awaiting user input) and need fast polling.
-  const isActive = !!(summaryProgress?.running) || !!(pipelineStatus?.running && pipelineStatus.alive !== false)
+  const isActive = !!(pipelineStatus?.running && pipelineStatus.alive !== false)
 
-  // Poll summary and pipeline status — fast (2s) when active, slow (15s) when idle.
+  // Poll pipeline status — fast (2s) when active, slow (15s) when idle.
   // Idle polling detects jobs triggered from other tabs or scheduled runs.
   useEffect(() => {
     const check = () => {
-      api.getSummaryStatus().then(s => {
-        setSummaryProgress(s)
-        if (!s.running && s.completed_at) {
-          api.getSummary().then(r => setSummary(r.summary)).catch(() => {})
-        }
-      }).catch(() => {})
       api.getPipelineStatus().then(ps => {
         setPipelineStatus(ps)
-        // When the pipeline completes (from any page), refresh report + summary
+        // When the pipeline completes (from any page), refresh the report
         if (!ps.running && ps.completed_at && ps.completed_at !== lastPipelineCompletedAt.current) {
           lastPipelineCompletedAt.current = ps.completed_at
           api.getLatest().then(setReport).catch(() => {})
-          api.getSummary().then(r => {
-            if (r.summary?.generated_at !== lastSummaryAt.current) {
-              lastSummaryAt.current = r.summary?.generated_at ?? null
-              setSummary(r.summary)
-            }
-          }).catch(() => {})
         }
       }).catch(() => {})
     }
@@ -184,145 +163,28 @@ export function Data() {
     return () => { clearTimeout(timeout); clearInterval(iv) }
   }, [isActive])
 
-  // Connect EventSource for streaming tokens during summarization
-  const isSummarizing = !!(summaryProgress?.running)
-  useEffect(() => {
-    if (!isSummarizing) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setStreamTokens({})
-      return
-    }
-
-    const es = new EventSource('/api/summary/stream')
-    es.addEventListener('token', (e) => {
-      try {
-        const { sensor, token } = JSON.parse(e.data)
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setStreamTokens(prev => ({
-          ...prev,
-          [sensor]: (prev[sensor] ?? '') + token,
-        }))
-      } catch { /* ignore malformed events */ }
-    })
-    es.addEventListener('state', (e) => {
-      try {
-        const { sensor, state } = JSON.parse(e.data)
-        // Clear tokens for this sensor when it completes or fails
-        if (state === 'ok' || state === 'failed' || state === 'cached') {
-          // eslint-disable-next-line react-hooks/set-state-in-effect
-          setStreamTokens(prev => {
-            const next = { ...prev }
-            delete next[sensor]
-            return next
-          })
-        }
-      } catch { /* ignore malformed events */ }
-    })
-    es.addEventListener('done', () => {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setStreamTokens({})
-      es.close()
-    })
-    es.addEventListener('idle', () => {
-      es.close()
-    })
-    es.onerror = () => {
-      es.close()
-    }
-    return () => { es.close() }
-  }, [isSummarizing])
-
-  const handleTriggerSummary = async () => {
-    try {
-      await api.triggerSummary()
-      // Immediately poll so summaryProgress.running is set without waiting for the 2s interval.
-      // This also survives tab switches since the state comes from the server, not local React state.
-      const s = await api.getSummaryStatus()
-      setSummaryProgress(s)
-    } catch (e) {
-      showToast('Failed: ' + (e as Error).message)
-    }
-  }
-
-  const handleLanguageChange = async (lang: SummaryLanguage) => {
-    try {
-      const updated = await api.updateConfig({ summary_language: lang })
-      setConfig(updated)
-      await api.triggerSummary()
-      const s = await api.getSummaryStatus()
-      setSummaryProgress(s)
-    } catch (e) {
-      showToast('Failed: ' + (e as Error).message)
-    }
-  }
-
-  const handleStopSummary = async () => {
-    try {
-      await api.stopSummary()
-      showToast('Summary generation stopped')
-      const s = await api.getSummaryStatus()
-      setSummaryProgress(s)
-    } catch {
-      // 404 = nothing running, just refresh status
-      const s = await api.getSummaryStatus()
-      setSummaryProgress(s)
-    }
-  }
-
-  const handleStopPipeline = async () => {
-    try {
-      await api.stopPipeline()
-      showToast('Pipeline stopped')
-    } catch {
-      // 404 = nothing running
-    }
-    refreshStatuses()
-  }
-
-  const handleSkipRetries = async () => {
-    try {
-      await api.resumePipeline('proceed')
-      refreshStatuses()
-    } catch (e) {
-      showToast('Failed: ' + (e as Error).message)
-    }
-  }
-
   // Detect stale processes (running in DB but no in-memory controller)
-  const staleInfo = detectStale(summaryProgress, pipelineStatus)
+  const staleInfo = detectStale(null, pipelineStatus)
 
   const handleAbortStale = async () => {
     try {
-      if (staleInfo?.type === 'summary') {
-        await api.stopSummary()
-      } else if (staleInfo?.type === 'pipeline') {
+      if (staleInfo?.type === 'pipeline') {
         await api.stopPipeline()
       }
     } catch {
       // 404 = already cleared, that's fine
     }
-    // Refresh both statuses
-    api.getSummaryStatus().then(setSummaryProgress).catch(() => {})
     api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
-  }
-
-  /** Poll both statuses so the UI picks up the new pipeline immediately. */
-  const refreshStatuses = () => {
-    api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
-    api.getSummaryStatus().then(setSummaryProgress).catch(() => {})
   }
 
   const handleResumeStale = async () => {
     await handleAbortStale()
-    if (staleInfo?.type === 'summary') {
-      handleTriggerSummary()
-    } else if (staleInfo?.type === 'pipeline') {
-      // If fetch was complete, only re-run summaries; otherwise full run
+    if (staleInfo?.type === 'pipeline') {
       const mode = staleInfo.fetchComplete ? 'summarize' as const : (pipelineStatus?.mode ?? 'fetch_summarize')
       try {
         await api.triggerFetch(mode)
         showToast(mode === 'summarize' ? 'Resuming summaries' : 'Pipeline resumed')
-        refreshStatuses()
+        api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
       } catch (e) {
         showToast('Failed: ' + (e as Error).message)
       }
@@ -331,20 +193,16 @@ export function Data() {
 
   const handleRestartStale = async () => {
     await handleAbortStale()
-    if (staleInfo?.type === 'summary') {
-      handleTriggerSummary()
-    } else if (staleInfo?.type === 'pipeline') {
+    if (staleInfo?.type === 'pipeline') {
       try {
         await api.triggerFetch(pipelineStatus?.mode ?? 'fetch_summarize')
         showToast('Pipeline restarted')
-        refreshStatuses()
+        api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
       } catch (e) {
         showToast('Failed: ' + (e as Error).message)
       }
     }
   }
-
-  const hasContent = Object.values(report?.items ?? {}).some(arr => arr.length > 0)
 
   // Group report items by display category for the tab view
   const displayItems = useMemo(() => {
@@ -353,7 +211,7 @@ export function Data() {
   }, [report])
 
   // Derive the unique filter keys present in the current section
-  const sectionItems = (displayItems && activeSection !== 'briefing' ? displayItems[activeSection as DisplayCategoryKey] : null) ?? []
+  const sectionItems = displayItems?.[activeSection as DisplayCategoryKey] ?? []
   const availableFilters = useMemo(() => {
     const seen = new Set<string>()
     for (const item of sectionItems) seen.add(filterKey(item, activeSection))
@@ -407,7 +265,7 @@ export function Data() {
 
   return (
     <div className="data-page-root" style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
-      <style dangerouslySetInnerHTML={{ __html: LINE_CLAMP_CSS + PULSE_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: LINE_CLAMP_CSS }} />
 
       {/* Page header — not sticky (hidden on mobile — shown in top bar) */}
       <div className="page-padding page-header" style={{ maxWidth: 1024, margin: '0 auto', width: '100%', paddingLeft: '3rem', paddingRight: '3rem' }}>
@@ -449,75 +307,64 @@ export function Data() {
               scrollbarWidth: 'none',
             }}>
               {SECTIONS.map(({ key, label }, idx) => {
-                const count = key === 'briefing' ? 0 : (displayItems?.[key as DisplayCategoryKey]?.length ?? 0)
+                const count = displayItems?.[key as DisplayCategoryKey]?.length ?? 0
                 const active = activeSection === key
                 return (
-                  <Fragment key={key}>
-                    <button
-                      onClick={() => handleSectionChange(key)}
-                      style={{
-                        position: 'relative',
-                        padding: '0.625rem 1rem',
-                        paddingLeft: idx === 0 ? 0 : '1rem',
-                        fontSize: '0.8125rem',
-                        fontWeight: active ? 600 : 400,
-                        color: active ? 'var(--accent)' : 'var(--ink-muted)',
-                        background: 'none',
-                        border: 'none',
-                        borderBottom: '2px solid transparent',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap',
-                        transition: 'color 100ms',
-                        marginBottom: -1,
-                        flexShrink: 0,
-                      }}
-                      onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.color = 'var(--ink)' }}
-                      onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)' }}
-                    >
-                      {label}
-                      {count > 0 && (
-                        <span style={{
-                          marginLeft: '0.375rem',
-                          fontSize: '0.625rem',
-                          color: active ? 'var(--accent-dim)' : 'var(--ink-faint)',
-                          fontFamily: 'ui-monospace, monospace',
-                        }}>
-                          {count}
-                        </span>
-                      )}
-                      {active && (
-                        <motion.div
-                          layoutId="tab-indicator"
-                          style={{
-                            position: 'absolute',
-                            bottom: 0,
-                            left: idx === 0 ? 0 : '1rem',
-                            right: '1rem',
-                            height: 2,
-                            background: 'var(--accent)',
-                            borderRadius: 1,
-                          }}
-                          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                        />
-                      )}
-                    </button>
-                    {idx === 0 && (
-                      <div style={{
-                        width: 1,
-                        height: 16,
-                        background: 'var(--border)',
-                        alignSelf: 'center',
-                        flexShrink: 0,
-                        margin: '0 0.375rem',
-                      }} />
+                  <button
+                    key={key}
+                    onClick={() => handleSectionChange(key)}
+                    style={{
+                      position: 'relative',
+                      padding: '0.625rem 1rem',
+                      paddingLeft: idx === 0 ? 0 : '1rem',
+                      fontSize: '0.8125rem',
+                      fontWeight: active ? 600 : 400,
+                      color: active ? 'var(--accent)' : 'var(--ink-muted)',
+                      background: 'none',
+                      border: 'none',
+                      borderBottom: '2px solid transparent',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      transition: 'color 100ms',
+                      marginBottom: -1,
+                      flexShrink: 0,
+                    }}
+                    onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.color = 'var(--ink)' }}
+                    onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)' }}
+                  >
+                    {label}
+                    {count > 0 && (
+                      <span style={{
+                        marginLeft: '0.375rem',
+                        fontSize: '0.625rem',
+                        color: active ? 'var(--accent-dim)' : 'var(--ink-faint)',
+                        fontFamily: 'ui-monospace, monospace',
+                      }}>
+                        {count}
+                      </span>
                     )}
-                  </Fragment>
+                    {active && (
+                      <motion.div
+                        layoutId="tab-indicator"
+                        style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: idx === 0 ? 0 : '1rem',
+                          right: '1rem',
+                          height: 2,
+                          background: 'var(--accent)',
+                          borderRadius: 1,
+                        }}
+                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                      />
+                    )}
+                  </button>
                 )
               })}
             </div>
             </LayoutGroup>
 
-            {/* Source filters (non-briefing tabs) + search (all tabs) */}
+            {/* Source filters + search */}
             <div className="source-filters" style={{
               display: 'flex',
               gap: '0.5rem',
@@ -526,41 +373,37 @@ export function Data() {
               borderTop: '1px solid var(--border-soft)',
               flexWrap: 'wrap',
             }}>
-              {activeSection !== 'briefing' && (
+              <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--ink-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '0.25rem' }}>
+                {activeSection === 'feeds' ? 'Feed' : 'Source'}
+              </span>
+              {availableFilters.length === 0 ? (
+                <span style={{ fontSize: '0.75rem', color: 'var(--ink-faint)' }}>—</span>
+              ) : (
                 <>
-                  <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--ink-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '0.25rem' }}>
-                    {activeSection === 'feeds' ? 'Feed' : 'Source'}
-                  </span>
-                  {availableFilters.length === 0 ? (
-                    <span style={{ fontSize: '0.75rem', color: 'var(--ink-faint)' }}>—</span>
-                  ) : (
-                    <>
-                      {availableFilters.map(key => (
-                        <FilterTag
-                          key={key}
-                          label={activeSection === 'feeds' ? key : (SOURCE_LABELS[key] ?? key)}
-                          active={selectedSources.has(key)}
-                          onClick={() => toggleSource(key)}
-                        />
-                      ))}
-                      {selectedSources.size < availableFilters.length && (
-                        <button
-                          onClick={() => { setSelectedSources(new Set(availableFilters)); setPage(1) }}
-                          style={{
-                            fontSize: '0.6875rem',
-                            color: 'var(--ink-faint)',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: '0.25rem 0.375rem',
-                          }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)' }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-faint)' }}
-                        >
-                          All
-                        </button>
-                      )}
-                    </>
+                  {availableFilters.map(key => (
+                    <FilterTag
+                      key={key}
+                      label={activeSection === 'feeds' ? key : (SOURCE_LABELS[key] ?? key)}
+                      active={selectedSources.has(key)}
+                      onClick={() => toggleSource(key)}
+                    />
+                  ))}
+                  {selectedSources.size < availableFilters.length && (
+                    <button
+                      onClick={() => { setSelectedSources(new Set(availableFilters)); setPage(1) }}
+                      style={{
+                        fontSize: '0.6875rem',
+                        color: 'var(--ink-faint)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '0.25rem 0.375rem',
+                      }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-faint)' }}
+                    >
+                      All
+                    </button>
                   )}
                 </>
               )}
@@ -633,24 +476,7 @@ export function Data() {
               exit="exit"
               transition={{ type: 'spring', stiffness: 300, damping: 25, mass: 0.8 }}
             >
-          {activeSection === 'briefing' ? (
-            <BriefingTabContent
-              summary={summary}
-              summaryProgress={summaryProgress}
-              pipelineStatus={pipelineStatus}
-              config={config}
-              hasContent={hasContent}
-              onTrigger={handleTriggerSummary}
-              onStop={handleStopSummary}
-              onStopPipeline={handleStopPipeline}
-              onSkipRetries={handleSkipRetries}
-              onLanguageChange={handleLanguageChange}
-              streamTokens={streamTokens}
-              searchQuery={searchQuery}
-              loading={loading}
-              report={report}
-            />
-          ) : loading ? (
+          {loading ? (
             <FeedSkeleton />
           ) : !report ? (
             <div style={{

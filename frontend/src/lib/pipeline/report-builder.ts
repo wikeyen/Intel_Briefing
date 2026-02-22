@@ -15,6 +15,7 @@ import { decodeItemEntities } from '../utils/decode-entities'
 import { suppressItems, boostItems } from './keyword-filter'
 import { writeReport } from './cache'
 import { SENSOR_CATEGORY_MAP } from '../sensors/taxonomy'
+import { enrichSentiment } from './sentiment'
 
 /**
  * Assemble a report from sensor results: dedup, filter, post-process, then write to cache.
@@ -68,6 +69,14 @@ export async function assembleReport(
     for (const item of dedupedSections[key]) {
       decodeItemEntities(item as unknown as Record<string, unknown>)
     }
+  }
+
+  // Sentiment enrichment: classify social items using local transformer
+  const allItems = Object.values(dedupedSections).flat()
+  try {
+    await enrichSentiment(allItems)
+  } catch (err) {
+    console.error('Sentiment enrichment failed (non-fatal):', err)
   }
 
   // Keyword filtering: suppress matching items, boost matching items to the top

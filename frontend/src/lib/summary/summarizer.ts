@@ -8,6 +8,7 @@ import { getSensorPrompt, getOverallPrompt, getChunkExtractPrompt, CHUNK_SIZE } 
 import { parseSensorJson, parseOverallJson } from './parse-json'
 import { SENSOR_LABELS } from '../sensors/taxonomy'
 import { formatItem, groupBySensor, chunkArray, computeContentHash } from './shared'
+import { aggregateSentiment } from '../pipeline/sentiment'
 import { readSensorSummary, writeSensorSummary } from './cache'
 import { buildUrlPool } from './ref-verifier'
 import { summarizeWithVerification } from './retry-with-verification'
@@ -333,9 +334,15 @@ export async function summarizeReport(
       ).join('\n\n')
     : ''
 
-  const overallContext = sourceList && sensorSummaries
-    ? `${sourceList}\n\n${sensorSummaries}`
-    : sensorSummaries || 'No data was collected in this run.'
+  // Aggregate per-item sentiment stats from local classifier to ground briefing analysis
+  const allItems = Object.values(report.items).flat()
+  const sentimentStats = aggregateSentiment(allItems)
+
+  const overallContext = [
+    sourceList,
+    sensorSummaries,
+    sentimentStats,
+  ].filter(Boolean).join('\n\n') || 'No data was collected in this run.'
 
   const overallMessages: ChatMessage[] = [
     { role: 'system', content: getOverallPrompt(overallPromptOverride, language) },

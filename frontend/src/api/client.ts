@@ -67,6 +67,17 @@ export interface IntelItem {
   topic?: string | null
   content?: string | null
   verified?: boolean | null
+  sentiment?: {
+    label: 'positive' | 'negative' | 'neutral'
+    score: number
+  } | null
+  velocity?: {
+    previousCount: number | null
+    currentCount: number
+    changePercent: number | null
+    firstSeenAt: string | null
+    hoursOnTrend: number | null
+  } | null
 }
 
 

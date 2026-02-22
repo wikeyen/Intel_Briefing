@@ -30,6 +30,21 @@ export interface IntelItem {
 
   // Link verification status
   verified?: boolean | null
+
+  // Per-item sentiment (social posts only)
+  sentiment?: {
+    label: 'positive' | 'negative' | 'neutral'
+    score: number
+  } | null
+
+  // Trend velocity (trend items only)
+  velocity?: {
+    previousCount: number | null
+    currentCount: number
+    changePercent: number | null
+    firstSeenAt: string | null
+    hoursOnTrend: number | null
+  } | null
 }
 
 export function emptyItemsMap(): Record<CategoryKey, IntelItem[]> {

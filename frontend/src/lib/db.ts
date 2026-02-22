@@ -1,5 +1,5 @@
 // ABOUTME: SQLite-backed key-value adapter using @libsql/client.
-// ABOUTME: Provides kvSet/kvGet with optional TTL, backed by a single 'kv' table.
+// ABOUTME: Provides kvSet/kvGet with optional TTL, plus trend snapshot helpers for velocity tracking.
 import { createClient, type Client } from '@libsql/client'
 
 // Store client on globalThis so it survives Next.js module re-evaluation
@@ -70,4 +70,57 @@ export async function kvGet<T>(key: string): Promise<T | null> {
     return null
   }
   return JSON.parse(result.rows[0].value as string) as T
+}
+
+// ── Trend snapshot helpers ──────────────────────────────────────────────
+
+export interface TrendSnapshot {
+  timestamp: string // ISO
+  trends: Array<{ name: string; count: number; rank: number }>
+}
+
+const SNAPSHOT_PREFIX = 'trends:'
+const MAX_SNAPSHOTS = 30
+
+/**
+ * Write a trend snapshot and prune old ones beyond MAX_SNAPSHOTS.
+ * Key format: `trends:{platform}:snapshot:{ISO-timestamp}`
+ */
+export async function writeTrendSnapshot(
+  platform: string,
+  snapshot: TrendSnapshot,
+): Promise<void> {
+  const key = `${SNAPSHOT_PREFIX}${platform}:snapshot:${snapshot.timestamp}`
+  await kvSet(key, snapshot)
+
+  // Prune old snapshots beyond retention limit
+  const db = await getDb()
+  const prefix = `${SNAPSHOT_PREFIX}${platform}:snapshot:`
+  const rows = await db.execute({
+    sql: `SELECT key FROM kv WHERE key LIKE ? ORDER BY key DESC`,
+    args: [`${prefix}%`],
+  })
+
+  if (rows.rows.length > MAX_SNAPSHOTS) {
+    const toDelete = rows.rows.slice(MAX_SNAPSHOTS)
+    for (const row of toDelete) {
+      await db.execute({ sql: `DELETE FROM kv WHERE key = ?`, args: [row.key as string] })
+    }
+  }
+}
+
+/**
+ * Load all trend snapshots for a platform, ordered oldest to newest.
+ */
+export async function readTrendSnapshots(
+  platform: string,
+): Promise<TrendSnapshot[]> {
+  const db = await getDb()
+  const prefix = `${SNAPSHOT_PREFIX}${platform}:snapshot:`
+  const rows = await db.execute({
+    sql: `SELECT value FROM kv WHERE key LIKE ? ORDER BY key ASC`,
+    args: [`${prefix}%`],
+  })
+
+  return rows.rows.map(row => JSON.parse(row.value as string) as TrendSnapshot)
 }

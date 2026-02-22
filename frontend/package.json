@@ -14,6 +14,7 @@
   "dependencies": {
     "@atproto/api": "^0.18.21",
     "@eslint/eslintrc": "^3.3.3",
+    "@huggingface/transformers": "^3.8.1",
     "@libsql/client": "^0.17.0",
     "@mozilla/readability": "^0.6.0",
     "@tailwindcss/postcss": "^4.1.18",

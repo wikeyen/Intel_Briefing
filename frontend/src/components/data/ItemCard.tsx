@@ -120,6 +120,19 @@ export function ItemCard({ item, index = 0, searchQuery }: { item: IntelItem; in
       {/* Meta row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
         <SourceChip source={item.source} label={item.source === 'rss_feeds' ? (item.account ?? undefined) : undefined} />
+        {item.sentiment && item.sentiment.label !== 'neutral' && (
+          <span
+            title={`${item.sentiment.label} (${Math.round(item.sentiment.score * 100)}%)`}
+            style={{
+              display: 'inline-block',
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: item.sentiment.label === 'positive' ? '#22c55e' : '#ef4444',
+              flexShrink: 0,
+            }}
+          />
+        )}
         {item.verified === false && (
           <span
             title="Link could not be verified"
@@ -138,7 +151,51 @@ export function ItemCard({ item, index = 0, searchQuery }: { item: IntelItem; in
           </span>
         )}
         {item.heat && (
-          <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>{item.heat}</span>
+          <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
+            {item.heat}
+            {item.velocity && item.velocity.changePercent != null && (
+              <span style={{
+                marginLeft: '0.25rem',
+                fontSize: '0.625rem',
+                fontWeight: 600,
+                color: item.velocity.changePercent > 0 ? '#22c55e' : item.velocity.changePercent < 0 ? '#ef4444' : 'var(--ink-faint)',
+              }}>
+                {item.velocity.changePercent > 0 ? '+' : ''}{item.velocity.changePercent}%
+              </span>
+            )}
+            {item.velocity && item.velocity.changePercent == null && (
+              <span style={{
+                marginLeft: '0.25rem',
+                fontSize: '0.625rem',
+                fontWeight: 600,
+                color: '#eab308',
+              }}>
+                NEW
+              </span>
+            )}
+          </span>
+        )}
+        {!item.heat && item.velocity && (
+          <span style={{
+            fontSize: '0.625rem',
+            fontWeight: 600,
+            color: item.velocity.changePercent == null ? '#eab308'
+              : item.velocity.changePercent > 0 ? '#22c55e'
+              : item.velocity.changePercent < 0 ? '#ef4444'
+              : 'var(--ink-faint)',
+          }}>
+            {item.velocity.changePercent == null ? 'NEW' : `${item.velocity.changePercent > 0 ? '+' : ''}${item.velocity.changePercent}%`}
+          </span>
+        )}
+        {item.velocity && item.velocity.hoursOnTrend != null && item.velocity.hoursOnTrend > 0 && (
+          <>
+            <span style={{ color: 'var(--border)', fontSize: '0.75rem' }}>·</span>
+            <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)', fontFamily: 'ui-monospace, monospace' }}>
+              {item.velocity.hoursOnTrend < 1
+                ? '<1h on trend'
+                : `${Math.round(item.velocity.hoursOnTrend)}h on trend`}
+            </span>
+          </>
         )}
         {item.published_at && (
           <>

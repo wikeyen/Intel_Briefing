@@ -1527,6 +1527,60 @@ function DashboardSkeleton() {
 }
 
 // ---------------------------------------------------------------------------
+// Widget: Summary Pending — shown when report exists but summary is not yet available
+// ---------------------------------------------------------------------------
+
+function SummaryPendingCard({ isActive }: { isActive: boolean }) {
+  return (
+    <DashCard style={{ background: 'var(--surface)' }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '0.75rem',
+        padding: '2.5rem 1.5rem',
+        textAlign: 'center',
+      }}>
+        {isActive ? (
+          <>
+            <span style={{
+              width: 10, height: 10, borderRadius: '50%',
+              background: 'var(--accent)',
+              animation: 'pulseDot 1.6s ease-in-out infinite',
+            }} />
+            <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)' }}>
+              Generating briefing
+            </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)', margin: 0, lineHeight: 1.6, maxWidth: 300 }}>
+              The pipeline is running. Executive summary and domain analysis will appear here once summarization completes.
+            </p>
+            {/* Shimmer placeholder lines */}
+            <div style={{ width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', gap: 8, marginTop: '0.5rem' }}>
+              <div className="skeleton-shimmer" style={{ width: '100%', height: 10, borderRadius: 4 }} />
+              <div className="skeleton-shimmer" style={{ width: '85%', height: 10, borderRadius: 4 }} />
+              <div className="skeleton-shimmer" style={{ width: '70%', height: 10, borderRadius: 4 }} />
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink-tertiary)' }}>
+              No summary available
+            </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)', margin: 0, lineHeight: 1.6, maxWidth: 300 }}>
+              Data has been fetched but no AI summary has been generated yet. Run{' '}
+              <Link href="/status" style={{ color: 'var(--accent)', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                Summarize
+              </Link>
+              {' '}to generate the briefing.
+            </p>
+          </>
+        )}
+      </div>
+    </DashCard>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Main Dashboard Component
 // ---------------------------------------------------------------------------
 
@@ -1677,7 +1731,7 @@ export function Dashboard() {
             <div className="dashboard-columns" style={{ marginTop: '0.75rem' }}>
               {/* Main column */}
               <div className="dashboard-main">
-                {summary && (
+                {summary ? (
                   <>
                     {/* Executive Summary */}
                     <StaggerChild index={1}>
@@ -1699,6 +1753,8 @@ export function Dashboard() {
                       ))}
                     </div>
                   </>
+                ) : hasReport && (
+                  <SummaryPendingCard isActive={isActive} />
                 )}
 
                 {/* Footer link */}

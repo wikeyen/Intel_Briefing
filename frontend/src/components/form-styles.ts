@@ -7,8 +7,8 @@ export const inputBase: React.CSSProperties = {
   background: 'var(--surface)',
   border: '1px solid var(--border)',
   borderRadius: 4,
-  padding: '0.75rem 1rem',
-  fontSize: '0.9375rem',
+  padding: '0.5rem 0.75rem',
+  fontSize: '0.875rem',
   color: 'var(--ink)',
   outline: 'none',
   transition: 'border-color 120ms, box-shadow 120ms',
@@ -33,14 +33,14 @@ export function SubLabel({ children }: { children: React.ReactNode }) {
       letterSpacing: '0.09em',
       textTransform: 'uppercase' as const,
       color: 'var(--ink-faint)',
-      marginBottom: '1rem',
+      marginBottom: '0.75rem',
     },
   }, children)
 }
 
 export function FieldLabel({ children, hint }: { children: React.ReactNode; hint?: string }) {
   return React.createElement('label', {
-    style: { display: 'flex', alignItems: 'baseline', gap: '0.5rem', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '0.5rem' },
+    style: { display: 'flex', alignItems: 'baseline', gap: '0.5rem', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '0.375rem' },
   },
     children,
     hint ? React.createElement('span', {
@@ -51,7 +51,7 @@ export function FieldLabel({ children, hint }: { children: React.ReactNode; hint
 
 export function HelpText({ children }: { children: React.ReactNode }) {
   return React.createElement('p', {
-    style: { fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, marginTop: '0.5rem' },
+    style: { fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, marginTop: '0.25rem' },
   }, children)
 }
 

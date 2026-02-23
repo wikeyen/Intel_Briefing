@@ -63,7 +63,7 @@ export function MaskedInput({ label, hint, saved, newValue, onNewValue, onReveal
     const displayValue = mode === 'revealed' && realValue !== null ? realValue : PLACEHOLDER_STARS
     return (
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.375rem' }}>
           <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', fontFamily: 'inherit' }}>
             {label}
           </label>
@@ -127,7 +127,7 @@ export function MaskedInput({ label, hint, saved, newValue, onNewValue, onReveal
   // editing mode
   return (
     <div>
-      <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '0.5rem', fontFamily: 'inherit' }}>
+      <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '0.375rem', fontFamily: 'inherit' }}>
         {label}
       </label>
       <div style={{ display: 'flex', gap: '0.625rem' }}>

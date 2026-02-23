@@ -400,7 +400,7 @@ export function AiSummary() {
 
               {/* Overall Prompt */}
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
                   <FieldLabel>{t('ai.exec_prompt')}</FieldLabel>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <StatusBadge isCustom={!!overallPrompt} />

@@ -203,7 +203,7 @@ export function ApiKeys() {
               ))}
               {group.plains?.map(({ field, label, hint, placeholder }) => (
                 <div key={field}>
-                  <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '0.375rem' }}>
                     {label}
                   </label>
                   <input

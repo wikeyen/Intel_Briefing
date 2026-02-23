@@ -165,53 +165,10 @@ export function Status() {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Auto-retry: retry failed sensors 3 times (5s/8s/13s) before showing button
-  // ---------------------------------------------------------------------------
+  // Auto-retry state (hooks placed after isRunning is derived, below)
   const AUTO_RETRY_DELAYS = [5_000, 8_000, 13_000]
   const autoRetryRef = useRef<Record<string, { count: number; timer?: ReturnType<typeof setTimeout> }>>({})
   const [autoRetryExhausted, setAutoRetryExhausted] = useState<Set<string>>(new Set())
-
-  // Reset auto-retry state when a new pipeline run starts
-  useEffect(() => {
-    if (isRunning) {
-      for (const entry of Object.values(autoRetryRef.current)) {
-        if (entry.timer) clearTimeout(entry.timer)
-      }
-      autoRetryRef.current = {}
-      setAutoRetryExhausted(new Set())
-    }
-  }, [isRunning])
-
-  // Watch for failed sensors when pipeline is idle and auto-retry
-  useEffect(() => {
-    if (isRunning || !report) return
-    for (const sensor of report.sources_failed) {
-      if (dismissed.has(sensor)) continue
-      if (autoRetryExhausted.has(sensor)) continue
-      const entry = autoRetryRef.current[sensor] ?? { count: 0 }
-      if (entry.count >= AUTO_RETRY_DELAYS.length) {
-        setAutoRetryExhausted(prev => new Set(prev).add(sensor))
-        continue
-      }
-      if (entry.timer) continue // already scheduled
-      const delay = AUTO_RETRY_DELAYS[entry.count]
-      entry.timer = setTimeout(async () => {
-        entry.count++
-        entry.timer = undefined
-        autoRetryRef.current[sensor] = entry
-        try {
-          await api.triggerFetch('fetch_summarize', [sensor])
-          triggerTimeRef.current = Date.now()
-          setRunning(true)
-        } catch {
-          // If trigger fails, mark as exhausted
-          setAutoRetryExhausted(prev => new Set(prev).add(sensor))
-        }
-      }, delay)
-      autoRetryRef.current[sensor] = entry
-    }
-  }, [isRunning, report, dismissed, autoRetryExhausted])
 
   const handleSkipSensor = async (sensor: string) => {
     try {
@@ -253,6 +210,47 @@ export function Status() {
 
   const isRunning = running || !!(pipelineStatus?.running && pipelineStatus.alive)
   const isPaused = !!(pipelineStatus?.paused && isRunning)
+
+  // ---------------------------------------------------------------------------
+  // Auto-retry: retry failed sensors 3 times (5s/8s/13s) before showing button
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (isRunning) {
+      for (const entry of Object.values(autoRetryRef.current)) {
+        if (entry.timer) clearTimeout(entry.timer)
+      }
+      autoRetryRef.current = {}
+      setAutoRetryExhausted(new Set())
+    }
+  }, [isRunning])
+
+  useEffect(() => {
+    if (isRunning || !report) return
+    for (const sensor of report.sources_failed) {
+      if (dismissed.has(sensor)) continue
+      if (autoRetryExhausted.has(sensor)) continue
+      const entry = autoRetryRef.current[sensor] ?? { count: 0 }
+      if (entry.count >= AUTO_RETRY_DELAYS.length) {
+        setAutoRetryExhausted(prev => new Set(prev).add(sensor))
+        continue
+      }
+      if (entry.timer) continue
+      const delay = AUTO_RETRY_DELAYS[entry.count]
+      entry.timer = setTimeout(async () => {
+        entry.count++
+        entry.timer = undefined
+        autoRetryRef.current[sensor] = entry
+        try {
+          await api.triggerFetch('fetch_summarize', [sensor])
+          triggerTimeRef.current = Date.now()
+          setRunning(true)
+        } catch {
+          setAutoRetryExhausted(prev => new Set(prev).add(sensor))
+        }
+      }, delay)
+      autoRetryRef.current[sensor] = entry
+    }
+  }, [isRunning, report, dismissed, autoRetryExhausted])
 
   const liveSensors: Record<string, SensorJobProgress> = {}
   if (isRunning && pipelineStatus) {

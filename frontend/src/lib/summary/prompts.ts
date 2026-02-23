@@ -46,8 +46,9 @@ Output format (strict JSON, no markdown code fences):
 }
 
 Requirements:
+- All output text must be in English. If source titles are not in English, translate them to English.
 - summary: Synthesized trend analysis; no bullet lists, no numbered lists
-- items: Pick the 3-8 most noteworthy items; use the exact URLs and titles from the source text
+- items: Pick the 3-8 most noteworthy items; use the exact URLs from the source text; translate titles to English
 - brief: Each item's brief MUST accurately describe that specific item's content and significance. Never substitute a general trend observation. For example, if the title is "India trade delegation postpones US visit", the brief should describe the postponement's cause or impact — not an unrelated AI or market trend.
 - Output strictly valid JSON
 

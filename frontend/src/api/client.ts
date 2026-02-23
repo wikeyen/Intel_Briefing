@@ -274,8 +274,8 @@ export const api = {
       body: JSON.stringify({ runId }),
     }),
 
-  getSummary: () =>
-    apiFetch<{ summary: BriefingSummary | null }>('/summary'),
+  getSummary: (lang?: string) =>
+    apiFetch<{ summary: BriefingSummary | null }>(lang ? `/summary?lang=${lang}` : '/summary'),
 
   discoverRssFeed: (url: string) =>
     apiFetch<RssDiscoveryResult>(`/rss-discover?url=${encodeURIComponent(url)}`),

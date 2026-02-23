@@ -3,7 +3,7 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { initDb } from '../db'
 import {
-  writeSummary, readSummary,
+  writeSummary, readSummary, invalidateAllSummaries,
   writeSummaryProgress, readSummaryProgress,
   writeSensorSummary, readSensorSummary,
   invalidateSensorSummary, invalidateAllSensorSummaries,
@@ -166,5 +166,70 @@ describe('per-sensor summary cache', () => {
     await invalidateAllSensorSummaries()
     expect(await readSensorSummary('hacker_news')).toBeNull()
     expect(await readSensorSummary('arxiv')).toBeNull()
+  })
+})
+
+describe('per-language summary cache', () => {
+  beforeAll(async () => {
+    await initDb(':memory:')
+  })
+
+  const EN_SUMMARY = { ...SAMPLE, overall: { ...SAMPLE.overall as object, executive_summary: 'English summary.' } } as BriefingSummary
+  const ZH_SUMMARY = { ...SAMPLE, overall: { ...SAMPLE.overall as object, executive_summary: '中文摘要。' } } as BriefingSummary
+
+  it('writes and reads summaries per language', async () => {
+    await writeSummary(EN_SUMMARY, 'en')
+    await writeSummary(ZH_SUMMARY, 'zh')
+
+    const en = await readSummary('en')
+    const zh = await readSummary('zh')
+
+    expect((en!.overall as { executive_summary: string }).executive_summary).toBe('English summary.')
+    expect((zh!.overall as { executive_summary: string }).executive_summary).toBe('中文摘要。')
+  })
+
+  it('language-specific reads do not cross-contaminate', async () => {
+    const en = await readSummary('en')
+    expect((en!.overall as { executive_summary: string }).executive_summary).not.toContain('中文')
+  })
+
+  it('falls back to legacy key when language-specific key missing', async () => {
+    // Write a legacy (no language) summary
+    await writeSummary(SAMPLE)
+    // Read with a language that has no specific entry
+    // Since 'en' was already written, let's invalidate first
+    await invalidateAllSummaries()
+    await writeSummary(SAMPLE) // legacy key (no language param)
+    const result = await readSummary('en')
+    // Should fall back to the legacy entry
+    expect(result).not.toBeNull()
+  })
+
+  it('invalidateAllSummaries clears all language variants', async () => {
+    await writeSummary(EN_SUMMARY, 'en')
+    await writeSummary(ZH_SUMMARY, 'zh')
+    expect(await readSummary('en')).not.toBeNull()
+    expect(await readSummary('zh')).not.toBeNull()
+
+    await invalidateAllSummaries()
+    // With no fallback, both should be null
+    expect(await readSummary('en')).toBeNull()
+    expect(await readSummary('zh')).toBeNull()
+  })
+
+  it('writes sensor summary with language key', async () => {
+    await writeSensorSummary('hacker_news', 'hash_en', SAMPLE_SENSOR_SUMMARY, 'en')
+    const enResult = await readSensorSummary('hacker_news', 'en')
+    expect(enResult).not.toBeNull()
+    expect(enResult!.content_hash).toBe('hash_en')
+  })
+
+  it('invalidateSensorSummary clears all language variants', async () => {
+    await writeSensorSummary('hacker_news', 'hash_en', SAMPLE_SENSOR_SUMMARY, 'en')
+    await writeSensorSummary('hacker_news', 'hash_zh', SAMPLE_SENSOR_SUMMARY, 'zh')
+
+    await invalidateSensorSummary('hacker_news')
+    expect(await readSensorSummary('hacker_news', 'en')).toBeNull()
+    expect(await readSensorSummary('hacker_news', 'zh')).toBeNull()
   })
 })

@@ -8,17 +8,18 @@ import { api } from '@/api/client'
 import type { IntelReport, IntelItem, BriefingSummary, PipelineStatus, SummaryProgress, OverallBriefing, BriefingSource, SentimentEntry } from '@/api/client'
 import { SENSOR_LABELS, SENSOR_DISPLAY_MAP, CATEGORY_TO_DISPLAY } from '@/lib/sensors/taxonomy'
 import type { CategoryKey, DisplayCategoryKey } from '@/lib/sensors/taxonomy'
+import { useTranslation } from '@/lib/i18n'
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function timeAgo(isoString: string): string {
+function timeAgo(isoString: string, t: (key: string, params?: Record<string, string | number>) => string): string {
   const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000)
-  if (diff < 60) return `${diff}s ago`
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
-  return `${Math.floor(diff / 86400)}d ago`
+  if (diff < 60) return t('time.seconds_ago', { n: diff })
+  if (diff < 3600) return t('time.minutes_ago', { n: Math.floor(diff / 60) })
+  if (diff < 86400) return t('time.hours_ago', { n: Math.floor(diff / 3600) })
+  return t('time.days_ago', { n: Math.floor(diff / 86400) })
 }
 
 function isStructuredOverall(overall: OverallBriefing | string): overall is OverallBriefing {
@@ -100,14 +101,15 @@ type DomainDef = {
   showSentiment?: boolean
 }
 
+/** Domain definitions with i18n label keys. */
 const DOMAINS: DomainDef[] = [
-  { key: 'macro', label: 'Macro & Finance', accent: 'var(--cat-news)', sensors: ['wallstreetcn', 'sources_36kr'] },
-  { key: 'news', label: 'News & Tech', accent: 'var(--cat-news)', sensors: ['hacker_news', 'product_hunt', 'chrome_radar', 'github'] },
-  { key: 'social', label: 'Social Pulse', accent: 'var(--cat-trend)', sensors: ['x', 'bluesky', 'mastodon'], showSentiment: true },
-  { key: 'china-trend', label: 'China Trend', accent: 'var(--cat-trend)', sensors: ['weibo', 'xiaohongshu'] },
-  { key: 'research', label: 'Research Radar', accent: 'var(--cat-research)', sensors: ['arxiv'] },
-  { key: 'opinion', label: 'Opinion Digest', accent: 'var(--cat-opinion)', sensors: ['hn_blogs', 'rss_feeds'] },
-  { key: 'china-community', label: 'China Community', accent: 'var(--cat-opinion)', sensors: ['v2ex', 'zhihu'] },
+  { key: 'macro', label: 'domain.macro', accent: 'var(--cat-news)', sensors: ['wallstreetcn', 'sources_36kr'] },
+  { key: 'news', label: 'domain.news', accent: 'var(--cat-news)', sensors: ['hacker_news', 'product_hunt', 'chrome_radar', 'github'] },
+  { key: 'social', label: 'domain.social', accent: 'var(--cat-trend)', sensors: ['x', 'bluesky', 'mastodon'], showSentiment: true },
+  { key: 'china-trend', label: 'domain.china-trend', accent: 'var(--cat-trend)', sensors: ['weibo', 'xiaohongshu'] },
+  { key: 'research', label: 'domain.research', accent: 'var(--cat-research)', sensors: ['arxiv'] },
+  { key: 'opinion', label: 'domain.opinion', accent: 'var(--cat-opinion)', sensors: ['hn_blogs', 'rss_feeds'] },
+  { key: 'china-community', label: 'domain.china-community', accent: 'var(--cat-opinion)', sensors: ['v2ex', 'zhihu'] },
 ]
 
 // ---------------------------------------------------------------------------
@@ -232,11 +234,12 @@ const SOCIAL = new Set(['x', 'bluesky', 'mastodon'])
 // Widget: Status Ticker Bar
 // ---------------------------------------------------------------------------
 
-function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
+function StatusTicker({ report, summary, pipelineStatus, summaryProgress, t }: {
   report: IntelReport | null
   summary: BriefingSummary | null
   pipelineStatus: PipelineStatus | null
   summaryProgress: SummaryProgress | null
+  t: (key: string, params?: Record<string, string | number>) => string
 }) {
   const isActive = !!(summaryProgress?.running) || !!(pipelineStatus?.running && pipelineStatus.alive !== false)
 
@@ -289,7 +292,7 @@ function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
           ...(isActive ? { animation: 'pulseDot 1.6s ease-in-out infinite' } : {}),
         }} />
         <span style={{ fontWeight: 600, color: isActive ? 'var(--accent)' : 'var(--ink-tertiary)' }}>
-          {isActive ? 'Updating' : 'Idle'}
+          {isActive ? t('ticker.updating') : t('ticker.idle')}
         </span>
       </span>
 
@@ -297,13 +300,13 @@ function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
 
       {/* Last fetch */}
       <span className="dashboard-ticker-hide-mobile" style={{ flexShrink: 0 }}>
-        {report ? `Fetched ${timeAgo(report.fetched_at)}` : 'No data'}
+        {report ? t('ticker.fetched_ago', { time: timeAgo(report.fetched_at, t) }) : t('ticker.no_data')}
       </span>
 
       {/* Last summary */}
       {summary && (
         <span className="dashboard-ticker-hide-mobile" style={{ flexShrink: 0 }}>
-          Summary {timeAgo(summary.generated_at)}
+          {t('ticker.summary_ago', { time: timeAgo(summary.generated_at, t) })}
         </span>
       )}
 
@@ -314,12 +317,12 @@ function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
         <span style={{ color: sourcesOk === sourcesTotal ? 'var(--ok-text)' : 'var(--warn-text)' }}>
           {sourcesOk}/{sourcesTotal}
         </span>
-        {' '}src
+        {' '}{t('ticker.src')}
       </span>
 
       {/* Items */}
       <span className="dashboard-ticker-hide-mobile" style={{ flexShrink: 0 }}>
-        {allItems.length} items
+        {t('ticker.items', { count: allItems.length })}
       </span>
 
       {/* Mood */}
@@ -328,8 +331,8 @@ function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
           <span style={{ width: 1, height: 14, background: 'var(--border-subtle)', flexShrink: 0 }} />
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: moodDotColors[mood] ?? 'var(--ink-tertiary)' }} />
-            <span style={{ fontWeight: 600, textTransform: 'capitalize' as const, color: moodColors[mood] ?? 'var(--ink-tertiary)' }}>
-              {mood}
+            <span style={{ fontWeight: 600, color: moodColors[mood] ?? 'var(--ink-tertiary)' }}>
+              {t(`sentiment.${mood}`)}
             </span>
           </span>
         </>
@@ -346,7 +349,7 @@ function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
           fontSize: '0.625rem',
           flexShrink: 0,
         }}>
-          {riskCount} risk{riskCount !== 1 ? 's' : ''}
+          {t(riskCount !== 1 ? 'ticker.risks_plural' : 'ticker.risks', { count: riskCount })}
         </span>
       )}
     </div>
@@ -357,7 +360,7 @@ function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
 // Widget: Executive Summary
 // ---------------------------------------------------------------------------
 
-function ExecSummaryWidget({ summary }: { summary: BriefingSummary }) {
+function ExecSummaryWidget({ summary, t }: { summary: BriefingSummary; t: (key: string, params?: Record<string, string | number>) => string }) {
   const overall = summary.overall
   if (!isStructuredOverall(overall) || !overall.executive_summary) return null
 
@@ -368,7 +371,7 @@ function ExecSummaryWidget({ summary }: { summary: BriefingSummary }) {
   return (
     <DashCard style={{ background: 'var(--accent-subtle)', borderColor: 'var(--accent-muted)' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-        <SectionLabel color="var(--accent)">Executive Summary</SectionLabel>
+        <SectionLabel color="var(--accent)">{t('dash.exec_summary')}</SectionLabel>
         <div
           style={{
             display: 'flex',
@@ -416,12 +419,12 @@ function ExecSummaryWidget({ summary }: { summary: BriefingSummary }) {
               cursor: 'pointer',
             }}
           >
-            {expanded ? 'Show less' : 'Show more'}
+            {expanded ? t('dash.show_less') : t('dash.show_more')}
           </button>
         )}
         {(expanded || !isLong) && overall.quick_scan && overall.quick_scan.length > 0 && (
           <div style={{ paddingTop: '0.625rem', borderTop: '1px solid var(--border-subtle)' }}>
-            <SectionLabel color="var(--accent)" style={{ marginBottom: '0.375rem' }}>Quick Scan</SectionLabel>
+            <SectionLabel color="var(--accent)" style={{ marginBottom: '0.375rem' }}>{t('dash.quick_scan')}</SectionLabel>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
               {overall.quick_scan.map((entry, i) => (
                 <div key={i} style={{ display: 'flex', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.6 }}>
@@ -441,7 +444,7 @@ function ExecSummaryWidget({ summary }: { summary: BriefingSummary }) {
 // Widget: Thematic Sections
 // ---------------------------------------------------------------------------
 
-function ThematicSectionsWidget({ summary }: { summary: BriefingSummary }) {
+function ThematicSectionsWidget({ summary, t }: { summary: BriefingSummary; t: (key: string, params?: Record<string, string | number>) => string }) {
   const overall = summary.overall
   if (!isStructuredOverall(overall)) return null
   const sections = overall.sections
@@ -449,7 +452,7 @@ function ThematicSectionsWidget({ summary }: { summary: BriefingSummary }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-      <SectionLabel>Investment Themes</SectionLabel>
+      <SectionLabel>{t('dash.investment_themes')}</SectionLabel>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.5rem' }}>
         {sections.map((section, i) => (
           <DashCard key={i}>
@@ -498,29 +501,29 @@ function ThematicSectionsWidget({ summary }: { summary: BriefingSummary }) {
 // Widget: Risk & Intelligence Panel
 // ---------------------------------------------------------------------------
 
-function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
+function RiskIntelPanel({ summary, t }: { summary: BriefingSummary; t: (key: string, params?: Record<string, string | number>) => string }) {
   const overall = summary.overall
   if (!isStructuredOverall(overall)) return null
   const sentiment = overall.sentiment
   if (!sentiment) return null
 
   const tabData = [
-    { key: 'risk' as const, label: 'Risk', items: sentiment.risk_flags ?? [], color: 'var(--sent-neg-text)', dot: 'var(--sent-neg)' },
-    { key: 'controversies' as const, label: 'Controversies', items: sentiment.controversies ?? [], color: 'var(--sent-mixed-text)', dot: 'var(--sent-mixed)' },
-    { key: 'shifts' as const, label: 'Shifts', items: sentiment.opinion_shifts ?? [], color: 'var(--accent)', dot: 'var(--accent)' },
+    { key: 'risk' as const, label: t('dash.risk'), items: sentiment.risk_flags ?? [], color: 'var(--sent-neg-text)', dot: 'var(--sent-neg)' },
+    { key: 'controversies' as const, label: t('dash.controversies'), items: sentiment.controversies ?? [], color: 'var(--sent-mixed-text)', dot: 'var(--sent-mixed)' },
+    { key: 'shifts' as const, label: t('dash.shifts'), items: sentiment.opinion_shifts ?? [], color: 'var(--accent)', dot: 'var(--accent)' },
   ]
 
-  const totalAlerts = tabData.reduce((n, t) => n + t.items.length, 0)
-  const defaultTab = tabData.find(t => t.items.length > 0)?.key ?? 'risk'
+  const totalAlerts = tabData.reduce((n, td) => n + td.items.length, 0)
+  const defaultTab = tabData.find(td => td.items.length > 0)?.key ?? 'risk'
   const [activeTab, setActiveTab] = useState(defaultTab)
-  const current = tabData.find(t => t.key === activeTab) ?? tabData[0]
+  const current = tabData.find(td => td.key === activeTab) ?? tabData[0]
 
   return (
     <DashCard>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <SectionLabel>Intelligence</SectionLabel>
+          <SectionLabel>{t('dash.intelligence')}</SectionLabel>
           {totalAlerts > 0 && (
             <span style={{
               fontFamily: MONO,
@@ -531,14 +534,14 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
               background: sentiment.risk_flags?.length ? 'var(--sent-neg-bg)' : 'var(--surface-inset)',
               color: sentiment.risk_flags?.length ? 'var(--sent-neg-text)' : 'var(--ink-tertiary)',
             }}>
-              {totalAlerts} alert{totalAlerts !== 1 ? 's' : ''}
+              {t(totalAlerts !== 1 ? 'dash.alerts_plural' : 'dash.alerts', { count: totalAlerts })}
             </span>
           )}
         </div>
 
         {/* Tab selector */}
         <InlineTabs
-          tabs={tabData.map(t => ({ key: t.key, label: t.label, count: t.items.length, color: t.color }))}
+          tabs={tabData.map(td => ({ key: td.key, label: td.label, count: td.items.length, color: td.color }))}
           active={activeTab}
           onChange={setActiveTab}
         />
@@ -547,7 +550,7 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
         <div className="risk-grid" style={{ minHeight: 60 }}>
           {current.items.length === 0 ? (
             <div style={{ padding: '1rem 0', textAlign: 'center', fontSize: '0.75rem', color: 'var(--ink-tertiary)' }}>
-              None detected
+              {t('dash.none_detected')}
             </div>
           ) : (
             current.items.map((entry: SentimentEntry, i: number) => (
@@ -594,8 +597,9 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
 // Widget: Sentiment Ring Gauge (SVG)
 // ---------------------------------------------------------------------------
 
-function SentimentRing({ positive, neutral, negative, size = 80 }: {
+function SentimentRing({ positive, neutral, negative, size = 80, t }: {
   positive: number; neutral: number; negative: number; size?: number
+  t: (key: string, params?: Record<string, string | number>) => string
 }) {
   const total = positive + neutral + negative
   if (total === 0) return null
@@ -648,7 +652,7 @@ function SentimentRing({ positive, neutral, negative, size = 80 }: {
       </text>
       <text x="50" y="62" textAnchor="middle" fill="var(--ink-tertiary)"
         style={{ fontSize: '0.5rem', fontWeight: 600, letterSpacing: '0.08em' }}>
-        POSITIVE
+        {t('dash.positive')}
       </text>
     </svg>
   )
@@ -658,7 +662,7 @@ function SentimentRing({ positive, neutral, negative, size = 80 }: {
 // Widget: Sentiment Overview
 // ---------------------------------------------------------------------------
 
-function SentimentWidget({ summary, report }: { summary: BriefingSummary; report: IntelReport | null }) {
+function SentimentWidget({ summary, report, t }: { summary: BriefingSummary; report: IntelReport | null; t: (key: string, params?: Record<string, string | number>) => string }) {
   const overall = summary.overall
   if (!isStructuredOverall(overall)) return null
   const sentiment = overall.sentiment
@@ -697,7 +701,7 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
         {/* Header: mood pill */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <SectionLabel>Sentiment</SectionLabel>
+          <SectionLabel>{t('dash.sentiment')}</SectionLabel>
           <div style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -713,17 +717,16 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
               fontFamily: MONO,
               fontSize: '0.625rem',
               fontWeight: 600,
-              textTransform: 'capitalize' as const,
               color: moodColors[sentiment.overall_mood] ?? 'var(--ink-tertiary)',
             }}>
-              {sentiment.overall_mood}
+              {t(`sentiment.${sentiment.overall_mood}`)}
             </span>
           </div>
         </div>
 
         {/* Ring gauge + mood summary */}
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <SentimentRing positive={totalPos} neutral={totalNeu} negative={totalNeg} size={80} />
+          <SentimentRing positive={totalPos} neutral={totalNeu} negative={totalNeg} size={80} t={t} />
           {sentiment.mood_summary && (
             <p style={{ fontSize: '0.75rem', color: 'var(--ink)', lineHeight: 1.5, margin: 0, flex: 1, minWidth: 120 }}>
               <InlineRefs text={sentiment.mood_summary} globalSources={overall.sources} />
@@ -769,7 +772,7 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
 // Widget: Category Distribution Bar
 // ---------------------------------------------------------------------------
 
-function CategoryDistributionWidget({ report }: { report: IntelReport }) {
+function CategoryDistributionWidget({ report, t }: { report: IntelReport; t: (key: string, params?: Record<string, string | number>) => string }) {
   const counts: Record<string, number> = { 'high-trust': 0, news: 0, trend: 0, opinions: 0 }
   for (const [cat, items] of Object.entries(report.items)) {
     for (const item of items) {
@@ -781,18 +784,18 @@ function CategoryDistributionWidget({ report }: { report: IntelReport }) {
   if (total === 0) return null
 
   const segments: { key: string; label: string; count: number; color: string }[] = [
-    { key: 'high-trust', label: 'Research', count: counts['high-trust'], color: 'var(--cat-research)' },
-    { key: 'news', label: 'News', count: counts.news, color: 'var(--cat-news)' },
-    { key: 'trend', label: 'Trend', count: counts.trend, color: 'var(--cat-trend)' },
-    { key: 'opinions', label: 'Opinion', count: counts.opinions, color: 'var(--cat-opinion)' },
+    { key: 'high-trust', label: t('cat.research'), count: counts['high-trust'], color: 'var(--cat-research)' },
+    { key: 'news', label: t('cat.news'), count: counts.news, color: 'var(--cat-news)' },
+    { key: 'trend', label: t('cat.trend'), count: counts.trend, color: 'var(--cat-trend)' },
+    { key: 'opinions', label: t('cat.opinion'), count: counts.opinions, color: 'var(--cat-opinion)' },
   ]
 
   return (
     <DashCard>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <SectionLabel>Distribution</SectionLabel>
-          <span style={{ fontFamily: MONO, fontSize: '0.625rem', color: 'var(--ink-tertiary)' }}>{total} items</span>
+          <SectionLabel>{t('dash.distribution')}</SectionLabel>
+          <span style={{ fontFamily: MONO, fontSize: '0.625rem', color: 'var(--ink-tertiary)' }}>{t('ticker.items', { count: total })}</span>
         </div>
         {/* Segmented bar */}
         <div style={{ display: 'flex', overflow: 'hidden', height: 8, borderRadius: 4, gap: 2 }}>
@@ -829,7 +832,7 @@ function CategoryDistributionWidget({ report }: { report: IntelReport }) {
 // Widget: Source Health Dots
 // ---------------------------------------------------------------------------
 
-function SourceHealthWidget({ report }: { report: IntelReport }) {
+function SourceHealthWidget({ report, t }: { report: IntelReport; t: (key: string, params?: Record<string, string | number>) => string }) {
   const okSet = new Set(report.sources_ok)
   const failedSorted = [...report.sources_failed].sort()
   const okSorted = [...report.sources_ok].sort()
@@ -843,7 +846,7 @@ function SourceHealthWidget({ report }: { report: IntelReport }) {
     <DashCard>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <SectionLabel>Source Health</SectionLabel>
+          <SectionLabel>{t('dash.source_health')}</SectionLabel>
           <span style={{
             fontFamily: MONO,
             fontSize: '0.625rem',
@@ -853,7 +856,7 @@ function SourceHealthWidget({ report }: { report: IntelReport }) {
             background: hasFailed ? 'var(--sent-neg-bg)' : 'var(--sent-pos-bg)',
             color: hasFailed ? 'var(--sent-neg-text)' : 'var(--sent-pos-text)',
           }}>
-            {healthPct}% ok
+            {healthPct}% {t('dash.ok')}
           </span>
         </div>
         {/* Health bar */}
@@ -888,10 +891,11 @@ function SourceHealthWidget({ report }: { report: IntelReport }) {
 // Widget: Domain Card (compact, opens detail panel on click)
 // ---------------------------------------------------------------------------
 
-function DomainCardCompact({ domain, summary, onClick }: {
+function DomainCardCompact({ domain, summary, onClick, t }: {
   domain: DomainDef
   summary: BriefingSummary
   onClick: () => void
+  t: (key: string, params?: Record<string, string | number>) => string
 }) {
   const matchingSections = summary.sections.filter(s => domain.sensors.includes(s.sensor_name))
   if (matchingSections.length === 0) return null
@@ -907,7 +911,7 @@ function DomainCardCompact({ domain, summary, onClick }: {
         style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', cursor: 'pointer', userSelect: 'none' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <SectionLabel color={domain.accent}>{domain.label}</SectionLabel>
+          <SectionLabel color={domain.accent}>{t(domain.label)}</SectionLabel>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
             <span style={{
               fontFamily: MONO, fontSize: '0.5625rem', fontWeight: 600,
@@ -918,7 +922,7 @@ function DomainCardCompact({ domain, summary, onClick }: {
             </span>
             {totalNotable > 0 && (
               <span style={{ fontFamily: MONO, fontSize: '0.5625rem', color: 'var(--ink-tertiary)' }}>
-                {totalNotable} notable
+                {t('dash.notable', { count: totalNotable })}
               </span>
             )}
             <span style={{ fontSize: '0.75rem', color: 'var(--ink-tertiary)', lineHeight: 1 }}>&#8250;</span>
@@ -939,7 +943,7 @@ function DomainCardCompact({ domain, summary, onClick }: {
 // Widget: Trending & Momentum
 // ---------------------------------------------------------------------------
 
-function TrendingWidget({ report, summary }: { report: IntelReport; summary?: BriefingSummary | null }) {
+function TrendingWidget({ report, summary, t }: { report: IntelReport; summary?: BriefingSummary | null; t: (key: string, params?: Record<string, string | number>) => string }) {
   const briefMap = new Map<string, string>()
   if (summary) {
     for (const section of summary.sections) {
@@ -965,9 +969,9 @@ function TrendingWidget({ report, summary }: { report: IntelReport; summary?: Br
     <DashCard>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-          <SectionLabel>Trending & Momentum</SectionLabel>
+          <SectionLabel>{t('dash.trending')}</SectionLabel>
           <Link href="/data" style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--accent)', textDecoration: 'none' }}>
-            View all &#8250;
+            {t('dash.view_all')} &#8250;
           </Link>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -1038,7 +1042,7 @@ function TrendingWidget({ report, summary }: { report: IntelReport; summary?: Br
                         background: isRapid ? 'var(--cat-trend-bg)' : 'var(--surface-alt)',
                         color: isRapid ? 'var(--cat-trend)' : 'var(--ink-tertiary)',
                       }}>
-                        {isRapid ? 'RAPID' : 'SUSTAINED'} &middot; {v.hoursOnTrend}h
+                        {isRapid ? t('dash.rapid') : t('dash.sustained')} &middot; {v.hoursOnTrend}h
                       </span>
                     )}
                   </div>
@@ -1061,11 +1065,12 @@ function TrendingWidget({ report, summary }: { report: IntelReport; summary?: Br
 // Detail Panel — slide-in overlay for domain deep-dive
 // ---------------------------------------------------------------------------
 
-function DetailPanel({ domain, summary, report, onClose }: {
+function DetailPanel({ domain, summary, report, onClose, t }: {
   domain: DomainDef
   summary: BriefingSummary
   report: IntelReport | null
   onClose: () => void
+  t: (key: string, params?: Record<string, string | number>) => string
 }) {
   const matchingSections = summary.sections.filter(s => domain.sensors.includes(s.sensor_name))
 
@@ -1139,7 +1144,7 @@ function DetailPanel({ domain, summary, report, onClose }: {
       >
         {/* Header with close button */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <SectionLabel color={domain.accent}>{domain.label}</SectionLabel>
+          <SectionLabel color={domain.accent}>{t(domain.label)}</SectionLabel>
           <button
             onClick={onClose}
             style={{
@@ -1194,9 +1199,9 @@ function DetailPanel({ domain, summary, report, onClose }: {
               return (
                 <div>
                   <div style={{ display: 'flex', gap: 6, fontFamily: MONO, fontSize: '0.625rem', color: 'var(--ink-tertiary)', marginBottom: 2 }}>
-                    <span style={{ color: 'var(--sent-pos-text)' }}>{posPct}% pos</span>
-                    <span>{neuPct}% neu</span>
-                    <span style={{ color: 'var(--sent-neg-text)' }}>{negPct}% neg</span>
+                    <span style={{ color: 'var(--sent-pos-text)' }}>{posPct}% {t('sent.pos')}</span>
+                    <span>{neuPct}% {t('sent.neu')}</span>
+                    <span style={{ color: 'var(--sent-neg-text)' }}>{negPct}% {t('sent.neg')}</span>
                   </div>
                   <div style={{ display: 'flex', overflow: 'hidden', height: 4, borderRadius: 2, background: 'var(--border-subtle)', gap: 1 }}>
                     {posPct > 0 && <div style={{ width: `${posPct}%`, background: 'var(--sent-pos)', transition: 'width 400ms ease' }} />}
@@ -1250,7 +1255,7 @@ function DetailPanel({ domain, summary, report, onClose }: {
         {/* Empty state */}
         {matchingSections.length === 0 && (
           <div style={{ padding: '2rem 0', textAlign: 'center', fontSize: '0.75rem', color: 'var(--ink-tertiary)' }}>
-            No data available for this domain
+            {t('dash.no_domain_data')}
           </div>
         )}
       </motion.div>
@@ -1363,6 +1368,7 @@ function DashboardSkeleton() {
 // ---------------------------------------------------------------------------
 
 export function Dashboard() {
+  const { t, locale } = useTranslation()
   const [report, setReport] = useState<IntelReport | null>(null)
   const [summary, setSummary] = useState<BriefingSummary | null>(null)
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null)
@@ -1389,16 +1395,16 @@ export function Dashboard() {
 
   useEffect(() => {
     if (!showUpdatedBanner) return
-    const t = setTimeout(() => setShowUpdatedBanner(false), 4000)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setShowUpdatedBanner(false), 4000)
+    return () => clearTimeout(timer)
   }, [showUpdatedBanner])
 
   useEffect(() => {
     Promise.all([
       api.getLatest().then(setReport).catch(() => {}),
-      api.getSummary().then(r => setSummary(r.summary)).catch(() => {}),
+      api.getSummary(locale).then(r => setSummary(r.summary)).catch(() => {}),
     ]).finally(() => setLoading(false))
-  }, [])
+  }, [locale])
 
   const isActive = !!(summaryProgress?.running) || !!(pipelineStatus?.running && pipelineStatus.alive !== false)
 
@@ -1408,7 +1414,7 @@ export function Dashboard() {
         setSummaryProgress(s)
         if (!s.running && s.completed_at && s.completed_at !== lastSummaryAt.current) {
           lastSummaryAt.current = s.completed_at
-          api.getSummary().then(r => setSummary(r.summary)).catch(() => {})
+          api.getSummary(locale).then(r => setSummary(r.summary)).catch(() => {})
         }
       }).catch(() => {})
       api.getPipelineStatus().then(ps => {
@@ -1416,7 +1422,7 @@ export function Dashboard() {
         if (!ps.running && ps.completed_at && ps.completed_at !== lastPipelineCompletedAt.current) {
           lastPipelineCompletedAt.current = ps.completed_at
           api.getLatest().then(setReport).catch(() => {})
-          api.getSummary().then(r => {
+          api.getSummary(locale).then(r => {
             if (r.summary?.generated_at !== lastSummaryAt.current) {
               lastSummaryAt.current = r.summary?.generated_at ?? null
               setSummary(r.summary)
@@ -1430,7 +1436,7 @@ export function Dashboard() {
     const timeout = setTimeout(check, delay)
     const iv = setInterval(check, interval)
     return () => { clearTimeout(timeout); clearInterval(iv) }
-  }, [isActive])
+  }, [isActive, locale])
 
   const hasReport = report && Object.values(report.items).some(arr => arr.length > 0)
   const hasSummary = summary && isStructuredOverall(summary.overall) && !!summary.overall.executive_summary
@@ -1449,14 +1455,13 @@ export function Dashboard() {
             <DashCard style={{ padding: '4rem 2rem', textAlign: 'center' }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
                 <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--ink-tertiary)' }}>
-                  No briefing data yet
+                  {t('dash.no_data_title')}
                 </div>
                 <p style={{ fontSize: '0.8125rem', color: 'var(--ink-secondary)', margin: 0 }}>
-                  Run the pipeline from the{' '}
-                  <Link href="/status" style={{ textDecoration: 'underline', textUnderlineOffset: 2, color: 'var(--accent)' }}>
-                    Status page
-                  </Link>
-                  {' '}to fetch data and generate your first briefing.
+                  {(() => {
+                    const parts = t('dash.no_data_desc', { link: '|||' }).split('|||')
+                    return <>{parts[0]}<Link href="/status" style={{ textDecoration: 'underline', textUnderlineOffset: 2, color: 'var(--accent)' }}>{t('dash.no_data_link')}</Link>{parts[1] ?? ''}</>
+                  })()}
                 </p>
               </div>
             </DashCard>
@@ -1488,7 +1493,7 @@ export function Dashboard() {
                   }}
                 >
                   <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)' }} />
-                  Briefing updated
+                  {t('dash.briefing_updated')}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -1501,6 +1506,7 @@ export function Dashboard() {
                   summary={summary}
                   pipelineStatus={pipelineStatus}
                   summaryProgress={summaryProgress}
+                  t={t}
                 />
               </StaggerChild>
             </div>
@@ -1513,14 +1519,14 @@ export function Dashboard() {
                   <>
                     {/* Executive Summary */}
                     <StaggerChild index={1}>
-                      <ExecSummaryWidget summary={summary} />
+                      <ExecSummaryWidget summary={summary} t={t} />
                     </StaggerChild>
 
                     <hr className="dash-divider" />
 
                     {/* Investment Themes */}
                     <StaggerChild index={2}>
-                      <ThematicSectionsWidget summary={summary} />
+                      <ThematicSectionsWidget summary={summary} t={t} />
                     </StaggerChild>
 
                     <hr className="dash-divider" />
@@ -1533,6 +1539,7 @@ export function Dashboard() {
                             domain={domain}
                             summary={summary}
                             onClick={() => setSelectedDomain(domain)}
+                            t={t}
                           />
                         </StaggerChild>
                       ))}
@@ -1543,7 +1550,7 @@ export function Dashboard() {
                 {/* Footer link */}
                 <div style={{ textAlign: 'center', paddingTop: 2, paddingBottom: 4 }}>
                   <Link href="/data" style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--accent)', textDecoration: 'none' }}>
-                    View full feed &#8250;
+                    {t('dash.view_full_feed')} &#8250;
                   </Link>
                 </div>
               </div>
@@ -1553,11 +1560,11 @@ export function Dashboard() {
                 {summary && (
                   <>
                     <StaggerChild index={3}>
-                      <RiskIntelPanel summary={summary} />
+                      <RiskIntelPanel summary={summary} t={t} />
                     </StaggerChild>
                     <hr className="dash-divider" />
                     <StaggerChild index={4}>
-                      <SentimentWidget summary={summary} report={report} />
+                      <SentimentWidget summary={summary} report={report} t={t} />
                     </StaggerChild>
                     <hr className="dash-divider" />
                   </>
@@ -1565,15 +1572,15 @@ export function Dashboard() {
                 {report && (
                   <>
                     <StaggerChild index={12}>
-                      <TrendingWidget report={report} summary={summary} />
+                      <TrendingWidget report={report} summary={summary} t={t} />
                     </StaggerChild>
                     <hr className="dash-divider" />
                     <StaggerChild index={13}>
-                      <CategoryDistributionWidget report={report} />
+                      <CategoryDistributionWidget report={report} t={t} />
                     </StaggerChild>
                     <hr className="dash-divider" />
                     <StaggerChild index={14}>
-                      <SourceHealthWidget report={report} />
+                      <SourceHealthWidget report={report} t={t} />
                     </StaggerChild>
                   </>
                 )}
@@ -1588,6 +1595,7 @@ export function Dashboard() {
                   summary={summary}
                   report={report}
                   onClose={() => setSelectedDomain(null)}
+                  t={t}
                 />
               )}
             </AnimatePresence>

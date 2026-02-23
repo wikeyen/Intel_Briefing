@@ -1,11 +1,14 @@
 // ABOUTME: Summary API — GET returns cached AI briefing, POST writes a new one.
-// ABOUTME: GET is used by the Status page; POST is used by the Claude Code skill.
+// ABOUTME: GET reads the summary for the configured language; POST writes a new one.
 import { NextRequest, NextResponse } from 'next/server'
 import { readSummary, writeSummary } from '@/lib/summary/cache'
-import type { BriefingSummary } from '@/lib/models'
+import { loadConfig } from '@/lib/config'
+import type { BriefingSummary, SummaryLanguage } from '@/lib/models'
 
-export async function GET(): Promise<NextResponse> {
-  const summary = await readSummary()
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const langParam = request.nextUrl.searchParams.get('lang')
+  const language = (langParam ?? (await loadConfig()).summary_language) as SummaryLanguage
+  const summary = await readSummary(language)
   return NextResponse.json({ summary })
 }
 

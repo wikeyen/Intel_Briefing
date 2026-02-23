@@ -183,10 +183,18 @@ async function summarizeSensor(
 
   // Correct LLM-generated titles with original verbatim titles from source items.
   // The LLM sometimes rewrites or fabricates titles even when instructed not to.
+  // However, when the target language differs from the source title's language,
+  // keep the LLM's translated title — the prompt instructed it to translate.
   const originalTitles = new Map(items.filter(i => i.url).map(i => [i.url, i.title]))
   const correctedItems = parsed.items.map(it => {
     const original = originalTitles.get(it.url)
-    return original ? { ...it, title: original } : it
+    if (!original) return it
+    // If source title is already in the target language, prefer the original
+    const sourceIsCjk = /[\u4e00-\u9fff\u3040-\u30ff]/.test(original)
+    const targetIsCjk = language === 'zh'
+    if (sourceIsCjk === targetIsCjk) return { ...it, title: original }
+    // Languages differ — keep LLM's translated title
+    return it
   })
 
   return {
@@ -260,7 +268,7 @@ export async function summarizeReport(
         // Check per-sensor cache unless skipCache is set
         if (!skipCache) {
           const contentHash = computeContentHash(items)
-          const cached = await readSensorSummary(sensorName)
+          const cached = await readSensorSummary(sensorName, language)
           if (cached && cached.content_hash === contentHash && cached.language === language) {
             await onProgress?.(sensorName, label, 'cached', null)
             return cached.sensor_summary

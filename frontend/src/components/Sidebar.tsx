@@ -1,18 +1,20 @@
 // ABOUTME: Sidebar navigation component for Intel Briefing.
-// ABOUTME: Uses Next.js Link and usePathname for client-side routing.
+// ABOUTME: Uses Next.js Link and usePathname for client-side routing; language selector in footer.
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect, type ReactNode } from 'react'
 import { api } from '@/api/client'
 import type { HealthResponse, PipelineStatus, SummaryProgress } from '@/api/client'
-import { usePolling, usePollEffect } from '@/lib/hooks/usePolling'
+import { usePolling } from '@/lib/hooks/usePolling'
+import { useTranslation, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from '@/lib/i18n'
 
-const CONFIG_NAV = [
-  { href: '/sources',     label: 'Sources' },
-  { href: '/pipeline',    label: 'Pipeline' },
-  { href: '/ai',          label: 'AI Summary' },
-  { href: '/connections', label: 'Credentials' },
+/** Nav item config keys for i18n. */
+const CONFIG_NAV: { href: string; labelKey: string }[] = [
+  { href: '/sources',     labelKey: 'nav.sources' },
+  { href: '/pipeline',    labelKey: 'nav.pipeline' },
+  { href: '/ai',          labelKey: 'nav.ai_summary' },
+  { href: '/connections', labelKey: 'nav.credentials' },
 ]
 
 function NavLink({ href, active, onClick, children }: { href: string; active: boolean; onClick?: () => void; children: ReactNode }) {
@@ -67,6 +69,7 @@ interface Props {
 export function Sidebar({ onNavigate }: Props) {
   const pathname = usePathname()
   const router = useRouter()
+  const { t, locale, setLocale } = useTranslation()
   const health = usePolling<HealthResponse>(() => api.health(), 30_000)
   const pipelineStatus = usePolling<PipelineStatus>(() => api.getPipelineStatus(), 5_000)
   const summaryProgress = usePolling<SummaryProgress>(() => api.getSummaryStatus(), 5_000)
@@ -139,7 +142,7 @@ export function Sidebar({ onNavigate }: Props) {
 
   const statusLabel = health
     ? `${health.status}${health.last_fetch ? ' · ' + health.last_fetch.slice(0, 16).replace('T', ' ') : ''}`
-    : 'loading…'
+    : t('sidebar.loading')
 
   return (
     <nav className="sidebar-nav" style={{
@@ -162,7 +165,7 @@ export function Sidebar({ onNavigate }: Props) {
           color: 'var(--sb-ink)',
           marginBottom: '0.5rem',
         }}>
-          Intel Briefing
+          {t('app.title')}
         </div>
         <div
           role="link"
@@ -213,9 +216,9 @@ export function Sidebar({ onNavigate }: Props) {
 
       {/* Nav */}
       <div style={{ flex: 1, padding: '1rem 0' }}>
-        <SideLabel>Overview</SideLabel>
+        <SideLabel>{t('nav.overview')}</SideLabel>
         <NavLink href="/dashboard" active={pathname === '/dashboard'} onClick={onNavigate}>
-          Dashboard
+          {t('nav.dashboard')}
           {hasNewBriefing && (
             <span style={{
               width: 6,
@@ -229,7 +232,7 @@ export function Sidebar({ onNavigate }: Props) {
           )}
         </NavLink>
         <NavLink href="/status" active={pathname === '/status'} onClick={onNavigate}>
-          Status
+          {t('nav.status')}
           {showBadge && (
             <span style={{
               fontSize: '0.5rem',
@@ -239,23 +242,64 @@ export function Sidebar({ onNavigate }: Props) {
               color: 'var(--err)',
               marginLeft: 'auto',
             }}>
-              errors
+              {t('nav.errors')}
             </span>
           )}
         </NavLink>
         <NavLink href="/data" active={pathname === '/data'} onClick={onNavigate}>
-          Feed
+          {t('nav.feed')}
         </NavLink>
 
         <SideDivider />
 
-        <SideLabel>Config</SideLabel>
-        {CONFIG_NAV.map(({ href, label }) => (
+        <SideLabel>{t('nav.config')}</SideLabel>
+        {CONFIG_NAV.map(({ href, labelKey }) => (
           <NavLink key={href} href={href} active={pathname === href} onClick={onNavigate}>
-            {label}
+            {t(labelKey)}
           </NavLink>
         ))}
 
+      </div>
+
+      {/* Language selector — sidebar footer */}
+      <div style={{
+        padding: '0.75rem 1.75rem',
+        borderTop: '1px solid var(--sb-border)',
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <span style={{
+            fontSize: '0.5625rem',
+            fontWeight: 700,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: 'var(--sb-faint)',
+          }}>
+            {t('sidebar.language')}
+          </span>
+          <select
+            value={locale}
+            onChange={e => setLocale(e.target.value as Locale)}
+            style={{
+              fontSize: '0.6875rem',
+              fontWeight: 500,
+              color: 'var(--sb-ink)',
+              background: 'var(--sb)',
+              border: '1px solid var(--sb-border)',
+              borderRadius: 4,
+              padding: '2px 4px',
+              cursor: 'pointer',
+              outline: 'none',
+            }}
+          >
+            {SUPPORTED_LOCALES.map(loc => (
+              <option key={loc} value={loc}>{LOCALE_LABELS[loc]}</option>
+            ))}
+          </select>
+        </div>
       </div>
     </nav>
   )

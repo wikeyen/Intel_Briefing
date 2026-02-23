@@ -4,23 +4,39 @@ import { kvSet, kvGet, kvDelete, getDb } from '../db'
 import type { BriefingSummary, SummaryProgress, SensorSummary, SummaryLanguage } from '../models'
 import { parseOverallJson } from './parse-json'
 
-const SUMMARY_KEY = 'intel:summary'
+const SUMMARY_KEY_PREFIX = 'intel:summary'
 const SUMMARY_TTL_SECONDS = 48 * 60 * 60 // 48 hours
 
-/** Write a BriefingSummary to the database with a 48-hour TTL. */
-export async function writeSummary(summary: BriefingSummary): Promise<void> {
-  await kvSet(SUMMARY_KEY, summary, SUMMARY_TTL_SECONDS)
+/** Build the cache key for a language-specific summary. */
+function summaryKey(language?: SummaryLanguage): string {
+  return language ? `${SUMMARY_KEY_PREFIX}:${language}` : SUMMARY_KEY_PREFIX
 }
 
-/** Read a cached BriefingSummary. Repairs broken fallback data on the fly. */
-export async function readSummary(): Promise<BriefingSummary | null> {
+/** Write a BriefingSummary to the database with a 48-hour TTL, keyed by language. */
+export async function writeSummary(summary: BriefingSummary, language?: SummaryLanguage): Promise<void> {
+  await kvSet(summaryKey(language), summary, SUMMARY_TTL_SECONDS)
+}
+
+/** Read a cached BriefingSummary for a specific language. Repairs broken fallback data on the fly. */
+export async function readSummary(language?: SummaryLanguage): Promise<BriefingSummary | null> {
   try {
-    const data = await kvGet<BriefingSummary>(SUMMARY_KEY)
+    // Try language-specific key first, fall back to legacy unkeyed entry
+    const data = await kvGet<BriefingSummary>(summaryKey(language))
+      ?? (language ? await kvGet<BriefingSummary>(SUMMARY_KEY_PREFIX) : null)
     if (!data) return null
     return repairIfNeeded(data)
   } catch {
     return null
   }
+}
+
+/** Invalidate all cached summaries across all languages. */
+export async function invalidateAllSummaries(): Promise<void> {
+  const db = await getDb()
+  await db.execute({
+    sql: `DELETE FROM kv WHERE key LIKE ? OR key = ?`,
+    args: [`${SUMMARY_KEY_PREFIX}:%`, SUMMARY_KEY_PREFIX],
+  })
 }
 
 /**
@@ -78,7 +94,14 @@ export interface CachedSensorSummary {
   language?: SummaryLanguage
 }
 
-/** Write a per-sensor summary with its content hash and language. */
+/** Build per-sensor cache key, optionally scoped to a language. */
+function sensorKey(sensorName: string, language?: SummaryLanguage): string {
+  return language
+    ? `${SENSOR_SUMMARY_PREFIX}${sensorName}:${language}`
+    : `${SENSOR_SUMMARY_PREFIX}${sensorName}`
+}
+
+/** Write a per-sensor summary with its content hash, keyed by sensor+language. */
 export async function writeSensorSummary(
   sensorName: string,
   contentHash: string,
@@ -91,21 +114,28 @@ export async function writeSensorSummary(
     generated_at: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
     language,
   }
-  await kvSet(SENSOR_SUMMARY_PREFIX + sensorName, entry, SENSOR_SUMMARY_TTL_SECONDS)
+  await kvSet(sensorKey(sensorName, language), entry, SENSOR_SUMMARY_TTL_SECONDS)
 }
 
-/** Read a cached per-sensor summary. Returns null if missing or expired. */
-export async function readSensorSummary(sensorName: string): Promise<CachedSensorSummary | null> {
+/** Read a cached per-sensor summary for a specific language. Returns null if missing or expired. */
+export async function readSensorSummary(sensorName: string, language?: SummaryLanguage): Promise<CachedSensorSummary | null> {
   try {
-    return await kvGet<CachedSensorSummary>(SENSOR_SUMMARY_PREFIX + sensorName)
+    // Try language-keyed entry first, fall back to legacy unkeyed entry
+    const data = await kvGet<CachedSensorSummary>(sensorKey(sensorName, language))
+      ?? (language ? await kvGet<CachedSensorSummary>(sensorKey(sensorName)) : null)
+    return data ?? null
   } catch {
     return null
   }
 }
 
-/** Invalidate a single sensor's cached summary. */
+/** Invalidate a single sensor's cached summary (all languages). */
 export async function invalidateSensorSummary(sensorName: string): Promise<void> {
-  await kvDelete(SENSOR_SUMMARY_PREFIX + sensorName)
+  const db = await getDb()
+  await db.execute({
+    sql: `DELETE FROM kv WHERE key LIKE ? OR key = ?`,
+    args: [`${SENSOR_SUMMARY_PREFIX}${sensorName}:%`, `${SENSOR_SUMMARY_PREFIX}${sensorName}`],
+  })
 }
 
 /** Invalidate all cached per-sensor summaries. Uses SQL LIKE for prefix match. */

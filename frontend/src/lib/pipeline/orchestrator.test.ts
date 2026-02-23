@@ -19,6 +19,7 @@ vi.mock('./cache', () => ({
 
 const mockWriteSummary = vi.fn().mockResolvedValue(undefined)
 const mockInvalidateAllSensorSummaries = vi.fn().mockResolvedValue(undefined)
+const mockInvalidateAllSummaries = vi.fn().mockResolvedValue(undefined)
 vi.mock('../summary/cache', () => ({
   writeSummary: (...args: unknown[]) => mockWriteSummary(...args),
   writeSummaryProgress: vi.fn().mockResolvedValue(undefined),
@@ -28,6 +29,7 @@ vi.mock('../summary/cache', () => ({
   writeSensorSummary: vi.fn().mockResolvedValue(undefined),
   invalidateSensorSummary: vi.fn().mockResolvedValue(undefined),
   invalidateAllSensorSummaries: (...args: unknown[]) => mockInvalidateAllSensorSummaries(...args),
+  invalidateAllSummaries: (...args: unknown[]) => mockInvalidateAllSummaries(...args),
 }))
 
 const mockChatCompletion = vi.fn().mockResolvedValue('Summary text')

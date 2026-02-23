@@ -13,7 +13,7 @@ import { sensorResultSucceeded, sensorLimit } from '../models'
 import { Semaphore } from './semaphore'
 import { PipelineProgressTracker } from './progress'
 import { readReport, writeReport, writePipelineStatus } from './cache'
-import { writeSummary, writeSummaryProgress, invalidateAllSensorSummaries } from '../summary/cache'
+import { writeSummary, writeSummaryProgress, invalidateAllSensorSummaries, invalidateAllSummaries } from '../summary/cache'
 import { summarizeReport, summarizeSingleSensor, generateOverallBriefing, type SummaryProgressCallback } from '../summary/summarizer'
 import type { LlmConfig } from '../summary/llm'
 import { SENSOR_REGISTRY } from '../sensors'
@@ -313,9 +313,12 @@ export async function runPipeline(
         }
       }
 
-      // Invalidate all per-sensor summary caches — fresh fetch means fresh analysis
+      // Invalidate all cached summaries (all languages) — fresh fetch means fresh analysis
       if (shouldSummarize) {
-        await invalidateAllSensorSummaries().catch(() => {})
+        await Promise.all([
+          invalidateAllSensorSummaries(),
+          invalidateAllSummaries(),
+        ]).catch(() => {})
       }
     }
 
@@ -528,7 +531,7 @@ export async function runPipeline(
 
         if (summary && !signal.aborted) {
           try {
-            await writeSummary(summary)
+            await writeSummary(summary, config.summary_language)
           } catch (err) {
             console.error('Failed to write summary cache:', err)
           }

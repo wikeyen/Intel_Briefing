@@ -2,9 +2,14 @@
 // ABOUTME: Covers rendering all sensors, disabled/failed states, dismissed filtering, and selection.
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
+import { I18nProvider } from '@/lib/i18n/context'
 import { SensorGrid } from './SensorGrid'
 import type { SensorGridProps } from './SensorGrid'
 import { makeReport, makeConfig, makePipelineStatus, makeSensorJob } from './test-helpers'
+
+function renderWithI18n(ui: React.ReactElement) {
+  return render(<I18nProvider initialLocale="en">{ui}</I18nProvider>)
+}
 
 function buildProps(overrides: Partial<SensorGridProps> = {}): SensorGridProps {
   return {
@@ -28,7 +33,7 @@ describe('SensorGrid', () => {
       config: makeConfig(),
       pipelineStatus: makePipelineStatus(),
     })
-    render(<SensorGrid {...props} />)
+    renderWithI18n(<SensorGrid {...props} />)
     expect(screen.getByText('Hacker News')).toBeInTheDocument()
     expect(screen.getByText('GitHub Trending')).toBeInTheDocument()
     expect(screen.getByText('ArXiv AI')).toBeInTheDocument()
@@ -43,7 +48,7 @@ describe('SensorGrid', () => {
       config: makeConfig(),
       pipelineStatus: makePipelineStatus(),
     })
-    render(<SensorGrid {...props} />)
+    renderWithI18n(<SensorGrid {...props} />)
     // HN has 2 items, ArXiv has 2, GitHub has 1
     const twos = screen.getAllByText('2')
     expect(twos.length).toBeGreaterThanOrEqual(2)
@@ -62,7 +67,7 @@ describe('SensorGrid', () => {
       config,
       pipelineStatus: makePipelineStatus(),
     })
-    render(<SensorGrid {...props} />)
+    renderWithI18n(<SensorGrid {...props} />)
     expect(screen.getByText('Disabled')).toBeInTheDocument()
   })
 
@@ -78,7 +83,7 @@ describe('SensorGrid', () => {
       }),
       dismissed: new Set(['github']),
     })
-    render(<SensorGrid {...props} />)
+    renderWithI18n(<SensorGrid {...props} />)
     expect(screen.queryByText('GitHub Trending')).not.toBeInTheDocument()
   })
 
@@ -90,7 +95,7 @@ describe('SensorGrid', () => {
       pipelineStatus: makePipelineStatus(),
       onToggleSelect,
     })
-    render(<SensorGrid {...props} />)
+    renderWithI18n(<SensorGrid {...props} />)
     fireEvent.click(screen.getByText('Hacker News'))
     expect(onToggleSelect).toHaveBeenCalledWith('hacker_news')
   })
@@ -119,7 +124,7 @@ describe('SensorGrid', () => {
       config: makeConfig(),
       pipelineStatus,
     })
-    render(<SensorGrid {...props} />)
+    renderWithI18n(<SensorGrid {...props} />)
     expect(screen.getByText('Connection refused')).toBeInTheDocument()
   })
 
@@ -132,7 +137,7 @@ describe('SensorGrid', () => {
       liveSensors,
       config: makeConfig(),
     })
-    render(<SensorGrid {...props} />)
+    renderWithI18n(<SensorGrid {...props} />)
     expect(screen.getByText(/Fetching/)).toBeInTheDocument()
   })
 })

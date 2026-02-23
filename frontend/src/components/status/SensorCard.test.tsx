@@ -2,9 +2,14 @@
 // ABOUTME: Covers all visual states: healthy, selected, disabled, failed, running, and interactions.
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
+import { I18nProvider } from '@/lib/i18n/context'
 import { SensorCard } from './SensorCard'
 import type { SensorCardProps } from './SensorCard'
 import { makeSensorJob } from './test-helpers'
+
+function renderWithI18n(ui: React.ReactElement) {
+  return render(<I18nProvider initialLocale="en">{ui}</I18nProvider>)
+}
 
 function buildProps(overrides: Partial<SensorCardProps> = {}): SensorCardProps {
   return {
@@ -27,31 +32,31 @@ function buildProps(overrides: Partial<SensorCardProps> = {}): SensorCardProps {
 
 describe('SensorCard', () => {
   it('renders label and category', () => {
-    render(<SensorCard {...buildProps()} />)
+    renderWithI18n(<SensorCard {...buildProps()} />)
     expect(screen.getByText('Hacker News')).toBeInTheDocument()
     expect(screen.getByText('Tech')).toBeInTheDocument()
   })
 
   it('shows item count for healthy sensor', () => {
-    render(<SensorCard {...buildProps()} />)
+    renderWithI18n(<SensorCard {...buildProps()} />)
     expect(screen.getByText('15')).toBeInTheDocument()
   })
 
   it('shows last fetch time for healthy sensor', () => {
-    render(<SensorCard {...buildProps()} />)
+    renderWithI18n(<SensorCard {...buildProps()} />)
     expect(screen.getByText('2h ago')).toBeInTheDocument()
   })
 
   it('calls onToggleSelect when clicked (idle, not disabled)', () => {
     const onToggleSelect = vi.fn()
-    render(<SensorCard {...buildProps({ onToggleSelect })} />)
+    renderWithI18n(<SensorCard {...buildProps({ onToggleSelect })} />)
     fireEvent.click(screen.getByText('Hacker News'))
     expect(onToggleSelect).toHaveBeenCalledOnce()
   })
 
   it('calls onToggleSelect on Enter key', () => {
     const onToggleSelect = vi.fn()
-    render(<SensorCard {...buildProps({ onToggleSelect })} />)
+    renderWithI18n(<SensorCard {...buildProps({ onToggleSelect })} />)
     const card = screen.getByRole('button')
     fireEvent.keyDown(card, { key: 'Enter' })
     expect(onToggleSelect).toHaveBeenCalledOnce()
@@ -59,14 +64,14 @@ describe('SensorCard', () => {
 
   it('does not call onToggleSelect when disabled', () => {
     const onToggleSelect = vi.fn()
-    render(<SensorCard {...buildProps({ isDisabled: true, isOk: false, onToggleSelect })} />)
+    renderWithI18n(<SensorCard {...buildProps({ isDisabled: true, isOk: false, onToggleSelect })} />)
     fireEvent.click(screen.getByText('Hacker News'))
     expect(onToggleSelect).not.toHaveBeenCalled()
   })
 
   it('does not call onToggleSelect when running', () => {
     const onToggleSelect = vi.fn()
-    render(<SensorCard {...buildProps({
+    renderWithI18n(<SensorCard {...buildProps({
       isRunning: true,
       liveSensor: makeSensorJob('hacker_news', { fetch: 'running' }),
       onToggleSelect,
@@ -76,12 +81,12 @@ describe('SensorCard', () => {
   })
 
   it('shows "Disabled" for disabled sensor', () => {
-    render(<SensorCard {...buildProps({ isDisabled: true, isOk: false })} />)
+    renderWithI18n(<SensorCard {...buildProps({ isDisabled: true, isOk: false })} />)
     expect(screen.getByText('Disabled')).toBeInTheDocument()
   })
 
   it('shows error text for failed sensor', () => {
-    render(<SensorCard {...buildProps({
+    renderWithI18n(<SensorCard {...buildProps({
       isOk: false,
       isFailed: true,
       fetchError: 'Connection timeout',
@@ -90,7 +95,7 @@ describe('SensorCard', () => {
   })
 
   it('shows "Needs API key" for config error', () => {
-    render(<SensorCard {...buildProps({
+    renderWithI18n(<SensorCard {...buildProps({
       isOk: false,
       isFailed: true,
       isConfigError: true,
@@ -102,7 +107,7 @@ describe('SensorCard', () => {
   it('shows Retry and Dismiss buttons for failed sensor', () => {
     const onRetry = vi.fn()
     const onDismiss = vi.fn()
-    render(<SensorCard {...buildProps({
+    renderWithI18n(<SensorCard {...buildProps({
       isOk: false,
       isFailed: true,
       fetchError: 'Failed',
@@ -122,7 +127,7 @@ describe('SensorCard', () => {
   })
 
   it('shows fetching state with item count during live run', () => {
-    render(<SensorCard {...buildProps({
+    renderWithI18n(<SensorCard {...buildProps({
       isRunning: true,
       liveSensor: makeSensorJob('hacker_news', { fetch: 'running', item_count: 7 }),
     })} />)
@@ -131,7 +136,7 @@ describe('SensorCard', () => {
   })
 
   it('shows "Summarizing" during summary phase', () => {
-    render(<SensorCard {...buildProps({
+    renderWithI18n(<SensorCard {...buildProps({
       isRunning: true,
       liveSensor: makeSensorJob('hacker_news', { fetch: 'ok', summary: 'running', item_count: 10 }),
     })} />)
@@ -139,7 +144,7 @@ describe('SensorCard', () => {
   })
 
   it('shows chunk progress bar during summarization', () => {
-    render(<SensorCard {...buildProps({
+    renderWithI18n(<SensorCard {...buildProps({
       isRunning: true,
       liveSensor: makeSensorJob('hacker_news', {
         fetch: 'ok',
@@ -153,7 +158,7 @@ describe('SensorCard', () => {
   })
 
   it('shows done state with checkmark after completion', () => {
-    render(<SensorCard {...buildProps({
+    renderWithI18n(<SensorCard {...buildProps({
       isRunning: true,
       liveSensor: makeSensorJob('hacker_news', {
         fetch: 'ok',
@@ -165,7 +170,7 @@ describe('SensorCard', () => {
   })
 
   it('shows "Waiting..." for queued sensor during run', () => {
-    render(<SensorCard {...buildProps({
+    renderWithI18n(<SensorCard {...buildProps({
       isRunning: true,
       // No liveSensor means waiting
     })} />)
@@ -173,7 +178,7 @@ describe('SensorCard', () => {
   })
 
   it('shows error for sensor that failed mid-run', () => {
-    render(<SensorCard {...buildProps({
+    renderWithI18n(<SensorCard {...buildProps({
       isRunning: true,
       liveSensor: makeSensorJob('hacker_news', {
         fetch: 'failed',

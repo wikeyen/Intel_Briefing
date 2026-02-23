@@ -2,6 +2,7 @@
 // ABOUTME: Covers stale detection logic, banner rendering, and abort/resume/restart actions.
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
+import { I18nProvider } from '@/lib/i18n/context'
 import { StaleProcessBanner, detectStale } from './StaleProcessBanner'
 import type { SummaryProgress, PipelineStatus } from '@/api/client'
 
@@ -169,7 +170,7 @@ function renderBanner(overrides: Partial<Parameters<typeof StaleProcessBanner>[0
     onRestart: noop,
     ...overrides,
   }
-  return render(<StaleProcessBanner {...props} />)
+  return render(<I18nProvider initialLocale="en"><StaleProcessBanner {...props} /></I18nProvider>)
 }
 
 describe('StaleProcessBanner', () => {

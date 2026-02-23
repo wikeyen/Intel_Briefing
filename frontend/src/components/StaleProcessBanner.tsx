@@ -2,6 +2,7 @@
 // ABOUTME: Offers Abort (clear state), Resume (continue from interruption), and Restart (fresh run).
 'use client'
 import type { SummaryProgress, PipelineStatus } from '@/api/client'
+import { useTranslation } from '@/lib/i18n'
 
 export type StaleProcess = 'summary' | 'pipeline'
 
@@ -84,13 +85,13 @@ export function detectStale(
   return null
 }
 
-function timeAgo(isoString: string): string {
+function timeAgo(isoString: string, t: (key: string, params?: Record<string, string>) => string): string {
   if (!isoString) return ''
   const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000)
-  if (diff < 60) return `${diff}s ago`
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
-  return `${Math.floor(diff / 86400)}d ago`
+  if (diff < 60) return t('time.seconds_ago', { n: String(diff) })
+  if (diff < 3600) return t('time.minutes_ago', { n: String(Math.floor(diff / 60)) })
+  if (diff < 86400) return t('time.hours_ago', { n: String(Math.floor(diff / 3600)) })
+  return t('time.days_ago', { n: String(Math.floor(diff / 86400)) })
 }
 
 const ghostBtn: React.CSSProperties = {
@@ -123,13 +124,14 @@ export function StaleProcessBanner({ stale, onAbort, onResume, onRestart }: {
   onResume: () => void
   onRestart: () => void
 }) {
-  const label = stale.type === 'pipeline' ? 'Pipeline' : 'Summary'
+  const { t } = useTranslation()
+  const label = stale.type === 'pipeline' ? t('stale.pipeline') : t('stale.summary')
   const pct = stale.totalSensors > 0
     ? Math.round((stale.completedSensors / stale.totalSensors) * 100)
     : 0
   const resumeHint = stale.fetchComplete
-    ? 'Resume will re-run summaries only'
-    : 'Resume will re-fetch and summarize'
+    ? t('stale.resume_summary')
+    : t('stale.resume_full')
 
   return (
     <div style={{
@@ -164,7 +166,7 @@ export function StaleProcessBanner({ stale, onAbort, onResume, onRestart }: {
               fontWeight: 600,
               color: 'var(--ink)',
             }}>
-              {label} interrupted
+              {t('stale.interrupted', { label })}
             </span>
             {stale.startedAt && (
               <span style={{
@@ -172,7 +174,7 @@ export function StaleProcessBanner({ stale, onAbort, onResume, onRestart }: {
                 color: 'var(--ink-faint)',
                 fontFamily: 'ui-monospace, monospace',
               }}>
-                started {timeAgo(stale.startedAt)}
+                {t('stale.started', { time: timeAgo(stale.startedAt, t) })}
               </span>
             )}
           </div>
@@ -182,11 +184,11 @@ export function StaleProcessBanner({ stale, onAbort, onResume, onRestart }: {
             margin: 0,
             lineHeight: 1.5,
           }}>
-            {pct}% complete ({stale.completedSensors}/{stale.totalSensors} sensors)
+            {t('stale.progress', { pct: String(pct), done: String(stale.completedSensors), total: String(stale.totalSensors) })}
             {stale.failedSensors.length > 0 && (
-              <> · {stale.failedSensors.length} failed</>
+              <> · {t('stale.n_failed', { count: String(stale.failedSensors.length) })}</>
             )}
-            {' '}— the process was lost, likely due to an app restart.
+            {' '}— {t('stale.lost')}
           </p>
         </div>
         <div style={{
@@ -202,7 +204,7 @@ export function StaleProcessBanner({ stale, onAbort, onResume, onRestart }: {
             onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--ink-faint)' }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
           >
-            Abort
+            {t('stale.abort')}
           </button>
           <button
             onClick={onResume}
@@ -211,7 +213,7 @@ export function StaleProcessBanner({ stale, onAbort, onResume, onRestart }: {
             onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--ink-faint)' }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
           >
-            Resume
+            {t('stale.resume')}
           </button>
           <button
             onClick={onRestart}
@@ -220,7 +222,7 @@ export function StaleProcessBanner({ stale, onAbort, onResume, onRestart }: {
             onMouseEnter={e => { e.currentTarget.style.background = 'var(--ink-muted)' }}
             onMouseLeave={e => { e.currentTarget.style.background = 'var(--ink)' }}
           >
-            Restart
+            {t('stale.restart')}
           </button>
         </div>
       </div>

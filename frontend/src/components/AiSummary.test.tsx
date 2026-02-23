@@ -2,6 +2,7 @@
 // ABOUTME: Covers model fetching, filtering, selection, pricing display, error states, and cache bypass.
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { I18nProvider } from '@/lib/i18n/context'
 
 // Mock the toast context
 vi.mock('@/lib/toast-context', () => ({
@@ -235,5 +236,5 @@ describe('AiSummary — OpenRouterModelPicker', () => {
 /** Helper: dynamically import and render AiSummary to avoid stale module references. */
 async function renderAiSummary() {
   const { AiSummary } = await import('./AiSummary')
-  return <AiSummary />
+  return <I18nProvider initialLocale="en"><AiSummary /></I18nProvider>
 }

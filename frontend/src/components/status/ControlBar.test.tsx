@@ -2,8 +2,13 @@
 // ABOUTME: Covers idle/running/paused states, metrics display, run/stop buttons, mode selector, and selection helpers.
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
+import { I18nProvider } from '@/lib/i18n/context'
 import { ControlBar } from './ControlBar'
 import type { ControlBarProps } from './ControlBar'
+
+function renderWithI18n(ui: React.ReactElement) {
+  return render(<I18nProvider initialLocale="en">{ui}</I18nProvider>)
+}
 
 function buildProps(overrides: Partial<ControlBarProps> = {}): ControlBarProps {
   return {
@@ -36,110 +41,110 @@ function buildProps(overrides: Partial<ControlBarProps> = {}): ControlBarProps {
 describe('ControlBar', () => {
   // --- Idle state: metrics from former StatusStrip ---
   it('renders health label when idle', () => {
-    render(<ControlBar {...buildProps()} />)
+    renderWithI18n(<ControlBar {...buildProps()} />)
     expect(screen.getByText('Healthy')).toBeInTheDocument()
   })
 
   it('renders health dot with correct test id', () => {
-    render(<ControlBar {...buildProps()} />)
+    renderWithI18n(<ControlBar {...buildProps()} />)
     expect(screen.getByTestId('control-health-dot')).toBeInTheDocument()
   })
 
   it('renders source count when idle', () => {
-    render(<ControlBar {...buildProps({ sourcesOk: 10, sourcesTotal: 13 })} />)
+    renderWithI18n(<ControlBar {...buildProps({ sourcesOk: 10, sourcesTotal: 13 })} />)
     expect(screen.getByText('10/13')).toBeInTheDocument()
     expect(screen.getByText('sources')).toBeInTheDocument()
   })
 
   it('renders item count when idle', () => {
-    render(<ControlBar {...buildProps({ totalItems: 114 })} />)
+    renderWithI18n(<ControlBar {...buildProps({ totalItems: 114 })} />)
     expect(screen.getByText('114')).toBeInTheDocument()
     expect(screen.getByText('items')).toBeInTheDocument()
   })
 
   it('renders schedule text when config has fetch_time', () => {
-    render(<ControlBar {...buildProps({
+    renderWithI18n(<ControlBar {...buildProps({
       config: { fetch_time: '14:00', fetch_timezone: 'UTC' } as ControlBarProps['config'],
     })} />)
     expect(screen.getByTestId('control-schedule')).toHaveTextContent(/Next:/)
   })
 
   it('renders "No schedule" when no fetch_time', () => {
-    render(<ControlBar {...buildProps({ config: null })} />)
+    renderWithI18n(<ControlBar {...buildProps({ config: null })} />)
     expect(screen.getByTestId('control-schedule')).toHaveTextContent('No schedule')
   })
 
   // --- Idle state: controls from former CommandBar ---
   it('renders mode dropdown with default "Fetch + Summarize"', () => {
-    render(<ControlBar {...buildProps()} />)
+    renderWithI18n(<ControlBar {...buildProps()} />)
     expect(screen.getByRole('combobox')).toHaveValue('fetch_summarize')
   })
 
   it('renders All and None quick-select buttons', () => {
-    render(<ControlBar {...buildProps()} />)
+    renderWithI18n(<ControlBar {...buildProps()} />)
     expect(screen.getByText('All')).toBeInTheDocument()
     expect(screen.getByText('None')).toBeInTheDocument()
   })
 
   it('renders Failed quick-select when hasFailedSensors', () => {
-    render(<ControlBar {...buildProps({ hasFailedSensors: true })} />)
+    renderWithI18n(<ControlBar {...buildProps({ hasFailedSensors: true })} />)
     expect(screen.getByText('Failed')).toBeInTheDocument()
   })
 
   it('does not render Failed quick-select when no failed sensors', () => {
-    render(<ControlBar {...buildProps({ hasFailedSensors: false })} />)
+    renderWithI18n(<ControlBar {...buildProps({ hasFailedSensors: false })} />)
     expect(screen.queryByText('Failed')).not.toBeInTheDocument()
   })
 
   it('calls onSelectAll when All is clicked', () => {
     const onSelectAll = vi.fn()
-    render(<ControlBar {...buildProps({ onSelectAll })} />)
+    renderWithI18n(<ControlBar {...buildProps({ onSelectAll })} />)
     fireEvent.click(screen.getByText('All'))
     expect(onSelectAll).toHaveBeenCalledOnce()
   })
 
   it('calls onSelectNone when None is clicked', () => {
     const onSelectNone = vi.fn()
-    render(<ControlBar {...buildProps({ onSelectNone })} />)
+    renderWithI18n(<ControlBar {...buildProps({ onSelectNone })} />)
     fireEvent.click(screen.getByText('None'))
     expect(onSelectNone).toHaveBeenCalledOnce()
   })
 
   it('shows "Run All" when no sensors selected', () => {
-    render(<ControlBar {...buildProps({ selectedCount: 0 })} />)
+    renderWithI18n(<ControlBar {...buildProps({ selectedCount: 0 })} />)
     const btn = screen.getByRole('button', { name: /run all/i })
     expect(btn).toBeEnabled()
   })
 
   it('shows "Run N" when some sensors are selected', () => {
-    render(<ControlBar {...buildProps({ selectedCount: 3 })} />)
+    renderWithI18n(<ControlBar {...buildProps({ selectedCount: 3 })} />)
     const btn = screen.getByRole('button', { name: /run 3/i })
     expect(btn).toBeEnabled()
   })
 
   it('shows "Run All" when all sensors are selected', () => {
-    render(<ControlBar {...buildProps({ selectedCount: 13, totalSensors: 13 })} />)
+    renderWithI18n(<ControlBar {...buildProps({ selectedCount: 13, totalSensors: 13 })} />)
     const btn = screen.getByRole('button', { name: /run all/i })
     expect(btn).toHaveTextContent('Run All')
   })
 
   it('calls onRun with selected mode when Run is clicked', () => {
     const onRun = vi.fn()
-    render(<ControlBar {...buildProps({ selectedCount: 5, onRun })} />)
+    renderWithI18n(<ControlBar {...buildProps({ selectedCount: 5, onRun })} />)
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'fetch' } })
     fireEvent.click(screen.getByRole('button', { name: /run/i }))
     expect(onRun).toHaveBeenCalledWith('fetch')
   })
 
   it('disables Run button when fetching', () => {
-    render(<ControlBar {...buildProps({ fetching: true, selectedCount: 5 })} />)
+    renderWithI18n(<ControlBar {...buildProps({ fetching: true, selectedCount: 5 })} />)
     const btn = screen.getByRole('button', { name: /run/i })
     expect(btn).toBeDisabled()
   })
 
   // --- Running state ---
   it('shows Stop button when running', () => {
-    render(<ControlBar {...buildProps({
+    renderWithI18n(<ControlBar {...buildProps({
       isRunning: true,
       phase: 'fetching',
       progress: { done: 3, total: 13 },
@@ -150,7 +155,7 @@ describe('ControlBar', () => {
 
   it('calls onStop when Stop is clicked', () => {
     const onStop = vi.fn()
-    render(<ControlBar {...buildProps({
+    renderWithI18n(<ControlBar {...buildProps({
       isRunning: true,
       phase: 'fetching',
       progress: { done: 3, total: 13 },
@@ -161,7 +166,7 @@ describe('ControlBar', () => {
   })
 
   it('shows disabled "Stopping..." when isStopping', () => {
-    render(<ControlBar {...buildProps({
+    renderWithI18n(<ControlBar {...buildProps({
       isRunning: true,
       phase: 'stopping',
       progress: { done: 5, total: 13 },
@@ -172,7 +177,7 @@ describe('ControlBar', () => {
   })
 
   it('shows phase label when running', () => {
-    render(<ControlBar {...buildProps({
+    renderWithI18n(<ControlBar {...buildProps({
       isRunning: true,
       phase: 'fetching',
       progress: { done: 3, total: 13 },
@@ -181,7 +186,7 @@ describe('ControlBar', () => {
   })
 
   it('shows progress count when running', () => {
-    render(<ControlBar {...buildProps({
+    renderWithI18n(<ControlBar {...buildProps({
       isRunning: true,
       phase: 'summarizing',
       progress: { done: 7, total: 13 },
@@ -191,7 +196,7 @@ describe('ControlBar', () => {
   })
 
   it('shows failed count during run when failures exist', () => {
-    render(<ControlBar {...buildProps({
+    renderWithI18n(<ControlBar {...buildProps({
       isRunning: true,
       phase: 'fetching',
       progress: { done: 10, total: 13 },
@@ -202,7 +207,7 @@ describe('ControlBar', () => {
   })
 
   it('hides mode dropdown when running', () => {
-    render(<ControlBar {...buildProps({
+    renderWithI18n(<ControlBar {...buildProps({
       isRunning: true,
       phase: 'fetching',
       progress: { done: 3, total: 13 },
@@ -211,7 +216,7 @@ describe('ControlBar', () => {
   })
 
   it('shows detail text when running with detail', () => {
-    render(<ControlBar {...buildProps({
+    renderWithI18n(<ControlBar {...buildProps({
       isRunning: true,
       phase: 'fetching',
       progress: { done: 3, total: 13 },
@@ -222,7 +227,7 @@ describe('ControlBar', () => {
 
   // --- Paused state ---
   it('shows warning and Generate Summary when paused', () => {
-    render(<ControlBar {...buildProps({
+    renderWithI18n(<ControlBar {...buildProps({
       isRunning: true,
       isPaused: true,
       failedCount: 3,
@@ -236,7 +241,7 @@ describe('ControlBar', () => {
 
   it('calls onGenerateOverall when Generate Summary is clicked', () => {
     const onGenerateOverall = vi.fn()
-    render(<ControlBar {...buildProps({
+    renderWithI18n(<ControlBar {...buildProps({
       isRunning: true,
       isPaused: true,
       failedCount: 2,

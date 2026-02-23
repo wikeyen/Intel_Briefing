@@ -4,6 +4,7 @@
 
 import { useState } from 'react'
 import type { HealthResponse, ConfigSettings, RunMode } from '@/api/client'
+import { useTranslation } from '@/lib/i18n'
 import { STATUS_META } from './constants'
 import { timeAgo, nextFetchIn } from './time-helpers'
 
@@ -43,19 +44,10 @@ export const CONTROL_BAR_CSS = `
 }
 `
 
-const PHASE_LABELS: Record<Phase, string> = {
-  idle: '',
-  fetching: 'Fetching',
-  summarizing: 'Summarizing',
-  briefing: 'Briefing',
-  stopping: 'Stopping',
-  paused: 'Paused',
-}
-
-const MODE_OPTIONS: { value: RunMode; label: string }[] = [
-  { value: 'fetch', label: 'Fetch' },
-  { value: 'fetch_summarize', label: 'Fetch + Summarize' },
-  { value: 'summarize', label: 'Summarize' },
+const MODE_OPTIONS: { value: RunMode }[] = [
+  { value: 'fetch' },
+  { value: 'fetch_summarize' },
+  { value: 'summarize' },
 ]
 
 const MONO: React.CSSProperties = {
@@ -195,6 +187,7 @@ export function ControlBar({
   fetching,
   isStopping,
 }: ControlBarProps) {
+  const { t } = useTranslation()
   const [mode, setMode] = useState<RunMode>('fetch_summarize')
   const [stopHovered, setStopHovered] = useState(false)
 
@@ -205,7 +198,7 @@ export function ControlBar({
   const runDisabled = fetching
   const noneSelected = selectedCount === 0
   const allSelected = selectedCount === totalSensors
-  const runLabel = noneSelected || allSelected ? 'Run All' : `Run ${selectedCount}`
+  const runLabel = noneSelected || allSelected ? t('status.run_all') : t('status.run_n', { count: String(selectedCount) })
 
   const schedule = config?.fetch_time
     ? nextFetchIn(config.fetch_time, config.fetch_timezone)
@@ -217,7 +210,7 @@ export function ControlBar({
       <div className="control-bar page-padding" style={barStyle}>
         <div className="control-bar-row" style={rowStyle}>
           <span style={{ fontSize: '0.8125rem', color: 'var(--warn)', fontWeight: 600 }}>
-            {failedCount} failed — retry or skip above
+            {t('status.failed_retry', { count: String(failedCount) })}
           </span>
 
           <div style={{ margin: '0 auto' }}>
@@ -227,7 +220,7 @@ export function ControlBar({
               style={runBtnBase}
             >
               <span style={{ fontSize: '0.625rem' }}>▶</span>
-              Generate Summary
+              {t('status.generate_summary')}
             </button>
           </div>
 
@@ -252,7 +245,7 @@ export function ControlBar({
 
   // --- Running state ---
   if (isRunning) {
-    const phaseLabel = PHASE_LABELS[phase] || PHASE_LABELS.fetching
+    const phaseLabel = phase === 'idle' ? '' : t('status.' + phase)
     const dotColor = 'var(--accent)'
 
     return (
@@ -282,19 +275,19 @@ export function ControlBar({
           {/* Center: progress counts */}
           <div className="control-bar-center" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0 auto' }}>
             <span style={{ ...MONO, fontSize: '0.8125rem', fontWeight: 600 }}>{progress.done}/{progress.total}</span>
-            <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>sensors</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>{t('status.sensors')}</span>
             {retryingCount > 0 && (
               <>
                 <span style={{ color: 'var(--ink-faint)' }}>·</span>
                 <span style={{ ...MONO, fontSize: '0.8125rem', fontWeight: 600, color: 'var(--warn)' }}>{retryingCount}</span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--warn)' }}>retrying</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--warn)' }}>{t('status.retrying')}</span>
               </>
             )}
             {failedCount > 0 && (
               <>
                 <span style={{ color: 'var(--ink-faint)' }}>·</span>
                 <span style={{ ...MONO, fontSize: '0.8125rem', fontWeight: 600, color: 'var(--err)' }}>{failedCount}</span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--err)' }}>failed</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--err)' }}>{t('status.failed')}</span>
               </>
             )}
           </div>
@@ -344,11 +337,11 @@ export function ControlBar({
         <div className="control-bar-metrics" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
           <span>
             <span style={metricValueStyle}>{sourcesOk}/{sourcesTotal}</span>
-            <span style={metricLabelStyle}>sources</span>
+            <span style={metricLabelStyle}>{t('status.sources')}</span>
           </span>
           <span>
             <span style={metricValueStyle}>{totalItems}</span>
-            <span style={metricLabelStyle}>items</span>
+            <span style={metricLabelStyle}>{t('status.items')}</span>
           </span>
           {health?.last_fetch && (
             <span>
@@ -365,18 +358,18 @@ export function ControlBar({
             style={selectStyle}
           >
             {MODE_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
+              <option key={opt.value} value={opt.value}>{t('status.mode_' + opt.value)}</option>
             ))}
           </select>
 
           <div className="control-bar-selection" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-            <button type="button" onClick={onSelectAll} style={quickLinkStyle} className="control-bar-link">All</button>
-            <button type="button" onClick={onSelectNone} style={quickLinkStyle} className="control-bar-link">None</button>
+            <button type="button" onClick={onSelectAll} style={quickLinkStyle} className="control-bar-link">{t('status.all')}</button>
+            <button type="button" onClick={onSelectNone} style={quickLinkStyle} className="control-bar-link">{t('status.none')}</button>
             {hasFailedSensors && (
-              <button type="button" onClick={onSelectFailed} style={quickLinkStyle} className="control-bar-link">Failed</button>
+              <button type="button" onClick={onSelectFailed} style={quickLinkStyle} className="control-bar-link">{t('status.failed_btn')}</button>
             )}
             <span style={selCountStyle}>
-              {allSelected ? 'All' : `${selectedCount} sel`}
+              {allSelected ? t('status.all_sel') : t('status.n_sel', { count: String(selectedCount) })}
             </span>
           </div>
 
@@ -409,7 +402,7 @@ export function ControlBar({
             color: 'var(--ink-faint)',
           }}
         >
-          {schedule ? `Next: ${schedule}` : 'No schedule'}
+          {schedule ? t('status.next', { time: schedule }) : t('status.no_schedule')}
         </span>
       </div>
     </div>
@@ -427,6 +420,7 @@ function StopButton({
   hovered: boolean
   onHover: (h: boolean) => void
 }) {
+  const { t } = useTranslation()
   return (
     <button
       type="button"
@@ -441,7 +435,7 @@ function StopButton({
       }}
     >
       <span style={{ fontSize: '0.5rem' }}>■</span>
-      {isStopping ? 'Stopping...' : 'Stop'}
+      {isStopping ? t('status.stopping_btn') : t('status.stop')}
     </button>
   )
 }

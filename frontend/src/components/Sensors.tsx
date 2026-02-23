@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { api } from '@/api/client'
 import { TagInput } from '@/components/TagInput'
 
+import { useTranslation } from '@/lib/i18n'
 import { useToast } from '@/lib/toast-context'
 import { useAutoSave } from '@/lib/hooks/useAutoSave'
 import { AutoSaveIndicator } from '@/components/form-styles'
@@ -59,11 +60,12 @@ const SENSOR_LOOKBACK_SUPPORT: Record<string, number> = {
 type SensorStatus = 'ok' | 'failed' | 'disabled'
 
 function Badge({ status }: { status: SensorStatus | undefined }) {
+  const { t } = useTranslation()
   if (!status) return null
   const map: Record<string, { bg: string; color: string; label: string }> = {
-    ok:       { bg: 'var(--ok-bg)',       color: 'var(--ok)',        label: 'OK' },
-    failed:   { bg: 'var(--err-bg)',      color: 'var(--err)',       label: 'Failed' },
-    disabled: { bg: 'var(--surface-alt)', color: 'var(--ink-faint)', label: 'Off' },
+    ok:       { bg: 'var(--ok-bg)',       color: 'var(--ok)',        label: t('sources.badge_ok') },
+    failed:   { bg: 'var(--err-bg)',      color: 'var(--err)',       label: t('sources.badge_failed') },
+    disabled: { bg: 'var(--surface-alt)', color: 'var(--ink-faint)', label: t('sources.badge_off') },
   }
   const s = map[status]
   return (
@@ -237,6 +239,7 @@ input[type=number]::-webkit-outer-spin-button {
 `
 
 export function Sensors() {
+  const { t } = useTranslation()
   const showToast = useToast()
   const [enabled, setEnabled] = useState<Record<string, boolean>>({})
   const [statuses, setStatuses] = useState<Record<string, SensorStatus>>({})
@@ -369,10 +372,10 @@ export function Sensors() {
       <div>
         <div className="page-header" style={{ paddingBottom: '1rem' }}>
           <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.01em', marginBottom: '0.125rem' }}>
-            Sources
+            {t('sources.title')}
           </h2>
           <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
-            Active data sources for your pipeline.
+            {t('sources.desc')}
           </p>
         </div>
         <div style={{ paddingBottom: '4rem' }}>
@@ -393,12 +396,12 @@ export function Sensors() {
       <div className="page-header" style={{ paddingBottom: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.01em', marginBottom: '0.125rem' }}>
-            Sources
+            {t('sources.title')}
           </h2>
           <AutoSaveIndicator status={saveStatus} />
         </div>
         <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
-          Active data sources for your pipeline.
+          {t('sources.desc')}
         </p>
       </div>
 
@@ -488,7 +491,7 @@ export function Sensors() {
                         <div className="sensor-row-right" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
                           {isOn && (
                             <PillInput
-                              label="Items"
+                              label={t('sources.items')}
                               value={sensorLimits[key] ?? defaultLimit}
                               min={1}
                               max={200}
@@ -497,7 +500,7 @@ export function Sensors() {
                           )}
                           {isOn && hasLookback && (
                             <PillInput
-                              label="Lookback"
+                              label={t('sources.lookback')}
                               value={sensorLookback[key] ?? SENSOR_LOOKBACK_SUPPORT[key]}
                               min={1}
                               max={336}
@@ -522,16 +525,16 @@ export function Sensors() {
                           <div>
                             <div style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                               <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: 'var(--ink)' }} />
-                              Scraper
+                              {t('sources.scraper')}
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                              <span style={{ fontSize: '0.75rem', color: 'var(--ink)' }}>Twitter Scraper</span>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--ink)' }}>{t('sources.twitter_scraper')}</span>
                             </div>
                           </div>
                           <div>
                             <div style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                               <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: 'var(--ink)' }} />
-                              Accounts
+                              {t('sources.accounts')}
                             </div>
                             <TagInput
                               tags={socialAccountsX}
@@ -560,7 +563,7 @@ export function Sensors() {
                           <div>
                             <div style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                               <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: 'var(--brand-bluesky)' }} />
-                              Accounts
+                              {t('sources.accounts')}
                             </div>
                             <TagInput
                               tags={socialAccountsBluesky}
@@ -588,7 +591,7 @@ export function Sensors() {
                                 style={{ accentColor: 'var(--brand-bluesky)', cursor: 'inherit' }}
                               />
                               <span style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>
-                                Include accounts I follow
+                                {t('sources.include_following')}
                               </span>
                             </label>
                           </div>
@@ -608,7 +611,7 @@ export function Sensors() {
                           <div>
                             <div style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                               <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: 'var(--brand-mastodon)' }} />
-                              Accounts
+                              {t('sources.accounts')}
                             </div>
                             <TagInput
                               tags={socialAccountsMastodon}
@@ -636,7 +639,7 @@ export function Sensors() {
                                 style={{ accentColor: 'var(--brand-mastodon)', cursor: 'inherit' }}
                               />
                               <span style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>
-                                Include accounts I follow
+                                {t('sources.include_following')}
                               </span>
                             </label>
                           </div>
@@ -651,7 +654,7 @@ export function Sensors() {
                           borderBottom: isLast ? 'none' : '1px solid var(--border-soft)',
                         }}>
                           <div style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.25rem' }}>
-                            Feed URLs
+                            {t('sources.feed_urls')}
                           </div>
                           <TagInput
                             tags={rssFeeds.map(f => f.url)}
@@ -707,7 +710,7 @@ export function Sensors() {
                   color: 'var(--ink-faint)',
                   marginBottom: '0.375rem',
                 }}>
-                  Trend
+                  {t('sources.trend')}
                 </div>
                 <div style={{
                   background: 'var(--surface)',
@@ -758,10 +761,10 @@ export function Sensors() {
                             fontWeight: 500,
                             color: topicsOn ? 'var(--ink)' : 'var(--ink-faint)',
                           }}>
-                            Topics
+                            {t('sources.topics')}
                           </div>
                           <div style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>
-                            Search keywords across social platforms
+                            {t('sources.topics_desc')}
                           </div>
                         </div>
                       </div>
@@ -821,10 +824,10 @@ export function Sensors() {
                           fontWeight: 500,
                           color: mastodonTrendsEnabled ? 'var(--ink)' : 'var(--ink-faint)',
                         }}>
-                          Trending
+                          {t('sources.trending')}
                         </div>
                         <div style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>
-                          Trending posts from social platforms
+                          {t('sources.trending_desc')}
                         </div>
                       </div>
                     </div>

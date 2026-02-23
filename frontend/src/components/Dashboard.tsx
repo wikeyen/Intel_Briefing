@@ -500,63 +500,6 @@ function ExecSummaryWidget({ summary }: { summary: BriefingSummary }) {
 }
 
 // ---------------------------------------------------------------------------
-// Widget: Thematic Sections
-// ---------------------------------------------------------------------------
-
-function ThematicSectionsWidget({ summary }: { summary: BriefingSummary }) {
-  const overall = summary.overall
-  if (!isStructuredOverall(overall)) return null
-  const sections = overall.sections
-  if (!sections || sections.length === 0) return null
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-      <SectionLabel>Investment Themes</SectionLabel>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.5rem' }}>
-        {sections.map((section, i) => (
-          <DashCard key={i}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)' }}>
-                  {section.title}
-                </span>
-                <span style={{
-                  fontFamily: MONO,
-                  fontSize: '0.5625rem',
-                  fontWeight: 600,
-                  background: 'var(--surface-alt)',
-                  borderRadius: 4,
-                  padding: '1px 5px',
-                  color: 'var(--ink-faint)',
-                }}>
-                  {section.entries.length}
-                </span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                {section.entries.map((entry, j) => (
-                  <div key={j} style={{
-                    display: 'flex',
-                    gap: '0.5rem',
-                    fontSize: '0.75rem',
-                    color: 'var(--ink-secondary)',
-                    lineHeight: 1.6,
-                    overflowWrap: 'break-word',
-                    wordBreak: 'break-word',
-                  }}>
-                    <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0, marginTop: 8 }} />
-                    <span><InlineRefs text={entry.text} globalSources={overall.sources} /></span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </DashCard>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
 // Widget: Risk & Intelligence Panel
 // ---------------------------------------------------------------------------
 
@@ -1406,15 +1349,6 @@ function DashboardSkeleton() {
             </div>
           </DashCard>
           <hr className="dash-divider" />
-          {/* Themes */}
-          <DashCard>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div className="skeleton-shimmer" style={{ width: 112, height: 10 }} />
-              <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-              <div className="skeleton-shimmer" style={{ width: '80%', height: 12 }} />
-            </div>
-          </DashCard>
-          <hr className="dash-divider" />
           {/* Domain cards */}
           <div className="dashboard-domains">
             {[0, 1, 2, 3].map(i => (
@@ -1646,13 +1580,6 @@ export function Dashboard() {
                     {/* Executive Summary */}
                     <StaggerChild index={1}>
                       <ExecSummaryWidget summary={summary} />
-                    </StaggerChild>
-
-                    <hr className="dash-divider" />
-
-                    {/* Investment Themes */}
-                    <StaggerChild index={2}>
-                      <ThematicSectionsWidget summary={summary} />
                     </StaggerChild>
 
                     <hr className="dash-divider" />

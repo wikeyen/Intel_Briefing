@@ -987,29 +987,26 @@ function DomainCardCompact({ domain, summary, onClick }: {
           </div>
         </div>
         {hasSubGroups ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
             {domain.subGroups!.map(group => {
               const groupSections = matchingSections.filter(s => group.sensors.includes(s.sensor_name))
               if (groupSections.length === 0) return null
               const text = buildSummary(groupSections, 1)
               if (!text) return null
               return (
-                <div key={group.label} style={{ display: 'flex', gap: '0.375rem', alignItems: 'flex-start' }}>
+                <p key={group.label} style={{
+                  fontSize: '0.6875rem', color: 'var(--ink-secondary)', lineHeight: 1.5, margin: 0,
+                  overflowWrap: 'break-word', wordBreak: 'break-word',
+                }}>
                   <span style={{
-                    fontFamily: MONO, fontSize: '0.5625rem', fontWeight: 700,
-                    padding: '1px 4px', borderRadius: 3,
-                    background: 'var(--surface-inset)', color: 'var(--ink-faint)',
-                    flexShrink: 0, marginTop: 1, letterSpacing: '0.04em',
+                    fontFamily: MONO, fontSize: '0.5rem', fontWeight: 700,
+                    color: 'var(--ink-faint)', letterSpacing: '0.04em',
+                    textTransform: 'uppercase' as const, marginRight: 4,
                   }}>
                     {group.label}
                   </span>
-                  <p style={{
-                    fontSize: '0.6875rem', color: 'var(--ink-secondary)', lineHeight: 1.5, margin: 0,
-                    overflowWrap: 'break-word', wordBreak: 'break-word',
-                  }}>
-                    {text}
-                  </p>
-                </div>
+                  {text}
+                </p>
               )
             })}
           </div>

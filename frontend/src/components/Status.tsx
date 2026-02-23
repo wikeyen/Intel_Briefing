@@ -206,6 +206,7 @@ export function Status() {
   }
 
   const isRunning = running || !!(pipelineStatus?.running && pipelineStatus.alive)
+  const isPaused = !!(pipelineStatus?.paused && isRunning)
 
   const liveSensors: Record<string, SensorJobProgress> = {}
   if (isRunning && pipelineStatus) {
@@ -255,8 +256,6 @@ export function Status() {
   const failedCount = pipelineStatus
     ? pipelineStatus.sensors.filter(s => s.fetch === 'failed' || s.summary === 'failed').length
     : 0
-
-  const isPaused = !!(pipelineStatus?.paused && isRunning)
 
   const totalItems = useMemo(() => {
     if (!report) return 0

@@ -97,14 +97,12 @@ export function Sidebar({ onNavigate }: Props) {
   const [lastViewedFetch, setLastViewedFetch] = useState<string | null>(null)
   const onDashboard = pathname === '/dashboard'
 
+  // Re-read localStorage on mount, navigation, and health updates to stay in sync.
+  // pathname ensures we pick up what Dashboard wrote when navigating away.
+  // health?.last_fetch ensures we detect new runs even while on a non-dashboard page.
   useEffect(() => {
     try { setLastViewedFetch(localStorage.getItem('ib:dashboard:lastViewedFetch')) } catch {}
-  }, [])
-
-  // Re-read localStorage whenever health updates (every 30s) to catch Dashboard writes
-  useEffect(() => {
-    try { setLastViewedFetch(localStorage.getItem('ib:dashboard:lastViewedFetch')) } catch {}
-  }, [health?.last_fetch])
+  }, [health?.last_fetch, pathname])
 
   const hasNewBriefing = !onDashboard
     && !!health?.last_fetch

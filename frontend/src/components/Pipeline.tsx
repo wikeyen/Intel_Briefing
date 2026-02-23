@@ -211,7 +211,7 @@ export function Pipeline() {
                     onBlur={blur}
                   >
                     {TIMEZONES.map((tz) => (
-                      <option key={tz} value={tz}>{tz}</option>
+                      <option key={tz} value={tz}>{t('tz.' + tz)}</option>
                     ))}
                   </select>
                   <span style={{

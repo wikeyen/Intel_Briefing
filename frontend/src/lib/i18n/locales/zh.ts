@@ -445,6 +445,21 @@ const zh: TranslationDict = {
   'pipeline.expired_toast': '已删除 {count} 个过期条目',
   'pipeline.expired_none': '没有需要删除的过期条目',
 
+  // ── 时区标签 ──────────────────────────────────────────────────────────────
+  'tz.UTC': 'UTC',
+  'tz.America/New_York': '纽约',
+  'tz.America/Chicago': '芝加哥',
+  'tz.America/Denver': '丹佛',
+  'tz.America/Los_Angeles': '洛杉矶',
+  'tz.Europe/London': '伦敦',
+  'tz.Europe/Paris': '巴黎',
+  'tz.Europe/Berlin': '柏林',
+  'tz.Asia/Tokyo': '东京',
+  'tz.Asia/Shanghai': '上海',
+  'tz.Asia/Singapore': '新加坡',
+  'tz.Asia/Seoul': '首尔',
+  'tz.Australia/Sydney': '悉尼',
+
   // ── Sources placeholders & toasts ──────────────────────────────────────────
   'sources.placeholder_twitter': '@用户名 — 按回车',
   'sources.placeholder_bluesky': 'name.bsky.social — 按回车',

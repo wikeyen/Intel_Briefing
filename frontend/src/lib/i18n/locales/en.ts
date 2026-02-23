@@ -445,6 +445,21 @@ const en: TranslationDict = {
   'pipeline.expired_toast': 'Removed {count} expired items',
   'pipeline.expired_none': 'No expired items to remove',
 
+  // ── Timezone labels ──────────────────────────────────────────────────────
+  'tz.UTC': 'UTC',
+  'tz.America/New_York': 'New York',
+  'tz.America/Chicago': 'Chicago',
+  'tz.America/Denver': 'Denver',
+  'tz.America/Los_Angeles': 'Los Angeles',
+  'tz.Europe/London': 'London',
+  'tz.Europe/Paris': 'Paris',
+  'tz.Europe/Berlin': 'Berlin',
+  'tz.Asia/Tokyo': 'Tokyo',
+  'tz.Asia/Shanghai': 'Shanghai',
+  'tz.Asia/Singapore': 'Singapore',
+  'tz.Asia/Seoul': 'Seoul',
+  'tz.Australia/Sydney': 'Sydney',
+
   // ── Sources placeholders & toasts ──────────────────────────────────────────
   'sources.placeholder_twitter': '@handle — press Enter',
   'sources.placeholder_bluesky': 'name.bsky.social — press Enter',

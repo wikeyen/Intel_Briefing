@@ -299,6 +299,8 @@ const en: TranslationDict = {
   'ai.customized': 'Customized',
   'ai.reset': 'Reset',
   'ai.reset_default': 'Reset to default',
+  'ai.cancel': 'Cancel',
+  'ai.save': 'Save',
   'ai.save_failed': 'Save failed: {error}',
   'ai.test_failed': 'LLM test failed: {error}',
 

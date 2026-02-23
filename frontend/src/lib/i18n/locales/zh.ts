@@ -299,6 +299,8 @@ const zh: TranslationDict = {
   'ai.customized': '已自定义',
   'ai.reset': '重置',
   'ai.reset_default': '恢复默认',
+  'ai.cancel': '取消',
+  'ai.save': '保存',
   'ai.save_failed': '保存失败: {error}',
   'ai.test_failed': 'LLM 测试失败: {error}',
 

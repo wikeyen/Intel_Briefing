@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { api } from '@/api/client'
 import type { OllamaModelInfo } from '@/api/client'
 import { inputBase, focus, blur, ChevronDown } from '@/components/form-styles'
+import { useTranslation } from '@/lib/i18n'
 
 export function OllamaModelPicker({
   value,
@@ -15,6 +16,7 @@ export function OllamaModelPicker({
   onChange: (v: string) => void
   baseUrl: string
 }) {
+  const { t } = useTranslation()
   const [models, setModels] = useState<OllamaModelInfo[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -29,9 +31,9 @@ export function OllamaModelPicker({
       const ollamaBase = baseUrl.replace(/\/v1\/?$/, '')
       const result = await api.getOllamaModels(ollamaBase)
       setModels(result.models ?? [])
-      if (result.models.length === 0) setError('No models found')
+      if (result.models.length === 0) setError(t('models.no_models'))
     } catch {
-      setError('Cannot connect to Ollama')
+      setError(t('models.cannot_connect_ollama'))
       setModels([])
     } finally {
       setLoading(false)
@@ -56,10 +58,10 @@ export function OllamaModelPicker({
   )
 
   const statusLine = loading
-    ? 'Scanning local models…'
+    ? t('models.scanning')
     : error
       ? error
-      : `${models.length} model${models.length !== 1 ? 's' : ''} available`
+      : models.length === 1 ? t('models.one_available') : t('models.n_available', { count: String(models.length) })
 
   return (
     <div ref={wrapperRef} style={{ position: 'relative' }}>
@@ -78,7 +80,7 @@ export function OllamaModelPicker({
             focus(e)
           }}
           onBlur={blur}
-          placeholder="Type to search models…"
+          placeholder={t('models.search_placeholder')}
           style={{ ...inputBase, width: '100%', paddingRight: '2.25rem' }}
         />
         <span style={{
@@ -117,7 +119,7 @@ export function OllamaModelPicker({
             padding: 0,
           }}
         >
-          {loading ? 'Scanning…' : 'Rescan'}
+          {loading ? t('models.scanning_btn') : t('models.rescan')}
         </button>
       </div>
 
@@ -138,7 +140,7 @@ export function OllamaModelPicker({
         }}>
           {filtered.length === 0 && (
             <div style={{ padding: '0.875rem 1rem', color: 'var(--ink-faint)', fontSize: '0.8125rem' }}>
-              {search ? `No models matching "${search}"` : 'No models available'}
+              {search ? t('models.no_matching', { search }) : t('models.no_available')}
             </div>
           )}
           {filtered.map((m, idx) => {

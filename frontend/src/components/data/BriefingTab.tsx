@@ -4,6 +4,7 @@
 import Link from 'next/link'
 import type { ConfigSettings, BriefingSummary, SummaryProgress, PipelineStatus, OverallBriefing, BriefingSource, IntelReport, IntelItem, SummaryLanguage } from '@/api/client'
 import { SENSOR_LABELS } from '@/lib/sensors/taxonomy'
+import { useTranslation } from '@/lib/i18n'
 import { Highlight, textHas } from './Highlight'
 import { BriefingSkeleton } from '../Skeleton'
 
@@ -70,6 +71,7 @@ function RetryProgressBanner({ pipelineStatus, onSkip }: {
   pipelineStatus: PipelineStatus
   onSkip: () => void
 }) {
+  const { t } = useTranslation()
   const { retry_attempt, retry_max } = pipelineStatus
   const failedSensors = pipelineStatus.sensors.filter(s =>
     s.fetch === 'failed' || s.summary === 'failed'
@@ -101,7 +103,7 @@ function RetryProgressBanner({ pipelineStatus, onSkip }: {
           fontWeight: 500,
           color: 'var(--ink)',
         }}>
-          Retrying {failedSensors.length} failed source{failedSensors.length !== 1 ? 's' : ''}
+          {failedSensors.length === 1 ? t('briefing.retrying_one') : t('briefing.retrying', { count: String(failedSensors.length) })}
         </span>
         <span style={{
           fontSize: '0.75rem',
@@ -130,7 +132,7 @@ function RetryProgressBanner({ pipelineStatus, onSkip }: {
         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--ink-faint)' }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)' }}
       >
-        Skip Retries
+        {t('briefing.skip_retries')}
       </button>
     </div>
   )
@@ -143,6 +145,7 @@ function SummaryProgressBanner({ progress, pipelineStatus, config, streamTokens,
   streamTokens?: Record<string, string>
   onStop?: () => void
 }) {
+  const { t } = useTranslation()
   const sourceSensors = progress?.sensors.filter(s => s.sensor_name !== '__overall__') ?? []
   const overallSensor = progress?.sensors.find(s => s.sensor_name === '__overall__')
   const done = sourceSensors.filter(s => s.state === 'ok' || s.state === 'failed').length
@@ -182,15 +185,15 @@ function SummaryProgressBanner({ progress, pipelineStatus, config, streamTokens,
 
   const phases: { key: Phase; label: string }[] = hasFetch
     ? [
-        { key: 'fetching', label: 'Fetch' },
-        { key: 'extracting', label: 'Extract' },
-        { key: 'synthesizing', label: 'Synthesize' },
-        { key: 'overall', label: 'Briefing' },
+        { key: 'fetching', label: t('briefing.phase_fetch') },
+        { key: 'extracting', label: t('briefing.phase_extract') },
+        { key: 'synthesizing', label: t('briefing.phase_synthesize') },
+        { key: 'overall', label: t('briefing.phase_briefing') },
       ]
     : [
-        { key: 'extracting', label: 'Extract' },
-        { key: 'synthesizing', label: 'Synthesize' },
-        { key: 'overall', label: 'Briefing' },
+        { key: 'extracting', label: t('briefing.phase_extract') },
+        { key: 'synthesizing', label: t('briefing.phase_synthesize') },
+        { key: 'overall', label: t('briefing.phase_briefing') },
       ]
 
   const phaseIdx = phases.findIndex(p => p.key === currentPhase)
@@ -278,7 +281,7 @@ function SummaryProgressBanner({ progress, pipelineStatus, config, streamTokens,
             const running = Math.max(pipelineRunning, summaryRunning)
             return c != null ? (
               <span style={{ whiteSpace: 'nowrap' }}>
-                {running}/{c} workers
+                {t('briefing.workers', { running: String(running), max: String(c) })}
               </span>
             ) : null
           })()}
@@ -305,7 +308,7 @@ function SummaryProgressBanner({ progress, pipelineStatus, config, streamTokens,
                 textUnderlineOffset: '2px',
               }}
             >
-              Stop
+              {t('briefing.stop')}
             </button>
           )}
         </div>
@@ -517,7 +520,7 @@ function SummaryProgressBanner({ progress, pipelineStatus, config, streamTokens,
               fontWeight: 500,
               color: 'var(--ink-muted)',
             }}>
-              Composing briefing from {done} sources…
+              {t('briefing.composing', { count: String(done) })}
             </span>
             {overallSensor.state === 'ok' && (
               <span style={{ fontSize: '0.5625rem', color: 'var(--accent)' }}>&#10003;</span>
@@ -565,13 +568,14 @@ const refLinkStyle = (verified: boolean | null | undefined): React.CSSProperties
 
 /** Render a single ref as a superscript link. */
 function RefLink({ source, index }: { source: { title: string; url: string; verified?: boolean | null }; index: number }) {
+  const { t } = useTranslation()
   return (
     <a
       className="citation-ref"
       href={source.verified === false ? undefined : source.url}
       target="_blank"
       rel="noopener noreferrer"
-      title={source.verified === false ? `${source.title} — link could not be verified` : source.title}
+      title={source.verified === false ? `${source.title} — ${t('briefing.link_unverified')}` : source.title}
       style={refLinkStyle(source.verified)}
       onMouseEnter={e => {
         if (source.verified !== false) (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'underline'
@@ -665,6 +669,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
   loading?: boolean
   report?: IntelReport | null
 }) {
+  const { t } = useTranslation()
   const isSummarizing = !!(summaryProgress?.running)
   const isPipelineActive = !!(pipelineStatus?.running && pipelineStatus.alive !== false)
   const isRetrying = isPipelineActive && (pipelineStatus?.retry_attempt ?? 0) > 0
@@ -753,7 +758,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                 padding: '0.3rem 0.75rem',
                 borderRadius: 4,
               }}>
-                {isSummarizing ? 'Updating briefing…' : 'Pipeline running…'}
+                {isSummarizing ? t('briefing.updating') : t('briefing.pipeline_running')}
               </span>
             ) : (
               <span style={{
@@ -810,7 +815,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                   textUnderlineOffset: '2px',
                 }}
               >
-                Regenerate
+                {t('briefing.regenerate')}
               </button>
             </div>
           )}
@@ -854,7 +859,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--warn)', flexShrink: 0 }} />
                     <span style={{ fontSize: '0.8125rem', color: 'var(--ink-muted)' }}>
-                      Overall briefing is incomplete — source summaries are available below.
+                      {t('briefing.incomplete')}
                     </span>
                   </div>
                   {hasProvider && hasContent && (
@@ -872,7 +877,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                         flexShrink: 0,
                       }}
                     >
-                      Regenerate
+                      {t('briefing.regenerate')}
                     </button>
                   )}
                 </div>
@@ -894,7 +899,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                     letterSpacing: '0.06em',
                     marginBottom: '0.625rem',
                   }}>
-                    Executive Summary
+                    {t('briefing.exec_summary')}
                   </div>
                   <div style={{
                     fontSize: '0.875rem',
@@ -942,7 +947,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                       letterSpacing: '0.06em',
                       marginBottom: '0.75rem',
                     }}>
-                      Social Sentiment
+                      {t('briefing.social_sentiment')}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                       {Object.entries(bySource).map(([source, counts]) => {
@@ -969,7 +974,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                                 color: 'var(--ink-faint)',
                                 fontFamily: 'ui-monospace, monospace',
                               }}>
-                                {counts.total} posts
+                                {t('briefing.posts', { count: String(counts.total) })}
                               </span>
                             </div>
                             {/* Stacked bar */}
@@ -1006,9 +1011,9 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                               fontSize: '0.625rem',
                               color: 'var(--ink-faint)',
                             }}>
-                              <span><span style={{ color: 'var(--sent-pos)' }}>{posPct}%</span> positive</span>
-                              <span><span style={{ color: 'var(--sent-neu)' }}>{neuPct}%</span> neutral</span>
-                              <span><span style={{ color: 'var(--sent-neg)' }}>{negPct}%</span> negative</span>
+                              <span><span style={{ color: 'var(--sent-pos)' }}>{posPct}%</span> {t('briefing.positive')}</span>
+                              <span><span style={{ color: 'var(--sent-neu)' }}>{neuPct}%</span> {t('briefing.neutral')}</span>
+                              <span><span style={{ color: 'var(--sent-neg)' }}>{negPct}%</span> {t('briefing.negative')}</span>
                             </div>
                           </div>
                         )
@@ -1022,10 +1027,10 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
               {summary.overall.sentiment && (summary.overall.sentiment.mood_summary || summary.overall.sentiment.controversies.length > 0 || summary.overall.sentiment.opinion_shifts.length > 0 || summary.overall.sentiment.risk_flags.length > 0) && (() => {
                 const s = summary.overall.sentiment
                 const moodConfig: Record<string, { dot: string; label: string }> = {
-                  bullish: { dot: 'var(--sent-bullish)', label: '偏多' },
-                  bearish: { dot: 'var(--sent-bearish)', label: '偏空' },
-                  mixed:   { dot: 'var(--sent-mixed)', label: '多空分歧' },
-                  neutral: { dot: 'var(--sent-neu)', label: '中性' },
+                  bullish: { dot: 'var(--sent-bullish)', label: t('briefing.mood_bullish') },
+                  bearish: { dot: 'var(--sent-bearish)', label: t('briefing.mood_bearish') },
+                  mixed:   { dot: 'var(--sent-mixed)', label: t('briefing.mood_mixed') },
+                  neutral: { dot: 'var(--sent-neu)', label: t('briefing.mood_neutral') },
                 }
                 const mood = moodConfig[s.overall_mood] ?? moodConfig.neutral
 
@@ -1071,7 +1076,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                         fontSize: '0.6875rem', fontWeight: 600, color: 'var(--ink-muted)',
                         textTransform: 'uppercase', letterSpacing: '0.06em',
                       }}>
-                        舆情风向
+                        {t('briefing.sentiment_outlook')}
                       </div>
                       <span style={{
                         display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
@@ -1092,9 +1097,9 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                         <Highlight text={s.mood_summary} query={q} />
                       </div>
                     )}
-                    {renderSubSection('var(--accent-controversy)', '争议焦点', s.controversies)}
-                    {renderSubSection('var(--accent-opinion)', '舆论转向', s.opinion_shifts)}
-                    {renderSubSection('var(--sent-neg)', '风险信号', s.risk_flags)}
+                    {renderSubSection('var(--accent-controversy)', t('briefing.controversies'), s.controversies)}
+                    {renderSubSection('var(--accent-opinion)', t('briefing.opinion_shifts'), s.opinion_shifts)}
+                    {renderSubSection('var(--sent-neg)', t('briefing.risk_flags'), s.risk_flags)}
                   </div>
                 )
               })()}
@@ -1168,7 +1173,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                 letterSpacing: '0.06em',
                 marginBottom: '0.625rem',
               }}>
-                References
+                {t('briefing.references')}
               </div>
               <div style={{
                 margin: 0,
@@ -1221,7 +1226,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                 letterSpacing: '0.06em',
                 marginBottom: '0.625rem',
               }}>
-                Sources
+                {t('briefing.sources')}
               </div>
               <div style={{
                 display: 'grid',
@@ -1270,7 +1275,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                         color: 'var(--ink-faint)',
                         fontFamily: 'ui-monospace, monospace',
                       }}>
-                        {s.item_count} items
+                        {t('briefing.items', { count: String(s.item_count) })}
                       </span>
                     </div>
 
@@ -1340,7 +1345,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
               border: '1px solid var(--border)',
               borderRadius: 8,
             }}>
-              No results for &ldquo;{searchQuery}&rdquo;
+              {t('briefing.no_results', { query: searchQuery ?? '' })}
             </div>
           )}
         </>
@@ -1356,20 +1361,19 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
         }}>
           {!hasProvider ? (
             <p style={{ color: 'var(--ink-faint)', fontSize: '0.8125rem', margin: 0 }}>
-              Configure an AI provider in{' '}
-              <Link href="/ai" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
-                AI Summary settings
-              </Link>
-              {' '}to enable briefings.
+              {(() => {
+                const [before, after] = t('briefing.configure_ai', { link: '|||' }).split('|||')
+                return <>{before}<Link href="/ai" style={{ color: 'var(--accent)', textDecoration: 'none' }}>{t('briefing.ai_settings_link')}</Link>{after}</>
+              })()}
             </p>
           ) : !hasContent ? (
             <p style={{ color: 'var(--ink-faint)', fontSize: '0.8125rem', margin: 0 }}>
-              Run the pipeline first to fetch content for summarization.
+              {t('briefing.run_pipeline')}
             </p>
           ) : (
             <div>
               <p style={{ color: 'var(--ink-muted)', fontSize: '0.8125rem', margin: 0, marginBottom: '0.75rem' }}>
-                AI provider configured. Generate a summary of the current feed.
+                {t('briefing.ready')}
               </p>
               <button
                 onClick={onTrigger}
@@ -1387,7 +1391,7 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--ink-muted)' }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--ink)' }}
               >
-                Generate Summary
+                {t('briefing.generate')}
               </button>
             </div>
           )}

@@ -3,6 +3,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { inputBase as _inputBase, focus, blur } from '@/components/form-styles'
+import { useTranslation } from '@/lib/i18n'
 
 export interface MaskedInputProps {
   label: string
@@ -21,6 +22,7 @@ const PLACEHOLDER_STARS = '\u2219'.repeat(20)
 type Mode = 'saved' | 'revealed' | 'editing'
 
 export function MaskedInput({ label, hint, saved, newValue, onNewValue, onReveal }: MaskedInputProps) {
+  const { t } = useTranslation()
   const [mode, setMode] = useState<Mode>(saved ? 'saved' : 'editing')
   const [realValue, setRealValue] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -72,7 +74,7 @@ export function MaskedInput({ label, hint, saved, newValue, onNewValue, onReveal
             textTransform: 'uppercase', color: 'var(--ok)', background: 'var(--ok-bg)',
             padding: '0.15rem 0.5rem', borderRadius: 999,
           }}>
-            Saved
+            {t('masked.saved')}
           </span>
         </div>
         <div style={{ display: 'flex', gap: '0.625rem' }}>
@@ -100,7 +102,7 @@ export function MaskedInput({ label, hint, saved, newValue, onNewValue, onReveal
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink)' }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)' }}
           >
-            {loading ? '\u2026' : mode === 'revealed' ? 'Hide' : 'Show'}
+            {loading ? '\u2026' : mode === 'revealed' ? t('masked.hide') : t('masked.show')}
           </button>
           <button
             type="button"
@@ -114,7 +116,7 @@ export function MaskedInput({ label, hint, saved, newValue, onNewValue, onReveal
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink)' }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)' }}
           >
-            Change
+            {t('masked.change')}
           </button>
         </div>
         <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.375rem', lineHeight: 1.5, fontFamily: 'inherit' }}>
@@ -135,7 +137,7 @@ export function MaskedInput({ label, hint, saved, newValue, onNewValue, onReveal
           type="password"
           value={newValue}
           onChange={(e) => onNewValue(e.target.value)}
-          placeholder={saved ? 'Enter new value to replace' : 'not set'}
+          placeholder={saved ? t('masked.placeholder_replace') : t('masked.placeholder_empty')}
           autoFocus={saved}
           style={inputBase}
           onFocus={focus}
@@ -154,7 +156,7 @@ export function MaskedInput({ label, hint, saved, newValue, onNewValue, onReveal
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink)' }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)' }}
           >
-            Cancel
+            {t('masked.cancel')}
           </button>
         )}
       </div>

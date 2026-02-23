@@ -3,6 +3,7 @@
 'use client'
 import { useState } from 'react'
 import type { KeyboardEvent } from 'react'
+import { useTranslation } from '@/lib/i18n'
 
 interface Props {
   tags: string[]
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export function TagInput({ tags, onChange, placeholder = 'Add…', validate, disabledTags, onToggleDisabled, onEnableAll, onDisableAll }: Props) {
+  const { t } = useTranslation()
   const [input, setInput] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -59,7 +61,7 @@ export function TagInput({ tags, onChange, placeholder = 'Add…', validate, dis
               textUnderlineOffset: '2px',
             }}
           >
-            Enable all
+            {t('tags.enable_all')}
           </button>
           <button
             type="button"
@@ -76,7 +78,7 @@ export function TagInput({ tags, onChange, placeholder = 'Add…', validate, dis
               textUnderlineOffset: '2px',
             }}
           >
-            Disable all
+            {t('tags.disable_all')}
           </button>
         </div>
       )}
@@ -104,7 +106,7 @@ export function TagInput({ tags, onChange, placeholder = 'Add…', validate, dis
                   transition: 'opacity 120ms, background 120ms, border 120ms',
                 }}
                 onClick={() => onToggleDisabled?.(tag)}
-                title={isDisabled ? 'Click to enable' : 'Click to disable'}
+                title={isDisabled ? t('tags.click_enable') : t('tags.click_disable')}
               >
                 {tag}
                 <button

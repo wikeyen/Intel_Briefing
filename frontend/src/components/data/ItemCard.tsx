@@ -137,7 +137,7 @@ export function ItemCard({ item, index = 0, searchQuery }: { item: IntelItem; in
         )}
         {item.verified === false && (
           <span
-            title="Link could not be verified"
+            title={t('item.link_unverified')}
             style={{
               fontSize: '0.625rem',
               fontWeight: 600,

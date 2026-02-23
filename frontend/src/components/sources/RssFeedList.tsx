@@ -3,6 +3,7 @@
 'use client'
 import { useState, useRef } from 'react'
 import type { RssFeedEntry, RssFeedType } from '@/lib/models'
+import { useTranslation } from '@/lib/i18n'
 
 const TYPE_LABELS: Record<RssFeedType, { label: string; color: string; bg: string }> = {
   news:  { label: 'news',  color: '#1a4b8c', bg: '#e8f0fe' },
@@ -19,6 +20,7 @@ interface RssFeedListProps {
 }
 
 export function RssFeedList({ feeds, onChange, onAdd }: RssFeedListProps) {
+  const { t } = useTranslation()
   const [input, setInput] = useState('')
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -29,15 +31,15 @@ export function RssFeedList({ feeds, onChange, onAdd }: RssFeedListProps) {
     try {
       const u = new URL(url)
       if (u.protocol !== 'http:' && u.protocol !== 'https:') {
-        setError('Must be an HTTP(S) URL')
+        setError(t('rss.error_url'))
         return
       }
     } catch {
-      setError('Invalid URL')
+      setError(t('rss.error_invalid'))
       return
     }
     if (feeds.some(f => f.url === url)) {
-      setError('Already added')
+      setError(t('rss.error_duplicate'))
       return
     }
     setError(null)
@@ -68,7 +70,7 @@ export function RssFeedList({ feeds, onChange, onAdd }: RssFeedListProps) {
           value={input}
           onChange={(e) => { setInput(e.target.value); setError(null) }}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd() } }}
-          placeholder="https://example.com/feed.xml — press Enter"
+          placeholder={t('rss.placeholder')}
           style={{
             flex: 1,
             padding: '0.375rem 0.5rem',
@@ -98,7 +100,7 @@ export function RssFeedList({ feeds, onChange, onAdd }: RssFeedListProps) {
             <button
               type="button"
               onClick={() => cycleType(i)}
-              title={`Click to change category (currently: ${feed.type})`}
+              title={t('rss.change_category', { type: t('rss.type_' + feed.type) })}
               style={{
                 fontSize: '0.5625rem',
                 fontWeight: 700,
@@ -115,7 +117,7 @@ export function RssFeedList({ feeds, onChange, onAdd }: RssFeedListProps) {
                 textAlign: 'center',
               }}
             >
-              {meta.label}
+              {t('rss.type_' + feed.type)}
             </button>
             <span style={{
               flex: 1,

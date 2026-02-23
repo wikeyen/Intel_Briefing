@@ -194,6 +194,22 @@ input[type=number]::-webkit-outer-spin-button {
 export function Sensors() {
   const { t } = useTranslation()
   const showToast = useToast()
+
+  const validateX = (v: string): string | null => {
+    const clean = v.startsWith('@') ? v : `@${v}`
+    if (!/^@[A-Za-z0-9_]{1,50}$/.test(clean)) return t('sources.invalid_x_handle')
+    return null
+  }
+  const validateBsky = (v: string): string | null => {
+    if (!/^[A-Za-z0-9][A-Za-z0-9.-]*\.[A-Za-z]{2,}$/.test(v)) return t('sources.invalid_bluesky_handle')
+    return null
+  }
+  const validateMasto = (v: string): string | null => {
+    const clean = v.startsWith('@') ? v : `@${v}`
+    if (!/^@[A-Za-z0-9_]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(clean)) return t('sources.invalid_mastodon_handle')
+    return null
+  }
+
   const [enabled, setEnabled] = useState<Record<string, boolean>>({})
   const [statuses, setStatuses] = useState<Record<string, SensorStatus>>({})
   const [socialAccountsX, setSocialAccountsX] = useState<string[]>([])
@@ -233,7 +249,7 @@ export function Sensors() {
       sensor_lookback_hours: sensorLookback,
       x_scraper_provider: xScraperProvider,
     }),
-    { onError: (e) => showToast('Save failed: ' + e.message) },
+    { onError: (e) => showToast(t('sources.save_failed', { error: e.message })) },
   )
 
   useEffect(() => {
@@ -374,7 +390,7 @@ export function Sensors() {
               <CnBadge language={lang} />
             </div>
             <div style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>
-              {sensor.desc}
+              {t('sensor.desc.' + sensor.key)}
             </div>
           </div>
         </div>
@@ -482,8 +498,8 @@ export function Sensors() {
                       <TagInput
                         tags={socialAccountsX}
                         onChange={(tags) => { setSocialAccountsX(tags.map(normalizeXHandle)); trigger() }}
-                        placeholder="@handle — press Enter"
-                        validate={validateXHandle}
+                        placeholder={t('sources.placeholder_twitter')}
+                        validate={validateX}
                         disabledTags={disabledAccounts}
                         onToggleDisabled={toggleAccountDisabled}
                         onEnableAll={() => enableAllAccounts(socialAccountsX)}
@@ -506,8 +522,8 @@ export function Sensors() {
                       <TagInput
                         tags={socialAccountsBluesky}
                         onChange={(tags) => { setSocialAccountsBluesky(tags); trigger() }}
-                        placeholder="name.bsky.social — press Enter"
-                        validate={validateBlueskyHandle}
+                        placeholder={t('sources.placeholder_bluesky')}
+                        validate={validateBsky}
                         disabledTags={disabledAccounts}
                         onToggleDisabled={toggleAccountDisabled}
                         onEnableAll={() => enableAllAccounts(socialAccountsBluesky)}
@@ -549,8 +565,8 @@ export function Sensors() {
                       <TagInput
                         tags={socialAccountsMastodon}
                         onChange={(tags) => { setSocialAccountsMastodon(tags.map(normalizeMastodonHandle)); trigger() }}
-                        placeholder="@user@mastodon.social — press Enter"
-                        validate={validateMastodonHandle}
+                        placeholder={t('sources.placeholder_mastodon')}
+                        validate={validateMasto}
                         disabledTags={disabledAccounts}
                         onToggleDisabled={toggleAccountDisabled}
                         onEnableAll={() => enableAllAccounts(socialAccountsMastodon)}
@@ -703,7 +719,7 @@ export function Sensors() {
                 <TagInput
                   tags={socialTopicsKeywords}
                   onChange={(tags) => { setSocialTopicsKeywords(tags); trigger() }}
-                  placeholder="keyword or #hashtag — press Enter"
+                  placeholder={t('sources.placeholder_topics')}
                 />
               </div>
             )}
@@ -736,13 +752,13 @@ export function Sensors() {
                           api.discoverRssFeed(url).then((result) => {
                             if (result.type === 'discovered' && result.feedUrl) {
                               setRssFeeds((prev) => prev.map((f) => f.url === url ? { ...f, url: result.feedUrl! } : f))
-                              showToast(`Feed discovered: ${result.feedTitle ?? result.feedUrl}`)
+                              showToast(t('sources.feed_discovered', { title: result.feedTitle ?? result.feedUrl ?? '' }))
                             } else if (result.type === 'not_found') {
                               setRssFeeds((prev) => prev.filter((f) => f.url !== url))
-                              showToast('No RSS feed found at that URL')
+                              showToast(t('sources.feed_not_found'))
                             } else if (result.type === 'error') {
                               setRssFeeds((prev) => prev.filter((f) => f.url !== url))
-                              showToast(`Feed discovery failed: ${result.message}`)
+                              showToast(t('sources.feed_discovery_failed', { error: result.message ?? '' }))
                             }
                             trigger()
                           }).catch(() => { trigger() })

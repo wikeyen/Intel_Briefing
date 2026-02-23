@@ -2,6 +2,7 @@
 // ABOUTME: Eliminates duplication across AiSummary, Pipeline, ApiKeys, and Sensors.
 import React from 'react'
 import type { AutoSaveStatus } from '@/lib/hooks/useAutoSave'
+import { useTranslation } from '@/lib/i18n'
 
 export const inputBase: React.CSSProperties = {
   background: 'var(--surface)',
@@ -83,15 +84,16 @@ export function PlayIcon({ size = 16, color = 'currentColor' }: { size?: number;
   }, React.createElement('path', { d: 'M5 3l8 5-8 5V3z' }))
 }
 
-const AUTO_SAVE_CONFIG: Record<Exclude<AutoSaveStatus, 'idle'>, { color: string; text: string }> = {
-  saving: { color: 'var(--ink-faint)', text: 'Saving\u2026' },
-  saved:  { color: 'var(--ok)',        text: 'Saved' },
-  error:  { color: 'var(--err)',       text: 'Save failed' },
-}
 
 export function AutoSaveIndicator({ status }: { status: AutoSaveStatus }) {
+  const { t } = useTranslation()
   if (status === 'idle') return null
-  const cfg = AUTO_SAVE_CONFIG[status]
+  const config: Record<Exclude<AutoSaveStatus, 'idle'>, { color: string; text: string }> = {
+    saving: { color: 'var(--ink-faint)', text: t('form.saving') },
+    saved:  { color: 'var(--ok)',        text: t('form.saved') },
+    error:  { color: 'var(--err)',       text: t('form.save_failed') },
+  }
+  const cfg = config[status]
   return React.createElement('span', {
     style: {
       fontSize: '0.75rem',

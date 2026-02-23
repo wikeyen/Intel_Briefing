@@ -23,27 +23,27 @@ const KEY_GROUPS: FieldGroup[] = [
   {
     title: 'creds.ai_providers',
     secrets: [
-      { field: 'summary_api_key',       label: 'OpenRouter API Key',       hint: 'API key for LLM summarization via OpenRouter. Get one at openrouter.ai/keys.' },
+      { field: 'summary_api_key',       label: 'creds.openrouter_key',       hint: 'creds.openrouter_hint' },
     ],
   },
   {
     title: 'creds.data_sources',
     secrets: [
-      { field: 'github_token',          label: 'GitHub Token',             hint: 'Personal access token for GitHub Trending sensor.' },
-      { field: 'producthunt_token',     label: 'Product Hunt Token',       hint: 'API token for Product Hunt daily launches.' },
+      { field: 'github_token',          label: 'creds.github_token',             hint: 'creds.github_hint' },
+      { field: 'producthunt_token',     label: 'creds.producthunt_token',       hint: 'creds.producthunt_hint' },
     ],
   },
   {
     title: 'creds.social_platforms',
     secrets: [
-      { field: 'twitter_auth_token',    label: 'Twitter auth_token Cookie', hint: 'Cookie from a logged-in x.com session. Open DevTools > Application > Cookies > x.com and copy the auth_token value.' },
-      { field: 'twitter_ct0',           label: 'Twitter ct0 Cookie',        hint: 'CSRF token cookie from x.com. Same steps as above — copy the ct0 value.' },
-      { field: 'apify_token',           label: 'Apify API Token',           hint: 'API token for Apify X scraper fallback. Get one at console.apify.com/settings/integrations.' },
-      { field: 'bluesky_app_password',  label: 'Bluesky App Password',     hint: 'App password for Bluesky social sensors. Generate at bsky.app/settings/app-passwords.' },
-      { field: 'mastodon_token',        label: 'Mastodon Access Token',    hint: 'Access token for Mastodon account monitoring.' },
+      { field: 'twitter_auth_token',    label: 'creds.twitter_auth', hint: 'creds.twitter_auth_hint' },
+      { field: 'twitter_ct0',           label: 'creds.twitter_ct0',        hint: 'creds.twitter_ct0_hint' },
+      { field: 'apify_token',           label: 'creds.apify_token',           hint: 'creds.apify_hint' },
+      { field: 'bluesky_app_password',  label: 'creds.bluesky_password',     hint: 'creds.bluesky_hint' },
+      { field: 'mastodon_token',        label: 'creds.mastodon_token',    hint: 'creds.mastodon_hint' },
     ],
     plains: [
-      { field: 'bluesky_handle', label: 'Bluesky Handle', hint: 'Your Bluesky handle (e.g., alice.bsky.social).', placeholder: 'e.g., alice.bsky.social' },
+      { field: 'bluesky_handle', label: 'creds.bluesky_handle', hint: 'creds.bluesky_handle_hint', placeholder: 'creds.bluesky_handle_placeholder' },
     ],
   },
 ]
@@ -100,7 +100,7 @@ export function ApiKeys() {
     },
     {
       delay: 1200,
-      onError: (e) => showToast('Save failed: ' + e.message),
+      onError: (e) => showToast(t('ai.save_failed', { error: e.message })),
       onSaved: () => {
         // Mark fields as saved and clear their pending values
         const savedFields = KEY_FIELDS.filter(({ field }) => !!pendingValues[field]).map(f => f.field)
@@ -190,8 +190,8 @@ export function ApiKeys() {
               {group.secrets.map(({ field, label, hint }) => (
                 <MaskedInput
                   key={field}
-                  label={label}
-                  hint={hint}
+                  label={t(label)}
+                  hint={t(hint)}
                   saved={savedFlags[field] ?? false}
                   newValue={pendingValues[field] ?? ''}
                   onNewValue={(v) => { setPendingValues((prev) => ({ ...prev, [field]: v })); if (v) trigger() }}
@@ -204,20 +204,20 @@ export function ApiKeys() {
               {group.plains?.map(({ field, label, hint, placeholder }) => (
                 <div key={field}>
                   <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '0.375rem' }}>
-                    {label}
+                    {t(label)}
                   </label>
                   <input
                     type="text"
                     value={plainValues[field] ?? ''}
                     onChange={(e) => { setPlainValues((prev) => ({ ...prev, [field]: e.target.value })); trigger() }}
-                    placeholder={placeholder}
+                    placeholder={placeholder ? t(placeholder) : undefined}
                     style={inputStyle}
                     onFocus={focus}
                     onBlur={blur}
                   />
                   {hint && (
                     <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.375rem', lineHeight: 1.5 }}>
-                      {hint}
+                      {t(hint)}
                     </p>
                   )}
                 </div>

@@ -3,6 +3,7 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { inputBase, focus, blur, ChevronDown } from '@/components/form-styles'
+import { useTranslation } from '@/lib/i18n'
 
 interface OpenRouterModel {
   id: string
@@ -38,6 +39,7 @@ export function OpenRouterModelPicker({
   value: string
   onChange: (v: string) => void
 }) {
+  const { t } = useTranslation()
   const [models, setModels] = useState<OpenRouterModel[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -65,9 +67,9 @@ export function OpenRouterModelPicker({
       }))
       openRouterCache = { models: parsed, ts: Date.now() }
       setModels(parsed)
-      if (parsed.length === 0) setError('No models returned')
+      if (parsed.length === 0) setError(t('models.no_returned'))
     } catch {
-      setError('Cannot reach OpenRouter')
+      setError(t('models.cannot_reach_openrouter'))
       setModels([])
     } finally {
       setLoading(false)
@@ -93,10 +95,10 @@ export function OpenRouterModelPicker({
   )
 
   const statusLine = loading
-    ? 'Loading models…'
+    ? t('models.loading')
     : error
       ? error
-      : `${models.length} model${models.length !== 1 ? 's' : ''} available`
+      : models.length === 1 ? t('models.one_available') : t('models.n_available', { count: String(models.length) })
 
   return (
     <div ref={wrapperRef} style={{ position: 'relative' }}>
@@ -115,7 +117,7 @@ export function OpenRouterModelPicker({
             focus(e)
           }}
           onBlur={blur}
-          placeholder="Type to search models…"
+          placeholder={t('models.search_placeholder')}
           style={{ ...inputBase, width: '100%', paddingRight: '2.25rem' }}
         />
         <span style={{
@@ -154,7 +156,7 @@ export function OpenRouterModelPicker({
             padding: 0,
           }}
         >
-          {loading ? 'Loading…' : 'Refresh'}
+          {loading ? t('models.loading_btn') : t('models.refresh')}
         </button>
       </div>
 
@@ -175,7 +177,7 @@ export function OpenRouterModelPicker({
         }}>
           {filtered.length === 0 && (
             <div style={{ padding: '0.875rem 1rem', color: 'var(--ink-faint)', fontSize: '0.8125rem' }}>
-              {search ? `No models matching "${search}"` : 'No models available'}
+              {search ? t('models.no_matching', { search }) : t('models.no_available')}
             </div>
           )}
           {filtered.map((m, idx) => {

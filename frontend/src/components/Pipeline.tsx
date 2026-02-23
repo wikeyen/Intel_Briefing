@@ -88,7 +88,7 @@ export function Pipeline() {
       default_limit: defaultLimit,
       sensor_limits: sectionLimits,
     }),
-    { onError: (e) => showToast('Save failed: ' + e.message) },
+    { onError: (e) => showToast(t('ai.save_failed', { error: e.message })) },
   )
 
   useEffect(() => {
@@ -117,8 +117,8 @@ export function Pipeline() {
     try {
       const result = await api.invalidateCache()
       showToast(result.invalidated > 0
-        ? `Marked ${result.invalidated} cached items as stale`
-        : 'No cached items to invalidate')
+        ? t('pipeline.stale_toast', { count: String(result.invalidated) })
+        : t('pipeline.stale_none'))
     } catch (e) {
       showToast('Failed: ' + (e as Error).message)
     } finally {
@@ -131,8 +131,8 @@ export function Pipeline() {
     try {
       const result = await api.cleanupExpired()
       showToast(result.removed > 0
-        ? `Removed ${result.removed} expired items`
-        : 'No expired items to remove')
+        ? t('pipeline.expired_toast', { count: String(result.removed) })
+        : t('pipeline.expired_none'))
     } catch (e) {
       showToast('Failed: ' + (e as Error).message)
     } finally {
@@ -364,7 +364,7 @@ export function Pipeline() {
                   {t('pipeline.boost')}
                 </label>
               </div>
-              <TagInput tags={boost} onChange={(tags) => { setBoost(tags); trigger() }} placeholder="keyword — press Enter" />
+              <TagInput tags={boost} onChange={(tags) => { setBoost(tags); trigger() }} placeholder={t('pipeline.keyword_placeholder')} />
               <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.5rem' }}>
                 {t('pipeline.boost_desc')}
               </p>
@@ -376,7 +376,7 @@ export function Pipeline() {
                   {t('pipeline.suppress')}
                 </label>
               </div>
-              <TagInput tags={suppress} onChange={(tags) => { setSuppress(tags); trigger() }} placeholder="keyword — press Enter" />
+              <TagInput tags={suppress} onChange={(tags) => { setSuppress(tags); trigger() }} placeholder={t('pipeline.keyword_placeholder')} />
               <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.5rem' }}>
                 {t('pipeline.suppress_desc')}
               </p>

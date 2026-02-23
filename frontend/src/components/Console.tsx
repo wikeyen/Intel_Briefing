@@ -7,6 +7,7 @@ import type { PipelineStatus } from '@/api/client'
 import { usePolling } from '@/lib/hooks/usePolling'
 import { Pagination } from './Pagination'
 import { SENSOR_LABELS } from '@/lib/sensors/taxonomy'
+import { useTranslation } from '@/lib/i18n'
 
 const MAX_ERRORS = 100
 const PAGE_SIZE = 20
@@ -15,6 +16,7 @@ const PAGE_SIZE = 20
 const TRUNCATE_LENGTH = 120
 
 function KindBadge({ kind }: { kind: 'config' | 'api' | null | undefined }) {
+  const { t } = useTranslation()
   const isConfig = kind === 'config'
   return (
     <span style={{
@@ -31,12 +33,13 @@ function KindBadge({ kind }: { kind: 'config' | 'api' | null | undefined }) {
       opacity: 0.85,
       flexShrink: 0,
     }}>
-      {isConfig ? 'config' : 'api'}
+      {isConfig ? t('console.badge_config') : t('console.badge_api')}
     </span>
   )
 }
 
 function ErrorRow({ entry }: { entry: { name: string; error: string; kind: 'config' | 'api' | null } }) {
+  const { t } = useTranslation()
   const label = SENSOR_LABELS[entry.name] ?? entry.name
   const msg = entry.error
   const isLong = msg.length > TRUNCATE_LENGTH
@@ -91,7 +94,7 @@ function ErrorRow({ entry }: { entry: { name: string; error: string; kind: 'conf
               textUnderlineOffset: '2px',
             }}
           >
-            {expanded ? 'less' : 'more'}
+            {expanded ? t('console.less') : t('console.more')}
           </button>
         )}
       </span>
@@ -101,6 +104,7 @@ function ErrorRow({ entry }: { entry: { name: string; error: string; kind: 'conf
 
 export function Console() {
   const status = usePolling<PipelineStatus>(() => api.getPipelineStatus(), 5_000)
+  const { t } = useTranslation()
   const [page, setPage] = useState(1)
 
   // Build errors from both fetch and summary stages, capped at MAX_ERRORS
@@ -122,10 +126,10 @@ export function Console() {
   const pagedConfigErrors = pagedErrors.filter(e => e.kind === 'config')
   const pagedApiErrors = pagedErrors.filter(e => e.kind !== 'config')
 
-  const runTime = status?.completed_at
-    ? new Date(status.completed_at).toLocaleString()
+  const runTimeDisplay = status?.completed_at
+    ? t('console.last_run', { time: new Date(status.completed_at).toLocaleString() })
     : status?.started_at
-      ? `running since ${new Date(status.started_at).toLocaleString()}`
+      ? t('console.running_since', { time: new Date(status.started_at).toLocaleString() })
       : null
 
   return (
@@ -134,22 +138,22 @@ export function Console() {
       {/* Page header (hidden on mobile — shown in top bar) */}
       <div className="page-header" style={{ marginBottom: '2rem' }}>
         <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.375rem' }}>
-          Console
+          {t('console.title')}
         </h2>
         <p style={{ fontSize: '0.875rem', color: 'var(--ink-muted)', lineHeight: 1.6 }}>
-          Sensor errors and warnings from the last pipeline run.
+          {t('console.desc')}
         </p>
       </div>
 
       {/* Timestamp */}
-      {runTime && (
+      {runTimeDisplay && (
         <div style={{
           fontSize: '0.75rem',
           fontFamily: 'ui-monospace, monospace',
           color: 'var(--ink-faint)',
           marginBottom: '1rem',
         }}>
-          Last run: {runTime}
+          {runTimeDisplay}
         </div>
       )}
 
@@ -164,7 +168,7 @@ export function Console() {
           color: 'var(--ink-faint)',
           fontSize: '0.875rem',
         }}>
-          {status ? 'No errors — all sensors reporting clean.' : 'Loading pipeline status…'}
+          {status ? t('console.no_errors') : t('console.loading')}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -185,7 +189,7 @@ export function Console() {
                 textTransform: 'uppercase',
                 color: 'var(--warn)',
               }}>
-                Configuration ({configErrors.length})
+                {t('console.config')} ({configErrors.length})
               </div>
               {pagedConfigErrors.map((e, i) => <ErrorRow key={`${e.name}-cfg-${i}`} entry={e} />)}
             </div>
@@ -208,7 +212,7 @@ export function Console() {
                 textTransform: 'uppercase',
                 color: 'var(--err)',
               }}>
-                API Errors ({apiErrors.length})
+                {t('console.api_errors')} ({apiErrors.length})
               </div>
               {pagedApiErrors.map((e, i) => <ErrorRow key={`${e.name}-api-${i}`} entry={e} />)}
             </div>
@@ -221,14 +225,7 @@ export function Console() {
             color: 'var(--ink-muted)',
             paddingTop: '0.25rem',
           }}>
-            <span style={{
-              fontWeight: 700,
-              color: 'var(--ink)',
-              fontFamily: 'ui-monospace, monospace',
-            }}>
-              {errors.length}
-            </span>
-            {' '}sensor{errors.length !== 1 ? 's' : ''} with issues
+            {errors.length === 1 ? t('console.one_sensor_issue') : t('console.n_sensors_issues', { count: String(errors.length) })}
           </div>
 
           <Pagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />

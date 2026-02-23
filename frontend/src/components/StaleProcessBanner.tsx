@@ -199,7 +199,7 @@ export function StaleProcessBanner({ stale, onAbort, onResume, onRestart }: {
         }}>
           <button
             onClick={onAbort}
-            title="Clear the interrupted state"
+            title={t('stale.abort_title')}
             style={ghostBtn}
             onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--ink-faint)' }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
@@ -217,7 +217,7 @@ export function StaleProcessBanner({ stale, onAbort, onResume, onRestart }: {
           </button>
           <button
             onClick={onRestart}
-            title="Start a fresh full run"
+            title={t('stale.restart_title')}
             style={solidBtn}
             onMouseEnter={e => { e.currentTarget.style.background = 'var(--ink-muted)' }}
             onMouseLeave={e => { e.currentTarget.style.background = 'var(--ink)' }}

@@ -1,5 +1,7 @@
 // ABOUTME: Shared pagination bar component for paginated lists.
 // ABOUTME: Shows prev/next buttons and page numbers with ellipsis for large ranges.
+'use client'
+import { useTranslation } from '@/lib/i18n'
 
 /** Compute which page numbers to display, with ellipsis gaps. */
 function pageRange(current: number, total: number): (number | '…')[] {
@@ -24,6 +26,7 @@ interface PaginationProps {
 }
 
 export function Pagination({ page, totalPages, onPageChange }: PaginationProps) {
+  const { t } = useTranslation()
   if (totalPages <= 1) return null
 
   const pages = pageRange(page, totalPages)
@@ -43,7 +46,7 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
     >
       {/* Prev */}
       <button
-        aria-label="Previous page"
+        aria-label={t('pagination.prev_aria')}
         disabled={page <= 1}
         onClick={() => onPageChange(page - 1)}
         style={{
@@ -57,7 +60,7 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
           opacity: page <= 1 ? 0.4 : 1,
         }}
       >
-        ‹ Prev
+        {t('pagination.prev')}
       </button>
 
       {/* Page numbers */}
@@ -93,7 +96,7 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
 
       {/* Next */}
       <button
-        aria-label="Next page"
+        aria-label={t('pagination.next_aria')}
         disabled={page >= totalPages}
         onClick={() => onPageChange(page + 1)}
         style={{
@@ -107,7 +110,7 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
           opacity: page >= totalPages ? 0.4 : 1,
         }}
       >
-        Next ›
+        {t('pagination.next')}
       </button>
     </nav>
   )

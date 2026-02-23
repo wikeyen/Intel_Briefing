@@ -8,7 +8,7 @@ import { DEFAULT_SENSOR_PROMPTS, DEFAULT_OVERALL_PROMPT } from '@/lib/summary/pr
 import { useTranslation } from '@/lib/i18n'
 import { useToast } from '@/lib/toast-context'
 import { useAutoSave } from '@/lib/hooks/useAutoSave'
-import { inputBase, focus, blur, SubLabel, FieldLabel, HelpText, AutoSaveIndicator } from '@/components/form-styles'
+import { inputBase, focus, blur, SubLabel, FieldLabel, HelpText, AutoSaveIndicator, ChevronDown, ChevronRight } from '@/components/form-styles'
 import { OllamaModelPicker } from '@/components/OllamaModelPicker'
 import { OpenRouterModelPicker } from '@/components/OpenRouterModelPicker'
 import { AiSummarySkeleton } from '@/components/Skeleton'
@@ -234,15 +234,13 @@ export function AiSummary() {
                   </select>
                   <span style={{
                     position: 'absolute',
-                    right: '0.875rem',
+                    right: '0.75rem',
                     top: '50%',
                     transform: 'translateY(-50%)',
                     pointerEvents: 'none',
                     color: 'var(--ink-faint)',
-                    fontSize: '1.25rem',
-                    userSelect: 'none',
                   }}>
-                    ▼
+                    <ChevronDown size={18} />
                   </span>
                 </div>
               </div>
@@ -462,12 +460,11 @@ export function AiSummary() {
                     {t('ai.per_sensor_prompts')}
                   </span>
                   <span style={{
-                    fontSize: '1.25rem',
                     color: 'var(--ink-muted)',
                     transition: 'transform 200ms',
                     transform: promptsExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
                   }}>
-                    ▼
+                    <ChevronDown size={18} />
                   </span>
                 </button>
 
@@ -504,12 +501,11 @@ export function AiSummary() {
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                               <span style={{
-                                fontSize: '1.25rem',
                                 color: 'var(--ink-faint)',
                                 transition: 'transform 200ms',
                                 transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
                               }}>
-                                ▶
+                                <ChevronRight size={14} />
                               </span>
                               <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>
                                 {sensor.label}

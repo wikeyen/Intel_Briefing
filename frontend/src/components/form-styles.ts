@@ -55,6 +55,34 @@ export function HelpText({ children }: { children: React.ReactNode }) {
   }, children)
 }
 
+/* ─── SVG Chevron icons ───────────────────────────────────────────── */
+
+/** Dropdown chevron (points down). size defaults to 16. */
+export function ChevronDown({ size = 16, color = 'currentColor', className }: { size?: number; color?: string; className?: string }) {
+  return React.createElement('svg', {
+    width: size, height: size, viewBox: '0 0 16 16', fill: 'none',
+    stroke: color, strokeWidth: 2.5, strokeLinecap: 'round', strokeLinejoin: 'round',
+    className, style: { display: 'block', flexShrink: 0 },
+  }, React.createElement('path', { d: 'M4 6l4 4 4-4' }))
+}
+
+/** Disclosure chevron (points right). size defaults to 16. */
+export function ChevronRight({ size = 16, color = 'currentColor', className }: { size?: number; color?: string; className?: string }) {
+  return React.createElement('svg', {
+    width: size, height: size, viewBox: '0 0 16 16', fill: 'none',
+    stroke: color, strokeWidth: 2.5, strokeLinecap: 'round', strokeLinejoin: 'round',
+    className, style: { display: 'block', flexShrink: 0 },
+  }, React.createElement('path', { d: 'M6 4l4 4-4 4' }))
+}
+
+/** Play icon (right-pointing triangle). size defaults to 16. */
+export function PlayIcon({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {
+  return React.createElement('svg', {
+    width: size, height: size, viewBox: '0 0 16 16', fill: color,
+    style: { display: 'block', flexShrink: 0 },
+  }, React.createElement('path', { d: 'M5 3l8 5-8 5V3z' }))
+}
+
 const AUTO_SAVE_CONFIG: Record<Exclude<AutoSaveStatus, 'idle'>, { color: string; text: string }> = {
   saving: { color: 'var(--ink-faint)', text: 'Saving\u2026' },
   saved:  { color: 'var(--ok)',        text: 'Saved' },

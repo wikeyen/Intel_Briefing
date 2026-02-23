@@ -2,7 +2,7 @@
 // ABOUTME: Extracted from AiSummary.tsx to reduce file size.
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { inputBase, focus, blur } from '@/components/form-styles'
+import { inputBase, focus, blur, ChevronDown } from '@/components/form-styles'
 
 interface OpenRouterModel {
   id: string
@@ -120,16 +120,14 @@ export function OpenRouterModelPicker({
         />
         <span style={{
           position: 'absolute',
-          right: '0.875rem',
+          right: '0.75rem',
           top: '50%',
           transform: `translateY(-50%) rotate(${open ? '180deg' : '0deg'})`,
           pointerEvents: 'none',
           color: 'var(--ink-faint)',
-          fontSize: '1.25rem',
           transition: 'transform 150ms',
-          userSelect: 'none',
         }}>
-          ▼
+          <ChevronDown size={18} />
         </span>
       </div>
 

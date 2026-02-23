@@ -135,7 +135,7 @@ type DomainDef = {
 }
 
 const DOMAINS: DomainDef[] = [
-  { key: 'macro', label: 'Macro & Finance', accent: 'var(--cat-news)', sensors: ['wallstreetcn', 'sources_36kr'] },
+  { key: 'macro', label: 'Macro & Finance', accent: 'var(--cat-news)', sensors: ['wallstreetcn', 'sources_36kr', 'rss_news'] },
   {
     key: 'social', label: 'Social Pulse', accent: 'var(--cat-trend)',
     sensors: ['x', 'bluesky', 'mastodon', 'weibo', 'xiaohongshu'], showSentiment: true,

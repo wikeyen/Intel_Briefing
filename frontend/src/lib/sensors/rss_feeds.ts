@@ -1,7 +1,8 @@
 // ABOUTME: RSS feeds sensor — fetches user-specified RSS/Atom feeds and extracts article content.
 // ABOUTME: Parses XML with fast-xml-parser, scrapes full content via readability, with fallback to RSS summary.
 import { XMLParser } from 'fast-xml-parser'
-import type { ConfigSettings, IntelItem } from '../models'
+import type { ConfigSettings, IntelItem, RssFeedType } from '../models'
+import { normalizeRssFeeds } from '../models'
 import { SensorConfigError } from './errors'
 import { stripHtml, md5Short } from './utils'
 
@@ -15,6 +16,7 @@ interface RawItem {
   summary: string | null
   fullContent: string | null
   feedTitle: string
+  feedType: RssFeedType
 }
 
 function parseDate(raw: string | undefined | null): Date | null {
@@ -33,7 +35,7 @@ function textOf(node: unknown): string | null {
   return String(node)
 }
 
-function parseFeed(xml: string): { feedTitle: string; items: RawItem[] } {
+function parseFeed(xml: string, feedType: RssFeedType): { feedTitle: string; items: RawItem[] } {
   const parser = new XMLParser({
     ignoreAttributes: false,
     attributeNamePrefix: '@_',
@@ -60,7 +62,7 @@ function parseFeed(xml: string): { feedTitle: string; items: RawItem[] } {
       // Atom <content> holds the full article HTML
       const rawContent = textOf(entry.content)
       const fullContent = rawContent ? stripHtml(rawContent) : null
-      items.push({ title, url, published, summary, fullContent, feedTitle })
+      items.push({ title, url, published, summary, fullContent, feedTitle, feedType })
     }
   } else {
     const channel = feed.rss?.channel ?? feed.channel ?? feed
@@ -75,13 +77,13 @@ function parseFeed(xml: string): { feedTitle: string; items: RawItem[] } {
       // RSS 2.0 <content:encoded> holds full article HTML (NS prefix stripped by removeNSPrefix)
       const rawEncoded = textOf(item.encoded)
       const fullContent = rawEncoded ? stripHtml(rawEncoded) : null
-      items.push({ title, url, published, summary, fullContent, feedTitle })
+      items.push({ title, url, published, summary, fullContent, feedTitle, feedType })
     }
   }
   return { feedTitle: items[0]?.feedTitle ?? 'Unknown Feed', items }
 }
 
-async function fetchFeed(feedUrl: string): Promise<RawItem[]> {
+async function fetchFeed(feedUrl: string, feedType: RssFeedType): Promise<RawItem[]> {
   try {
     const resp = await fetch(feedUrl, {
       signal: AbortSignal.timeout(FEED_FETCH_TIMEOUT),
@@ -89,7 +91,7 @@ async function fetchFeed(feedUrl: string): Promise<RawItem[]> {
     })
     if (!resp.ok) return []
     const xml = await resp.text()
-    const { items } = parseFeed(xml)
+    const { items } = parseFeed(xml, feedType)
     return items
   } catch {
     return []
@@ -122,13 +124,22 @@ async function scrapeArticles(items: RawItem[]): Promise<RawItem[]> {
   return results
 }
 
+/** Source name per feed type — routes items to different taxonomy categories. */
+const SOURCE_BY_TYPE: Record<RssFeedType, string> = {
+  news: 'rss_news',
+  blog: 'rss_feeds',
+  other: 'rss_feeds',
+}
+
 export async function fetchRssFeeds(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
   if (!config.rss_feed_urls || config.rss_feed_urls.length === 0) {
     throw new SensorConfigError('No RSS feed URLs configured')
   }
 
+  const feeds = normalizeRssFeeds(config.rss_feed_urls)
+
   const feedResults = await Promise.allSettled(
-    config.rss_feed_urls.map((url) => fetchFeed(url)),
+    feeds.map((entry) => fetchFeed(entry.url, entry.type)),
   )
 
   let allItems: RawItem[] = []
@@ -162,7 +173,7 @@ export async function fetchRssFeeds(config: ConfigSettings, limit: number): Prom
 
   return enriched.map((item) => ({
     id: `rss-${md5Short(item.url)}`,
-    source: 'rss_feeds',
+    source: SOURCE_BY_TYPE[item.feedType],
     title: item.title,
     url: item.url,
     published_at: parseDate(item.published)?.toISOString().slice(0, 10) ?? null,

@@ -4,7 +4,7 @@ import { readFile, writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import yaml from 'js-yaml'
 import { kvSet, kvGet } from '../db'
-import { type ConfigSettings, type SummaryLanguage, defaultConfig } from '../models'
+import { type ConfigSettings, type SummaryLanguage, type RssFeedEntry, defaultConfig } from '../models'
 
 const DB_KEY = 'intel:config'
 
@@ -74,7 +74,9 @@ function applyEnvOverrides(config: ConfigSettings): ConfigSettings {
       ? env.SOCIAL_FOLLOWING_MASTODON === 'true'
       : config.social_following_mastodon,
     rss_feed_urls: env.RSS_FEED_URLS
-      ? env.RSS_FEED_URLS.split(',').map(u => u.trim()).filter(Boolean)
+      ? env.RSS_FEED_URLS.split(',').map(u => u.trim()).filter(Boolean).map(
+          (url): RssFeedEntry => ({ url, type: 'other' }),
+        )
       : config.rss_feed_urls,
     summary_api_key:  env.SUMMARY_API_KEY  ?? config.summary_api_key,
     summary_base_url: env.SUMMARY_BASE_URL || config.summary_base_url,

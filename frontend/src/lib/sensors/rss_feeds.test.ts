@@ -255,6 +255,76 @@ describe('RSS Feeds Sensor', () => {
     expect(items.length).toBe(2)
   })
 
+  it('routes news-type feeds to rss_news source', async () => {
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === 'https://example.com/news.xml') {
+        return Promise.resolve({
+          ok: true,
+          text: () => Promise.resolve(RSS_XML),
+        })
+      }
+      return Promise.resolve({ ok: false, status: 403 })
+    })
+
+    const config = makeConfig({
+      rss_feed_urls: [{ url: 'https://example.com/news.xml', type: 'news' }],
+    })
+    const { fetchRssFeeds } = await import('./rss_feeds')
+    const items = await fetchRssFeeds(config, 10)
+
+    expect(items.length).toBe(2)
+    expect(items[0].source).toBe('rss_news')
+    expect(items[1].source).toBe('rss_news')
+  })
+
+  it('routes blog-type feeds to rss_feeds source', async () => {
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === 'https://example.com/blog.xml') {
+        return Promise.resolve({
+          ok: true,
+          text: () => Promise.resolve(RSS_XML),
+        })
+      }
+      return Promise.resolve({ ok: false, status: 403 })
+    })
+
+    const config = makeConfig({
+      rss_feed_urls: [{ url: 'https://example.com/blog.xml', type: 'blog' }],
+    })
+    const { fetchRssFeeds } = await import('./rss_feeds')
+    const items = await fetchRssFeeds(config, 10)
+
+    expect(items.length).toBe(2)
+    expect(items[0].source).toBe('rss_feeds')
+    expect(items[1].source).toBe('rss_feeds')
+  })
+
+  it('handles mixed feed types in same config', async () => {
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === 'https://example.com/news.xml' || url === 'https://example.com/blog.xml') {
+        return Promise.resolve({
+          ok: true,
+          text: () => Promise.resolve(RSS_XML),
+        })
+      }
+      return Promise.resolve({ ok: false, status: 403 })
+    })
+
+    const config = makeConfig({
+      rss_feed_urls: [
+        { url: 'https://example.com/news.xml', type: 'news' },
+        { url: 'https://example.com/blog.xml', type: 'blog' },
+      ],
+    })
+    const { fetchRssFeeds } = await import('./rss_feeds')
+    const items = await fetchRssFeeds(config, 20)
+
+    const newsSources = items.filter(i => i.source === 'rss_news')
+    const blogSources = items.filter(i => i.source === 'rss_feeds')
+    expect(newsSources.length).toBe(2)
+    expect(blogSources.length).toBe(2)
+  })
+
   it('respects the limit parameter', async () => {
     globalThis.fetch = vi.fn().mockImplementation((url: string) => {
       if (url === 'https://example.com/feed.xml') {

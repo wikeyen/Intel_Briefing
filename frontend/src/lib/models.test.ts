@@ -7,6 +7,7 @@ import {
   createReport,
   defaultConfig,
   ensureAllSections,
+  normalizeRssFeeds,
   sensorLimit,
   sensorResultSucceeded,
 } from './models'
@@ -57,6 +58,34 @@ describe('ConfigSettings', () => {
     const cfg = { ...defaultConfig(), sensor_limits: { arxiv: 5 } }
     expect(sensorLimit(cfg, 'arxiv')).toBe(5)
     expect(sensorLimit(cfg, 'hacker_news')).toBe(10)
+  })
+})
+
+describe('normalizeRssFeeds', () => {
+  it('converts bare URL strings to RssFeedEntry with type other', () => {
+    const result = normalizeRssFeeds(['https://example.com/feed.xml'])
+    expect(result).toEqual([{ url: 'https://example.com/feed.xml', type: 'other' }])
+  })
+
+  it('passes through RssFeedEntry objects unchanged', () => {
+    const entry = { url: 'https://example.com/news.xml', type: 'news' as const }
+    const result = normalizeRssFeeds([entry])
+    expect(result).toEqual([entry])
+  })
+
+  it('handles mixed array of strings and RssFeedEntry objects', () => {
+    const result = normalizeRssFeeds([
+      'https://example.com/bare.xml',
+      { url: 'https://example.com/typed.xml', type: 'blog' },
+    ])
+    expect(result).toEqual([
+      { url: 'https://example.com/bare.xml', type: 'other' },
+      { url: 'https://example.com/typed.xml', type: 'blog' },
+    ])
+  })
+
+  it('returns empty array for empty input', () => {
+    expect(normalizeRssFeeds([])).toEqual([])
   })
 })
 

@@ -105,6 +105,19 @@ export function sensorResultSucceeded(result: SensorResult): boolean {
   return result.error === null
 }
 
+export type RssFeedType = 'news' | 'blog' | 'other'
+export interface RssFeedEntry {
+  url: string
+  type: RssFeedType
+}
+
+/** Normalize a mixed array of bare URL strings and RssFeedEntry objects. */
+export function normalizeRssFeeds(raw: (string | RssFeedEntry)[]): RssFeedEntry[] {
+  return raw.map(entry =>
+    typeof entry === 'string' ? { url: entry, type: 'other' as RssFeedType } : entry,
+  )
+}
+
 export type SummaryLanguage = 'en' | 'zh'
 
 export type RunMode = 'fetch' | 'summarize' | 'fetch_summarize'
@@ -201,6 +214,7 @@ export const SOURCE_URLS: Record<string, string> = {
   wallstreetcn:     'https://wallstreetcn.com',
   chrome_radar:     'https://chromewebstore.google.com',
   rss_feeds:        '',
+  rss_news:         '',
   x:                'https://x.com',
   bluesky:          'https://bsky.app',
   mastodon:         'https://mastodon.social',
@@ -321,8 +335,8 @@ export interface ConfigSettings {
   mastodon_topics_enabled: boolean
   mastodon_trends_enabled: boolean
 
-  // RSS feed URLs
-  rss_feed_urls: string[]
+  // RSS feed entries (URL + type: news / blog / other)
+  rss_feed_urls: (string | RssFeedEntry)[]
 
   // Cache
   cache_ttl_hours: number

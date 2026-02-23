@@ -8,6 +8,12 @@ export interface HealthResponse {
 
 export type SummaryLanguage = 'en' | 'zh'
 
+export type RssFeedType = 'news' | 'blog' | 'other'
+export interface RssFeedEntry {
+  url: string
+  type: RssFeedType
+}
+
 export interface ConfigSettings {
   github_token: string | null
   producthunt_token: string | null
@@ -37,7 +43,7 @@ export interface ConfigSettings {
   bluesky_trends_enabled: boolean
   mastodon_topics_enabled: boolean
   mastodon_trends_enabled: boolean
-  rss_feed_urls: string[]
+  rss_feed_urls: (string | RssFeedEntry)[]
   cache_ttl_hours: number
   default_concurrency: number
   local_summary_concurrency: number

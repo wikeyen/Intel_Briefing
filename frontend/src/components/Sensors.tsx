@@ -9,6 +9,7 @@ import { useToast } from '@/lib/toast-context'
 import { useAutoSave } from '@/lib/hooks/useAutoSave'
 import { AutoSaveIndicator } from '@/components/form-styles'
 import { sensorsByLanguageAndCategory } from '@/lib/sensors/taxonomy'
+import { normalizeRssFeeds, type RssFeedEntry, type RssFeedType } from '@/lib/models'
 import { SkeletonCard } from '@/components/Skeleton'
 
 interface SensorDef {
@@ -228,7 +229,7 @@ export function Sensors() {
   const [blueskyTopicsEnabled, setBlueskyTopicsEnabled] = useState(true)
   const [mastodonTopicsEnabled, setMastodonTopicsEnabled] = useState(true)
   const [mastodonTrendsEnabled, setMastodonTrendsEnabled] = useState(true)
-  const [rssFeedUrls, setRssFeedUrls] = useState<string[]>([])
+  const [rssFeeds, setRssFeeds] = useState<RssFeedEntry[]>([])
   const [sensorLimits, setSensorLimits] = useState<Record<string, number>>({})
   const [sensorLookback, setSensorLookback] = useState<Record<string, number>>({})
   const [defaultLimit, setDefaultLimit] = useState(10)
@@ -249,7 +250,7 @@ export function Sensors() {
       bluesky_topics_enabled: blueskyTopicsEnabled,
       mastodon_topics_enabled: mastodonTopicsEnabled,
       mastodon_trends_enabled: mastodonTrendsEnabled,
-      rss_feed_urls: rssFeedUrls,
+      rss_feed_urls: rssFeeds,
       sensor_limits: sensorLimits,
       sensor_lookback_hours: sensorLookback,
       x_scraper_provider: xScraperProvider,
@@ -274,7 +275,7 @@ export function Sensors() {
       setBlueskyTopicsEnabled(cfg.bluesky_topics_enabled ?? true)
       setMastodonTopicsEnabled(cfg.mastodon_topics_enabled ?? true)
       setMastodonTrendsEnabled(cfg.mastodon_trends_enabled ?? true)
-      setRssFeedUrls(cfg.rss_feed_urls ?? [])
+      setRssFeeds(normalizeRssFeeds(cfg.rss_feed_urls ?? []))
       setSensorLimits(cfg.sensor_limits ?? {})
       setSensorLookback(cfg.sensor_lookback_hours ?? {})
       setDefaultLimit(cfg.default_limit)
@@ -665,27 +666,29 @@ export function Sensors() {
                             Feed URLs
                           </div>
                           <TagInput
-                            tags={rssFeedUrls}
+                            tags={rssFeeds.map(f => f.url)}
                             onChange={(tags) => {
-                              const added = tags.find((t) => !rssFeedUrls.includes(t))
+                              const currentUrls = rssFeeds.map(f => f.url)
+                              const added = tags.find((t) => !currentUrls.includes(t))
                               if (!added) {
-                                setRssFeedUrls(tags)
+                                // Removal — keep entries that still exist in tags
+                                setRssFeeds(prev => prev.filter(f => tags.includes(f.url)))
                                 trigger()
                                 return
                               }
-                              setRssFeedUrls(tags)
+                              // Addition — default new feeds to 'other'
+                              setRssFeeds(prev => [...prev, { url: added, type: 'other' }])
                               api.discoverRssFeed(added).then((result) => {
                                 if (result.type === 'discovered' && result.feedUrl) {
-                                  setRssFeedUrls((prev) => prev.map((u) => u === added ? result.feedUrl! : u))
+                                  setRssFeeds((prev) => prev.map((f) => f.url === added ? { ...f, url: result.feedUrl! } : f))
                                   showToast(`Feed discovered: ${result.feedTitle ?? result.feedUrl}`)
                                 } else if (result.type === 'not_found') {
-                                  setRssFeedUrls((prev) => prev.filter((u) => u !== added))
+                                  setRssFeeds((prev) => prev.filter((f) => f.url !== added))
                                   showToast('No RSS feed found at that URL')
                                 } else if (result.type === 'error') {
-                                  setRssFeedUrls((prev) => prev.filter((u) => u !== added))
+                                  setRssFeeds((prev) => prev.filter((f) => f.url !== added))
                                   showToast(`Feed discovery failed: ${result.message}`)
                                 }
-                                // type === 'feed' — URL is already a valid feed, keep silently
                                 trigger()
                               }).catch(() => {
                                 trigger()
@@ -694,6 +697,68 @@ export function Sensors() {
                             placeholder="https://example.com/feed.xml — press Enter"
                             validate={validateUrl}
                           />
+                          {/* Per-feed type selector */}
+                          {rssFeeds.length > 0 && (
+                            <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                              <div style={{ fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' as const, color: 'var(--ink-faint)', marginBottom: '0.125rem' }}>
+                                Feed Types
+                              </div>
+                              {rssFeeds.map((feed) => {
+                                const typeColors: Record<RssFeedType, string> = {
+                                  news: 'var(--cat-news)',
+                                  blog: 'var(--cat-opinion)',
+                                  other: 'var(--ink-faint)',
+                                }
+                                const nextType: Record<RssFeedType, RssFeedType> = {
+                                  other: 'news',
+                                  news: 'blog',
+                                  blog: 'other',
+                                }
+                                const domain = (() => {
+                                  try { return new URL(feed.url).hostname.replace(/^www\./, '') } catch { return feed.url }
+                                })()
+                                return (
+                                  <div key={feed.url} style={{
+                                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                    padding: '0.25rem 0.5rem', borderRadius: 6,
+                                    background: 'var(--surface-inset)',
+                                  }}>
+                                    <button
+                                      onClick={() => {
+                                        setRssFeeds(prev => prev.map(f =>
+                                          f.url === feed.url ? { ...f, type: nextType[f.type] } : f,
+                                        ))
+                                        trigger()
+                                      }}
+                                      style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                                        padding: '2px 8px', borderRadius: 4,
+                                        fontSize: '0.625rem', fontWeight: 700,
+                                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                                        letterSpacing: '0.04em', textTransform: 'uppercase' as const,
+                                        background: `color-mix(in srgb, ${typeColors[feed.type]} 15%, transparent)`,
+                                        color: typeColors[feed.type],
+                                        border: `1px solid color-mix(in srgb, ${typeColors[feed.type]} 30%, transparent)`,
+                                        cursor: 'pointer',
+                                        transition: 'background 150ms, border-color 150ms',
+                                      }}
+                                      title={`Click to cycle: other → news → blog → other`}
+                                    >
+                                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: typeColors[feed.type] }} />
+                                      {feed.type}
+                                    </button>
+                                    <span style={{
+                                      fontSize: '0.6875rem', color: 'var(--ink-secondary)',
+                                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                      flex: 1, minWidth: 0,
+                                    }}>
+                                      {domain}
+                                    </span>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

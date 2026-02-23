@@ -24,6 +24,7 @@ export const SENSORS: SensorDef[] = [
   { key: 'bluesky',   label: 'Bluesky',     desc: 'Accounts, topics, and trends on Bluesky',       language: 'row', category: 'social' },
   { key: 'mastodon',  label: 'Mastodon',     desc: 'Accounts, topics, and trends on Mastodon',      language: 'row', category: 'social' },
   { key: 'rss_feeds',       label: 'RSS Feeds',         desc: 'Custom RSS/Atom feed subscriptions',             language: 'row', category: 'feeds' },
+  { key: 'rss_news',        label: 'RSS News',          desc: 'News feeds from RSS subscriptions',              language: 'row', category: 'feeds' },
   // CN
   { key: 'sources_36kr',    label: '36Kr',              desc: 'Chinese startup and tech news',                  language: 'cn',  category: 'finance' },
   { key: 'wallstreetcn',    label: 'WallStreetCN',      desc: 'Chinese financial and macro news',               language: 'cn',  category: 'finance' },
@@ -146,6 +147,7 @@ export const SENSOR_DISPLAY_MAP: Record<string, DisplayCategoryKey> = {
   xiaohongshu:   'trend',
   hn_blogs:      'opinions',
   rss_feeds:     'opinions',
+  rss_news:      'news',
   v2ex:          'opinions',
   zhihu:         'opinions',
 }

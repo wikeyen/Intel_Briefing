@@ -239,6 +239,8 @@ const en: TranslationDict = {
   'pipeline.cache_desc': 'Data older than this threshold is flagged as stale.',
   'pipeline.mark_stale': 'Mark Stale Now',
   'pipeline.marking': 'Marking…',
+  'pipeline.resume_window': 'Resume Window',
+  'pipeline.resume_window_desc': 'Social accounts fetched within this window are skipped on re-run. Set to 0 to always do a full re-fetch.',
   'pipeline.post_expiry': 'Post Expiry',
   'pipeline.post_expiry_desc': 'Posts older than this are automatically deleted by the cleanup cron job.',
   'pipeline.delete_expired': 'Delete Expired Now',

@@ -239,6 +239,8 @@ const zh: TranslationDict = {
   'pipeline.cache_desc': '超过此阈值的数据将被标记为过期。',
   'pipeline.mark_stale': '立即标记过期',
   'pipeline.marking': '标记中…',
+  'pipeline.resume_window': '增量恢复窗口',
+  'pipeline.resume_window_desc': '在此窗口内已获取的社交账号将在重新运行时跳过。设为 0 则每次全量获取。',
   'pipeline.post_expiry': '帖子过期',
   'pipeline.post_expiry_desc': '超过此时间的帖子将被清理任务自动删除。',
   'pipeline.delete_expired': '立即删除过期',

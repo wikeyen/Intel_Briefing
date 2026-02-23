@@ -64,6 +64,7 @@ export function Pipeline() {
   const [defaultConcurrency, setDefaultConcurrency] = useState(4)
   const [localSummaryConcurrency, setLocalSummaryConcurrency] = useState(1)
   const [cacheTtl, setCacheTtl] = useState(25)
+  const [resumeWindow, setResumeWindow] = useState(6)
   const [postExpiryDays, setPostExpiryDays] = useState(30)
   const [boost, setBoost] = useState<string[]>([])
   const [suppress, setSuppress] = useState<string[]>([])
@@ -82,6 +83,7 @@ export function Pipeline() {
       default_concurrency: defaultConcurrency,
       local_summary_concurrency: localSummaryConcurrency,
       cache_ttl_hours: cacheTtl,
+      resume_window_hours: resumeWindow,
       post_expiry_days: postExpiryDays,
       boost_keywords: boost,
       suppress_keywords: suppress,
@@ -98,6 +100,7 @@ export function Pipeline() {
       setDefaultConcurrency(cfg.default_concurrency ?? 4)
       setLocalSummaryConcurrency(cfg.local_summary_concurrency ?? 1)
       setCacheTtl(cfg.cache_ttl_hours)
+      setResumeWindow(cfg.resume_window_hours ?? 6)
       setPostExpiryDays(cfg.post_expiry_days ?? 30)
       setBoost(cfg.boost_keywords)
       setSuppress(cfg.suppress_keywords)
@@ -306,6 +309,27 @@ export function Pipeline() {
                   {invalidating ? t('pipeline.marking') : t('pipeline.mark_stale')}
                 </button>
               </div>
+            </div>
+
+            <div>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
+                <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
+                  {t('pipeline.resume_window')}
+                </label>
+                <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--ink)', fontFamily: 'ui-monospace, monospace' }}>
+                  {resumeWindow === 0 ? 'Off' : `${resumeWindow}h`}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={24}
+                value={resumeWindow}
+                onChange={(e) => { setResumeWindow(Number(e.target.value)); trigger() }}
+              />
+              <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, marginTop: '0.5rem' }}>
+                {t('pipeline.resume_window_desc')}
+              </p>
             </div>
 
             <div>

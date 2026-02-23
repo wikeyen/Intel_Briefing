@@ -343,6 +343,9 @@ export interface ConfigSettings {
   // Cache
   cache_ttl_hours: number
 
+  // Resume window — skip re-fetching social accounts that were fetched within this many hours (0 = disabled)
+  resume_window_hours: number
+
   // Concurrency — default applies to both fetch and summary; local override for local LLM models
   default_concurrency: number
   local_summary_concurrency: number
@@ -414,6 +417,7 @@ export function defaultConfig(): ConfigSettings {
     mastodon_trends_enabled: true,
     rss_feed_urls: [],
     cache_ttl_hours: 6,
+    resume_window_hours: 6,
     default_concurrency: 4,
     local_summary_concurrency: 1,
     post_expiry_days: 30,

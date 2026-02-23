@@ -1000,8 +1000,12 @@ function DomainCardCompact({ domain, summary, onClick }: {
                 }}>
                   <span style={{
                     fontFamily: MONO, fontSize: '0.5rem', fontWeight: 700,
-                    color: 'var(--ink-faint)', letterSpacing: '0.04em',
+                    letterSpacing: '0.04em',
                     textTransform: 'uppercase' as const, marginRight: 4,
+                    padding: '1px 4px', borderRadius: 3,
+                    ...(group.label === 'China'
+                      ? { background: '#c8102e', color: '#ffe066' }
+                      : { background: '#1a4b8c', color: '#fff' }),
                   }}>
                     {group.label}
                   </span>
@@ -1739,7 +1743,7 @@ export function Dashboard() {
 
                     {/* Domain cards grid */}
                     <div className="dashboard-domains">
-                      {DOMAINS.map((domain, i) => (
+                      {DOMAINS.filter(d => summary.sections.some(s => d.sensors.includes(s.sensor_name))).map((domain, i) => (
                         <StaggerChild key={domain.key} index={5 + i}>
                           <DomainCardCompact
                             domain={domain}

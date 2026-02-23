@@ -937,12 +937,14 @@ function DomainCardCompact({ domain, summary, onClick }: {
   const totalItems = matchingSections.reduce((n, s) => n + s.item_count, 0)
   const totalNotable = matchingSections.reduce((n, s) => n + s.items.length, 0)
 
-  /** Build summary text for a set of sections. */
+  /** Build summary text for a set of sections — max 2 sentences for card preview. */
   const buildSummary = (sections: typeof matchingSections) => {
     const briefs = sections.map(s => s.brief_summary).filter(Boolean)
-    return briefs.length > 0
+    const raw = briefs.length > 0
       ? briefs.join(' ')
-      : sections.map(s => s.summary).join(' ').split(/(?<=[。！？.!?])\s*/).filter(s => s.trim()).slice(0, 3).join('')
+      : sections.map(s => s.summary).join(' ')
+    const sentences = raw.split(/(?<=[。！？.!?])\s*/).filter(s => s.trim())
+    return sentences.slice(0, 2).join(' ')
   }
 
   const hasSubGroups = domain.subGroups && domain.subGroups.length > 0

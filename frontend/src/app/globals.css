@@ -7,7 +7,7 @@
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
 :root {
   /* Surfaces — warm off-white base */
-  --canvas:          #FAFAF8;
+  --canvas:          #FFFFFF;
   --surface:         #FFFFFF;
   --surface-raised:  #FFFFFF;
   --surface-inset:   #F5F4F1;
@@ -109,7 +109,7 @@
   --focus-ring:      0 0 0 2px var(--surface), 0 0 0 4px rgba(26, 122, 109, 0.5);
 
   /* Utility — fades, tints */
-  --canvas-fade:     rgba(250, 250, 248, 0.9);
+  --canvas-fade:     rgba(255, 255, 255, 0.9);
   --warn-tint:       rgba(234, 179, 8, 0.06);
   --warn-border:     rgba(234, 179, 8, 0.3);
   --err-tint:        rgba(239, 68, 68, 0.08);
@@ -171,7 +171,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     /* Surfaces — warm dark */
-    --canvas:          #0C0C0B;
+    --canvas:          #151514;
     --surface:         #151514;
     --surface-raised:  #1B1B19;
     --surface-inset:   #101010;
@@ -273,7 +273,7 @@
     --focus-ring:      0 0 0 2px var(--surface), 0 0 0 4px rgba(92, 196, 180, 0.5);
 
     /* Utility — dark-appropriate values */
-    --canvas-fade:     rgba(12, 12, 11, 0.9);
+    --canvas-fade:     rgba(21, 21, 20, 0.9);
     --warn-tint:       rgba(250, 204, 21, 0.08);
     --warn-border:     rgba(250, 204, 21, 0.3);
     --err-tint:        rgba(248, 113, 113, 0.1);

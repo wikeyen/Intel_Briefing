@@ -948,13 +948,12 @@ function DomainCardCompact({ domain, summary, onClick }: {
 
   const totalItems = matchingSections.reduce((n, s) => n + s.item_count, 0)
   const totalNotable = matchingSections.reduce((n, s) => n + s.items.length, 0)
-  const firstSummary = matchingSections[0]?.summary ?? ''
 
   return (
     <DashCard>
       <div
         onClick={onClick}
-        style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', cursor: 'pointer', userSelect: 'none' }}
+        style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', cursor: 'pointer', userSelect: 'none' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <SectionLabel color={domain.accent}>{domain.label}</SectionLabel>
@@ -974,12 +973,16 @@ function DomainCardCompact({ domain, summary, onClick }: {
             <span style={{ fontSize: '0.75rem', color: 'var(--ink-tertiary)', lineHeight: 1 }}>&#8250;</span>
           </div>
         </div>
-        <p style={{
-          fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.5, margin: 0,
-          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden',
-        }}>
-          {firstSummary}
-        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+          {matchingSections.map(section => (
+            <p key={section.sensor_name} style={{
+              fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.6, margin: 0,
+              overflowWrap: 'break-word', wordBreak: 'break-word',
+            }}>
+              {section.summary}
+            </p>
+          ))}
+        </div>
       </div>
     </DashCard>
   )

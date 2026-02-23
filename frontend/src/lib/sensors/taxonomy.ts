@@ -32,6 +32,13 @@ export const SENSORS: SensorDef[] = [
   { key: 'zhihu',           label: 'Zhihu',             desc: 'Zhihu trending questions and discussions',       language: 'cn',  category: 'community' },
   { key: 'weibo',           label: 'Weibo',             desc: 'Weibo real-time hot search trending',            language: 'cn',  category: 'trend' },
   { key: 'xiaohongshu',     label: 'Xiaohongshu',       desc: 'Xiaohongshu trending topics',                    language: 'cn',  category: 'trend' },
+  { key: 'baidu_tieba',     label: 'Baidu Tieba',       desc: 'Hot discussion topics from Baidu Tieba',         language: 'cn',  category: 'trend' },
+  { key: 'douyin',          label: 'Douyin',            desc: 'Douyin hot search trending',                     language: 'cn',  category: 'trend' },
+  { key: 'toutiao',         label: 'Toutiao',           desc: 'Toutiao hot news board',                         language: 'cn',  category: 'trend' },
+  { key: 'netease',         label: 'Netease News',      desc: 'Netease hot news board',                         language: 'cn',  category: 'trend' },
+  { key: '36kr_trending',   label: '36Kr Hot',          desc: '36Kr 24-hour most-read articles',                language: 'cn',  category: 'trend' },
+  { key: 'juejin',          label: 'Juejin',            desc: 'Juejin developer hot article ranking',           language: 'cn',  category: 'trend' },
+  { key: 'baidu',           label: 'Baidu Hot',         desc: 'Baidu real-time hot search ranking',             language: 'cn',  category: 'trend' },
 ]
 
 /** Maps each sensor key to its category. */
@@ -150,6 +157,13 @@ export const SENSOR_DISPLAY_MAP: Record<string, DisplayCategoryKey> = {
   rss_news:      'news',
   v2ex:          'opinions',
   zhihu:         'opinions',
+  baidu_tieba:   'trend',
+  douyin:        'trend',
+  toutiao:       'trend',
+  netease:       'trend',
+  '36kr_trending': 'trend',
+  juejin:        'trend',
+  baidu:         'trend',
 }
 
 /** Fallback: maps internal category to display category. */

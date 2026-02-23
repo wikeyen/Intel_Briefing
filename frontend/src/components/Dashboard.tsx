@@ -5,7 +5,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
 import { api } from '@/api/client'
-import type { IntelReport, IntelItem, BriefingSummary, PipelineStatus, SummaryProgress, OverallBriefing, BriefingSource, SentimentEntry } from '@/api/client'
+import type { IntelReport, IntelItem, BriefingSummary, PipelineStatus, SummaryProgress, OverallBriefing, BriefingSource, SentimentEntry, IntelligenceReport } from '@/api/client'
+import { PublicFocusCard, TopicPulseCard, VoicesCard } from './IntelligenceCards'
 import { SENSOR_LABELS, SENSOR_DISPLAY_MAP, CATEGORY_TO_DISPLAY } from '@/lib/sensors/taxonomy'
 import type { CategoryKey, DisplayCategoryKey } from '@/lib/sensors/taxonomy'
 import { useTranslation } from '@/lib/i18n'
@@ -2032,6 +2033,7 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [selectedDomain, setSelectedDomain] = useState<DomainDef | null>(null)
   const [showTrendPanel, setShowTrendPanel] = useState(false)
+  const [intelligence, setIntelligence] = useState<IntelligenceReport | null>(null)
 
   const [showUpdatedBanner, setShowUpdatedBanner] = useState(false)
   const lastPipelineCompletedAt = useRef<string | null>(null)
@@ -2061,6 +2063,7 @@ export function Dashboard() {
       api.getLatest().then(setReport).catch(() => {}),
       api.getSummary().then(r => setSummary(r.summary)).catch(() => {}),
     ]).finally(() => setLoading(false))
+    api.getIntelligence().then(res => setIntelligence(res.intelligence)).catch(() => {})
   }, [])
 
   const isActive = !!(summaryProgress?.running) || !!(pipelineStatus?.running && pipelineStatus.alive !== false)
@@ -2173,6 +2176,18 @@ export function Dashboard() {
                     </StaggerChild>
 
                     <hr className="dash-divider" />
+
+                    {/* Intelligence Section */}
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+                      gap: '0.75rem',
+                      marginBottom: '1rem',
+                    }}>
+                      <PublicFocusCard data={intelligence?.trend ?? null} />
+                      <TopicPulseCard data={intelligence?.topics ?? null} />
+                      <VoicesCard data={intelligence?.accounts ?? null} />
+                    </div>
 
                     {/* Domain cards grid */}
                     <div className="dashboard-domains">

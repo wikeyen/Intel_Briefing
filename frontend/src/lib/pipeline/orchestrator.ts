@@ -21,6 +21,8 @@ import { SENSOR_LABELS } from '../sensors/taxonomy'
 import { SensorConfigError } from '../sensors/errors'
 import { assembleReport } from './report-builder'
 import { createBus } from '../summary/events'
+import { runIntelligenceAnalysis } from './intelligence'
+import { writeIntelligence } from './intelligence-cache'
 
 export interface PipelineResult {
   report: IntelReport | null
@@ -578,6 +580,18 @@ export async function runPipeline(
             console.error('Failed to write summary cache:', err)
           }
         }
+      }
+    }
+
+    // ── Intelligence analysis ──
+    // Run after summary completes — analyzes trend, topic, and account data via LLM.
+    if (llmConfig && report && !signal.aborted) {
+      try {
+        const intelligence = await runIntelligenceAnalysis(report, llmConfig, signal)
+        await writeIntelligence(intelligence)
+      } catch (err) {
+        // Intelligence is non-critical — log and continue
+        console.error('Intelligence analysis failed:', err)
       }
     }
 

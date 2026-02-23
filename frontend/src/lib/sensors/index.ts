@@ -18,6 +18,13 @@ import { fetchXPosts } from './x_posts'
 import { fetchWeibo } from './weibo'
 import { fetchZhihu } from './zhihu'
 import { fetchXiaohongshu } from './xiaohongshu'
+import { fetchBaiduTieba } from './baidu_tieba'
+import { fetchDouyin } from './douyin'
+import { fetchToutiao } from './toutiao'
+import { fetchNetease } from './netease'
+import { fetchKrTrending } from './kr_trending'
+import { fetchJuejin } from './juejin'
+import { fetchBaidu } from './baidu'
 
 import { SensorConfigError } from './errors'
 
@@ -80,4 +87,11 @@ export const SENSOR_REGISTRY: Record<string, SensorFetchFn> = {
   weibo: fetchWeibo,
   zhihu: fetchZhihu,
   xiaohongshu: fetchXiaohongshu,
+  baidu_tieba: fetchBaiduTieba,
+  douyin: fetchDouyin,
+  toutiao: fetchToutiao,
+  netease: fetchNetease,
+  '36kr_trending': fetchKrTrending,
+  juejin: fetchJuejin,
+  baidu: fetchBaidu,
 }

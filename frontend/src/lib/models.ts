@@ -225,6 +225,13 @@ export const SOURCE_URLS: Record<string, string> = {
   weibo:            'https://weibo.com',
   zhihu:            'https://www.zhihu.com',
   xiaohongshu:      'https://www.xiaohongshu.com',
+  baidu_tieba:      'https://tieba.baidu.com',
+  douyin:           'https://www.douyin.com',
+  toutiao:          'https://www.toutiao.com',
+  netease:          'https://www.163.com',
+  '36kr_trending':  'https://36kr.com',
+  juejin:           'https://juejin.cn',
+  baidu:            'https://www.baidu.com',
 }
 
 export interface SentimentEntry {
@@ -391,6 +398,13 @@ export function defaultConfig(): ConfigSettings {
       weibo: true,
       zhihu: true,
       xiaohongshu: true,
+      baidu_tieba: true,
+      douyin: true,
+      toutiao: true,
+      netease: true,
+      '36kr_trending': true,
+      juejin: true,
+      baidu: true,
     },
     fetch_time: '07:51',
     fetch_timezone: 'Asia/Shanghai',

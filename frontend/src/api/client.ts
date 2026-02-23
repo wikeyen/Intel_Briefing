@@ -237,6 +237,66 @@ export interface OllamaModelInfo {
   quantization: string
 }
 
+// Intelligence analysis types
+export interface IntelTag {
+  text: string
+  weight: number
+  sentiment?: 'positive' | 'negative' | 'neutral' | 'mixed'
+}
+
+export interface TrendTopic {
+  name: string
+  summary: string
+  sources: string[]
+  itemCount: number
+  sentiment: 'positive' | 'negative' | 'neutral' | 'mixed'
+  heat: number
+}
+
+export interface TrendIntelligence {
+  topics: TrendTopic[]
+  tags: IntelTag[]
+  summary: string
+  generated_at: string
+}
+
+export interface TopicSentimentEntry {
+  topic: string
+  sentiment: 'positive' | 'negative' | 'neutral' | 'mixed'
+  summary: string
+  samplePosts: string[]
+  postCount: number
+}
+
+export interface TopicIntelligence {
+  topics: TopicSentimentEntry[]
+  tags: IntelTag[]
+  summary: string
+  generated_at: string
+}
+
+export interface AccountFocus {
+  account: string
+  handle: string
+  platform: string
+  themes: string[]
+  sentiment: 'positive' | 'negative' | 'neutral' | 'mixed'
+  postCount: number
+}
+
+export interface AccountsIntelligence {
+  accounts: AccountFocus[]
+  tags: IntelTag[]
+  summary: string
+  generated_at: string
+}
+
+export interface IntelligenceReport {
+  trend: TrendIntelligence | null
+  topics: TopicIntelligence | null
+  accounts: AccountsIntelligence | null
+}
+
 const BASE = '/api'
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
@@ -322,4 +382,7 @@ export const api = {
     apiFetch<{ models: OllamaModelInfo[]; error?: string }>(
       `/ollama/models${baseUrl ? `?base_url=${encodeURIComponent(baseUrl)}` : ''}`,
     ),
+
+  getIntelligence: () =>
+    apiFetch<{ intelligence: IntelligenceReport | null }>('/intelligence'),
 }

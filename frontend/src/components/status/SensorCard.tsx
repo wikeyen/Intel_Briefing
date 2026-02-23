@@ -517,3 +517,141 @@ export const SensorCard = memo(function SensorCard(props: SensorCardProps) {
     </div>
   )
 })
+
+/* ── Compact row variant for list layout ── */
+
+function rowContainerStyle(state: CardState, hovered: boolean): React.CSSProperties {
+  const base: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.75rem',
+    padding: '0.5rem 0.875rem',
+    background: 'var(--surface)',
+    borderBottom: '1px solid var(--border-soft)',
+    transition: 'background 150ms ease',
+    cursor: 'pointer',
+    minHeight: 40,
+  }
+
+  if (state === 'disabled') return { ...base, opacity: 0.45, cursor: 'default' }
+
+  if (state === 'paused-failed' || state === 'failed-mid-run') {
+    return { ...base, borderLeft: '3px solid var(--err)', cursor: state === 'paused-failed' ? 'default' : base.cursor }
+  }
+
+  if (state === 'fetching' || state === 'summarizing' || state === 'waiting' || state === 'done') {
+    return { ...base, cursor: 'default' }
+  }
+
+  if (state === 'selected') {
+    return { ...base, background: 'var(--accent-wash)' }
+  }
+
+  if (state === 'failed') {
+    return { ...base, borderLeft: '3px solid var(--err)', ...(hovered && { background: 'var(--surface-alt)' }) }
+  }
+
+  if (state === 'config-error') {
+    return { ...base, borderLeft: '3px solid var(--warn)', ...(hovered && { background: 'var(--surface-alt)' }) }
+  }
+
+  return { ...base, ...(hovered && { background: 'var(--surface-alt)' }) }
+}
+
+function RowMetric({ state, props }: { state: CardState; props: SensorCardProps }) {
+  const { liveSensor, itemCount, fetchError, summaryError } = props
+  const mono: React.CSSProperties = { fontFamily: 'ui-monospace, monospace', fontSize: '0.75rem', fontWeight: 600 }
+
+  switch (state) {
+    case 'healthy':
+    case 'selected':
+      return (
+        <span style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
+          <span style={{ ...mono, color: 'var(--ink)' }}>{itemCount}</span>
+          <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>items</span>
+        </span>
+      )
+    case 'disabled':
+      return <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>Disabled</span>
+    case 'config-error':
+      return <span style={{ fontSize: '0.6875rem', color: 'var(--warn)' }}>Needs API key</span>
+    case 'failed':
+      return <span style={{ fontSize: '0.6875rem', color: 'var(--err)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fetchError || summaryError || 'Failed'}</span>
+    case 'fetching':
+      return (
+        <span style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
+          <span style={{ fontSize: '0.6875rem', color: 'var(--accent)', fontWeight: 500 }}>Fetching</span>
+          {liveSensor && <span style={{ ...mono, fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>{liveSensor.item_count}</span>}
+        </span>
+      )
+    case 'summarizing':
+      return <span style={{ fontSize: '0.6875rem', color: 'var(--accent)', fontWeight: 500 }}>Summarizing</span>
+    case 'waiting':
+      return <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>Queued{'\u2026'}</span>
+    case 'done':
+      return (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+          <span style={{ ...mono, color: 'var(--ink)' }}>{liveSensor?.item_count ?? itemCount}</span>
+          <span style={{ fontSize: '0.5625rem', fontWeight: 600, color: 'var(--ok)', background: 'var(--ok-bg)', padding: '0.0625rem 0.3125rem', borderRadius: 3 }}>Done</span>
+        </span>
+      )
+    case 'failed-mid-run':
+    case 'paused-failed':
+      return <span style={{ fontSize: '0.6875rem', color: 'var(--err)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{liveSensor?.fetch_error || liveSensor?.summary_error || 'Failed'}</span>
+  }
+}
+
+function RowActions({ state, props }: { state: CardState; props: SensorCardProps }) {
+  const { lastFetchAgo, onRetry, onSkip, onDismiss } = props
+
+  if (state === 'healthy' || state === 'selected') {
+    return lastFetchAgo ? <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)', whiteSpace: 'nowrap' }}>{lastFetchAgo}</span> : null
+  }
+
+  if (state === 'failed') {
+    return (onRetry || onDismiss) ? (
+      <div style={{ display: 'flex', gap: '0.375rem' }}>
+        {onRetry && <button style={retryButtonStyle} onClick={(e) => { e.stopPropagation(); onRetry() }}>Retry</button>}
+        {onDismiss && <button style={dismissButtonStyle} onClick={(e) => { e.stopPropagation(); onDismiss() }}>Dismiss</button>}
+      </div>
+    ) : null
+  }
+
+  if (state === 'paused-failed') {
+    return (
+      <div style={{ display: 'flex', gap: '0.375rem' }}>
+        {onRetry && <button style={retryButtonStyle} onClick={(e) => { e.stopPropagation(); onRetry() }}>Retry</button>}
+        {onSkip && <button style={dismissButtonStyle} onClick={(e) => { e.stopPropagation(); onSkip() }}>Skip</button>}
+      </div>
+    )
+  }
+
+  return null
+}
+
+export const SensorRow = memo(function SensorRow(props: SensorCardProps) {
+  const { label, category, isDisabled, isRunning, isPaused, onToggleSelect } = props
+  const state = deriveState(props)
+  const isClickable = !isDisabled && !isRunning && !isPaused
+
+  return (
+    <div
+      role={isClickable ? 'button' : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      className={state === 'failed-mid-run' ? 'sensor-card-flash' : undefined}
+      style={rowContainerStyle(state, false)}
+      onClick={() => { if (isClickable) onToggleSelect() }}
+      onKeyDown={(e) => { if (isClickable && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onToggleSelect() } }}
+      onMouseEnter={(e) => { if (isClickable) Object.assign(e.currentTarget.style, { background: rowContainerStyle(state, true).background }) }}
+      onMouseLeave={(e) => { if (isClickable) Object.assign(e.currentTarget.style, { background: rowContainerStyle(state, false).background }) }}
+    >
+      <Dot state={state} />
+      <span style={{ ...nameStyle, fontSize: '0.8125rem', minWidth: 120, maxWidth: 140 }}>{label}</span>
+      <span style={categoryBadgeStyle}>{category}</span>
+      <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <RowMetric state={state} props={props} />
+        <RowActions state={state} props={props} />
+      </span>
+    </div>
+  )
+})

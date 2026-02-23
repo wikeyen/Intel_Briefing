@@ -1,11 +1,11 @@
-// ABOUTME: Sensor card grid — Zone 2 of the mission control Status page.
-// ABOUTME: Responsive CSS grid of SensorCard components, grouped by category.
+// ABOUTME: Sensor list — Zone 2 of the mission control Status page.
+// ABOUTME: Flat list of SensorRow components, ordered by category (same-category sensors adjacent).
 'use client'
 
 import { useMemo } from 'react'
 import type { IntelReport, ConfigSettings, PipelineStatus, SensorJobProgress } from '@/api/client'
 import { SECTION_SENSORS, SENSOR_LABEL_MAP } from './constants'
-import { SensorCard, CARD_CSS } from './SensorCard'
+import { SensorRow, CARD_CSS } from './SensorCard'
 import { timeAgo } from './time-helpers'
 
 export interface SensorGridProps {
@@ -40,11 +40,10 @@ export function SensorGrid({
 }: SensorGridProps) {
   const sensorCounts = useMemo(() => countItemsBySensor(report), [report])
 
-  const sectionData = useMemo(() => {
-    return SECTION_SENSORS.map(section => ({
-      key: section.key,
-      label: section.label,
-      sensors: section.sensors.map(sensorKey => {
+  /* Flat list of all sensors, ordered by category (SECTION_SENSORS preserves grouping) */
+  const allSensors = useMemo(() => {
+    return SECTION_SENSORS.flatMap(section =>
+      section.sensors.map(sensorKey => {
         const label = SENSOR_LABEL_MAP[sensorKey] ?? sensorKey
         const isDisabled = config?.sensors_enabled[sensorKey] === false
         const isFailed = report?.sources_failed.includes(sensorKey) ?? false
@@ -69,70 +68,51 @@ export function SensorGrid({
           lastFetchAgo: report?.fetched_at ? timeAgo(report.fetched_at) : undefined,
         }
       }),
-    }))
+    )
   }, [report, config, pipelineStatus, sensorCounts])
+
+  const visibleSensors = allSensors.filter(s => !dismissed.has(s.sensorKey))
 
   return (
     <div className="sensor-grid" style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '1rem',
-      padding: '1rem 3rem',
       maxWidth: 1024,
       margin: '0 auto',
       width: '100%',
-      paddingBottom: '1.5rem',
+      padding: '0.75rem 3rem 1.5rem',
     }}>
       <style dangerouslySetInnerHTML={{ __html: CARD_CSS }} />
-      {sectionData.map(section => {
-        const visibleSensors = section.sensors.filter(s => !dismissed.has(s.sensorKey))
-        if (visibleSensors.length === 0) return null
-        return (
-          <div key={section.key} className="sensor-grid-section">
-            <div style={{
-              fontSize: '0.625rem',
-              fontWeight: 600,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              color: 'var(--ink-faint)',
-              marginBottom: '0.5rem',
-            }}>
-              {section.label}
-            </div>
-            <div className="sensor-grid-cards" style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-              gap: '0.75rem',
-            }}>
-              {visibleSensors.map(sensor => (
-                <SensorCard
-                  key={sensor.sensorKey}
-                  sensorKey={sensor.sensorKey}
-                  label={sensor.label}
-                  category={sensor.category}
-                  isRunning={isRunning}
-                  isPaused={isPaused}
-                  liveSensor={liveSensors[sensor.sensorKey]}
-                  itemCount={sensor.itemCount}
-                  lastFetchAgo={sensor.lastFetchAgo}
-                  isOk={sensor.isOk}
-                  isFailed={sensor.isFailed}
-                  isDisabled={sensor.isDisabled}
-                  isConfigError={sensor.isConfigError}
-                  isApiError={sensor.isApiError}
-                  fetchError={sensor.fetchError}
-                  summaryError={sensor.summaryError}
-                  isSelected={selected.has(sensor.sensorKey)}
-                  onToggleSelect={() => onToggleSelect(sensor.sensorKey)}
-                  onRetry={sensor.isFailed && onRetry ? () => onRetry(sensor.sensorKey) : undefined}
-                  onSkip={isPaused && onSkipSensor ? () => onSkipSensor(sensor.sensorKey) : undefined}
-                  onDismiss={sensor.isFailed && !isPaused ? () => onDismiss(sensor.sensorKey) : undefined}
-                />
-              ))}
-            </div>
-          </div>
-        )
-      })}
+      <div className="sensor-list" style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
+        borderRadius: 8,
+        overflow: 'hidden',
+      }}>
+        {visibleSensors.map(sensor => (
+          <SensorRow
+            key={sensor.sensorKey}
+            sensorKey={sensor.sensorKey}
+            label={sensor.label}
+            category={sensor.category}
+            isRunning={isRunning}
+            isPaused={isPaused}
+            liveSensor={liveSensors[sensor.sensorKey]}
+            itemCount={sensor.itemCount}
+            lastFetchAgo={sensor.lastFetchAgo}
+            isOk={sensor.isOk}
+            isFailed={sensor.isFailed}
+            isDisabled={sensor.isDisabled}
+            isConfigError={sensor.isConfigError}
+            isApiError={sensor.isApiError}
+            fetchError={sensor.fetchError}
+            summaryError={sensor.summaryError}
+            isSelected={selected.has(sensor.sensorKey)}
+            onToggleSelect={() => onToggleSelect(sensor.sensorKey)}
+            onRetry={sensor.isFailed && onRetry ? () => onRetry(sensor.sensorKey) : undefined}
+            onSkip={isPaused && onSkipSensor ? () => onSkipSensor(sensor.sensorKey) : undefined}
+            onDismiss={sensor.isFailed && !isPaused ? () => onDismiss(sensor.sensorKey) : undefined}
+          />
+        ))}
+      </div>
     </div>
   )
 }

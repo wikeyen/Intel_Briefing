@@ -661,13 +661,7 @@ input[type="range"]::-moz-range-thumb {
     height: auto !important;
   }
   .sensor-grid {
-    gap: 0.75rem !important;
-    padding: 0.75rem !important;
-    padding-bottom: 0.75rem !important;
-  }
-  .sensor-grid-cards {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 0.5rem !important;
+    padding: 0.5rem 0.75rem !important;
   }
 
   .control-bar {

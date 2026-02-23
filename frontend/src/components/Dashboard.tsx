@@ -948,6 +948,7 @@ function DomainCardCompact({ domain, summary, onClick }: {
 
   const totalItems = matchingSections.reduce((n, s) => n + s.item_count, 0)
   const totalNotable = matchingSections.reduce((n, s) => n + s.items.length, 0)
+  const combinedSummary = matchingSections.map(s => s.summary).join(' ')
 
   return (
     <DashCard>
@@ -973,15 +974,23 @@ function DomainCardCompact({ domain, summary, onClick }: {
             <span style={{ fontSize: '0.75rem', color: 'var(--ink-tertiary)', lineHeight: 1 }}>&#8250;</span>
           </div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-          {matchingSections.map(section => (
-            <p key={section.sensor_name} style={{
-              fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.6, margin: 0,
-              overflowWrap: 'break-word', wordBreak: 'break-word',
-            }}>
-              {section.summary}
-            </p>
-          ))}
+        <div style={{
+          position: 'relative',
+          maxHeight: 'calc(1.6em * 8)',
+          overflow: 'hidden',
+        }}>
+          <p style={{
+            fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.6, margin: 0,
+            overflowWrap: 'break-word', wordBreak: 'break-word',
+          }}>
+            {combinedSummary}
+          </p>
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            height: '2.4em',
+            background: 'linear-gradient(to bottom, transparent, var(--surface))',
+            pointerEvents: 'none',
+          }} />
         </div>
       </div>
     </DashCard>
@@ -1209,11 +1218,29 @@ function DetailPanel({ domain, summary, report, onClose }: {
           </button>
         </div>
 
-        {/* Mood summary for social domains */}
-        {moodSummary && (
-          <p style={{ fontSize: '0.75rem', color: 'var(--ink)', lineHeight: 1.6, margin: 0, overflowWrap: 'break-word', wordBreak: 'break-word' }}>
-            {moodSummary}
-          </p>
+        {/* Sector summary — combined from all matching sensors */}
+        {matchingSections.length > 0 && (
+          <div style={{
+            padding: '0.75rem 1rem',
+            borderRadius: 8,
+            background: 'var(--surface-inset)',
+            borderLeft: `3px solid ${domain.accent}`,
+          }}>
+            <p style={{
+              fontSize: '0.8125rem', color: 'var(--ink)', lineHeight: 1.7, margin: 0,
+              overflowWrap: 'break-word', wordBreak: 'break-word',
+            }}>
+              {matchingSections.map(s => s.summary).join(' ')}
+            </p>
+            {moodSummary && (
+              <p style={{
+                fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.6, margin: 0,
+                marginTop: '0.5rem', fontStyle: 'italic',
+              }}>
+                {moodSummary}
+              </p>
+            )}
+          </div>
         )}
 
         {/* Per-source sections */}

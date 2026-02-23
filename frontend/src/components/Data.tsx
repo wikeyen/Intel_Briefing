@@ -12,6 +12,7 @@ import { useToast } from '@/lib/toast-context'
 import { useTranslation } from '@/lib/i18n'
 import { Pagination } from './Pagination'
 import { StaleProcessBanner, detectStale } from './StaleProcessBanner'
+import { EmptyState } from './EmptyState'
 import { ItemCard, LINE_CLAMP_CSS } from './data/ItemCard'
 import { FeedSkeleton } from './Skeleton'
 
@@ -84,20 +85,19 @@ function filterKey(item: IntelItem, section: string): string {
 }
 
 function EmptySection({ needsKey, t }: { needsKey?: boolean; t: (key: string, params?: Record<string, string>) => string }) {
-  return (
-    <div style={{
-      padding: '4rem 1.5rem',
-      textAlign: 'center',
-      color: needsKey ? 'var(--warn)' : 'var(--ink-faint)',
-      fontSize: '0.875rem',
-      background: 'var(--surface)',
-      border: '1px solid var(--border)',
-      borderRadius: 8,
-    }}>
-      {needsKey
-        ? t('feed.no_items_key')
-        : t('feed.no_items')}
-    </div>
+  return needsKey ? (
+    <EmptyState
+      illustration="key"
+      title={t('feed.no_items_key')}
+      action={{ label: t('nav.credentials'), href: '/api-keys' }}
+      warn
+    />
+  ) : (
+    <EmptyState
+      illustration="stream"
+      title={t('feed.no_items')}
+      action={{ label: t('nav.status'), href: '/status' }}
+    />
   )
 }
 
@@ -481,17 +481,11 @@ export function Data() {
           {loading ? (
             <FeedSkeleton />
           ) : !report ? (
-            <div style={{
-              padding: '4rem 1.5rem',
-              textAlign: 'center',
-              color: 'var(--ink-faint)',
-              fontSize: '0.875rem',
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: 8,
-            }}>
-              {t('feed.no_data')}
-            </div>
+            <EmptyState
+              illustration="stream"
+              title={t('feed.no_data')}
+              action={{ label: t('nav.status'), href: '/status' }}
+            />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {filteredItems.length === 0

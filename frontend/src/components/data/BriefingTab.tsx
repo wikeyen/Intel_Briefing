@@ -1,12 +1,12 @@
 // ABOUTME: Briefing tab content for the Data page — shows AI-generated summary with progress tracking.
 // ABOUTME: Extracted from Data.tsx; includes summary progress banner, streaming token preview, and structured briefing display.
 'use client'
-import Link from 'next/link'
 import type { ConfigSettings, BriefingSummary, SummaryProgress, PipelineStatus, OverallBriefing, BriefingSource, IntelReport, IntelItem, SummaryLanguage } from '@/api/client'
 import { SENSOR_LABELS } from '@/lib/sensors/taxonomy'
 import { useTranslation } from '@/lib/i18n'
 import { Highlight, textHas } from './Highlight'
 import { BriefingSkeleton } from '../Skeleton'
+import { EmptyState } from '../EmptyState'
 
 function timeAgo(isoString: string): string {
   const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000)
@@ -1336,66 +1336,37 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
 
           {/* No search results */}
           {q && !hasSearchResults && (
-            <div style={{
-              padding: '3rem 1.5rem',
-              textAlign: 'center',
-              color: 'var(--ink-faint)',
-              fontSize: '0.875rem',
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: 8,
-            }}>
-              {t('briefing.no_results', { query: searchQuery ?? '' })}
-            </div>
+            <EmptyState
+              illustration="search"
+              title={t('briefing.no_results', { query: searchQuery ?? '' })}
+            />
           )}
         </>
       ) : loading ? (
         <BriefingSkeleton />
       ) : !showProgressBanner && (
-        <div style={{
-          padding: '4rem 1.5rem',
-          textAlign: 'center',
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: 8,
-        }}>
-          {!hasProvider ? (
-            <p style={{ color: 'var(--ink-faint)', fontSize: '0.8125rem', margin: 0 }}>
-              {(() => {
-                const [before, after] = t('briefing.configure_ai', { link: '|||' }).split('|||')
-                return <>{before}<Link href="/ai" style={{ color: 'var(--accent)', textDecoration: 'none' }}>{t('briefing.ai_settings_link')}</Link>{after}</>
-              })()}
-            </p>
-          ) : !hasContent ? (
-            <p style={{ color: 'var(--ink-faint)', fontSize: '0.8125rem', margin: 0 }}>
-              {t('briefing.run_pipeline')}
-            </p>
-          ) : (
-            <div>
-              <p style={{ color: 'var(--ink-muted)', fontSize: '0.8125rem', margin: 0, marginBottom: '0.75rem' }}>
-                {t('briefing.ready')}
-              </p>
-              <button
-                onClick={onTrigger}
-                style={{
-                  fontSize: '0.8125rem',
-                  fontWeight: 500,
-                  padding: '0.5rem 1.25rem',
-                  borderRadius: 4,
-                  border: 'none',
-                  color: 'var(--canvas)',
-                  background: 'var(--ink)',
-                  cursor: 'pointer',
-                  transition: 'background 120ms',
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--ink-muted)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--ink)' }}
-              >
-                {t('briefing.generate')}
-              </button>
-            </div>
-          )}
-        </div>
+        !hasProvider ? (
+          <EmptyState
+            illustration="sparkle"
+            title={(() => {
+              const [before, after] = t('briefing.configure_ai', { link: '|||' }).split('|||')
+              return `${before}${t('briefing.ai_settings_link')}${after}`
+            })()}
+            action={{ label: t('briefing.ai_settings_link'), href: '/ai' }}
+          />
+        ) : !hasContent ? (
+          <EmptyState
+            illustration="stream"
+            title={t('briefing.run_pipeline')}
+            action={{ label: t('nav.status'), href: '/status' }}
+          />
+        ) : (
+          <EmptyState
+            illustration="sparkle"
+            title={t('briefing.ready')}
+            action={{ label: t('briefing.generate'), onClick: onTrigger }}
+          />
+        )
       )}
     </div>
   )

@@ -9,6 +9,7 @@ import type { IntelReport, IntelItem, BriefingSummary, PipelineStatus, SummaryPr
 import { SENSOR_LABELS, SENSOR_DISPLAY_MAP, CATEGORY_TO_DISPLAY } from '@/lib/sensors/taxonomy'
 import type { CategoryKey, DisplayCategoryKey } from '@/lib/sensors/taxonomy'
 import { useTranslation } from '@/lib/i18n'
+import { EmptyState } from './EmptyState'
 
 // ---------------------------------------------------------------------------
 // Animated height container — measures content and smoothly transitions height
@@ -1930,21 +1931,14 @@ export function Dashboard() {
             <DashboardSkeleton />
           </motion.div>
         ) : !hasSummary && !hasReport ? (
-          <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <DashCard style={{ padding: '4rem 2rem', textAlign: 'center' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--ink-tertiary)' }}>
-                  {t('dash.no_data_title')}
-                </div>
-                <p style={{ fontSize: '0.8125rem', color: 'var(--ink-secondary)', margin: 0 }}>
-                  {t('dash.no_data_desc').split('{link}')[0]}
-                  <Link href="/status" style={{ textDecoration: 'underline', textUnderlineOffset: 2, color: 'var(--accent)' }}>
-                    {t('dash.no_data_link')}
-                  </Link>
-                  {t('dash.no_data_desc').split('{link}')[1]}
-                </p>
-              </div>
-            </DashCard>
+          <motion.div key="empty" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
+            <EmptyState
+              illustration="radar"
+              title={t('dash.no_data_title')}
+              description={<>{t('dash.no_data_desc').split('{link}')[0]}{t('dash.no_data_desc').split('{link}')[1]}</>}
+              action={{ label: t('dash.no_data_link'), href: '/status' }}
+              fullHeight
+            />
           </motion.div>
         ) : (
           <motion.div key="content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>

@@ -21,8 +21,9 @@ const JSON_SENSOR_RULE = `
 }
 
 要求：
+- 所有输出文本必须使用简体中文。如果原文标题不是中文，将其翻译为简体中文。
 - summary: 综合趋势分析，严禁逐条列举，严禁编号列表
-- items: 挑选最值得关注的3-8个条目，必须使用原文中提供的URL和标题
+- items: 挑选最值得关注的3-8个条目，必须使用原文中提供的URL，标题翻译为简体中文
 - brief: 每个条目的brief必须准确描述该条目本身的内容和意义，严禁用总体趋势概括替代。例如：标题为"印度贸易代表团推迟访美"的brief应描述印度访美推迟的原因或影响，而不是AI趋势或消费升级。
 - 严格输出合法JSON
 
@@ -59,7 +60,7 @@ Accuracy:
  * Map-phase prompt: extracts key signals from a chunk of items (Chinese).
  * Produces a short extraction that feeds into the reduce (merge) phase.
  */
-export const CHUNK_EXTRACT_PROMPT = `你是一名情报提取助手。请从以下内容中提取关键信号。
+export const CHUNK_EXTRACT_PROMPT = `你是一名情报提取助手。请从以下内容中提取关键信号。所有输出必须使用简体中文。
 
 要求：
 - 提取最重要的事实、趋势信号和值得关注的动向
@@ -67,7 +68,8 @@ export const CHUNK_EXTRACT_PROMPT = `你是一名情报提取助手。请从以�
 - 区分事实与观点
 - 忽略无关紧要的噪音内容
 - 严格基于原文提取，严禁编造或添加原文中不存在的信息
-- 输出3-5句话，纯文本，不要使用 Markdown 格式或编号列表`
+- 输出3-5句话，纯文本，不要使用 Markdown 格式或编号列表
+- 如果原文不是中文，翻译为简体中文后输出`
 
 /**
  * Map-phase prompt (English).

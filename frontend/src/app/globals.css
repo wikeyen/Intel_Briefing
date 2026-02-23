@@ -614,6 +614,18 @@ input[type="range"]::-moz-range-thumb {
     display: none !important;
   }
 
+  /* ── Stale process banner — stack on mobile ── */
+  .stale-banner-layout {
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+  }
+  .stale-banner-header {
+    gap: 0.375rem !important;
+  }
+  .stale-banner-actions {
+    align-self: flex-end !important;
+  }
+
   /* Section tabs — edge-to-edge scroll with fade masks */
   .data-sticky-nav .section-tabs {
     padding: 0 1.25rem !important;

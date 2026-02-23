@@ -948,7 +948,11 @@ function DomainCardCompact({ domain, summary, onClick }: {
 
   const totalItems = matchingSections.reduce((n, s) => n + s.item_count, 0)
   const totalNotable = matchingSections.reduce((n, s) => n + s.items.length, 0)
+
+  // Truncate combined summary to first 3 sentences for card display
   const combinedSummary = matchingSections.map(s => s.summary).join(' ')
+  const sentences = combinedSummary.split(/(?<=[。！？.!?])\s*/).filter(s => s.trim())
+  const cardSummary = sentences.slice(0, 3).join('')
 
   return (
     <DashCard>
@@ -974,24 +978,12 @@ function DomainCardCompact({ domain, summary, onClick }: {
             <span style={{ fontSize: '0.75rem', color: 'var(--ink-tertiary)', lineHeight: 1 }}>&#8250;</span>
           </div>
         </div>
-        <div style={{
-          position: 'relative',
-          maxHeight: 'calc(1.6em * 8)',
-          overflow: 'hidden',
+        <p style={{
+          fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.6, margin: 0,
+          overflowWrap: 'break-word', wordBreak: 'break-word',
         }}>
-          <p style={{
-            fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.6, margin: 0,
-            overflowWrap: 'break-word', wordBreak: 'break-word',
-          }}>
-            {combinedSummary}
-          </p>
-          <div style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0,
-            height: '2.4em',
-            background: 'linear-gradient(to bottom, transparent, var(--surface))',
-            pointerEvents: 'none',
-          }} />
-        </div>
+          {cardSummary}
+        </p>
       </div>
     </DashCard>
   )

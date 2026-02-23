@@ -50,7 +50,7 @@ function UiShell({ children }: { children: React.ReactNode }) {
   return (
     <div
       className={sidebarOpen ? 'sidebar-open' : ''}
-      style={{ display: 'flex', flex: 1, height: '100vh', overflow: 'hidden', background: 'var(--canvas)' }}
+      style={{ display: 'flex', flex: 1, height: '100dvh', overflow: 'hidden', background: 'var(--canvas)' }}
     >
       {/* Mobile top bar — tap to scroll to top, hamburger to toggle menu */}
       <div className="mobile-top-bar" onClick={() => mainRef.current?.scrollTo({ top: 0 })}>
@@ -98,7 +98,7 @@ function UiShell({ children }: { children: React.ReactNode }) {
       <Sidebar onNavigate={closeSidebar} />
       <main ref={mainRef} className="main-content" style={{
         flex: 1,
-        height: '100vh',
+        height: '100dvh',
         overflowY: 'auto',
         scrollBehavior: 'smooth',
       }}>

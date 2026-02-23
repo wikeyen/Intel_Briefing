@@ -141,7 +141,7 @@ export function Sidebar({ onNavigate }: Props) {
     'var(--err)'
 
   const statusLabel = health
-    ? `${health.status}${health.last_fetch ? ' · ' + health.last_fetch.slice(0, 16).replace('T', ' ') : ''}`
+    ? `${t('health.' + health.status)}${health.last_fetch ? ' · ' + health.last_fetch.slice(0, 16).replace('T', ' ') : ''}`
     : t('sidebar.loading')
 
   return (

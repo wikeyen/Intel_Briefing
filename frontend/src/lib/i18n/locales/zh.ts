@@ -120,6 +120,12 @@ const zh: TranslationDict = {
   'sentiment.mixed': '分歧',
   'sentiment.neutral': '中性',
 
+  // ── Health status ────────────────────────────────────────────────────────
+  'health.ok': '正常',
+  'health.stale': '过期',
+  'health.no_data': '无数据',
+  'health.error': '错误',
+
   // ── Sidebar ───────────────────────────────────────────────────────────────
   'sidebar.loading': '加载中…',
   'sidebar.language': '语言',

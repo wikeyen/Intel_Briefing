@@ -120,6 +120,12 @@ const en: TranslationDict = {
   'sentiment.mixed': 'Mixed',
   'sentiment.neutral': 'Neutral',
 
+  // ── Health status ────────────────────────────────────────────────────────
+  'health.ok': 'Healthy',
+  'health.stale': 'Stale',
+  'health.no_data': 'No Data',
+  'health.error': 'Error',
+
   // ── Sidebar ───────────────────────────────────────────────────────────────
   'sidebar.loading': 'loading…',
   'sidebar.language': 'Language',

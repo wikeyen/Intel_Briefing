@@ -338,7 +338,7 @@ export function ControlBar({
               flexShrink: 0,
             }}
           />
-          <span style={{ ...labelStyle, color: meta.color }}>{meta.label}</span>
+          <span style={{ ...labelStyle, color: meta.color }}>{t(meta.labelKey)}</span>
         </div>
 
         <div className="control-bar-metrics" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>

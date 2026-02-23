@@ -1223,8 +1223,8 @@ function DetailPanel({ domain, summary, report, onClose }: {
           <div style={{
             padding: '0.75rem 1rem',
             borderRadius: 8,
-            background: 'var(--surface-inset)',
-            borderLeft: `3px solid ${domain.accent}`,
+            background: `color-mix(in srgb, ${domain.accent} 8%, var(--surface))`,
+            border: `1px solid color-mix(in srgb, ${domain.accent} 15%, transparent)`,
           }}>
             <p style={{
               fontSize: '0.8125rem', color: 'var(--ink)', lineHeight: 1.7, margin: 0,

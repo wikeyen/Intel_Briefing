@@ -829,6 +829,12 @@ input[type="range"]::-moz-range-thumb {
   gap: 0.625rem;
   min-width: 0;
 }
+.dashboard-domains > * {
+  height: 100%;
+}
+.dashboard-domains > * > * {
+  height: 100%;
+}
 .dash-divider {
   border: none;
   border-top: 1px solid var(--border-subtle);

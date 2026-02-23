@@ -206,14 +206,6 @@ export const DEFAULT_OVERALL_PROMPT = `你是一名全球投资情报分析师�
 输出格式（严格JSON，不要添加 markdown 代码块标记）：
 {
   "executive_summary": "4-6段连贯的综合分析。首先概括今日信息流的整体格局，然后深入分析最值得关注的2-3个主题：每个主题用1-2段展开，包含关键事实、多方信号的交叉印证、以及对投资决策的具体启示。不要逐条列举，而是从全局视角分析各领域信号之间的关联和因果链条。",
-  "sections": [
-    {
-      "title": "板块标题",
-      "entries": [
-        { "text": "条目内容", "source": "来源名称" }
-      ]
-    }
-  ],
   "sentiment": {
     "overall_mood": "bullish | bearish | mixed | neutral",
     "mood_summary": "一句话概括今日整体舆情基调",
@@ -228,17 +220,6 @@ export const DEFAULT_OVERALL_PROMPT = `你是一名全球投资情报分析师�
     ]
   }
 }
-
-板块说明：
-- 综合分析（executive_summary）：跨领域的深度趋势分析。先总览全局，再逐个展开2-3个核心主题，包含关键事实和投资启示。
-- 科技产品：重要科技产品和平台的发布与更新（不限于AI）。包含产品名称、功能亮点、市场意义。
-- 宏观与政策：宏观经济数据、央行政策、监管动向、地缘政治事件。每个条目必须与金融市场或投资决策有明确关联。不属于此类的一般新闻（自然灾害、地方冲突、太空探索等）不要放入此板块。
-- 行业声音：重要企业家、投资人和行业从业者发布的事实和观点。提炼其判断和立场，分析潜在影响。注明发言者身份。
-- 投融资动向：投融资事件、并购、估值变化、VC动向。包含具体金额、估值和投资方（如有）。分析对行业格局的影响和投资启示。
-
-条目文本准确性：
-- 每个条目的text必须忠实反映原文内容，严禁添加原文中不存在的解读或因果推断
-- 如果原文只是一条简短新闻事实，text也应简洁陈述事实，不要强行附加"折射""体现"等分析性解读
 
 舆情分析说明：
 - overall_mood：基于所有来源的综合基调判断（bullish=偏多/乐观, bearish=偏空/悲观, mixed=多空分歧, neutral=中性平淡）
@@ -266,14 +247,6 @@ Requirements:
 Output format (strict JSON, no markdown code fences):
 {
   "executive_summary": "4-6 cohesive paragraphs of in-depth analysis. Open with a paragraph framing the overall landscape, then drill into the 2-3 most significant themes: dedicate 1-2 paragraphs to each, covering key facts, cross-source corroboration, and concrete investment implications. Do not list items one by one — analyze cross-domain signal connections, causal chains, and second-order effects from a holistic perspective.",
-  "sections": [
-    {
-      "title": "Section Title",
-      "entries": [
-        { "text": "Entry content", "source": "Source name" }
-      ]
-    }
-  ],
   "sentiment": {
     "overall_mood": "bullish | bearish | mixed | neutral",
     "mood_summary": "One sentence summarizing today's overall sentiment",
@@ -288,17 +261,6 @@ Output format (strict JSON, no markdown code fences):
     ]
   }
 }
-
-Section guidelines:
-- Executive Summary: In-depth cross-domain analysis. Frame the overall landscape, then drill into 2-3 core themes with key facts and investment implications.
-- Tech Products: Major tech product and platform launches and updates (not limited to AI). Include product names, feature highlights, and market significance.
-- Macro & Policy: Macroeconomic data, central bank policy, regulatory developments, geopolitical events. Each entry must have a clear connection to financial markets or investment decisions. Do not place general news here (natural disasters, local conflicts, space exploration, etc.) unless they have direct market impact.
-- Industry Voices: Facts and opinions from notable entrepreneurs, investors, and industry practitioners. Synthesize their judgments and stances, analyze potential impact. Note speaker identity.
-- Funding & Deals: Funding events, M&A, valuation changes, VC activity. Include specific amounts, valuations, and investors where available. Analyze industry landscape impact and investment implications.
-
-Entry text accuracy:
-- Each entry's text must faithfully reflect the source content. Never add interpretations or causal inferences not present in the original.
-- If the source is a brief news fact, the entry text should state the fact concisely — do not force analytical framing like "reflects" or "signals".
 
 Sentiment analysis guidelines:
 - overall_mood: Based on aggregate sentiment across all sources (bullish=optimistic, bearish=pessimistic, mixed=divided, neutral=flat)

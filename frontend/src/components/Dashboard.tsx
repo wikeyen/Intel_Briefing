@@ -124,22 +124,37 @@ const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 // ---------------------------------------------------------------------------
 
 /** Domain definition for compact cards and detail panel. */
+type SubGroup = { label: string; sensors: string[] }
 type DomainDef = {
   key: string
   label: string
   accent: string
   sensors: string[]
   showSentiment?: boolean
+  subGroups?: SubGroup[]
 }
 
 const DOMAINS: DomainDef[] = [
   { key: 'macro', label: 'Macro & Finance', accent: 'var(--cat-news)', sensors: ['wallstreetcn', 'sources_36kr'] },
-  { key: 'news', label: 'News & Tech', accent: 'var(--cat-news)', sensors: ['hacker_news', 'product_hunt', 'chrome_radar', 'github'] },
-  { key: 'social', label: 'Social Pulse', accent: 'var(--cat-trend)', sensors: ['x', 'bluesky', 'mastodon'], showSentiment: true },
-  { key: 'china-trend', label: 'China Trend', accent: 'var(--cat-trend)', sensors: ['weibo', 'xiaohongshu'] },
+  {
+    key: 'social', label: 'Social Pulse', accent: 'var(--cat-trend)',
+    sensors: ['x', 'bluesky', 'mastodon', 'weibo', 'xiaohongshu'], showSentiment: true,
+    subGroups: [
+      { label: 'Global', sensors: ['x', 'bluesky', 'mastodon'] },
+      { label: 'China', sensors: ['weibo', 'xiaohongshu'] },
+    ],
+  },
+  { key: 'products', label: 'Product & Opportunities', accent: 'var(--cat-news)', sensors: ['product_hunt', 'chrome_radar', 'github'] },
   { key: 'research', label: 'Research Radar', accent: 'var(--cat-research)', sensors: ['arxiv'] },
+  {
+    key: 'forums', label: 'Community & Forums', accent: 'var(--cat-opinion)',
+    sensors: ['hacker_news', 'v2ex', 'zhihu'],
+    subGroups: [
+      { label: 'Global', sensors: ['hacker_news'] },
+      { label: 'China', sensors: ['v2ex', 'zhihu'] },
+    ],
+  },
   { key: 'opinion', label: 'Opinion Digest', accent: 'var(--cat-opinion)', sensors: ['hn_blogs', 'rss_feeds'] },
-  { key: 'china-community', label: 'China Community', accent: 'var(--cat-opinion)', sensors: ['v2ex', 'zhihu'] },
 ]
 
 // ---------------------------------------------------------------------------
@@ -225,7 +240,7 @@ function InlineTabs<T extends string>({ tabs, active, onChange }: {
   onChange: (key: T) => void
 }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', height: 24 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', height: 28 }}>
       {tabs.map(tab => {
         const isActive = tab.key === active
         return (
@@ -235,51 +250,44 @@ function InlineTabs<T extends string>({ tabs, active, onChange }: {
             onMouseEnter={() => { if (!isActive) onChange(tab.key) }}
             layout
             style={{
+              flex: 1,
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: 5,
               fontSize: '0.6875rem',
               fontWeight: 600,
-              padding: isActive ? '0.25rem 0.625rem' : '0.25rem 0.375rem',
+              padding: '0.25rem 0.5rem',
               borderRadius: 6,
               border: 'none',
               cursor: 'pointer',
               background: isActive ? 'var(--surface-inset)' : 'transparent',
               color: isActive ? 'var(--ink)' : 'var(--ink-faint)',
-              overflow: 'hidden',
               whiteSpace: 'nowrap',
+              transition: 'background 150ms ease, color 150ms ease',
             }}
-            whileHover={!isActive ? { background: 'var(--surface-inset)', scale: 1.08 } : {}}
+            whileHover={!isActive ? { background: 'var(--surface-inset)' } : {}}
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
           >
-            <motion.span
+            <span
               style={{
+                width: 7,
+                height: 7,
                 borderRadius: '50%',
                 background: tab.color ?? 'var(--ink-faint)',
                 flexShrink: 0,
+                opacity: isActive ? 1 : 0.6,
+                transition: 'opacity 150ms ease',
               }}
-              animate={{ width: isActive ? 7 : 8, height: isActive ? 7 : 8, opacity: isActive ? 1 : 0.7 }}
-              whileHover={{ opacity: 1, scale: 1.2 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             />
-            <AnimatePresence mode="wait">
-              {isActive && (
-                <motion.span
-                  initial={{ width: 0, opacity: 0 }}
-                  animate={{ width: 'auto', opacity: 1 }}
-                  exit={{ width: 0, opacity: 0 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                  style={{ overflow: 'hidden', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                >
-                  {tab.label}
-                  {tab.count != null && tab.count > 0 && (
-                    <span style={{ fontSize: '0.625rem', color: tab.color ?? 'var(--ink-tertiary)' }}>
-                      {tab.count}
-                    </span>
-                  )}
-                </motion.span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              {tab.label}
+              {tab.count != null && tab.count > 0 && (
+                <span style={{ fontSize: '0.625rem', color: isActive ? (tab.color ?? 'var(--ink-tertiary)') : 'var(--ink-disabled)' }}>
+                  {tab.count}
+                </span>
               )}
-            </AnimatePresence>
+            </span>
           </motion.button>
         )
       })}
@@ -287,8 +295,8 @@ function InlineTabs<T extends string>({ tabs, active, onChange }: {
   )
 }
 
-/** Social platform set for sentiment computation (ROW only). */
-const SOCIAL = new Set(['x', 'bluesky', 'mastodon'])
+/** Social platform set for sentiment computation (all social media). */
+const SOCIAL = new Set(['x', 'bluesky', 'mastodon', 'weibo', 'xiaohongshu'])
 
 // ---------------------------------------------------------------------------
 // Widget: Status Ticker Bar
@@ -455,10 +463,6 @@ function ExecSummaryWidget({ summary }: { summary: BriefingSummary }) {
                 margin: 0,
                 overflowWrap: 'break-word',
                 wordBreak: 'break-word',
-                ...(i > 0 ? {
-                  paddingLeft: '0.75rem',
-                  borderLeft: '2px solid var(--border-subtle)',
-                } : {}),
               }}
             >
               <InlineRefs text={para.trim()} globalSources={overall.sources} />
@@ -519,37 +523,20 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
   const nonEmptyTabs = tabData.filter(t => t.items.length > 0)
   const defaultTab = nonEmptyTabs[0]?.key ?? 'risk'
   const [activeTab, setActiveTab] = useState(defaultTab)
-  const [paused, setPaused] = useState(false)
   const [slideDir, setSlideDir] = useState(1) // 1 = forward, -1 = back
   const current = tabData.find(t => t.key === activeTab) ?? tabData[0]
 
+  type TabKey = typeof tabData[number]['key']
   const switchTab = useCallback((next: string) => {
     const prevIdx = tabData.findIndex(t => t.key === activeTab)
     const nextIdx = tabData.findIndex(t => t.key === next)
     setSlideDir(nextIdx >= prevIdx ? 1 : -1)
-    setActiveTab(next)
+    setActiveTab(next as TabKey)
   }, [activeTab, tabData])
-
-  // Auto-rotate tabs every 7s, pause on hover
-  useEffect(() => {
-    if (paused || nonEmptyTabs.length <= 1) return
-    const timer = setInterval(() => {
-      setActiveTab(prev => {
-        const idx = nonEmptyTabs.findIndex(t => t.key === prev)
-        setSlideDir(1)
-        return nonEmptyTabs[(idx + 1) % nonEmptyTabs.length].key
-      })
-    }, 7000)
-    return () => clearInterval(timer)
-  }, [paused, nonEmptyTabs.length])
 
   return (
     <DashCard>
-      <div
-        style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}
-        onMouseEnter={() => setPaused(true)}
-        onMouseLeave={() => setPaused(false)}
-      >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <SectionLabel>Intelligence</SectionLabel>
@@ -719,6 +706,7 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
 
   const PLATFORM_COLORS: Record<string, string> = {
     x: 'var(--ink)', bluesky: 'var(--brand-bluesky)', mastodon: 'var(--brand-mastodon)',
+    weibo: 'var(--sent-neg)', xiaohongshu: 'var(--sent-neg)',
   }
 
   const totalSocial = totalPos + totalNeu + totalNeg
@@ -949,11 +937,15 @@ function DomainCardCompact({ domain, summary, onClick }: {
   const totalItems = matchingSections.reduce((n, s) => n + s.item_count, 0)
   const totalNotable = matchingSections.reduce((n, s) => n + s.items.length, 0)
 
-  // Use LLM-generated brief summaries; fall back to first 3 sentences for old cached data
-  const briefs = matchingSections.map(s => s.brief_summary).filter(Boolean)
-  const cardSummary = briefs.length > 0
-    ? briefs.join(' ')
-    : matchingSections.map(s => s.summary).join(' ').split(/(?<=[。！？.!?])\s*/).filter(s => s.trim()).slice(0, 3).join('')
+  /** Build summary text for a set of sections. */
+  const buildSummary = (sections: typeof matchingSections) => {
+    const briefs = sections.map(s => s.brief_summary).filter(Boolean)
+    return briefs.length > 0
+      ? briefs.join(' ')
+      : sections.map(s => s.summary).join(' ').split(/(?<=[。！？.!?])\s*/).filter(s => s.trim()).slice(0, 3).join('')
+  }
+
+  const hasSubGroups = domain.subGroups && domain.subGroups.length > 0
 
   return (
     <DashCard>
@@ -979,12 +971,41 @@ function DomainCardCompact({ domain, summary, onClick }: {
             <span style={{ fontSize: '0.75rem', color: 'var(--ink-tertiary)', lineHeight: 1 }}>&#8250;</span>
           </div>
         </div>
-        <p style={{
-          fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.6, margin: 0,
-          overflowWrap: 'break-word', wordBreak: 'break-word',
-        }}>
-          {cardSummary}
-        </p>
+        {hasSubGroups ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+            {domain.subGroups!.map(group => {
+              const groupSections = matchingSections.filter(s => group.sensors.includes(s.sensor_name))
+              if (groupSections.length === 0) return null
+              const text = buildSummary(groupSections)
+              if (!text) return null
+              return (
+                <div key={group.label} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                  <span style={{
+                    fontFamily: MONO, fontSize: '0.5625rem', fontWeight: 700,
+                    padding: '1px 5px', borderRadius: 3,
+                    background: 'var(--surface-inset)', color: 'var(--ink-faint)',
+                    flexShrink: 0, marginTop: 2, letterSpacing: '0.04em',
+                  }}>
+                    {group.label}
+                  </span>
+                  <p style={{
+                    fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.6, margin: 0,
+                    overflowWrap: 'break-word', wordBreak: 'break-word',
+                  }}>
+                    {text}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <p style={{
+            fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.6, margin: 0,
+            overflowWrap: 'break-word', wordBreak: 'break-word',
+          }}>
+            {buildSummary(matchingSections)}
+          </p>
+        )}
       </div>
     </DashCard>
   )
@@ -1073,25 +1094,27 @@ function TrendingWidget({ report, summary }: { report: IntelReport; summary?: Br
                       {brief}
                     </div>
                   )}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2, fontSize: '0.5625rem', color: 'var(--ink-tertiary)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 3, fontSize: '0.625rem', color: 'var(--ink-tertiary)' }}>
                     <span style={{
                       fontFamily: MONO,
                       fontWeight: 500,
-                      padding: '1px 5px',
+                      padding: '1px 6px',
                       borderRadius: 4,
                       background: 'var(--surface-alt)',
+                      whiteSpace: 'nowrap',
                     }}>
                       {SENSOR_LABELS[item.source] ?? item.source}
                     </span>
-                    {item.heat && <span>{item.heat}</span>}
+                    {item.heat && <span style={{ whiteSpace: 'nowrap' }}>{item.heat}</span>}
                     {v.hoursOnTrend != null && (
                       <span style={{
                         fontFamily: MONO,
                         fontWeight: 600,
-                        padding: '0 4px',
+                        padding: '1px 6px',
                         borderRadius: 4,
                         background: isRapid ? 'var(--cat-trend-bg)' : 'var(--surface-alt)',
                         color: isRapid ? 'var(--cat-trend)' : 'var(--ink-tertiary)',
+                        whiteSpace: 'nowrap',
                       }}>
                         {isRapid ? 'RAPID' : 'SUSTAINED'} &middot; {v.hoursOnTrend}h
                       </span>
@@ -1236,84 +1259,37 @@ function DetailPanel({ domain, summary, report, onClose }: {
           </div>
         )}
 
-        {/* Per-source sections */}
-        {matchingSections.map((section, sIdx) => (
-          <div key={section.sensor_name} style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-            {/* Source header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-              <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)' }}>
-                {section.label}
-              </span>
-              <span style={{
-                fontFamily: MONO, fontSize: '0.5625rem', fontWeight: 600,
-                background: 'var(--surface-alt)', borderRadius: 4,
-                padding: '1px 5px', color: 'var(--ink-faint)',
+        {/* Per-source sections, grouped by sub-group when available */}
+        {domain.subGroups ? domain.subGroups.map((group, gIdx) => {
+          const groupSections = matchingSections.filter(s => group.sensors.includes(s.sensor_name))
+          if (groupSections.length === 0) return null
+          return (
+            <div key={group.label}>
+              {/* Sub-group header */}
+              {gIdx > 0 && <div style={{ borderBottom: '1px solid var(--border)', margin: '0.25rem 0 0.5rem' }} />}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '0.375rem',
+                marginBottom: '0.5rem',
               }}>
-                {section.item_count}
-              </span>
-            </div>
-
-            {/* AI summary */}
-            <p style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.6, margin: 0, overflowWrap: 'break-word', wordBreak: 'break-word' }}>
-              {section.summary}
-            </p>
-
-            {/* Sentiment bar */}
-            {domain.showSentiment && platformSentiment[section.sensor_name] && (() => {
-              const counts = platformSentiment[section.sensor_name]
-              const posPct = Math.round((counts.positive / counts.total) * 100)
-              const negPct = Math.round((counts.negative / counts.total) * 100)
-              const neuPct = 100 - posPct - negPct
-              return (
-                <div>
-                  <div style={{ display: 'flex', gap: 6, fontFamily: MONO, fontSize: '0.625rem', color: 'var(--ink-tertiary)', marginBottom: 2 }}>
-                    <span style={{ color: 'var(--sent-pos-text)' }}>{posPct}% pos</span>
-                    <span>{neuPct}% neu</span>
-                    <span style={{ color: 'var(--sent-neg-text)' }}>{negPct}% neg</span>
-                  </div>
-                  <div style={{ display: 'flex', overflow: 'hidden', height: 4, borderRadius: 2, background: 'var(--border-subtle)', gap: 1 }}>
-                    {posPct > 0 && <div style={{ width: `${posPct}%`, background: 'var(--sent-pos)', transition: 'width 400ms ease' }} />}
-                    {neuPct > 0 && <div style={{ width: `${neuPct}%`, background: 'var(--sent-neu)', opacity: 0.4, transition: 'width 400ms ease' }} />}
-                    {negPct > 0 && <div style={{ width: `${negPct}%`, background: 'var(--sent-neg)', transition: 'width 400ms ease' }} />}
-                  </div>
-                </div>
-              )
-            })()}
-
-            {/* Notable items */}
-            {section.items.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                {section.items.map((item, idx) => (
-                  <a
-                    key={idx}
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: 'flex', gap: '0.5rem', textDecoration: 'none',
-                      borderRadius: 6, padding: '6px 10px', margin: '0 -10px',
-                      transition: 'background 150ms ease',
-                    }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-inset)' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
-                  >
-                    <span style={{ width: 4, height: 4, borderRadius: '50%', background: domain.accent, flexShrink: 0, marginTop: 6 }} />
-                    <div style={{ flex: 1, minWidth: 0, overflowWrap: 'break-word', wordBreak: 'break-word' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink)', lineHeight: 1.5 }}>
-                        {item.title}
-                      </div>
-                      {item.brief && (
-                        <div style={{ fontSize: '0.6875rem', color: 'var(--ink-tertiary)', lineHeight: 1.5, marginTop: 1 }}>
-                          {item.brief}
-                        </div>
-                      )}
-                    </div>
-                  </a>
-                ))}
+                <span style={{
+                  fontFamily: MONO, fontSize: '0.5625rem', fontWeight: 700,
+                  padding: '2px 6px', borderRadius: 3,
+                  background: 'var(--surface-inset)', color: 'var(--ink-faint)',
+                  letterSpacing: '0.04em',
+                }}>
+                  {group.label}
+                </span>
               </div>
-            )}
-
-            {/* Divider between sources */}
+              {groupSections.map((section, sIdx) => (
+                <div key={section.sensor_name} style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', marginBottom: sIdx < groupSections.length - 1 ? '0.625rem' : 0 }}>
+                  <DetailSectionContent section={section} domain={domain} platformSentiment={platformSentiment} />
+                </div>
+              ))}
+            </div>
+          )
+        }) : matchingSections.map((section, sIdx) => (
+          <div key={section.sensor_name} style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+            <DetailSectionContent section={section} domain={domain} platformSentiment={platformSentiment} />
             {sIdx < matchingSections.length - 1 && (
               <div style={{ borderBottom: '1px solid var(--border-subtle)', marginTop: 2 }} />
             )}

@@ -82,7 +82,7 @@ export function SensorGrid({
       maxWidth: 1024,
       margin: '0 auto',
       width: '100%',
-      paddingBottom: 'calc(56px + 1rem + env(safe-area-inset-bottom))',
+      paddingBottom: '1rem',
     }}>
       <style dangerouslySetInnerHTML={{ __html: CARD_CSS }} />
       {allSensors.map(sensor => {

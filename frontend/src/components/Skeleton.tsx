@@ -332,38 +332,59 @@ const SENSOR_NAME_WIDTHS = [88, 110, 60, 96, 92, 66, 26, 60, 72, 70, 34, 92, 40,
 /** Category badge widths matching real category labels. */
 const CATEGORY_BADGE_WIDTHS = [30, 30, 52, 52, 52, 40, 40, 40, 52, 36, 46, 46, 62, 62, 36, 36]
 
-/** Skeleton layout for the status page — strip (Zone 1) + sensor grid (Zone 2) + command bar (Zone 3). */
+/** Skeleton layout for the status page — control bar (top) + sensor grid. */
 export function StatusSkeleton() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* Zone 1: Status strip */}
+      {/* Control bar skeleton */}
       <div
-        className="status-strip page-padding"
+        className="control-bar page-padding"
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '1.5rem',
+          position: 'relative',
           maxWidth: 1024,
           margin: '0 auto',
           width: '100%',
-          minHeight: 52,
+          minHeight: 68,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
           borderBottom: '1px solid var(--border)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Skeleton width={8} height={8} borderRadius={4} />
-          <Skeleton width={55} height={11} />
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem',
+          padding: '0 3rem',
+        }}>
+          {/* Health dot + label */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Skeleton width={8} height={8} borderRadius={4} />
+            <Skeleton width={55} height={11} />
+          </div>
+          {/* Metrics */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+            <Skeleton width={72} height={11} />
+            <Skeleton width={52} height={11} />
+          </div>
+          {/* Mode dropdown + selection + run button */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto' }}>
+            <Skeleton width={130} height={30} borderRadius={4} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+              <Skeleton width={20} height={10} />
+              <Skeleton width={30} height={10} />
+              <Skeleton width={32} height={10} />
+            </div>
+            <Skeleton width={90} height={34} borderRadius={6} />
+          </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-          <Skeleton width={72} height={11} />
-          <Skeleton width={52} height={11} />
-        </div>
-        <div style={{ marginLeft: 'auto' }}>
-          <Skeleton width={100} height={11} />
+        {/* Schedule line */}
+        <div style={{ padding: '0 3rem 0.375rem' }}>
+          <Skeleton width={100} height={9} />
         </div>
       </div>
 
-      {/* Zone 2: Sensor card grid */}
+      {/* Sensor card grid */}
       <div className="sensor-grid" style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(4, 1fr)',
@@ -372,7 +393,7 @@ export function StatusSkeleton() {
         alignContent: 'start',
         overflowY: 'auto',
         padding: '1rem 3rem',
-        paddingBottom: 'calc(56px + 1rem + env(safe-area-inset-bottom))',
+        paddingBottom: '1rem',
         maxWidth: 1024,
         margin: '0 auto',
         width: '100%',
@@ -407,37 +428,6 @@ export function StatusSkeleton() {
             </div>
           </div>
         ))}
-      </div>
-
-      {/* Zone 3: Command bar */}
-      <div className="command-bar" style={{
-        position: 'fixed',
-        bottom: 0,
-        right: 0,
-        left: 240,
-        zIndex: 20,
-        background: 'var(--surface)',
-        borderTop: '1px solid var(--border)',
-        boxShadow: '0 -2px 8px rgba(0,0,0,0.04)',
-        paddingBottom: 'env(safe-area-inset-bottom)',
-      }}>
-        <div className="command-bar-inner" style={{
-          maxWidth: 1024,
-          margin: '0 auto',
-          padding: '0 3rem',
-          minHeight: 56,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '1rem',
-        }}>
-          <Skeleton width={130} height={30} borderRadius={4} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-            <Skeleton width={20} height={10} />
-            <Skeleton width={30} height={10} />
-            <Skeleton width={32} height={10} />
-          </div>
-          <Skeleton width={90} height={34} borderRadius={6} style={{ marginLeft: 'auto' }} />
-        </div>
       </div>
     </div>
   )

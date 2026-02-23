@@ -1,18 +1,16 @@
 // ABOUTME: Mission control Status page — fixed-viewport command center with real-time telemetry.
-// ABOUTME: Orchestrates StatusStrip (Zone 1), SensorGrid (Zone 2), and CommandBar (Zone 3).
+// ABOUTME: Orchestrates ControlBar (top) and SensorGrid (scrollable body).
 'use client'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { api } from '@/api/client'
 import type { HealthResponse, IntelReport, ConfigSettings, PipelineStatus, SensorJobProgress, RunMode } from '@/api/client'
 import { useToast } from '@/lib/toast-context'
-import { StatusStrip, STATUS_STRIP_CSS } from './status/StatusStrip'
-import type { Phase } from './status/StatusStrip'
+import { ControlBar, CONTROL_BAR_CSS } from './status/ControlBar'
+import type { Phase } from './status/ControlBar'
 import { SensorGrid } from './status/SensorGrid'
-import { CommandBar, COMMAND_BAR_CSS } from './status/CommandBar'
-import { STATUS_META, SECTION_SENSORS } from './status/constants'
+import { SECTION_SENSORS } from './status/constants'
 import { StaleProcessBanner, detectStale } from './StaleProcessBanner'
 import { StatusSkeleton } from './Skeleton'
-import { timeAgo } from './status/time-helpers'
 
 export function Status() {
   const showToast = useToast()
@@ -264,9 +262,6 @@ export function Status() {
 
   const sourcesOk = report?.sources_ok.length ?? 0
 
-  const statusMeta = STATUS_META[health?.status ?? 'no_data'] ?? STATUS_META.no_data
-  const lastFetchAgo = health?.last_fetch ? timeAgo(health.last_fetch) : null
-
   if (!health && !report && !pipelineChecked) {
     return (
       <section id="status" className="status-page">
@@ -282,7 +277,7 @@ export function Status() {
       height: '100%',
       overflow: 'hidden',
     }}>
-      <style dangerouslySetInnerHTML={{ __html: COMMAND_BAR_CSS + STATUS_STRIP_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: CONTROL_BAR_CSS }} />
 
       {staleInfo && !isRunning && (
         <div style={{ maxWidth: 1024, margin: '0 auto', width: '100%', padding: '0.5rem 0.75rem 0' }}>
@@ -295,35 +290,12 @@ export function Status() {
         </div>
       )}
 
-      <StatusStrip
+      <ControlBar
         health={health}
         config={config}
         sourcesOk={sourcesOk}
         sourcesTotal={allEnabledSensors.length}
         totalItems={totalItems}
-        isRunning={isRunning}
-        phase={phase}
-        progress={progress}
-        detail={phaseDetail}
-        failedCount={failedCount}
-      />
-
-      <SensorGrid
-        isRunning={isRunning}
-        isPaused={isPaused}
-        liveSensors={liveSensors}
-        report={report}
-        config={config}
-        pipelineStatus={pipelineStatus}
-        selected={selectedSensors}
-        onToggleSelect={toggleSensorSelect}
-        onRetry={handleRetrySensor}
-        onSkipSensor={handleSkipSensor}
-        dismissed={dismissed}
-        onDismiss={dismissSensor}
-      />
-
-      <CommandBar
         isRunning={isRunning}
         phase={phase}
         progress={progress}
@@ -345,13 +317,23 @@ export function Status() {
         onSelectFailed={selectFailed}
         fetching={fetching}
         isStopping={stopping}
-        statusColor={statusMeta.color}
-        statusLabel={statusMeta.label}
-        sourcesOk={sourcesOk}
-        sourcesTotal={allEnabledSensors.length}
-        totalItems={totalItems}
-        lastFetchAgo={lastFetchAgo}
       />
+
+      <SensorGrid
+        isRunning={isRunning}
+        isPaused={isPaused}
+        liveSensors={liveSensors}
+        report={report}
+        config={config}
+        pipelineStatus={pipelineStatus}
+        selected={selectedSensors}
+        onToggleSelect={toggleSensorSelect}
+        onRetry={handleRetrySensor}
+        onSkipSensor={handleSkipSensor}
+        dismissed={dismissed}
+        onDismiss={dismissSensor}
+      />
+
     </section>
   )
 }

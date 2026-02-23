@@ -664,7 +664,7 @@ input[type="range"]::-moz-range-thumb {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 0.5rem !important;
     padding: 0.75rem !important;
-    padding-bottom: calc(56px + 0.75rem + env(safe-area-inset-bottom)) !important;
+    padding-bottom: 0.75rem !important;
     overflow: visible !important;
     flex: none !important;
   }
@@ -673,31 +673,28 @@ input[type="range"]::-moz-range-thumb {
     min-height: 88px !important;
   }
 
-  .command-bar {
-    left: 0 !important;
+  .control-bar {
+    min-height: 56px !important;
   }
-  .command-bar-inner {
+  .control-bar-row {
     padding: 0.5rem 0.75rem !important;
     flex-wrap: wrap !important;
-    min-height: auto !important;
     gap: 0.5rem !important;
   }
-  .command-bar-status {
-    display: flex !important;
+  .control-bar-metrics {
+    gap: 0.75rem !important;
+  }
+  .control-bar-controls {
     flex-basis: 100%;
-    padding-bottom: 0.375rem;
-    border-bottom: 1px solid var(--border);
+    margin-left: 0 !important;
   }
-  .command-bar-run-stats {
+  .control-bar-schedule {
+    padding: 0 0.75rem 0.375rem !important;
+  }
+  .control-bar-center {
     margin: 0 !important;
   }
-  .command-bar-pause-actions {
-    margin: 0 !important;
-  }
-  .command-bar-left {
-    flex-shrink: 0;
-  }
-  .command-bar-left span[style*="italic"] {
+  .control-bar-left span[style*="italic"] {
     display: none !important;
   }
 
@@ -810,8 +807,11 @@ input[type="range"]::-moz-range-thumb {
     margin-left: 1.25rem !important;
     margin-right: 1.25rem !important;
   }
-  .command-bar {
-    left: 180px !important;
+  .control-bar-row {
+    padding: 0 2rem !important;
+  }
+  .control-bar-schedule {
+    padding: 0 2rem 0.375rem !important;
   }
 }
 

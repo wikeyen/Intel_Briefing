@@ -1,5 +1,5 @@
 // ABOUTME: Full-page prompt editor modal with animated backdrop for editing long prompts.
-// ABOUTME: Read mode shows full prompt text compactly with edit icon; edit mode opens a centered modal overlay.
+// ABOUTME: Settings-row read mode with colored indicator; edit mode opens a centered modal overlay.
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 
@@ -14,19 +14,6 @@ const MODAL_CSS = `
 }
 `
 
-function PencilIcon({ size = 14 }: { size?: number }) {
-  return (
-    <svg
-      width={size} height={size} viewBox="0 0 16 16" fill="none"
-      stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
-      style={{ display: 'block', flexShrink: 0 }}
-    >
-      <path d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z" />
-      <path d="M9.5 3.5l3 3" />
-    </svg>
-  )
-}
-
 function CloseIcon({ size = 18 }: { size?: number }) {
   return (
     <svg
@@ -39,6 +26,25 @@ function CloseIcon({ size = 18 }: { size?: number }) {
   )
 }
 
+function ChevronRightIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg
+      width={size} height={size} viewBox="0 0 16 16" fill="none"
+      stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+      style={{ display: 'block', flexShrink: 0 }}
+    >
+      <path d="M6 4l4 4-4 4" />
+    </svg>
+  )
+}
+
+/** Derive a stable hue from a string for the coloured indicator dot */
+function labelHue(s: string): number {
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0
+  return ((h % 360) + 360) % 360
+}
+
 export interface PromptEditorModalProps {
   /** Label shown in read mode and as the modal title */
   label: string
@@ -48,10 +54,10 @@ export interface PromptEditorModalProps {
   defaultPrompt: string
   /** Called when the user saves a new value */
   onChange: (value: string) => void
-  /** Optional help text below the read-mode display */
-  helpText?: string
   /** Whether this prompt has been customized */
   isCustom?: boolean
+  /** Show a coloured dot derived from the label */
+  showDot?: boolean
   /** Label for "customized" badge */
   customBadgeLabel?: string
   /** Label for "reset" action */
@@ -67,8 +73,8 @@ export function PromptEditorModal({
   value,
   defaultPrompt,
   onChange,
-  helpText,
   isCustom,
+  showDot,
   customBadgeLabel = 'Customized',
   resetLabel = 'Reset to default',
   cancelLabel = 'Cancel',
@@ -77,8 +83,6 @@ export function PromptEditorModal({
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-
-  const displayText = value || defaultPrompt
 
   const handleOpen = useCallback(() => {
     setDraft(value)
@@ -101,7 +105,6 @@ export function PromptEditorModal({
   /* Focus textarea on open */
   useEffect(() => {
     if (open && textareaRef.current) {
-      // Small delay to let animation start
       const t = setTimeout(() => textareaRef.current?.focus(), 50)
       return () => clearTimeout(t)
     }
@@ -123,9 +126,11 @@ export function PromptEditorModal({
     }
   }, [open, handleClose])
 
+  const dotColor = showDot ? `hsl(${labelHue(label)}, 55%, 55%)` : undefined
+
   return (
     <>
-      {/* ── Read Mode — clickable card ────────────────────────── */}
+      {/* ── Read Mode — settings row ───────────────────────────── */}
       <button
         type="button"
         onClick={handleOpen}
@@ -135,30 +140,22 @@ export function PromptEditorModal({
           gap: '0.625rem',
           width: '100%',
           textAlign: 'left',
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          padding: '0.5rem 0.75rem',
+          background: 'none',
+          border: 'none',
+          padding: '0.5rem 0.125rem',
           cursor: 'pointer',
-          borderRadius: 6,
-          transition: 'border-color 120ms, box-shadow 120ms, transform 120ms',
+          borderRadius: 4,
+          transition: 'background 100ms',
         }}
-        onMouseEnter={e => {
-          e.currentTarget.style.borderColor = 'var(--accent-dim)'
-          e.currentTarget.style.boxShadow = 'var(--shadow-xs)'
-          e.currentTarget.style.transform = 'translateY(-1px)'
-        }}
-        onMouseLeave={e => {
-          e.currentTarget.style.borderColor = 'var(--border)'
-          e.currentTarget.style.boxShadow = 'none'
-          e.currentTarget.style.transform = 'none'
-        }}
+        onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover, rgba(0,0,0,0.03))' }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
       >
-        {isCustom && (
+        {showDot && (
           <span style={{
-            width: 6,
-            height: 6,
+            width: 8,
+            height: 8,
             borderRadius: '50%',
-            background: 'var(--accent)',
+            background: dotColor,
             flexShrink: 0,
           }} />
         )}
@@ -170,8 +167,18 @@ export function PromptEditorModal({
         }}>
           {label}
         </span>
-        <span style={{ color: 'var(--ink-faint)', flexShrink: 0, opacity: 0.5 }}>
-          <PencilIcon size={12} />
+        {isCustom && (
+          <span style={{
+            fontSize: '0.6875rem',
+            color: 'var(--accent)',
+            fontWeight: 500,
+            flexShrink: 0,
+          }}>
+            {customBadgeLabel}
+          </span>
+        )}
+        <span style={{ color: 'var(--ink-faint)', flexShrink: 0, opacity: 0.4 }}>
+          <ChevronRightIcon size={14} />
         </span>
       </button>
 
@@ -190,7 +197,7 @@ export function PromptEditorModal({
         >
           <style>{MODAL_CSS}</style>
 
-          {/* Backdrop — solid colour with fade-in animation */}
+          {/* Backdrop */}
           <div
             onClick={handleClose}
             style={{
@@ -228,6 +235,15 @@ export function PromptEditorModal({
               flexShrink: 0,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {showDot && (
+                  <span style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: dotColor,
+                    flexShrink: 0,
+                  }} />
+                )}
                 <h3 style={{
                   fontSize: '0.8125rem',
                   fontWeight: 600,
@@ -271,11 +287,7 @@ export function PromptEditorModal({
             </div>
 
             {/* Textarea body */}
-            <div style={{
-              flex: 1,
-              overflow: 'auto',
-              padding: '0',
-            }}>
+            <div style={{ flex: 1, overflow: 'auto', padding: '0' }}>
               <textarea
                 ref={textareaRef}
                 value={draft}
@@ -307,7 +319,6 @@ export function PromptEditorModal({
               borderTop: '1px solid var(--border-soft)',
               flexShrink: 0,
             }}>
-              {/* Left: Reset */}
               <button
                 type="button"
                 onClick={handleReset}
@@ -324,7 +335,6 @@ export function PromptEditorModal({
               >
                 {resetLabel}
               </button>
-              {/* Right: Cancel + Save */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <button
                   type="button"

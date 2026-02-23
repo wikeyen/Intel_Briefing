@@ -376,22 +376,24 @@ export function AiSummary() {
               gap: '1rem',
             }}>
 
-              {/* Overall Prompt — read-mode preview + modal editor */}
+              {/* Executive Summary Prompt */}
               <PromptEditorModal
                 label={t('ai.exec_prompt')}
                 value={overallPrompt}
                 defaultPrompt={DEFAULT_OVERALL_PROMPT}
                 onChange={(v) => { setOverallPrompt(v); trigger() }}
-                helpText={t('ai.exec_prompt_desc')}
                 isCustom={!!overallPrompt}
                 customBadgeLabel={t('ai.customized')}
                 resetLabel={t('ai.reset_default')}
                 cancelLabel={t('ai.cancel')}
                 saveLabel={t('ai.save')}
               />
+              <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.4, margin: '-0.25rem 0 0 0.25rem' }}>
+                {t('ai.exec_prompt_desc')}
+              </p>
 
-              {/* Per-Sensor Prompts — collapsible list with modal editors */}
-              <div style={{ borderTop: '1px solid var(--border-soft)', paddingTop: '1rem' }}>
+              {/* Per-Sensor Prompts — collapsible settings list */}
+              <div style={{ marginTop: '0.5rem' }}>
                 <button
                   onClick={() => setPromptsExpanded(!promptsExpanded)}
                   style={{
@@ -399,13 +401,16 @@ export function AiSummary() {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     width: '100%',
-                    padding: 0,
-                    marginBottom: promptsExpanded ? '0.75rem' : 0,
+                    padding: '0.25rem 0.125rem',
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
                     color: 'var(--ink)',
+                    borderRadius: 4,
+                    transition: 'background 100ms',
                   }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover, rgba(0,0,0,0.03))' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
                 >
                   <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>
                     {t('ai.per_sensor_prompts')}
@@ -421,27 +426,33 @@ export function AiSummary() {
 
                 {promptsExpanded && (
                   <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                    gap: '0.5rem',
+                    marginTop: '0.25rem',
+                    background: 'var(--bg, #fafafa)',
+                    borderRadius: 8,
+                    padding: '0.25rem 0.5rem',
                   }}>
-                    {PROMPT_SENSORS.map((sensor) => {
+                    {PROMPT_SENSORS.map((sensor, i) => {
                       const isCustom = !!sensorPrompts[sensor.key]
                       const defaultPrompt = DEFAULT_SENSOR_PROMPTS[sensor.key] ?? ''
 
                       return (
-                        <PromptEditorModal
-                          key={sensor.key}
-                          label={sensor.label}
-                          value={sensorPrompts[sensor.key] ?? ''}
-                          defaultPrompt={defaultPrompt}
-                          onChange={(v) => updateSensorPrompt(sensor.key, v)}
-                          isCustom={isCustom}
-                          customBadgeLabel={t('ai.customized')}
-                          resetLabel={t('ai.reset_default')}
-                          cancelLabel={t('ai.cancel')}
-                          saveLabel={t('ai.save')}
-                        />
+                        <div key={sensor.key} style={{
+                          borderBottom: i < PROMPT_SENSORS.length - 1
+                            ? '1px solid var(--border-soft)' : 'none',
+                        }}>
+                          <PromptEditorModal
+                            label={sensor.label}
+                            value={sensorPrompts[sensor.key] ?? ''}
+                            defaultPrompt={defaultPrompt}
+                            onChange={(v) => updateSensorPrompt(sensor.key, v)}
+                            isCustom={isCustom}
+                            showDot
+                            customBadgeLabel={t('ai.customized')}
+                            resetLabel={t('ai.reset_default')}
+                            cancelLabel={t('ai.cancel')}
+                            saveLabel={t('ai.save')}
+                          />
+                        </div>
                       )
                     })}
                   </div>

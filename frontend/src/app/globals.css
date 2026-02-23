@@ -61,22 +61,22 @@
   --cat-trend-bg:      rgba(196, 133, 28, 0.08);
   --cat-opinion-bg:    rgba(126, 107, 154, 0.08);
 
-  /* Sentiment — distinct from ok/err/warn, tuned for data viz */
-  --sent-pos:        #0D9488;
-  --sent-pos-text:   #0F766E;
-  --sent-pos-bg:     rgba(13, 148, 136, 0.08);
-  --sent-neg:        #E11D48;
-  --sent-neg-text:   #BE123C;
-  --sent-neg-bg:     rgba(225, 29, 72, 0.08);
-  --sent-neu:        #6B7280;
-  --sent-neu-text:   #4B5563;
-  --sent-neu-bg:     rgba(107, 114, 128, 0.08);
-  --sent-bullish:    #0D9488;
-  --sent-bullish-text: #0F766E;
-  --sent-bearish:    #E11D48;
-  --sent-bearish-text: #BE123C;
-  --sent-mixed:      #D97706;
-  --sent-mixed-text: #B45309;
+  /* Sentiment — balanced palette for data viz */
+  --sent-pos:        #3D9E85;
+  --sent-pos-text:   #2E8A72;
+  --sent-pos-bg:     rgba(61, 158, 133, 0.08);
+  --sent-neg:        #C4606E;
+  --sent-neg-text:   #B34E5D;
+  --sent-neg-bg:     rgba(196, 96, 110, 0.08);
+  --sent-neu:        #8D95A0;
+  --sent-neu-text:   #6B7280;
+  --sent-neu-bg:     rgba(141, 149, 160, 0.08);
+  --sent-bullish:    #3D9E85;
+  --sent-bullish-text: #2E8A72;
+  --sent-bearish:    #C4606E;
+  --sent-bearish-text: #B34E5D;
+  --sent-mixed:      #C48F54;
+  --sent-mixed-text: #A67A42;
 
   /* Heatmap intensity (teal-based) */
   --heat-0:          var(--surface-inset);
@@ -213,22 +213,22 @@
     --cat-trend-bg:      rgba(224, 168, 56, 0.10);
     --cat-opinion-bg:    rgba(164, 148, 190, 0.10);
 
-    /* Sentiment — brighter for dark surfaces */
-    --sent-pos:        #2DD4BF;
-    --sent-pos-text:   #2DD4BF;
-    --sent-pos-bg:     rgba(45, 212, 191, 0.10);
-    --sent-neg:        #FB7185;
-    --sent-neg-text:   #FB7185;
-    --sent-neg-bg:     rgba(251, 113, 133, 0.10);
+    /* Sentiment — balanced for dark surfaces */
+    --sent-pos:        #5CB89E;
+    --sent-pos-text:   #5CB89E;
+    --sent-pos-bg:     rgba(92, 184, 158, 0.10);
+    --sent-neg:        #D47A86;
+    --sent-neg-text:   #D47A86;
+    --sent-neg-bg:     rgba(212, 122, 134, 0.10);
     --sent-neu:        #9CA3AF;
     --sent-neu-text:   #9CA3AF;
     --sent-neu-bg:     rgba(156, 163, 175, 0.10);
-    --sent-bullish:    #2DD4BF;
-    --sent-bullish-text: #2DD4BF;
-    --sent-bearish:    #FB7185;
-    --sent-bearish-text: #FB7185;
-    --sent-mixed:      #FBBF24;
-    --sent-mixed-text: #FBBF24;
+    --sent-bullish:    #5CB89E;
+    --sent-bullish-text: #5CB89E;
+    --sent-bearish:    #D47A86;
+    --sent-bearish-text: #D47A86;
+    --sent-mixed:      #D4A46A;
+    --sent-mixed-text: #D4A46A;
 
     /* Heatmap intensity (teal-based) */
     --heat-0:          var(--surface-inset);

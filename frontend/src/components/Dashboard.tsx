@@ -10,6 +10,38 @@ import { SENSOR_LABELS, SENSOR_DISPLAY_MAP, CATEGORY_TO_DISPLAY } from '@/lib/se
 import type { CategoryKey, DisplayCategoryKey } from '@/lib/sensors/taxonomy'
 
 // ---------------------------------------------------------------------------
+// Animated height container — measures content and smoothly transitions height
+// ---------------------------------------------------------------------------
+
+function AnimatedHeight({ children, activeKey }: { children: React.ReactNode; activeKey: string }) {
+  const contentRef = useRef<HTMLDivElement>(null)
+  const [height, setHeight] = useState<number | 'auto'>('auto')
+
+  useEffect(() => {
+    if (!contentRef.current) return
+    const observer = new ResizeObserver(([entry]) => {
+      setHeight(entry.contentRect.height)
+    })
+    observer.observe(contentRef.current)
+    return () => observer.disconnect()
+  }, [activeKey])
+
+  return (
+    <motion.div
+      animate={{ height }}
+      transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+      style={{ overflow: 'hidden', position: 'relative' }}
+    >
+      <div ref={contentRef}>
+        <AnimatePresence initial={false} mode="wait">
+          {children}
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -193,32 +225,62 @@ function InlineTabs<T extends string>({ tabs, active, onChange }: {
   onChange: (key: T) => void
 }) {
   return (
-    <div style={{ display: 'flex', gap: '0.25rem' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', height: 24 }}>
       {tabs.map(tab => {
         const isActive = tab.key === active
         return (
-          <button
+          <motion.button
             key={tab.key}
             onClick={() => onChange(tab.key)}
+            onMouseEnter={() => { if (!isActive) onChange(tab.key) }}
+            layout
             style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
               fontSize: '0.6875rem',
-              fontWeight: isActive ? 600 : 400,
-              padding: '0.25rem 0.625rem',
+              fontWeight: 600,
+              padding: isActive ? '0.25rem 0.625rem' : '0.25rem 0.375rem',
               borderRadius: 6,
               border: 'none',
               cursor: 'pointer',
               background: isActive ? 'var(--surface-inset)' : 'transparent',
               color: isActive ? 'var(--ink)' : 'var(--ink-faint)',
-              transition: 'background 150ms ease, color 150ms ease',
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
             }}
+            whileHover={!isActive ? { background: 'var(--surface-inset)', scale: 1.08 } : {}}
+            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
           >
-            {tab.label}
-            {tab.count != null && tab.count > 0 && (
-              <span style={{ marginLeft: 4, fontSize: '0.625rem', fontWeight: 600, color: tab.color ?? 'var(--ink-tertiary)' }}>
-                {tab.count}
-              </span>
-            )}
-          </button>
+            <motion.span
+              style={{
+                borderRadius: '50%',
+                background: tab.color ?? 'var(--ink-faint)',
+                flexShrink: 0,
+              }}
+              animate={{ width: isActive ? 7 : 8, height: isActive ? 7 : 8, opacity: isActive ? 1 : 0.7 }}
+              whileHover={{ opacity: 1, scale: 1.2 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            />
+            <AnimatePresence mode="wait">
+              {isActive && (
+                <motion.span
+                  initial={{ width: 0, opacity: 0 }}
+                  animate={{ width: 'auto', opacity: 1 }}
+                  exit={{ width: 0, opacity: 0 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  style={{ overflow: 'hidden', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                >
+                  {tab.label}
+                  {tab.count != null && tab.count > 0 && (
+                    <span style={{ fontSize: '0.625rem', color: tab.color ?? 'var(--ink-tertiary)' }}>
+                      {tab.count}
+                    </span>
+                  )}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
         )
       })}
     </div>
@@ -511,13 +573,40 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
   ]
 
   const totalAlerts = tabData.reduce((n, t) => n + t.items.length, 0)
-  const defaultTab = tabData.find(t => t.items.length > 0)?.key ?? 'risk'
+  const nonEmptyTabs = tabData.filter(t => t.items.length > 0)
+  const defaultTab = nonEmptyTabs[0]?.key ?? 'risk'
   const [activeTab, setActiveTab] = useState(defaultTab)
+  const [paused, setPaused] = useState(false)
+  const [slideDir, setSlideDir] = useState(1) // 1 = forward, -1 = back
   const current = tabData.find(t => t.key === activeTab) ?? tabData[0]
+
+  const switchTab = useCallback((next: string) => {
+    const prevIdx = tabData.findIndex(t => t.key === activeTab)
+    const nextIdx = tabData.findIndex(t => t.key === next)
+    setSlideDir(nextIdx >= prevIdx ? 1 : -1)
+    setActiveTab(next)
+  }, [activeTab, tabData])
+
+  // Auto-rotate tabs every 7s, pause on hover
+  useEffect(() => {
+    if (paused || nonEmptyTabs.length <= 1) return
+    const timer = setInterval(() => {
+      setActiveTab(prev => {
+        const idx = nonEmptyTabs.findIndex(t => t.key === prev)
+        setSlideDir(1)
+        return nonEmptyTabs[(idx + 1) % nonEmptyTabs.length].key
+      })
+    }, 7000)
+    return () => clearInterval(timer)
+  }, [paused, nonEmptyTabs.length])
 
   return (
     <DashCard>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <div
+        style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+      >
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <SectionLabel>Intelligence</SectionLabel>
@@ -540,38 +629,48 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
         <InlineTabs
           tabs={tabData.map(t => ({ key: t.key, label: t.label, count: t.items.length, color: t.color }))}
           active={activeTab}
-          onChange={setActiveTab}
+          onChange={switchTab}
         />
 
-        {/* Tab content */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', minHeight: 60 }}>
-          {current.items.length === 0 ? (
-            <div style={{ padding: '1rem 0', textAlign: 'center', fontSize: '0.75rem', color: 'var(--ink-tertiary)' }}>
-              None detected
-            </div>
-          ) : (
-            current.items.map((entry: SentimentEntry, i: number) => (
-              <div key={i} style={{
-                padding: '0.625rem 0.75rem',
-                borderRadius: 8,
-                background: 'var(--surface-inset)',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: 3 }}>
-                  <span style={{
-                    width: 7, height: 7, borderRadius: '50%',
-                    background: current.dot, flexShrink: 0,
-                  }} />
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--ink)', lineHeight: 1.4 }}>
-                    {entry.topic}
-                  </span>
-                </div>
-                <div style={{ fontSize: '0.6875rem', color: 'var(--ink-secondary)', lineHeight: 1.6, paddingLeft: '1.0625rem', overflowWrap: 'break-word', wordBreak: 'break-word' }}>
-                  <InlineRefs text={entry.analysis} globalSources={overall.sources} />
-                </div>
+        {/* Tab content — slide + height animation */}
+        <AnimatedHeight activeKey={activeTab}>
+          <motion.div
+            key={activeTab}
+            custom={slideDir}
+            initial={(dir: number) => ({ x: dir * 24, opacity: 0 })}
+            animate={{ x: 0, opacity: 1 }}
+            exit={(dir: number) => ({ x: dir * -24, opacity: 0 })}
+            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+            style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}
+          >
+            {current.items.length === 0 ? (
+              <div style={{ padding: '1rem 0', textAlign: 'center', fontSize: '0.75rem', color: 'var(--ink-tertiary)' }}>
+                None detected
               </div>
-            ))
-          )}
-        </div>
+            ) : (
+              current.items.map((entry: SentimentEntry, i: number) => (
+                <div key={i} style={{
+                  padding: '0.625rem 0.75rem',
+                  borderRadius: 8,
+                  background: 'var(--surface-inset)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: 3 }}>
+                    <span style={{
+                      width: 7, height: 7, borderRadius: '50%',
+                      background: current.dot, flexShrink: 0,
+                    }} />
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--ink)', lineHeight: 1.4 }}>
+                      {entry.topic}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.6875rem', color: 'var(--ink-secondary)', lineHeight: 1.6, paddingLeft: '1.0625rem', overflowWrap: 'break-word', wordBreak: 'break-word' }}>
+                    <InlineRefs text={entry.analysis} globalSources={overall.sources} />
+                  </div>
+                </div>
+              ))
+            )}
+          </motion.div>
+        </AnimatedHeight>
       </div>
     </DashCard>
   )
@@ -679,6 +778,11 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
     x: 'var(--ink)', bluesky: '#0085FF', mastodon: '#6364FF',
   }
 
+  const totalSocial = totalPos + totalNeu + totalNeg
+  const overallPosPct = totalSocial > 0 ? Math.round((totalPos / totalSocial) * 100) : 0
+  const overallNegPct = totalSocial > 0 ? Math.round((totalNeg / totalSocial) * 100) : 0
+  const overallNeuPct = 100 - overallPosPct - overallNegPct
+
   return (
     <DashCard>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
@@ -708,39 +812,55 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
           </div>
         </div>
 
-        {/* Ring gauge + mood summary */}
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <SentimentRing positive={totalPos} neutral={totalNeu} negative={totalNeg} size={80} />
-          {sentiment.mood_summary && (
-            <p style={{ fontSize: '0.75rem', color: 'var(--ink)', lineHeight: 1.5, margin: 0, flex: 1, minWidth: 120 }}>
-              <InlineRefs text={sentiment.mood_summary} globalSources={overall.sources} />
-            </p>
-          )}
-        </div>
+        {/* Mood summary */}
+        {sentiment.mood_summary && (
+          <p style={{ fontSize: '0.75rem', color: 'var(--ink)', lineHeight: 1.6, margin: 0, overflowWrap: 'break-word', wordBreak: 'break-word' }}>
+            <InlineRefs text={sentiment.mood_summary} globalSources={overall.sources} />
+          </p>
+        )}
 
-        {/* Per-platform sentiment bars */}
+        {/* Overall sentiment bar */}
+        {totalSocial > 0 && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+              <div style={{ display: 'flex', gap: 8, fontFamily: MONO, fontSize: '0.625rem' }}>
+                <span style={{ color: 'var(--sent-pos-text)', fontWeight: 600 }}>{overallPosPct}% pos</span>
+                <span style={{ color: 'var(--ink-tertiary)' }}>{overallNeuPct}% neu</span>
+                <span style={{ color: 'var(--sent-neg-text)', fontWeight: 600 }}>{overallNegPct}% neg</span>
+              </div>
+              <span style={{ fontFamily: MONO, fontSize: '0.625rem', color: 'var(--ink-faint)' }}>{totalSocial} posts</span>
+            </div>
+            <div style={{ display: 'flex', overflow: 'hidden', height: 6, borderRadius: 3, background: 'var(--border-subtle)', gap: 1 }}>
+              {overallPosPct > 0 && <div style={{ width: `${overallPosPct}%`, background: 'var(--sent-pos)', transition: 'width 400ms ease' }} />}
+              {overallNeuPct > 0 && <div style={{ width: `${overallNeuPct}%`, background: 'var(--sent-neu)', transition: 'width 400ms ease' }} />}
+              {overallNegPct > 0 && <div style={{ width: `${overallNegPct}%`, background: 'var(--sent-neg)', transition: 'width 400ms ease' }} />}
+            </div>
+          </div>
+        )}
+
+        {/* Per-platform breakdown */}
         {Object.keys(bySource).length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
             {Object.entries(bySource).map(([source, counts]) => {
               const posPct = Math.round((counts.positive / counts.total) * 100)
               const negPct = Math.round((counts.negative / counts.total) * 100)
               const neuPct = 100 - posPct - negPct
               return (
-                <div key={source}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-                    <span style={{ fontFamily: MONO, fontSize: '0.625rem', fontWeight: 500, color: PLATFORM_COLORS[source] ?? 'var(--ink-secondary)' }}>
-                      {SENSOR_LABELS[source] ?? source}
-                    </span>
-                    <div style={{ display: 'flex', gap: 6, fontFamily: MONO, fontSize: '0.625rem', color: 'var(--ink-tertiary)' }}>
-                      <span style={{ color: 'var(--sent-pos-text)' }}>{posPct}%</span>
-                      <span>{neuPct}%</span>
-                      <span style={{ color: 'var(--sent-neg-text)' }}>{negPct}%</span>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', overflow: 'hidden', height: 4, borderRadius: 2, background: 'var(--border-subtle)', gap: 1 }}>
+                <div key={source} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontFamily: MONO, fontSize: '0.5625rem', fontWeight: 500, color: PLATFORM_COLORS[source] ?? 'var(--ink-secondary)', width: 56, flexShrink: 0 }}>
+                    {SENSOR_LABELS[source] ?? source}
+                  </span>
+                  <div style={{ flex: 1, display: 'flex', overflow: 'hidden', height: 3, borderRadius: 2, background: 'var(--border-subtle)', gap: 1 }}>
                     {posPct > 0 && <div style={{ width: `${posPct}%`, background: 'var(--sent-pos)', transition: 'width 400ms ease' }} />}
-                    {neuPct > 0 && <div style={{ width: `${neuPct}%`, background: 'var(--sent-neu)', opacity: 0.4, transition: 'width 400ms ease' }} />}
+                    {neuPct > 0 && <div style={{ width: `${neuPct}%`, background: 'var(--sent-neu)', transition: 'width 400ms ease' }} />}
                     {negPct > 0 && <div style={{ width: `${negPct}%`, background: 'var(--sent-neg)', transition: 'width 400ms ease' }} />}
+                  </div>
+                  <div style={{ display: 'flex', gap: 4, fontFamily: MONO, fontSize: '0.5625rem', color: 'var(--ink-tertiary)', flexShrink: 0 }}>
+                    <span style={{ color: 'var(--sent-pos-text)' }}>{posPct}</span>
+                    <span>/</span>
+                    <span>{neuPct}</span>
+                    <span>/</span>
+                    <span style={{ color: 'var(--sent-neg-text)' }}>{negPct}</span>
                   </div>
                 </div>
               )
@@ -1272,12 +1392,17 @@ function DashboardSkeleton() {
         {/* Main column */}
         <div className="dashboard-main">
           {/* Exec summary */}
-          <DashCard accent="var(--accent)">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div className="skeleton-shimmer" style={{ width: 96, height: 10 }} />
-              <div className="skeleton-shimmer" style={{ width: '95%', height: 12 }} />
-              <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-              <div className="skeleton-shimmer" style={{ width: '70%', height: 12 }} />
+          <DashCard style={{ background: 'var(--accent-subtle)', borderColor: 'var(--accent-muted)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="skeleton-shimmer" style={{ width: 112, height: 10 }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div className="skeleton-shimmer" style={{ width: '100%', height: 10 }} />
+                <div className="skeleton-shimmer" style={{ width: '90%', height: 10 }} />
+              </div>
+              <div style={{ paddingLeft: 12, borderLeft: '2px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div className="skeleton-shimmer" style={{ width: '95%', height: 10 }} />
+                <div className="skeleton-shimmer" style={{ width: '75%', height: 10 }} />
+              </div>
             </div>
           </DashCard>
           <hr className="dash-divider" />
@@ -1307,19 +1432,35 @@ function DashboardSkeleton() {
         <div className="dashboard-sidebar">
           {/* Intelligence */}
           <DashCard>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div className="skeleton-shimmer" style={{ width: 80, height: 10 }} />
-              <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-              <div className="skeleton-shimmer" style={{ width: '70%', height: 12 }} />
+              {[0, 1].map(i => (
+                <div key={i} style={{ padding: '0.5rem 0.625rem', borderRadius: 8, background: 'var(--surface-inset)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                    <div className="skeleton-shimmer" style={{ width: 7, height: 7, borderRadius: '50%' }} />
+                    <div className="skeleton-shimmer" style={{ width: 100, height: 10 }} />
+                  </div>
+                  <div className="skeleton-shimmer" style={{ width: '90%', height: 9, marginLeft: 13 }} />
+                </div>
+              ))}
             </div>
           </DashCard>
           <hr className="dash-divider" />
           {/* Sentiment */}
           <DashCard>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div className="skeleton-shimmer" style={{ width: 64, height: 10 }} />
-              <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-              <div className="skeleton-shimmer" style={{ width: '60%', height: 12 }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div className="skeleton-shimmer" style={{ width: 64, height: 10 }} />
+                <div className="skeleton-shimmer" style={{ width: 48, height: 16, borderRadius: 4 }} />
+              </div>
+              <div className="skeleton-shimmer" style={{ width: '100%', height: 10 }} />
+              <div className="skeleton-shimmer" style={{ width: '100%', height: 6, borderRadius: 3 }} />
+              {[0, 1, 2].map(i => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div className="skeleton-shimmer" style={{ width: 48, height: 8 }} />
+                  <div className="skeleton-shimmer" style={{ flex: 1, height: 3, borderRadius: 2 }} />
+                </div>
+              ))}
             </div>
           </DashCard>
           <hr className="dash-divider" />
@@ -1327,16 +1468,20 @@ function DashboardSkeleton() {
           <DashCard>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div className="skeleton-shimmer" style={{ width: 96, height: 10 }} />
-              <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-              <div className="skeleton-shimmer" style={{ width: '70%', height: 12 }} />
+              {[0, 1, 2].map(i => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div className="skeleton-shimmer" style={{ width: '70%', height: 10 }} />
+                  <div className="skeleton-shimmer" style={{ width: 40, height: 8 }} />
+                </div>
+              ))}
             </div>
           </DashCard>
           <hr className="dash-divider" />
-          {/* Distribution + Health */}
+          {/* Distribution */}
           <DashCard>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div className="skeleton-shimmer" style={{ width: 80, height: 10 }} />
-              <div className="skeleton-shimmer" style={{ width: '100%', height: 8 }} />
+              <div className="skeleton-shimmer" style={{ width: '100%', height: 8, borderRadius: 4 }} />
             </div>
           </DashCard>
         </div>

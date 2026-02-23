@@ -13,7 +13,7 @@ import { fetchSocialAccounts } from './social_accounts'
 import { fetchSocialTopics } from './social_topics'
 import { fetchSocialTrends } from './social_trends'
 import { fetchChromeRadar } from './chrome_radar'
-import { fetchRssFeeds } from './rss_feeds'
+import { fetchRssFeeds, fetchRssNews } from './rss_feeds'
 import { fetchXPosts } from './x_posts'
 import { fetchWeibo } from './weibo'
 import { fetchZhihu } from './zhihu'
@@ -76,6 +76,7 @@ export const SENSOR_REGISTRY: Record<string, SensorFetchFn> = {
   wallstreetcn: fetchWallStreetCN,
   chrome_radar: fetchChromeRadar,
   rss_feeds: fetchRssFeeds,
+  rss_news: fetchRssNews,
   weibo: fetchWeibo,
   zhihu: fetchZhihu,
   xiaohongshu: fetchXiaohongshu,

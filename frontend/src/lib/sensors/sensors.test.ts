@@ -374,13 +374,13 @@ describe('SensorProtocolCompliance', () => {
     await expect(fetchProductHunt(makeConfig({ producthunt_token: null }), 5)).rejects.toThrow(SensorConfigError)
   })
 
-  it('sensor registry has all 16 sensors', async () => {
+  it('sensor registry has all 17 sensors', async () => {
     const { SENSOR_REGISTRY } = await import('./index')
-    expect(Object.keys(SENSOR_REGISTRY)).toHaveLength(16)
+    expect(Object.keys(SENSOR_REGISTRY)).toHaveLength(17)
     const expected = [
       'hacker_news', 'arxiv', 'github', 'product_hunt', 'v2ex',
       'hn_blogs', 'x', 'bluesky', 'mastodon',
-      'sources_36kr', 'wallstreetcn', 'chrome_radar', 'rss_feeds',
+      'sources_36kr', 'wallstreetcn', 'chrome_radar', 'rss_feeds', 'rss_news',
       'weibo', 'zhihu', 'xiaohongshu',
     ]
     for (const name of expected) {

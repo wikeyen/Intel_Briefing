@@ -131,12 +131,25 @@ const SOURCE_BY_TYPE: Record<RssFeedType, string> = {
   other: 'rss_feeds',
 }
 
-export async function fetchRssFeeds(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
+/**
+ * Core RSS fetch logic shared by both rss_feeds and rss_news sensors.
+ * Filters feeds by type so each sensor only processes its own subset.
+ */
+async function fetchRssItems(
+  config: ConfigSettings,
+  limit: number,
+  typeFilter: RssFeedType[],
+  sensorKey: string,
+): Promise<IntelItem[]> {
   if (!config.rss_feed_urls || config.rss_feed_urls.length === 0) {
     throw new SensorConfigError('No RSS feed URLs configured')
   }
 
-  const feeds = normalizeRssFeeds(config.rss_feed_urls)
+  const allFeeds = normalizeRssFeeds(config.rss_feed_urls)
+  const feeds = allFeeds.filter(f => typeFilter.includes(f.type))
+  if (feeds.length === 0) {
+    throw new SensorConfigError(`No RSS feeds of type ${typeFilter.join('/')} configured`)
+  }
 
   const feedResults = await Promise.allSettled(
     feeds.map((entry) => fetchFeed(entry.url, entry.type)),
@@ -149,7 +162,7 @@ export async function fetchRssFeeds(config: ConfigSettings, limit: number): Prom
     }
   }
 
-  const lookbackHours = config.sensor_lookback_hours?.rss_feeds
+  const lookbackHours = config.sensor_lookback_hours?.[sensorKey]
   if (lookbackHours) {
     const cutoff = new Date(Date.now() - lookbackHours * 60 * 60 * 1000)
     allItems = allItems.filter((item) => {
@@ -180,4 +193,12 @@ export async function fetchRssFeeds(config: ConfigSettings, limit: number): Prom
     content: item.fullContent ?? item.summary,
     account: item.feedTitle,
   }))
+}
+
+export function fetchRssFeeds(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
+  return fetchRssItems(config, limit, ['blog', 'other'], 'rss_feeds')
+}
+
+export function fetchRssNews(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
+  return fetchRssItems(config, limit, ['news'], 'rss_news')
 }

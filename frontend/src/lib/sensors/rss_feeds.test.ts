@@ -255,7 +255,7 @@ describe('RSS Feeds Sensor', () => {
     expect(items.length).toBe(2)
   })
 
-  it('routes news-type feeds to rss_news source', async () => {
+  it('fetchRssNews routes news-type feeds to rss_news source', async () => {
     globalThis.fetch = vi.fn().mockImplementation((url: string) => {
       if (url === 'https://example.com/news.xml') {
         return Promise.resolve({
@@ -269,15 +269,15 @@ describe('RSS Feeds Sensor', () => {
     const config = makeConfig({
       rss_feed_urls: [{ url: 'https://example.com/news.xml', type: 'news' }],
     })
-    const { fetchRssFeeds } = await import('./rss_feeds')
-    const items = await fetchRssFeeds(config, 10)
+    const { fetchRssNews } = await import('./rss_feeds')
+    const items = await fetchRssNews(config, 10)
 
     expect(items.length).toBe(2)
     expect(items[0].source).toBe('rss_news')
     expect(items[1].source).toBe('rss_news')
   })
 
-  it('routes blog-type feeds to rss_feeds source', async () => {
+  it('fetchRssFeeds only processes blog/other feeds', async () => {
     globalThis.fetch = vi.fn().mockImplementation((url: string) => {
       if (url === 'https://example.com/blog.xml') {
         return Promise.resolve({
@@ -299,7 +299,25 @@ describe('RSS Feeds Sensor', () => {
     expect(items[1].source).toBe('rss_feeds')
   })
 
-  it('handles mixed feed types in same config', async () => {
+  it('fetchRssFeeds skips news-type feeds', async () => {
+    const config = makeConfig({
+      rss_feed_urls: [{ url: 'https://example.com/news.xml', type: 'news' }],
+    })
+    const { fetchRssFeeds } = await import('./rss_feeds')
+    const { SensorConfigError: ImportedError } = await import('./errors')
+    await expect(fetchRssFeeds(config, 10)).rejects.toThrow(ImportedError)
+  })
+
+  it('fetchRssNews skips blog-type feeds', async () => {
+    const config = makeConfig({
+      rss_feed_urls: [{ url: 'https://example.com/blog.xml', type: 'blog' }],
+    })
+    const { fetchRssNews } = await import('./rss_feeds')
+    const { SensorConfigError: ImportedError } = await import('./errors')
+    await expect(fetchRssNews(config, 10)).rejects.toThrow(ImportedError)
+  })
+
+  it('mixed config — each sensor only fetches its own feeds', async () => {
     globalThis.fetch = vi.fn().mockImplementation((url: string) => {
       if (url === 'https://example.com/news.xml' || url === 'https://example.com/blog.xml') {
         return Promise.resolve({
@@ -316,13 +334,15 @@ describe('RSS Feeds Sensor', () => {
         { url: 'https://example.com/blog.xml', type: 'blog' },
       ],
     })
-    const { fetchRssFeeds } = await import('./rss_feeds')
-    const items = await fetchRssFeeds(config, 20)
+    const { fetchRssFeeds, fetchRssNews } = await import('./rss_feeds')
 
-    const newsSources = items.filter(i => i.source === 'rss_news')
-    const blogSources = items.filter(i => i.source === 'rss_feeds')
-    expect(newsSources.length).toBe(2)
-    expect(blogSources.length).toBe(2)
+    const blogItems = await fetchRssFeeds(config, 20)
+    expect(blogItems.length).toBe(2)
+    expect(blogItems.every(i => i.source === 'rss_feeds')).toBe(true)
+
+    const newsItems = await fetchRssNews(config, 20)
+    expect(newsItems.length).toBe(2)
+    expect(newsItems.every(i => i.source === 'rss_news')).toBe(true)
   })
 
   it('respects the limit parameter', async () => {

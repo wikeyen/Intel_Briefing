@@ -365,7 +365,7 @@ function ExecSummaryWidget({ summary }: { summary: BriefingSummary }) {
   const isLong = overall.executive_summary.length > 400
 
   return (
-    <DashCard accent="var(--accent)">
+    <DashCard style={{ background: 'var(--accent-subtle)', borderColor: 'var(--accent-muted)' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
         <SectionLabel color="var(--accent)">Executive Summary</SectionLabel>
         <div

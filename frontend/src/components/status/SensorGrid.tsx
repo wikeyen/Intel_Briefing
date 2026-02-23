@@ -69,9 +69,6 @@ export function SensorGrid({
     return new Set(pipelineStatus.sensors.map(s => s.name))
   }, [pipelineStatus])
 
-  // The most recent fetched_at timestamp — sensors matching this are "fresh"
-  const latestFetchedAt = report?.fetched_at ?? ''
-
   /* Flat list of all sensors, ordered by category (SECTION_SENSORS preserves grouping) */
   const allSensors = useMemo(() => {
     const perSensorTs = report?.sources_fetched_at ?? {}
@@ -86,6 +83,9 @@ export function SensorGrid({
         const isApiErr = isFailed && lastSp?.fetch_error_kind === 'api'
         const count = sensorCounts[sensorKey] ?? 0
         const sensorFetchedAt = perSensorTs[sensorKey]
+        // Fresh = green by default. Only show orange (stale) when a pipeline
+        // is actively running and this sensor is NOT part of the current run.
+        const isStale = isRunning && !pipelineSensorSet.has(sensorKey)
 
         return {
           sensorKey,
@@ -100,11 +100,11 @@ export function SensorGrid({
           summaryError: lastSp?.summary_error ?? undefined,
           itemCount: count,
           lastFetchAgo: sensorFetchedAt ? timeAgo(sensorFetchedAt) : (report?.fetched_at ? timeAgo(report.fetched_at) : undefined),
-          isFreshFetch: sensorFetchedAt === latestFetchedAt,
+          isFreshFetch: !isStale,
         }
       }),
     )
-  }, [report, config, pipelineStatus, sensorCounts, latestFetchedAt])
+  }, [report, config, pipelineStatus, sensorCounts, isRunning, pipelineSensorSet])
 
   const visibleSensors = allSensors.filter(s => !dismissed.has(s.sensorKey))
   const selectedCount = selected.size

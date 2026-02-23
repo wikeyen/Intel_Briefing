@@ -557,7 +557,7 @@ input[type="range"]::-moz-range-thumb {
     width: 100%;
     /* Push below the fixed top bar */
     padding-top: calc(56px + env(safe-area-inset-top, 0)) !important;
-    height: 100vh;
+    height: 100dvh;
   }
 
   /* ── Page header — hidden on mobile (info is in the top bar) ── */
@@ -718,6 +718,11 @@ input[type="range"]::-moz-range-thumb {
     gap: 0.25rem !important;
     padding-left: 0.75rem !important;
     padding-right: 0.75rem !important;
+  }
+
+  /* ── Sources page — more clearance below fixed header (page-header hidden on mobile) ── */
+  .sources-root {
+    padding-top: 2rem !important;
   }
 
   /* ── Sources page — sensor row stacks on mobile ── */

@@ -221,7 +221,7 @@ export function Pipeline() {
                     transform: 'translateY(-50%)',
                     pointerEvents: 'none',
                     color: 'var(--ink-faint)',
-                    fontSize: '0.75rem',
+                    fontSize: '0.875rem',
                     userSelect: 'none',
                   }}>
                     ▾

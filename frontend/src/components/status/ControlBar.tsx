@@ -225,7 +225,7 @@ export function ControlBar({
               onClick={onGenerateOverall}
               style={runBtnBase}
             >
-              <span style={{ fontSize: '0.75rem' }}>▶</span>
+              <span style={{ fontSize: '0.875rem' }}>▶</span>
               {t('status.generate_summary')}
             </button>
           </div>
@@ -389,7 +389,7 @@ export function ControlBar({
               ...(runDisabled ? { opacity: 0.4, cursor: 'not-allowed' } : {}),
             }}
           >
-            <span style={{ fontSize: '0.75rem' }}>▶</span>
+            <span style={{ fontSize: '0.875rem' }}>▶</span>
             {runLabel}
           </button>
         </div>

@@ -239,7 +239,7 @@ export function AiSummary() {
                     transform: 'translateY(-50%)',
                     pointerEvents: 'none',
                     color: 'var(--ink-faint)',
-                    fontSize: '0.75rem',
+                    fontSize: '0.875rem',
                     userSelect: 'none',
                   }}>
                     ▾
@@ -442,7 +442,7 @@ export function AiSummary() {
               </div>
 
               {/* Per-Sensor Prompts — collapsible list */}
-              <div>
+              <div style={{ borderTop: '1px solid var(--border-soft)', paddingTop: '1rem' }}>
                 <button
                   onClick={() => setPromptsExpanded(!promptsExpanded)}
                   style={{
@@ -450,21 +450,19 @@ export function AiSummary() {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     width: '100%',
-                    padding: '0.5rem 0.75rem',
+                    padding: 0,
                     marginBottom: promptsExpanded ? '0.75rem' : 0,
-                    background: 'var(--surface-raised, var(--surface))',
-                    border: '1px solid var(--border)',
-                    borderRadius: 6,
+                    background: 'none',
+                    border: 'none',
                     cursor: 'pointer',
                     color: 'var(--ink)',
-                    transition: 'border-color 120ms',
                   }}
                 >
                   <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>
                     {t('ai.per_sensor_prompts')}
                   </span>
                   <span style={{
-                    fontSize: '0.75rem',
+                    fontSize: '0.875rem',
                     color: 'var(--ink-muted)',
                     transition: 'transform 200ms',
                     transform: promptsExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
@@ -506,7 +504,7 @@ export function AiSummary() {
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                               <span style={{
-                                fontSize: '0.75rem',
+                                fontSize: '0.875rem',
                                 color: 'var(--ink-faint)',
                                 transition: 'transform 200ms',
                                 transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',

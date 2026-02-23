@@ -152,9 +152,9 @@ function SectionLabel({ children, color, style }: { children: React.ReactNode; c
 }
 
 /** Stagger-fade on mount via CSS animation. */
-function StaggerChild({ index, children }: { index: number; children: React.ReactNode }) {
+function StaggerChild({ index, children, className }: { index: number; children: React.ReactNode; className?: string }) {
   return (
-    <div style={{
+    <div className={className} style={{
       animation: `fadeSlideIn 300ms ease both`,
       animationDelay: `${index * 40}ms`,
     }}>
@@ -1387,11 +1387,11 @@ export function Dashboard() {
             {/* Bento Grid */}
             <div className="dashboard-grid" style={{ marginTop: '0.75rem' }}>
               {/* Row 1: Exec Summary (2 cols) + Sentiment (1 col) */}
-              {summary && <StaggerChild index={1}><div className="dash-span-2"><ExecSummaryWidget summary={summary} /></div></StaggerChild>}
+              {summary && <StaggerChild index={1} className="dash-span-2"><ExecSummaryWidget summary={summary} /></StaggerChild>}
               {summary && <StaggerChild index={2}><SentimentWidget summary={summary} report={report} /></StaggerChild>}
 
               {/* Row 2: Themes (2 cols) + Distribution (1 col) */}
-              {summary && <StaggerChild index={3}><div className="dash-span-2"><ThematicSectionsWidget summary={summary} /></div></StaggerChild>}
+              {summary && <StaggerChild index={3} className="dash-span-2"><ThematicSectionsWidget summary={summary} /></StaggerChild>}
               {report && <StaggerChild index={4}><CategoryDistributionWidget report={report} /></StaggerChild>}
 
               {/* Row 3: Risk Intel + Macro + Source Health */}
@@ -1400,7 +1400,7 @@ export function Dashboard() {
               {report && <StaggerChild index={7}><SourceHealthWidget report={report} /></StaggerChild>}
 
               {/* Row 4: Trending (full width) */}
-              {report && <StaggerChild index={8}><div className="dash-span-full"><TrendingWidget report={report} summary={summary} /></div></StaggerChild>}
+              {report && <StaggerChild index={8} className="dash-span-full"><TrendingWidget report={report} summary={summary} /></StaggerChild>}
 
               {/* Row 5: News + Social + China Trend */}
               {summary && <StaggerChild index={9}><NewsTechWidget summary={summary} /></StaggerChild>}

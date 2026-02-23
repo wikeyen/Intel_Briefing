@@ -32,7 +32,7 @@ export function FoldableSection({ title, enabledCount, totalCount, children, def
         }}
       >
         <span style={{
-          fontSize: '0.625rem',
+          fontSize: '0.75rem',
           color: 'var(--ink-faint)',
           transition: 'transform 150ms',
           transform: open ? 'rotate(90deg)' : 'rotate(0deg)',

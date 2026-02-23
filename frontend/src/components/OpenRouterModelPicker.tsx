@@ -125,7 +125,7 @@ export function OpenRouterModelPicker({
           transform: `translateY(-50%) rotate(${open ? '180deg' : '0deg'})`,
           pointerEvents: 'none',
           color: 'var(--ink-faint)',
-          fontSize: '0.625rem',
+          fontSize: '0.75rem',
           transition: 'transform 150ms',
           userSelect: 'none',
         }}>

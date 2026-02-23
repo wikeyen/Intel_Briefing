@@ -239,7 +239,7 @@ export function AiSummary() {
                     transform: 'translateY(-50%)',
                     pointerEvents: 'none',
                     color: 'var(--ink-faint)',
-                    fontSize: '0.625rem',
+                    fontSize: '0.75rem',
                     userSelect: 'none',
                   }}>
                     ▾
@@ -464,7 +464,7 @@ export function AiSummary() {
                     {t('ai.per_sensor_prompts')}
                   </span>
                   <span style={{
-                    fontSize: '0.625rem',
+                    fontSize: '0.75rem',
                     color: 'var(--ink-muted)',
                     transition: 'transform 200ms',
                     transform: promptsExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
@@ -506,7 +506,7 @@ export function AiSummary() {
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                               <span style={{
-                                fontSize: '0.625rem',
+                                fontSize: '0.75rem',
                                 color: 'var(--ink-faint)',
                                 transition: 'transform 200ms',
                                 transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',

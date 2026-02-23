@@ -22,7 +22,7 @@ export function Status() {
   const [stopping, setStopping]       = useState(false)
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null)
   const [pipelineChecked, setPipelineChecked] = useState(false)
-  const [, setTick]                   = useState(0)
+  const [tick, setTick]               = useState(0)
   const [selectedSensors, setSelectedSensors] = useState<Set<string>>(new Set())
   const [dismissed, setDismissed]     = useState<Set<string>>(new Set())
   const lastFetchedAtRef              = useRef<string | null>(null)
@@ -173,6 +173,15 @@ export function Status() {
   const handleSkipSensor = async (sensor: string) => {
     try {
       await api.resumePipeline('skip_sensor', [sensor])
+      showToast(`Skipped ${sensor}`)
+    } catch (e) {
+      showToast('Skip failed: ' + (e as Error).message)
+    }
+  }
+
+  const handleSkipFetchingSensor = async (sensor: string) => {
+    try {
+      await api.resumePipeline('skip_fetching_sensor', [sensor])
       showToast(`Skipped ${sensor}`)
     } catch (e) {
       showToast('Skip failed: ' + (e as Error).message)
@@ -383,6 +392,8 @@ export function Status() {
         onSelectNone={selectNone}
         onRetry={handleRetrySensor}
         onSkipSensor={handleSkipSensor}
+        onSkipFetchingSensor={handleSkipFetchingSensor}
+        tick={tick}
         dismissed={dismissed}
         onDismiss={dismissSensor}
         autoRetryExhausted={autoRetryExhausted}

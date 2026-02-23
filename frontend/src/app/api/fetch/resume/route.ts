@@ -1,5 +1,5 @@
 // ABOUTME: Pipeline resume endpoint — POST /api/fetch/resume.
-// ABOUTME: Handles skip-retries, retry-sensor, skip-sensor, and generate-overall actions.
+// ABOUTME: Handles skip-retries, retry-sensor, skip-sensor, skip-fetching-sensor, and generate-overall actions.
 import { NextRequest, NextResponse } from 'next/server'
 import {
   skipPipelineRetries,
@@ -7,10 +7,11 @@ import {
   isPipelinePaused,
   retrySensor,
   skipSensor,
+  skipFetchingSensor,
   generateOverall,
 } from '@/lib/pipeline/orchestrator'
 
-const VALID_ACTIONS = ['proceed', 'retry_sensor', 'skip_sensor', 'generate_overall'] as const
+const VALID_ACTIONS = ['proceed', 'retry_sensor', 'skip_sensor', 'skip_fetching_sensor', 'generate_overall'] as const
 type Action = typeof VALID_ACTIONS[number]
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -39,6 +40,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Failed to skip retries' }, { status: 500 })
     }
     return NextResponse.json({ status: 'skipped_retries' })
+  }
+
+  // Skip a sensor mid-fetch — works during active fetch (no pause required)
+  if (action === 'skip_fetching_sensor') {
+    const sensor = sensors?.[0]
+    if (!sensor) {
+      return NextResponse.json({ error: 'sensors[0] required for skip_fetching_sensor' }, { status: 400 })
+    }
+    const ok = skipFetchingSensor(sensor)
+    if (!ok) return NextResponse.json({ error: 'Sensor is not currently fetching' }, { status: 409 })
+    return NextResponse.json({ status: 'skipped_fetching_sensor', sensor })
   }
 
   // Actions below require the pipeline to be in paused state

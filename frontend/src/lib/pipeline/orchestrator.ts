@@ -45,6 +45,8 @@ const g = globalThis as unknown as {
   __pipelineReport?: IntelReport | null
   __pipelineFailedSensors?: Set<string> | null
   __pipelineConfig?: ConfigSettings | null
+  // Per-sensor skip promises — resolve to abort a single sensor's fetch mid-flight
+  __pipelineSensorSkips?: Map<string, () => void>
 }
 
 /** Cancel the running pipeline, if any. Returns true if a pipeline was cancelled. */
@@ -95,6 +97,14 @@ export function generateOverall(): boolean {
   if (!g.__pipelinePauseResolve) return false
   g.__pipelinePauseResolve({ type: 'generate_overall' })
   g.__pipelinePauseResolve = null
+  return true
+}
+
+/** Skip a sensor that is currently fetching. The orchestrator stops waiting and marks it skipped. */
+export function skipFetchingSensor(sensorName: string): boolean {
+  const resolve = g.__pipelineSensorSkips?.get(sensorName)
+  if (!resolve) return false
+  resolve()
   return true
 }
 
@@ -239,10 +249,16 @@ export async function runPipeline(
   try {
     // Track sensors that failed fetch — for progress tracker skip marking
     const failedSensors = new Set<string>()
+    // Track sensors skipped mid-fetch — their summaries should also be skipped
+    const skippedSensors = new Set<string>()
 
     if (shouldFetch) {
       // Stage 1: Run all sensor fetches with retry loop on failures
       const resultMap = new Map<string, SensorResult>()
+
+      // Per-sensor skip map — resolve to abandon a single sensor's fetch
+      if (!g.__pipelineSensorSkips) g.__pipelineSensorSkips = new Map()
+      const sensorSkips = g.__pipelineSensorSkips
 
       // Inner function to fetch a batch of sensors concurrently
       const fetchBatch = async (sensorNames: string[]) => {
@@ -250,10 +266,33 @@ export async function runPipeline(
           fetchSemaphore.run(async () => {
             if (signal.aborted) return
             tracker.setFetchState(name, 'running')
-            const result = await fetchSensor(name, config, (detail) => {
-              tracker.setFetchDetail(name, detail)
+
+            // Race the actual fetch against a per-sensor skip promise
+            let skipResolve: () => void
+            const skipPromise = new Promise<'SKIPPED'>(resolve => {
+              skipResolve = () => resolve('SKIPPED')
             })
+            sensorSkips.set(name, skipResolve!)
+
+            const outcome = await Promise.race([
+              fetchSensor(name, config, (detail) => {
+                tracker.setFetchDetail(name, detail)
+              }),
+              skipPromise,
+            ])
+
+            sensorSkips.delete(name)
+
             if (signal.aborted) return
+
+            if (outcome === 'SKIPPED') {
+              tracker.setFetchState(name, 'skipped', 0)
+              failedSensors.delete(name)
+              skippedSensors.add(name)
+              return
+            }
+
+            const result = outcome
             resultMap.set(name, result)
             if (sensorResultSucceeded(result)) {
               tracker.setFetchState(name, 'ok', result.items.length)
@@ -306,9 +345,12 @@ export async function runPipeline(
 
       report = await assembleReport([...resultMap.values()], config, { llmConfig, signal, sensorFilter })
 
-      // Mark failed sensors' summaries as skipped — they don't pass to the next stage
+      // Mark failed/skipped sensors' summaries as skipped — they don't pass to the next stage
       if (shouldSummarize) {
         for (const name of failedSensors) {
+          tracker.skipSummaryForSensor(name)
+        }
+        for (const name of skippedSensors) {
           tracker.skipSummaryForSensor(name)
         }
       }
@@ -567,6 +609,7 @@ export async function runPipeline(
     if (g.__pipelineAbortController === abortController) {
       g.__pipelineAbortController = null
       g.__pipelineTracker = null
+      g.__pipelineSensorSkips = undefined
     }
   }
 }

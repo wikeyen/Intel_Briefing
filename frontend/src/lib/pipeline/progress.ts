@@ -46,6 +46,7 @@ export class PipelineProgressTracker {
       fetch_error: null,
       fetch_error_kind: null,
       fetch_detail: null,
+      fetch_started_at: null,
       summary: skipSummary ? 'skipped' : 'queued',
       summary_error: null,
       item_count: 0,
@@ -78,6 +79,7 @@ export class PipelineProgressTracker {
   ): void {
     const s = this.find(name)
     s.fetch = state
+    if (state === 'running') s.fetch_started_at = new Date().toISOString().replace(/\.\d+Z$/, 'Z')
     if (itemCount !== undefined) s.item_count = itemCount
     if (error !== undefined) s.fetch_error = error
     if (errorKind !== undefined) s.fetch_error_kind = errorKind
@@ -164,6 +166,7 @@ export class PipelineProgressTracker {
     s.fetch_error = null
     s.fetch_error_kind = null
     s.fetch_detail = null
+    s.fetch_started_at = null
     s.item_count = 0
     this.notify()
   }

@@ -28,9 +28,12 @@ export interface SensorCardProps {
   isRetrying?: boolean
   /** Sensor was not included in the current pipeline run. */
   isSkipped?: boolean
+  /** Current tick counter — changes every second to trigger re-render for elapsed time. */
+  tick?: number
   onToggleSelect: () => void
   onRetry?: () => void
   onSkip?: () => void
+  onSkipFetching?: () => void
   onDismiss?: () => void
 }
 
@@ -430,10 +433,25 @@ function SecondaryContent({ state, props, t }: { state: CardState; props: Sensor
         </div>
       )
 
-    case 'fetching':
-      return liveSensor?.fetch_detail
-        ? <span style={secondaryStyle}>{liveSensor.fetch_detail}</span>
-        : null
+    case 'fetching': {
+      const { onSkipFetching } = props
+      const startedAt = liveSensor?.fetch_started_at
+      const elapsedSec = startedAt ? Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000) : 0
+      const showSkip = onSkipFetching && elapsedSec >= 60
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
+          {liveSensor?.fetch_detail && <span style={secondaryStyle}>{liveSensor.fetch_detail}</span>}
+          {showSkip && (
+            <button
+              style={{ ...dismissButtonStyle, marginTop: '0.125rem', alignSelf: 'flex-start' }}
+              onClick={(e) => { e.stopPropagation(); onSkipFetching() }}
+            >
+              {t('sensor.skip')}
+            </button>
+          )}
+        </div>
+      )
+    }
 
     case 'summarizing': {
       if (!liveSensor) return null
@@ -628,11 +646,22 @@ function RowMetric({ state, props, t }: { state: CardState; props: SensorCardPro
 }
 
 function RowActions({ state, props, t }: { state: CardState; props: SensorCardProps; t: TFn }) {
-  const { lastFetchAgo, onRetry, onSkip, onDismiss } = props
+  const { lastFetchAgo, onRetry, onSkip, onSkipFetching, onDismiss, liveSensor } = props
   const fetchColor = props.isFreshFetch ? 'var(--ok)' : 'var(--warn)'
 
   if (state === 'healthy' || state === 'selected') {
     return lastFetchAgo ? <span style={{ fontSize: '0.6875rem', color: fetchColor, whiteSpace: 'nowrap' }}>{lastFetchAgo}</span> : null
+  }
+
+  if (state === 'fetching') {
+    const startedAt = liveSensor?.fetch_started_at
+    const elapsedSec = startedAt ? Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000) : 0
+    if (onSkipFetching && elapsedSec >= 60) {
+      return (
+        <button style={dismissButtonStyle} onClick={(e) => { e.stopPropagation(); onSkipFetching() }}>{t('sensor.skip')}</button>
+      )
+    }
+    return null
   }
 
   if (state === 'failed') {

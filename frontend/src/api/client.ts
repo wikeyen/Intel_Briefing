@@ -96,6 +96,8 @@ export interface SensorJobProgress {
   fetch_error: string | null
   fetch_error_kind: 'config' | 'api' | null
   fetch_detail: string | null
+  /** ISO timestamp when this sensor's fetch stage started running. */
+  fetch_started_at: string | null
   summary: StageState
   summary_error: string | null
   item_count: number
@@ -310,7 +312,7 @@ export const api = {
   stopPipeline: () =>
     apiFetch<{ status: string }>('/fetch/stop', { method: 'POST' }),
 
-  resumePipeline: (action: 'proceed' | 'retry_sensor' | 'skip_sensor' | 'generate_overall', sensors?: string[]) =>
+  resumePipeline: (action: 'proceed' | 'retry_sensor' | 'skip_sensor' | 'skip_fetching_sensor' | 'generate_overall', sensors?: string[]) =>
     apiFetch<{ status: string }>('/fetch/resume', {
       method: 'POST',
       body: JSON.stringify({ action, ...(sensors?.length ? { sensors } : {}) }),

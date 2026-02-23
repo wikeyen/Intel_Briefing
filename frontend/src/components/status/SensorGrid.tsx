@@ -23,6 +23,9 @@ export interface SensorGridProps {
   onSelectNone: () => void
   onRetry?: (sensor: string) => void
   onSkipSensor?: (sensor: string) => void
+  onSkipFetchingSensor?: (sensor: string) => void
+  /** Tick counter — increments every second for elapsed-time calculations. */
+  tick?: number
   dismissed: Set<string>
   onDismiss: (sensor: string) => void
   /** Sensors whose automatic retries are exhausted — show manual Retry button. */
@@ -60,7 +63,7 @@ const toolbarLinkStyle: React.CSSProperties = {
 export function SensorGrid({
   isRunning, isPaused, liveSensors, report, config, pipelineStatus,
   retryAttempt, selected, onToggleSelect, onSelectAll, onSelectNone,
-  onRetry, onSkipSensor, dismissed, onDismiss, autoRetryExhausted,
+  onRetry, onSkipSensor, onSkipFetchingSensor, tick, dismissed, onDismiss, autoRetryExhausted,
 }: SensorGridProps) {
   const { t } = useTranslation()
   const sensorCounts = useMemo(() => countItemsBySensor(report), [report])
@@ -183,9 +186,11 @@ export function SensorGrid({
               isSelected={selected.has(sensor.sensorKey)}
               isRetrying={liveRetrying}
               isSkipped={isRunning && !live && !sensor.isDisabled && !pipelineSensorSet.has(sensor.sensorKey)}
+              tick={tick}
               onToggleSelect={() => onToggleSelect(sensor.sensorKey)}
               onRetry={(sensor.isFailed || liveFailed) && onRetry && (isPaused || autoRetryExhausted?.has(sensor.sensorKey)) ? () => onRetry(sensor.sensorKey) : undefined}
               onSkip={isPaused && onSkipSensor ? () => onSkipSensor(sensor.sensorKey) : undefined}
+              onSkipFetching={isRunning && live?.fetch === 'running' && onSkipFetchingSensor ? () => onSkipFetchingSensor(sensor.sensorKey) : undefined}
               onDismiss={sensor.isFailed && !isPaused ? () => onDismiss(sensor.sensorKey) : undefined}
             />
           )

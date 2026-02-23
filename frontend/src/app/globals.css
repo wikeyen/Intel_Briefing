@@ -433,6 +433,11 @@ input[type="range"]::-moz-range-thumb {
   background: rgba(255, 255, 255, 0.08);
 }
 
+/* Sidebar width animates smoothly between tablet (180px) and desktop (240px) */
+.sidebar-nav {
+  transition: width 200ms ease;
+}
+
 /* Sidebar overlay backdrop — hidden on desktop */
 .sidebar-backdrop {
   display: none;
@@ -744,6 +749,34 @@ input[type="range"]::-moz-range-thumb {
   }
   input[type="range"] {
     height: 4px;
+  }
+}
+
+/* ── Tablet: narrower sidebar to smooth the desktop → mobile transition ── */
+@media (min-width: 769px) and (max-width: 1023px) {
+  .sidebar-nav {
+    width: 180px !important;
+    transition: width 200ms ease;
+  }
+  .sidebar-brand {
+    padding-left: 1.25rem !important;
+    padding-right: 1.25rem !important;
+  }
+  .sidebar-brand-divider {
+    margin-left: 1.25rem !important;
+    margin-right: 1.25rem !important;
+  }
+  .sidebar-nav a {
+    padding-left: 1.25rem !important;
+    padding-right: 1.25rem !important;
+  }
+  .sidebar-label {
+    padding-left: 1.25rem !important;
+    padding-right: 1.25rem !important;
+  }
+  .sidebar-divider {
+    margin-left: 1.25rem !important;
+    margin-right: 1.25rem !important;
   }
 }
 

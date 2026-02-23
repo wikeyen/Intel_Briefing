@@ -42,7 +42,7 @@ function NavLink({ href, active, onClick, children }: { href: string; active: bo
 
 function SideLabel({ children }: { children: ReactNode }) {
   return (
-    <div style={{
+    <div className="sidebar-label" style={{
       padding: '0 1.75rem 0.375rem',
       fontSize: '0.5625rem',
       fontWeight: 700,
@@ -56,7 +56,7 @@ function SideLabel({ children }: { children: ReactNode }) {
 }
 
 function SideDivider() {
-  return <div style={{ height: 1, background: 'var(--sb-border)', margin: '0.625rem 1.75rem 0.875rem' }} />
+  return <div className="sidebar-divider" style={{ height: 1, background: 'var(--sb-border)', margin: '0.625rem 1.75rem 0.875rem' }} />
 }
 
 

@@ -27,6 +27,13 @@ const SENSOR_TO_SECTION: Record<string, SourceSection> = {
   mastodon: 'social',
   weibo: 'trend',
   xiaohongshu: 'trend',
+  baidu_tieba: 'trend',
+  douyin: 'trend',
+  toutiao: 'trend',
+  netease: 'trend',
+  '36kr_trending': 'trend',
+  juejin: 'trend',
+  baidu: 'trend',
   rss_feeds: 'rss',
   rss_news: 'rss',
 }

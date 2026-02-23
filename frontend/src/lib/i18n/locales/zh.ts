@@ -496,6 +496,13 @@ const zh: TranslationDict = {
   'sensor.desc.zhihu': '知乎热门问答和讨论',
   'sensor.desc.weibo': '微博实时热搜',
   'sensor.desc.xiaohongshu': '小红书热门话题',
+  'sensor.desc.baidu_tieba': '百度贴吧热门讨论话题',
+  'sensor.desc.douyin': '抖音热搜榜',
+  'sensor.desc.toutiao': '头条热榜',
+  'sensor.desc.netease': '网易新闻热榜',
+  'sensor.desc.36kr_trending': '36氪24小时最热文章',
+  'sensor.desc.juejin': '掘金开发者热门文章排行',
+  'sensor.desc.baidu': '百度实时热搜排行',
 
   // ── Item card (tooltip) ────────────────────────────────────────────────────
   'item.link_unverified': '链接无法验证',

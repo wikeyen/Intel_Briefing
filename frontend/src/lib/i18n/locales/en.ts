@@ -496,6 +496,13 @@ const en: TranslationDict = {
   'sensor.desc.zhihu': 'Zhihu trending questions and discussions',
   'sensor.desc.weibo': 'Weibo real-time hot search trending',
   'sensor.desc.xiaohongshu': 'Xiaohongshu trending topics',
+  'sensor.desc.baidu_tieba': 'Hot discussion topics from Baidu Tieba',
+  'sensor.desc.douyin': 'Douyin hot search trending',
+  'sensor.desc.toutiao': 'Toutiao hot news board',
+  'sensor.desc.netease': 'Netease hot news board',
+  'sensor.desc.36kr_trending': '36Kr 24-hour most-read articles',
+  'sensor.desc.juejin': 'Juejin developer hot article ranking',
+  'sensor.desc.baidu': 'Baidu real-time hot search ranking',
 
   // ── Item card (tooltip) ────────────────────────────────────────────────────
   'item.link_unverified': 'Link could not be verified',

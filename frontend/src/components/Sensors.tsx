@@ -765,79 +765,98 @@ export function Sensors() {
                   )
                 })}
 
-                {/* Discovery — shared Topics + Trends controls for social platforms */}
-                {group.label === 'Social' && ((enabled.bluesky ?? true) || (enabled.mastodon ?? true)) && (
-                  <div style={{
-                    padding: '1.25rem 1.25rem 1.25rem 1.25rem',
-                    background: 'var(--canvas)',
-                    borderTop: '1px solid var(--border-soft)',
-                  }}>
-                    {/* Section header */}
-                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.09em',
-                      textTransform: 'uppercase', color: 'var(--ink-faint)', marginBottom: '0.75rem' }}>
-                      Discovery
-                    </div>
+              </div>
+            </div>
+          ))}
 
-                    {/* Topics row */}
-                    <div style={{ marginBottom: '1rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', minWidth: 40 }}>
-                          Topics
-                        </span>
-                        {(enabled.bluesky ?? true) && (
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: 'pointer' }}>
-                            <input type="checkbox" checked={blueskyTopicsEnabled}
-                              onChange={(e) => { setBlueskyTopicsEnabled(e.target.checked); trigger() }}
-                              style={{ accentColor: 'var(--brand-bluesky)' }} />
-                            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--brand-bluesky)' }} />
-                            <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Bluesky</span>
-                          </label>
-                        )}
-                        {(enabled.mastodon ?? true) && (
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: 'pointer' }}>
-                            <input type="checkbox" checked={mastodonTopicsEnabled}
-                              onChange={(e) => { setMastodonTopicsEnabled(e.target.checked); trigger() }}
-                              style={{ accentColor: 'var(--brand-mastodon)' }} />
-                            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--brand-mastodon)' }} />
-                            <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Mastodon</span>
-                          </label>
-                        )}
-                      </div>
-                      {/* Keywords input — shown when any platform has topics on */}
-                      {((blueskyTopicsEnabled && (enabled.bluesky ?? true)) ||
-                        (mastodonTopicsEnabled && (enabled.mastodon ?? true))) && (
-                        <div style={{ paddingLeft: '0.25rem' }}>
-                          <TagInput
-                            tags={socialTopicsKeywords}
-                            onChange={(tags) => { setSocialTopicsKeywords(tags); trigger() }}
-                            placeholder="keyword or #hashtag — press Enter"
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Trends row — only if mastodon sensor is on */}
-                    {(enabled.mastodon ?? true) && (
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', minWidth: 40 }}>
-                            Trends
-                          </span>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: 'pointer' }}>
-                            <input type="checkbox" checked={mastodonTrendsEnabled}
-                              onChange={(e) => { setMastodonTrendsEnabled(e.target.checked); trigger() }}
-                              style={{ accentColor: 'var(--brand-mastodon)' }} />
-                            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--brand-mastodon)' }} />
-                            <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Mastodon</span>
-                          </label>
-                        </div>
-                      </div>
+          {/* Discovery — dedicated section for Topics + Trends */}
+          {activeLanguage === 'row' && ((enabled.bluesky ?? true) || (enabled.mastodon ?? true)) && (
+            <div>
+              <div style={{
+                fontSize: '0.6875rem',
+                fontWeight: 600,
+                letterSpacing: '0.09em',
+                textTransform: 'uppercase',
+                color: 'var(--ink-faint)',
+                marginBottom: '0.5rem',
+              }}>
+                Discovery
+              </div>
+              <div style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: 8,
+                overflow: 'hidden',
+                boxShadow: 'var(--shadow-card)',
+                transition: 'box-shadow 200ms, border-color 200ms',
+              }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-card-hover)'
+                  ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-card)'
+                  ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'
+                }}
+              >
+                {/* Topics */}
+                <div style={{
+                  padding: '1rem 1.25rem',
+                  borderBottom: (enabled.mastodon ?? true) ? '1px solid var(--border-soft)' : 'none',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', minWidth: 40 }}>
+                      Topics
+                    </span>
+                    {(enabled.bluesky ?? true) && (
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={blueskyTopicsEnabled}
+                          onChange={(e) => { setBlueskyTopicsEnabled(e.target.checked); trigger() }}
+                          style={{ accentColor: 'var(--brand-bluesky)' }} />
+                        <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--brand-bluesky)' }} />
+                        <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Bluesky</span>
+                      </label>
                     )}
+                    {(enabled.mastodon ?? true) && (
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={mastodonTopicsEnabled}
+                          onChange={(e) => { setMastodonTopicsEnabled(e.target.checked); trigger() }}
+                          style={{ accentColor: 'var(--brand-mastodon)' }} />
+                        <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--brand-mastodon)' }} />
+                        <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Mastodon</span>
+                      </label>
+                    )}
+                  </div>
+                  {((blueskyTopicsEnabled && (enabled.bluesky ?? true)) ||
+                    (mastodonTopicsEnabled && (enabled.mastodon ?? true))) && (
+                    <TagInput
+                      tags={socialTopicsKeywords}
+                      onChange={(tags) => { setSocialTopicsKeywords(tags); trigger() }}
+                      placeholder="keyword or #hashtag — press Enter"
+                    />
+                  )}
+                </div>
+
+                {/* Trends — only if mastodon sensor is on */}
+                {(enabled.mastodon ?? true) && (
+                  <div style={{ padding: '1rem 1.25rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', minWidth: 40 }}>
+                        Trends
+                      </span>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={mastodonTrendsEnabled}
+                          onChange={(e) => { setMastodonTrendsEnabled(e.target.checked); trigger() }}
+                          style={{ accentColor: 'var(--brand-mastodon)' }} />
+                        <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--brand-mastodon)' }} />
+                        <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Mastodon</span>
+                      </label>
+                    </div>
                   </div>
                 )}
               </div>
             </div>
-          ))}
+          )}
         </div>
 
       </div>

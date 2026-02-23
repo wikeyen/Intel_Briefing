@@ -436,6 +436,7 @@ input[type="range"]::-moz-range-thumb {
    Mobile overrides below replace this for the mobile layout. */
 .page-padding {
   padding-top: 2.5rem;
+  padding-bottom: 2.5rem;
 }
 
 /* ─── Mobile Responsive ─────────────────────────────────────────────────── */
@@ -569,6 +570,7 @@ input[type="range"]::-moz-range-thumb {
     padding-left: 0.75rem !important;
     padding-right: 0.75rem !important;
     padding-top: 1.5rem !important;
+    padding-bottom: 1.5rem !important;
   }
 
   /* ── Data page — tabs flush against top bar ── */

@@ -1543,82 +1543,283 @@ function DashboardSkeleton() {
 // Widget: Summary Pending — shown when report exists but summary is not yet available
 // ---------------------------------------------------------------------------
 
-function SummaryPendingCard({ isActive, report }: { isActive: boolean; report: IntelReport | null }) {
+function SummaryPendingCard({ isActive }: { isActive: boolean }) {
   return (
     <DashCard style={{ background: 'var(--surface)' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        {isActive ? (
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '0.75rem',
-            padding: '2rem 1rem',
-            textAlign: 'center',
-          }}>
-            <span style={{
-              width: 10, height: 10, borderRadius: '50%',
-              background: 'var(--accent)',
-              animation: 'pulseDot 1.6s ease-in-out infinite',
-            }} />
-            <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)' }}>
-              Generating briefing
+      {isActive ? (
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '0.75rem',
+          padding: '2rem 1rem',
+          textAlign: 'center',
+        }}>
+          <span style={{
+            width: 10, height: 10, borderRadius: '50%',
+            background: 'var(--accent)',
+            animation: 'pulseDot 1.6s ease-in-out infinite',
+          }} />
+          <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)' }}>
+            Generating briefing
+          </div>
+          <p style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)', margin: 0, lineHeight: 1.6, maxWidth: 300 }}>
+            The pipeline is running. Executive summary and domain analysis will appear here once summarization completes.
+          </p>
+          <div style={{ width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', gap: 8, marginTop: '0.5rem' }}>
+            <div className="skeleton-shimmer" style={{ width: '100%', height: 10, borderRadius: 4 }} />
+            <div className="skeleton-shimmer" style={{ width: '85%', height: 10, borderRadius: 4 }} />
+            <div className="skeleton-shimmer" style={{ width: '70%', height: 10, borderRadius: 4 }} />
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+          <div>
+            <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)', marginBottom: 2 }}>
+              Data fetched — no summary yet
             </div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)', margin: 0, lineHeight: 1.6, maxWidth: 300 }}>
-              The pipeline is running. Executive summary and domain analysis will appear here once summarization completes.
+            <p style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)', margin: 0, lineHeight: 1.5 }}>
+              Run summarization to generate the executive briefing and domain analysis.
             </p>
-            {/* Shimmer placeholder lines */}
-            <div style={{ width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', gap: 8, marginTop: '0.5rem' }}>
-              <div className="skeleton-shimmer" style={{ width: '100%', height: 10, borderRadius: 4 }} />
-              <div className="skeleton-shimmer" style={{ width: '85%', height: 10, borderRadius: 4 }} />
-              <div className="skeleton-shimmer" style={{ width: '70%', height: 10, borderRadius: 4 }} />
-            </div>
           </div>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-            <div>
-              <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)', marginBottom: 2 }}>
-                Data fetched — no summary yet
-              </div>
-              <p style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)', margin: 0, lineHeight: 1.5 }}>
-                Run summarization to generate the executive briefing and domain analysis.
-              </p>
-            </div>
-            <Link
-              href="/status"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-                padding: '6px 14px',
-                borderRadius: 6,
-                background: 'var(--accent)',
-                color: 'var(--surface)',
-                fontSize: '0.6875rem',
-                fontWeight: 600,
-                textDecoration: 'none',
-                whiteSpace: 'nowrap',
-                flexShrink: 0,
-                transition: 'opacity 150ms ease',
-              }}
-            >
-              Summarize &#8250;
-            </Link>
-          </div>
-        )}
-
-        {/* Inline Distribution + Source Health when report available */}
-        {report && (
-          <>
-            <div style={{ borderTop: '1px solid var(--border-subtle)' }} />
-            <div className="dashboard-pending-widgets">
-              <CategoryDistributionContent report={report} />
-              <SourceHealthContent report={report} />
-            </div>
-          </>
-        )}
-      </div>
+          <Link
+            href="/status"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '6px 14px',
+              borderRadius: 6,
+              background: 'var(--accent)',
+              color: 'var(--surface)',
+              fontSize: '0.6875rem',
+              fontWeight: 600,
+              textDecoration: 'none',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              transition: 'opacity 150ms ease',
+            }}
+          >
+            Summarize &#8250;
+          </Link>
+        </div>
+      )}
     </DashCard>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Infographic: Collection Distribution — horizontal bar chart
+// ---------------------------------------------------------------------------
+
+function CollectionPanel({ report }: { report: IntelReport }) {
+  const counts: Record<string, number> = { 'high-trust': 0, news: 0, trend: 0, opinions: 0 }
+  for (const [cat, items] of Object.entries(report.items)) {
+    for (const item of items) {
+      const dc = displayCategoryOf(item, cat)
+      counts[dc] = (counts[dc] || 0) + 1
+    }
+  }
+  const total = Object.values(counts).reduce((a, b) => a + b, 0)
+  if (total === 0) return null
+
+  const segments = [
+    { key: 'trend', label: 'Trend', count: counts.trend, color: 'var(--cat-trend)' },
+    { key: 'news', label: 'News', count: counts.news, color: 'var(--cat-news)' },
+    { key: 'opinions', label: 'Opinion', count: counts.opinions, color: 'var(--cat-opinion)' },
+    { key: 'high-trust', label: 'Research', count: counts['high-trust'], color: 'var(--cat-research)' },
+  ].sort((a, b) => b.count - a.count)
+
+  const maxCount = Math.max(...segments.map(s => s.count))
+
+  return (
+    <div style={{
+      background: 'var(--surface-inset)',
+      borderRadius: 10,
+      padding: '1rem 1.25rem',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '0.75rem',
+    }}>
+      {/* Header — big number + label */}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+        <span style={{
+          fontFamily: MONO,
+          fontSize: '1.75rem',
+          fontWeight: 700,
+          color: 'var(--ink)',
+          lineHeight: 1,
+        }}>
+          {total}
+        </span>
+        <span style={{
+          fontFamily: MONO,
+          fontSize: '0.5625rem',
+          fontWeight: 700,
+          letterSpacing: '0.08em',
+          color: 'var(--ink-faint)',
+        }}>
+          ITEMS COLLECTED
+        </span>
+      </div>
+
+      {/* Horizontal bar chart — sorted by count descending */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+        {segments.map(seg => {
+          const pct = maxCount > 0 ? (seg.count / maxCount) * 100 : 0
+          return (
+            <div key={seg.key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{
+                fontFamily: MONO,
+                fontSize: '0.625rem',
+                fontWeight: 500,
+                color: 'var(--ink-secondary)',
+                width: 52,
+                flexShrink: 0,
+              }}>
+                {seg.label}
+              </span>
+              <div style={{
+                flex: 1,
+                height: 8,
+                borderRadius: 4,
+                background: 'var(--border-subtle)',
+                overflow: 'hidden',
+              }}>
+                <div style={{
+                  width: `${pct}%`,
+                  height: '100%',
+                  borderRadius: 4,
+                  background: seg.color,
+                  transition: 'width 500ms cubic-bezier(0.4, 0, 0.2, 1)',
+                  minWidth: seg.count > 0 ? 4 : 0,
+                }} />
+              </div>
+              <span style={{
+                fontFamily: MONO,
+                fontSize: '0.625rem',
+                fontWeight: 700,
+                color: seg.count > 0 ? 'var(--ink)' : 'var(--ink-disabled)',
+                width: 20,
+                textAlign: 'right',
+                flexShrink: 0,
+              }}>
+                {seg.count}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Infographic: Source Health — ring gauge + status grid
+// ---------------------------------------------------------------------------
+
+function HealthRing({ okCount, totalCount, size = 72 }: {
+  okCount: number; totalCount: number; size?: number
+}) {
+  const pct = totalCount > 0 ? okCount / totalCount : 0
+  const circumference = 2 * Math.PI * 40
+  const arc = pct * circumference
+  const allOk = okCount === totalCount
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" style={{ flexShrink: 0 }}
+      role="img" aria-label={`Source health: ${Math.round(pct * 100)}%`}>
+      <circle cx="50" cy="50" r="40" fill="none" stroke="var(--border-subtle)" strokeWidth="7" />
+      <circle cx="50" cy="50" r="40" fill="none"
+        stroke={allOk ? 'var(--sent-pos)' : 'var(--sent-mixed)'}
+        strokeWidth="7"
+        strokeDasharray={`${arc} ${circumference - arc}`}
+        strokeDashoffset={circumference * 0.25}
+        strokeLinecap="round"
+        style={{ transition: 'stroke-dasharray 600ms cubic-bezier(0.4, 0, 0.2, 1)' }}
+      />
+      <text x="50" y="47" textAnchor="middle" dominantBaseline="central" fill="var(--ink)"
+        style={{ fontSize: '1.375rem', fontWeight: 700, fontFamily: MONO, letterSpacing: '-0.02em' }}>
+        {Math.round(pct * 100)}
+      </text>
+      <text x="50" y="64" textAnchor="middle" fill="var(--ink-faint)"
+        style={{ fontSize: '0.5rem', fontWeight: 700, letterSpacing: '0.08em' }}>
+        PERCENT
+      </text>
+    </svg>
+  )
+}
+
+function SourcesPanel({ report }: { report: IntelReport }) {
+  const okSet = new Set(report.sources_ok)
+  const failedSorted = [...report.sources_failed].sort()
+  const okSorted = [...report.sources_ok].sort()
+  const all = [...failedSorted, ...okSorted]
+  if (all.length === 0) return null
+
+  const hasFailed = report.sources_failed.length > 0
+
+  return (
+    <div style={{
+      background: 'var(--surface-inset)',
+      borderRadius: 10,
+      padding: '1rem 1.25rem',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '0.75rem',
+    }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{
+          fontFamily: MONO,
+          fontSize: '0.5625rem',
+          fontWeight: 700,
+          letterSpacing: '0.08em',
+          color: 'var(--ink-faint)',
+        }}>
+          SOURCE HEALTH
+        </span>
+        <span style={{
+          fontFamily: MONO,
+          fontSize: '0.5625rem',
+          fontWeight: 700,
+          padding: '2px 6px',
+          borderRadius: 4,
+          background: hasFailed ? 'var(--sent-neg-bg)' : 'var(--sent-pos-bg)',
+          color: hasFailed ? 'var(--sent-neg-text)' : 'var(--sent-pos-text)',
+        }}>
+          {report.sources_ok.length}/{all.length} online
+        </span>
+      </div>
+
+      {/* Ring + source grid side by side */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <HealthRing okCount={report.sources_ok.length} totalCount={all.length} />
+        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.25rem 0.5rem' }}>
+          {all.map(source => (
+            <div key={source}
+              title={`${SENSOR_LABELS[source] ?? source}: ${okSet.has(source) ? 'OK' : 'Failed'}`}
+              style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{
+                width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                background: okSet.has(source) ? 'var(--sent-pos)' : 'var(--sent-neg)',
+              }} />
+              <span style={{
+                fontFamily: MONO,
+                fontSize: '0.5625rem',
+                color: okSet.has(source) ? 'var(--ink-secondary)' : 'var(--sent-neg-text)',
+                fontWeight: okSet.has(source) ? 400 : 600,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}>
+                {(SENSOR_LABELS[source] ?? source).slice(0, 14)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -1796,7 +1997,15 @@ export function Dashboard() {
                     </div>
                   </>
                 ) : hasReport && (
-                  <SummaryPendingCard isActive={isActive} report={report} />
+                  <>
+                    <SummaryPendingCard isActive={isActive} />
+                    {report && (
+                      <div className="dashboard-pending-widgets">
+                        <CollectionPanel report={report} />
+                        <SourcesPanel report={report} />
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {/* Footer link */}

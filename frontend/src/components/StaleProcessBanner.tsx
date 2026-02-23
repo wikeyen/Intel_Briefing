@@ -141,18 +141,19 @@ export function StaleProcessBanner({ stale, onAbort, onResume, onRestart }: {
       padding: '1rem 1.25rem',
       marginBottom: '1.25rem',
     }}>
-      <div style={{
+      <div className="stale-banner-layout" style={{
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'space-between',
         gap: '1rem',
       }}>
-        <div style={{ flex: 1 }}>
-          <div style={{
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="stale-banner-header" style={{
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem',
             marginBottom: '0.375rem',
+            flexWrap: 'wrap',
           }}>
             <span style={{
               width: 8,
@@ -191,7 +192,7 @@ export function StaleProcessBanner({ stale, onAbort, onResume, onRestart }: {
             {' '}— {t('stale.lost')}
           </p>
         </div>
-        <div style={{
+        <div className="stale-banner-actions" style={{
           display: 'flex',
           gap: '0.5rem',
           flexShrink: 0,

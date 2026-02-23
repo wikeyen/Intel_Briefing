@@ -34,7 +34,8 @@ describe('SensorCard', () => {
 
   it('shows item count for healthy sensor', () => {
     render(<SensorCard {...buildProps()} />)
-    expect(screen.getByText('15 items')).toBeInTheDocument()
+    expect(screen.getByText('15')).toBeInTheDocument()
+    expect(screen.getByText('items')).toBeInTheDocument()
   })
 
   it('shows last fetch time for healthy sensor', () => {
@@ -161,7 +162,7 @@ describe('SensorCard', () => {
         item_count: 20,
       }),
     })} />)
-    expect(screen.getByText('20 items')).toBeInTheDocument()
+    expect(screen.getByText('20')).toBeInTheDocument()
   })
 
   it('shows "Waiting..." for queued sensor during run', () => {
@@ -169,7 +170,7 @@ describe('SensorCard', () => {
       isRunning: true,
       // No liveSensor means waiting
     })} />)
-    expect(screen.getByText(/Waiting/)).toBeInTheDocument()
+    expect(screen.getByText(/Queued/)).toBeInTheDocument()
   })
 
   it('shows error for sensor that failed mid-run', () => {

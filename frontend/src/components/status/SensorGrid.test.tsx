@@ -45,9 +45,10 @@ describe('SensorGrid', () => {
     })
     render(<SensorGrid {...props} />)
     // HN has 2 items, ArXiv has 2, GitHub has 1
-    const twoItemCards = screen.getAllByText('2 items')
-    expect(twoItemCards).toHaveLength(2)
-    expect(screen.getByText('1 items')).toBeInTheDocument()
+    // Item counts are rendered as separate <span> elements (number + "items")
+    const twos = screen.getAllByText('2')
+    expect(twos.length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText('1')).toBeInTheDocument()
   })
 
   it('shows "Disabled" for disabled sensors', () => {

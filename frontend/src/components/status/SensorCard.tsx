@@ -34,6 +34,9 @@ export const CARD_CSS = `
   100% { background-color: transparent; }
 }
 .sensor-card-flash { animation: flashError 0.5s ease-out; }
+@media (max-width: 768px) {
+  .sensor-card-header { flex-wrap: wrap; gap: 0.25rem !important; }
+}
 `
 
 type CardState =
@@ -109,8 +112,9 @@ function cardContainerStyle(state: CardState, hovered: boolean): React.CSSProper
   const base: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    minHeight: 110,
-    padding: '1rem',
+    gap: '0.375rem',
+    minHeight: 100,
+    padding: '0.75rem 0.875rem',
     background: 'var(--surface)',
     borderTopWidth: 1,
     borderRightWidth: 1,
@@ -126,6 +130,7 @@ function cardContainerStyle(state: CardState, hovered: boolean): React.CSSProper
     transition: 'all 200ms ease',
     cursor: 'pointer',
     position: 'relative',
+    overflow: 'hidden',
   }
 
   if (state === 'disabled') {
@@ -157,7 +162,7 @@ function cardContainerStyle(state: CardState, hovered: boolean): React.CSSProper
       borderBottomColor: 'var(--accent)',
       borderLeftColor: 'var(--accent)',
       background: 'var(--accent-wash)',
-      ...(hovered && { boxShadow: 'var(--shadow-card-hover)', borderTopColor: 'var(--accent)', borderRightColor: 'var(--accent)', borderBottomColor: 'var(--accent)', borderLeftColor: 'var(--accent)' }),
+      ...(hovered && { boxShadow: 'var(--shadow-card-hover)' }),
     }
   }
 
@@ -185,22 +190,40 @@ function cardContainerStyle(state: CardState, hovered: boolean): React.CSSProper
   }
 }
 
+const headerRowStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '0.375rem',
+}
+
 const nameStyle: React.CSSProperties = {
   fontSize: '0.8125rem',
   fontWeight: 600,
   color: 'var(--ink)',
   lineHeight: 1.2,
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  minWidth: 0,
 }
 
-const categoryStyle: React.CSSProperties = {
-  fontSize: '0.6875rem',
+const categoryBadgeStyle: React.CSSProperties = {
+  fontSize: '0.5625rem',
+  fontWeight: 500,
   color: 'var(--ink-faint)',
-  letterSpacing: '0.04em',
+  background: 'var(--surface-alt)',
+  padding: '0.0625rem 0.375rem',
+  borderRadius: 3,
+  letterSpacing: '0.03em',
+  textTransform: 'uppercase',
+  flexShrink: 0,
+  lineHeight: 1.6,
 }
 
 const metricStyle: React.CSSProperties = {
   fontFamily: 'ui-monospace, monospace',
-  fontSize: '0.875rem',
+  fontSize: '0.8125rem',
   fontWeight: 600,
   color: 'var(--ink)',
 }
@@ -208,23 +231,29 @@ const metricStyle: React.CSSProperties = {
 const secondaryStyle: React.CSSProperties = {
   fontSize: '0.6875rem',
   color: 'var(--ink-faint)',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  display: 'block',
 }
 
 const errorTextStyle: React.CSSProperties = {
-  fontSize: '0.75rem',
+  fontSize: '0.6875rem',
   color: 'var(--err)',
-  lineHeight: 1.3,
+  lineHeight: 1.35,
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   display: '-webkit-box',
   WebkitLineClamp: 2,
   WebkitBoxOrient: 'vertical',
+  wordBreak: 'break-word',
 }
 
 const buttonBase: React.CSSProperties = {
-  padding: '0.25rem 0.75rem',
+  padding: '0.1875rem 0.625rem',
   borderRadius: 3,
-  fontSize: '0.6875rem',
+  fontSize: '0.625rem',
+  fontWeight: 500,
   background: 'transparent',
   cursor: 'pointer',
   lineHeight: 1.4,
@@ -246,7 +275,6 @@ const progressBarTrack: React.CSSProperties = {
   height: 3,
   borderRadius: 2,
   background: 'var(--border)',
-  marginTop: '0.375rem',
   overflow: 'hidden',
 }
 
@@ -260,7 +288,7 @@ const progressBarFill = (pct: number): React.CSSProperties => ({
 
 const chunkTextStyle: React.CSSProperties = {
   fontFamily: 'ui-monospace, monospace',
-  fontSize: '0.625rem',
+  fontSize: '0.5625rem',
   color: 'var(--ink-faint)',
   marginTop: '0.125rem',
 }
@@ -271,10 +299,15 @@ function PrimaryMetric({ state, props }: { state: CardState; props: SensorCardPr
   switch (state) {
     case 'healthy':
     case 'selected':
-      return <span style={metricStyle}>{itemCount} items</span>
+      return (
+        <span style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
+          <span style={metricStyle}>{itemCount}</span>
+          <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>items</span>
+        </span>
+      )
 
     case 'disabled':
-      return <span style={{ ...metricStyle, color: 'var(--ink-faint)' }}>Disabled</span>
+      return <span style={{ ...metricStyle, fontSize: '0.75rem', color: 'var(--ink-faint)', fontWeight: 500 }}>Disabled</span>
 
     case 'config-error':
       return <span style={{ ...errorTextStyle, color: 'var(--warn)' }}>Needs API key</span>
@@ -284,35 +317,43 @@ function PrimaryMetric({ state, props }: { state: CardState; props: SensorCardPr
 
     case 'fetching':
       return (
-        <span style={{ ...metricStyle, color: 'var(--accent)', fontWeight: 500 }}>
-          Fetching{liveSensor ? ` \u00b7 ${liveSensor.item_count}` : '\u2026'}
+        <span style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
+          <span style={{ ...metricStyle, color: 'var(--accent)', fontWeight: 500, fontSize: '0.75rem' }}>
+            Fetching
+          </span>
+          {liveSensor && (
+            <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>
+              {'\u00b7'} {liveSensor.item_count}
+            </span>
+          )}
         </span>
       )
 
     case 'summarizing':
       return (
-        <span style={{ ...metricStyle, color: 'var(--accent)', fontWeight: 500 }}>
+        <span style={{ ...metricStyle, color: 'var(--accent)', fontWeight: 500, fontSize: '0.75rem' }}>
           Summarizing
         </span>
       )
 
     case 'waiting':
-      return <span style={{ ...metricStyle, color: 'var(--ink-faint)', fontWeight: 400 }}>Waiting\u2026</span>
+      return <span style={{ ...metricStyle, color: 'var(--ink-faint)', fontWeight: 400, fontSize: '0.75rem' }}>Queued{'\u2026'}</span>
 
     case 'done':
       return (
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-          <span style={metricStyle}>{liveSensor?.item_count ?? itemCount} items</span>
+          <span style={metricStyle}>{liveSensor?.item_count ?? itemCount}</span>
+          <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>items</span>
           <span style={{
-            fontSize: '0.625rem',
+            fontSize: '0.5625rem',
             fontWeight: 600,
             color: 'var(--ok)',
             background: 'var(--ok-bg)',
-            padding: '0.0625rem 0.375rem',
+            padding: '0.0625rem 0.3125rem',
             borderRadius: 3,
             letterSpacing: '0.02em',
           }}>
-            {'✓ Done'}
+            Done
           </span>
         </span>
       )
@@ -337,7 +378,7 @@ function SecondaryContent({ state, props }: { state: CardState; props: SensorCar
 
     case 'failed':
       return (onRetry || onDismiss) ? (
-        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.375rem', marginTop: '0.125rem' }}>
           {onRetry && (
             <button
               style={retryButtonStyle}
@@ -359,7 +400,7 @@ function SecondaryContent({ state, props }: { state: CardState; props: SensorCar
 
     case 'paused-failed':
       return (
-        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.375rem', marginTop: '0.125rem' }}>
           {onRetry && (
             <button
               style={retryButtonStyle}
@@ -459,20 +500,20 @@ export const SensorCard = memo(function SensorCard(props: SensorCardProps) {
         }
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <Dot state={state} />
-        <span style={nameStyle}>{label}</span>
+      {/* Row 1: name + category badge */}
+      <div className="sensor-card-header" style={headerRowStyle}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', minWidth: 0 }}>
+          <Dot state={state} />
+          <span style={nameStyle}>{label}</span>
+        </div>
+        <span style={categoryBadgeStyle}>{category}</span>
       </div>
 
-      <div style={{ marginTop: '0.25rem' }}>
-        <span style={categoryStyle}>{category}</span>
-      </div>
-
-      <div style={{ marginTop: 'auto', paddingTop: '0.5rem' }}>
+      {/* Row 2+: metric and secondary content pushed to bottom */}
+      <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
         <PrimaryMetric state={state} props={props} />
+        <SecondaryContent state={state} props={props} />
       </div>
-
-      <SecondaryContent state={state} props={props} />
     </div>
   )
 })

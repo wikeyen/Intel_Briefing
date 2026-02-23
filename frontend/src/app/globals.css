@@ -721,7 +721,7 @@ input[type="range"]::-moz-range-thumb {
     display: none !important;
   }
   .dashboard-ticker-sticky {
-    top: calc(56px + env(safe-area-inset-top, 0)) !important;
+    top: 0 !important;
   }
   /* Card internal padding tighter on mobile */
   .dashboard-card {

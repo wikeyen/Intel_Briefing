@@ -1284,24 +1284,6 @@ function DashboardSkeleton() {
             </div>
           </DashCard>
           <hr className="dash-divider" />
-          {/* Intel row */}
-          <div className="dashboard-intel-row">
-            <DashCard>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div className="skeleton-shimmer" style={{ width: 64, height: 10 }} />
-                <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-                <div className="skeleton-shimmer" style={{ width: '70%', height: 12 }} />
-              </div>
-            </DashCard>
-            <DashCard>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div className="skeleton-shimmer" style={{ width: 64, height: 10 }} />
-                <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-                <div className="skeleton-shimmer" style={{ width: '60%', height: 12 }} />
-              </div>
-            </DashCard>
-          </div>
-          <hr className="dash-divider" />
           {/* Domain cards */}
           <div className="dashboard-domains">
             {[0, 1, 2, 3].map(i => (
@@ -1317,6 +1299,25 @@ function DashboardSkeleton() {
         </div>
         {/* Sidebar */}
         <div className="dashboard-sidebar">
+          {/* Intelligence */}
+          <DashCard>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="skeleton-shimmer" style={{ width: 80, height: 10 }} />
+              <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+              <div className="skeleton-shimmer" style={{ width: '70%', height: 12 }} />
+            </div>
+          </DashCard>
+          <hr className="dash-divider" />
+          {/* Sentiment */}
+          <DashCard>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="skeleton-shimmer" style={{ width: 64, height: 10 }} />
+              <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+              <div className="skeleton-shimmer" style={{ width: '60%', height: 12 }} />
+            </div>
+          </DashCard>
+          <hr className="dash-divider" />
+          {/* Trending */}
           <DashCard>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div className="skeleton-shimmer" style={{ width: 96, height: 10 }} />
@@ -1325,13 +1326,7 @@ function DashboardSkeleton() {
             </div>
           </DashCard>
           <hr className="dash-divider" />
-          <DashCard>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div className="skeleton-shimmer" style={{ width: 80, height: 10 }} />
-              <div className="skeleton-shimmer" style={{ width: '100%', height: 8 }} />
-            </div>
-          </DashCard>
-          <hr className="dash-divider" />
+          {/* Distribution + Health */}
           <DashCard>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div className="skeleton-shimmer" style={{ width: 80, height: 10 }} />
@@ -1479,15 +1474,17 @@ export function Dashboard() {
               )}
             </AnimatePresence>
 
-            {/* Status Ticker */}
-            <StaggerChild index={0}>
-              <StatusTicker
-                report={report}
-                summary={summary}
-                pipelineStatus={pipelineStatus}
-                summaryProgress={summaryProgress}
-              />
-            </StaggerChild>
+            {/* Status Ticker — sticky at top */}
+            <div className="dashboard-ticker-sticky">
+              <StaggerChild index={0}>
+                <StatusTicker
+                  report={report}
+                  summary={summary}
+                  pipelineStatus={pipelineStatus}
+                  summaryProgress={summaryProgress}
+                />
+              </StaggerChild>
+            </div>
 
             {/* Two-column layout: Main + Sidebar */}
             <div className="dashboard-columns" style={{ marginTop: '0.75rem' }}>
@@ -1506,18 +1503,6 @@ export function Dashboard() {
                     <StaggerChild index={2}>
                       <ThematicSectionsWidget summary={summary} />
                     </StaggerChild>
-
-                    <hr className="dash-divider" />
-
-                    {/* Intelligence + Sentiment row */}
-                    <div className="dashboard-intel-row">
-                      <StaggerChild index={3}>
-                        <RiskIntelPanel summary={summary} />
-                      </StaggerChild>
-                      <StaggerChild index={4}>
-                        <SentimentWidget summary={summary} report={report} />
-                      </StaggerChild>
-                    </div>
 
                     <hr className="dash-divider" />
 
@@ -1546,6 +1531,18 @@ export function Dashboard() {
 
               {/* Sidebar */}
               <div className="dashboard-sidebar">
+                {summary && (
+                  <>
+                    <StaggerChild index={3}>
+                      <RiskIntelPanel summary={summary} />
+                    </StaggerChild>
+                    <hr className="dash-divider" />
+                    <StaggerChild index={4}>
+                      <SentimentWidget summary={summary} report={report} />
+                    </StaggerChild>
+                    <hr className="dash-divider" />
+                  </>
+                )}
                 {report && (
                   <>
                     <StaggerChild index={12}>

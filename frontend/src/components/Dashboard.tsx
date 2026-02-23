@@ -1,5 +1,5 @@
 // ABOUTME: Dashboard home page — intelligence terminal organized by domain with AI-generated briefs.
-// ABOUTME: Status-style design language — dense cards, monospace metrics, state-driven borders.
+// ABOUTME: Two-column layout with sidebar, compact domain cards, slide-in detail panel.
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
@@ -86,6 +86,29 @@ const DASH_CSS = `
 `
 
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
+
+// ---------------------------------------------------------------------------
+// Domain Definitions
+// ---------------------------------------------------------------------------
+
+/** Domain definition for compact cards and detail panel. */
+type DomainDef = {
+  key: string
+  label: string
+  accent: string
+  sensors: string[]
+  showSentiment?: boolean
+}
+
+const DOMAINS: DomainDef[] = [
+  { key: 'macro', label: 'Macro & Finance', accent: 'var(--cat-news)', sensors: ['wallstreetcn', 'sources_36kr'] },
+  { key: 'news', label: 'News & Tech', accent: 'var(--cat-news)', sensors: ['hacker_news', 'product_hunt', 'chrome_radar', 'github'] },
+  { key: 'social', label: 'Social Pulse', accent: 'var(--cat-trend)', sensors: ['x', 'bluesky', 'mastodon'], showSentiment: true },
+  { key: 'china-trend', label: 'China Trend', accent: 'var(--cat-trend)', sensors: ['weibo', 'xiaohongshu'] },
+  { key: 'research', label: 'Research Radar', accent: 'var(--cat-research)', sensors: ['arxiv'] },
+  { key: 'opinion', label: 'Opinion Digest', accent: 'var(--cat-opinion)', sensors: ['hn_blogs', 'rss_feeds'] },
+  { key: 'china-community', label: 'China Community', accent: 'var(--cat-opinion)', sensors: ['v2ex', 'zhihu'] },
+]
 
 // ---------------------------------------------------------------------------
 // Shared Components
@@ -845,47 +868,29 @@ function SourceHealthWidget({ report }: { report: IntelReport }) {
 }
 
 // ---------------------------------------------------------------------------
-// Widget: Sensor Domain Card (shared, reusable)
+// Widget: Domain Card (compact, opens detail panel on click)
 // ---------------------------------------------------------------------------
 
-function SensorDomainCard({ sectionLabel, accentColor, sensorNames, summary, report, showSentimentBars, moodSummary }: {
-  sectionLabel: string
-  accentColor: string
-  sensorNames: string[]
+function DomainCardCompact({ domain, summary, onClick }: {
+  domain: DomainDef
   summary: BriefingSummary
-  report?: IntelReport | null
-  showSentimentBars?: boolean
-  moodSummary?: string | null
+  onClick: () => void
 }) {
-  const [expanded, setExpanded] = useState(false)
-  const matchingSections = summary.sections.filter(s => sensorNames.includes(s.sensor_name))
+  const matchingSections = summary.sections.filter(s => domain.sensors.includes(s.sensor_name))
   if (matchingSections.length === 0) return null
 
   const totalItems = matchingSections.reduce((n, s) => n + s.item_count, 0)
   const totalNotable = matchingSections.reduce((n, s) => n + s.items.length, 0)
   const firstSummary = matchingSections[0]?.summary ?? ''
 
-  const platformSentiment: Record<string, { positive: number; negative: number; neutral: number; total: number }> = {}
-  if (showSentimentBars && report) {
-    const allItems: IntelItem[] = Object.values(report.items).flat()
-    for (const item of allItems) {
-      if (sensorNames.includes(item.source) && item.sentiment) {
-        if (!platformSentiment[item.source]) platformSentiment[item.source] = { positive: 0, negative: 0, neutral: 0, total: 0 }
-        platformSentiment[item.source][item.sentiment.label]++
-        platformSentiment[item.source].total++
-      }
-    }
-  }
-
   return (
     <DashCard>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: expanded ? '0.75rem' : '0.375rem' }}>
-        {/* Header — clickable to toggle */}
-        <div
-          onClick={() => setExpanded(prev => !prev)}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', userSelect: 'none' }}
-        >
-          <SectionLabel color={accentColor}>{sectionLabel}</SectionLabel>
+      <div
+        onClick={onClick}
+        style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', cursor: 'pointer', userSelect: 'none' }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <SectionLabel color={domain.accent}>{domain.label}</SectionLabel>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
             <span style={{
               fontFamily: MONO, fontSize: '0.5625rem', fontWeight: 600,
@@ -894,170 +899,23 @@ function SensorDomainCard({ sectionLabel, accentColor, sensorNames, summary, rep
             }}>
               {totalItems}
             </span>
-            {totalNotable > 0 && !expanded && (
+            {totalNotable > 0 && (
               <span style={{ fontFamily: MONO, fontSize: '0.5625rem', color: 'var(--ink-tertiary)' }}>
                 {totalNotable} notable
               </span>
             )}
-            <span style={{
-              fontSize: '0.75rem', color: 'var(--ink-tertiary)',
-              transition: 'transform 200ms ease',
-              transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
-              lineHeight: 1,
-            }}>
-              &#8250;
-            </span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--ink-tertiary)', lineHeight: 1 }}>&#8250;</span>
           </div>
         </div>
-
-        {/* Collapsed: show first summary truncated to 2 lines */}
-        {!expanded && (
-          <p style={{
-            fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.5, margin: 0,
-            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden',
-          }}>
-            {firstSummary}
-          </p>
-        )}
-
-        {/* Expanded: full content */}
-        {expanded && (
-          <>
-            {moodSummary && (
-              <p style={{ fontSize: '0.75rem', color: 'var(--ink)', lineHeight: 1.6, margin: 0 }}>
-                {moodSummary}
-              </p>
-            )}
-
-            {matchingSections.map((section, sIdx) => (
-              <div key={section.sensor_name} style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-                {/* Source header */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                  <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)' }}>
-                    {section.label}
-                  </span>
-                  <span style={{
-                    fontFamily: MONO,
-                    fontSize: '0.5625rem',
-                    fontWeight: 600,
-                    background: 'var(--surface-alt)',
-                    borderRadius: 4,
-                    padding: '1px 5px',
-                    color: 'var(--ink-faint)',
-                  }}>
-                    {section.item_count}
-                  </span>
-                </div>
-
-                {/* AI summary */}
-                <p style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.6, margin: 0 }}>
-                  {section.summary}
-                </p>
-
-                {/* Sentiment bar */}
-                {showSentimentBars && platformSentiment[section.sensor_name] && (() => {
-                  const counts = platformSentiment[section.sensor_name]
-                  const posPct = Math.round((counts.positive / counts.total) * 100)
-                  const negPct = Math.round((counts.negative / counts.total) * 100)
-                  const neuPct = 100 - posPct - negPct
-                  return (
-                    <div>
-                      <div style={{ display: 'flex', gap: 6, fontFamily: MONO, fontSize: '0.625rem', color: 'var(--ink-tertiary)', marginBottom: 2 }}>
-                        <span style={{ color: 'var(--sent-pos-text)' }}>{posPct}% pos</span>
-                        <span>{neuPct}% neu</span>
-                        <span style={{ color: 'var(--sent-neg-text)' }}>{negPct}% neg</span>
-                      </div>
-                      <div style={{ display: 'flex', overflow: 'hidden', height: 4, borderRadius: 2, background: 'var(--border-subtle)', gap: 1 }}>
-                        {posPct > 0 && <div style={{ width: `${posPct}%`, background: 'var(--sent-pos)', transition: 'width 400ms ease' }} />}
-                        {neuPct > 0 && <div style={{ width: `${neuPct}%`, background: 'var(--sent-neu)', opacity: 0.4, transition: 'width 400ms ease' }} />}
-                        {negPct > 0 && <div style={{ width: `${negPct}%`, background: 'var(--sent-neg)', transition: 'width 400ms ease' }} />}
-                      </div>
-                    </div>
-                  )
-                })()}
-
-                {/* Notable items */}
-                {section.items.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    {section.items.map((item, idx) => (
-                      <a
-                        key={idx}
-                        href={item.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: 'flex',
-                          gap: '0.5rem',
-                          textDecoration: 'none',
-                          borderRadius: 6,
-                          padding: '6px 10px',
-                          margin: '0 -10px',
-                          transition: 'background 150ms ease',
-                        }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-inset)' }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
-                      >
-                        <span style={{ width: 4, height: 4, borderRadius: '50%', background: accentColor, flexShrink: 0, marginTop: 6 }} />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink)', lineHeight: 1.5 }}>
-                            {item.title}
-                          </div>
-                          {item.brief && (
-                            <div style={{ fontSize: '0.6875rem', color: 'var(--ink-tertiary)', lineHeight: 1.5, marginTop: 1 }}>
-                              {item.brief}
-                            </div>
-                          )}
-                        </div>
-                      </a>
-                    ))}
-                  </div>
-                )}
-
-                {/* Divider between sources */}
-                {sIdx < matchingSections.length - 1 && (
-                  <div style={{ borderBottom: '1px solid var(--border-subtle)', marginTop: 2 }} />
-                )}
-              </div>
-            ))}
-          </>
-        )}
+        <p style={{
+          fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.5, margin: 0,
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden',
+        }}>
+          {firstSummary}
+        </p>
       </div>
     </DashCard>
   )
-}
-
-// ---------------------------------------------------------------------------
-// Domain Widgets
-// ---------------------------------------------------------------------------
-
-function MacroIntelWidget({ summary }: { summary: BriefingSummary }) {
-  return <SensorDomainCard sectionLabel="Macro & Finance" accentColor="var(--cat-news)" sensorNames={['wallstreetcn', 'sources_36kr']} summary={summary} />
-}
-
-function NewsTechWidget({ summary }: { summary: BriefingSummary }) {
-  return <SensorDomainCard sectionLabel="News & Tech" accentColor="var(--cat-news)" sensorNames={['hacker_news', 'product_hunt', 'chrome_radar', 'github']} summary={summary} />
-}
-
-function SocialPulseWidget({ summary, report }: { summary: BriefingSummary; report: IntelReport | null }) {
-  const overall = summary.overall
-  const moodSummary = isStructuredOverall(overall) ? overall.sentiment?.mood_summary ?? null : null
-  return <SensorDomainCard sectionLabel="Social Pulse" accentColor="var(--cat-trend)" sensorNames={['x', 'bluesky', 'mastodon']} summary={summary} report={report} showSentimentBars moodSummary={moodSummary} />
-}
-
-function ChinaTrendWidget({ summary }: { summary: BriefingSummary }) {
-  return <SensorDomainCard sectionLabel="China Trend" accentColor="var(--cat-trend)" sensorNames={['weibo', 'xiaohongshu']} summary={summary} />
-}
-
-function ResearchRadarWidget({ summary }: { summary: BriefingSummary }) {
-  return <SensorDomainCard sectionLabel="Research Radar" accentColor="var(--cat-research)" sensorNames={['arxiv']} summary={summary} />
-}
-
-function OpinionDigestWidget({ summary }: { summary: BriefingSummary }) {
-  return <SensorDomainCard sectionLabel="Opinion Digest" accentColor="var(--cat-opinion)" sensorNames={['hn_blogs', 'rss_feeds']} summary={summary} />
-}
-
-function ChinaCommunityWidget({ summary }: { summary: BriefingSummary }) {
-  return <SensorDomainCard sectionLabel="China Community" accentColor="var(--cat-opinion)" sensorNames={['v2ex', 'zhihu']} summary={summary} />
 }
 
 // ---------------------------------------------------------------------------
@@ -1183,6 +1041,205 @@ function TrendingWidget({ report, summary }: { report: IntelReport; summary?: Br
 }
 
 // ---------------------------------------------------------------------------
+// Detail Panel — slide-in overlay for domain deep-dive
+// ---------------------------------------------------------------------------
+
+function DetailPanel({ domain, summary, report, onClose }: {
+  domain: DomainDef
+  summary: BriefingSummary
+  report: IntelReport | null
+  onClose: () => void
+}) {
+  const matchingSections = summary.sections.filter(s => domain.sensors.includes(s.sensor_name))
+
+  // Per-platform sentiment for social domains
+  const platformSentiment: Record<string, { positive: number; negative: number; neutral: number; total: number }> = {}
+  if (domain.showSentiment && report) {
+    const allItems: IntelItem[] = Object.values(report.items).flat()
+    for (const item of allItems) {
+      if (domain.sensors.includes(item.source) && item.sentiment) {
+        if (!platformSentiment[item.source]) platformSentiment[item.source] = { positive: 0, negative: 0, neutral: 0, total: 0 }
+        platformSentiment[item.source][item.sentiment.label]++
+        platformSentiment[item.source].total++
+      }
+    }
+  }
+
+  const overall = summary.overall
+  const moodSummary = domain.showSentiment && isStructuredOverall(overall)
+    ? overall.sentiment?.mood_summary ?? null
+    : null
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  // Prevent body scroll while panel is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [])
+
+  return (
+    <>
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 100,
+          background: 'rgba(0, 0, 0, 0.3)',
+          backdropFilter: 'blur(2px)',
+          WebkitBackdropFilter: 'blur(2px)',
+        }}
+      />
+      {/* Panel */}
+      <motion.div
+        initial={{ x: '100%' }}
+        animate={{ x: 0 }}
+        exit={{ x: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        onClick={e => e.stopPropagation()}
+        style={{
+          position: 'fixed', top: 0, right: 0, bottom: 0,
+          width: 480, maxWidth: '90vw',
+          background: 'var(--surface)',
+          borderLeft: '1px solid var(--border)',
+          boxShadow: 'var(--shadow-lg)',
+          overflowY: 'auto',
+          zIndex: 101,
+          padding: '1.5rem',
+          display: 'flex', flexDirection: 'column', gap: '0.75rem',
+        }}
+      >
+        {/* Header with close button */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <SectionLabel color={domain.accent}>{domain.label}</SectionLabel>
+          <button
+            onClick={onClose}
+            style={{
+              width: 28, height: 28, borderRadius: 6,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'var(--surface-inset)', color: 'var(--ink-tertiary)',
+              fontSize: '1rem', lineHeight: 1,
+              transition: 'background 150ms, color 150ms',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--border)'; e.currentTarget.style.color = 'var(--ink)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface-inset)'; e.currentTarget.style.color = 'var(--ink-tertiary)' }}
+          >
+            &times;
+          </button>
+        </div>
+
+        {/* Mood summary for social domains */}
+        {moodSummary && (
+          <p style={{ fontSize: '0.75rem', color: 'var(--ink)', lineHeight: 1.6, margin: 0 }}>
+            {moodSummary}
+          </p>
+        )}
+
+        {/* Per-source sections */}
+        {matchingSections.map((section, sIdx) => (
+          <div key={section.sensor_name} style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+            {/* Source header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)' }}>
+                {section.label}
+              </span>
+              <span style={{
+                fontFamily: MONO, fontSize: '0.5625rem', fontWeight: 600,
+                background: 'var(--surface-alt)', borderRadius: 4,
+                padding: '1px 5px', color: 'var(--ink-faint)',
+              }}>
+                {section.item_count}
+              </span>
+            </div>
+
+            {/* AI summary */}
+            <p style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.6, margin: 0 }}>
+              {section.summary}
+            </p>
+
+            {/* Sentiment bar */}
+            {domain.showSentiment && platformSentiment[section.sensor_name] && (() => {
+              const counts = platformSentiment[section.sensor_name]
+              const posPct = Math.round((counts.positive / counts.total) * 100)
+              const negPct = Math.round((counts.negative / counts.total) * 100)
+              const neuPct = 100 - posPct - negPct
+              return (
+                <div>
+                  <div style={{ display: 'flex', gap: 6, fontFamily: MONO, fontSize: '0.625rem', color: 'var(--ink-tertiary)', marginBottom: 2 }}>
+                    <span style={{ color: 'var(--sent-pos-text)' }}>{posPct}% pos</span>
+                    <span>{neuPct}% neu</span>
+                    <span style={{ color: 'var(--sent-neg-text)' }}>{negPct}% neg</span>
+                  </div>
+                  <div style={{ display: 'flex', overflow: 'hidden', height: 4, borderRadius: 2, background: 'var(--border-subtle)', gap: 1 }}>
+                    {posPct > 0 && <div style={{ width: `${posPct}%`, background: 'var(--sent-pos)', transition: 'width 400ms ease' }} />}
+                    {neuPct > 0 && <div style={{ width: `${neuPct}%`, background: 'var(--sent-neu)', opacity: 0.4, transition: 'width 400ms ease' }} />}
+                    {negPct > 0 && <div style={{ width: `${negPct}%`, background: 'var(--sent-neg)', transition: 'width 400ms ease' }} />}
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* Notable items */}
+            {section.items.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {section.items.map((item, idx) => (
+                  <a
+                    key={idx}
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'flex', gap: '0.5rem', textDecoration: 'none',
+                      borderRadius: 6, padding: '6px 10px', margin: '0 -10px',
+                      transition: 'background 150ms ease',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-inset)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
+                  >
+                    <span style={{ width: 4, height: 4, borderRadius: '50%', background: domain.accent, flexShrink: 0, marginTop: 6 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink)', lineHeight: 1.5 }}>
+                        {item.title}
+                      </div>
+                      {item.brief && (
+                        <div style={{ fontSize: '0.6875rem', color: 'var(--ink-tertiary)', lineHeight: 1.5, marginTop: 1 }}>
+                          {item.brief}
+                        </div>
+                      )}
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
+
+            {/* Divider between sources */}
+            {sIdx < matchingSections.length - 1 && (
+              <div style={{ borderBottom: '1px solid var(--border-subtle)', marginTop: 2 }} />
+            )}
+          </div>
+        ))}
+
+        {/* Empty state */}
+        {matchingSections.length === 0 && (
+          <div style={{ padding: '2rem 0', textAlign: 'center', fontSize: '0.75rem', color: 'var(--ink-tertiary)' }}>
+            No data available for this domain
+          </div>
+        )}
+      </motion.div>
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Dashboard Skeleton
 // ---------------------------------------------------------------------------
 
@@ -1205,9 +1262,10 @@ function DashboardSkeleton() {
         <div className="skeleton-shimmer" style={{ width: 96, height: 10 }} />
         <div className="skeleton-shimmer" style={{ width: 64, height: 10 }} />
       </div>
-      <div className="dashboard-grid" style={{ marginTop: '0.75rem' }}>
-        {/* Exec summary — span 2 */}
-        <div className="dash-span-2">
+      <div className="dashboard-columns" style={{ marginTop: '0.75rem' }}>
+        {/* Main column */}
+        <div className="dashboard-main">
+          {/* Exec summary */}
           <DashCard accent="var(--accent)">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div className="skeleton-shimmer" style={{ width: 96, height: 10 }} />
@@ -1216,25 +1274,71 @@ function DashboardSkeleton() {
               <div className="skeleton-shimmer" style={{ width: '70%', height: 12 }} />
             </div>
           </DashCard>
-        </div>
-        {/* Sentiment */}
-        <DashCard>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div className="skeleton-shimmer" style={{ width: 64, height: 10 }} />
-            <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-            <div className="skeleton-shimmer" style={{ width: '70%', height: 12 }} />
-          </div>
-        </DashCard>
-        {/* Domain cards */}
-        {[0, 1, 2, 3, 4, 5].map(i => (
-          <DashCard key={i}>
+          <hr className="dash-divider" />
+          {/* Themes */}
+          <DashCard>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div className="skeleton-shimmer" style={{ width: 112, height: 10 }} />
               <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-              <div className="skeleton-shimmer" style={{ width: '60%', height: 12 }} />
+              <div className="skeleton-shimmer" style={{ width: '80%', height: 12 }} />
             </div>
           </DashCard>
-        ))}
+          <hr className="dash-divider" />
+          {/* Intel row */}
+          <div className="dashboard-intel-row">
+            <DashCard>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div className="skeleton-shimmer" style={{ width: 64, height: 10 }} />
+                <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+                <div className="skeleton-shimmer" style={{ width: '70%', height: 12 }} />
+              </div>
+            </DashCard>
+            <DashCard>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div className="skeleton-shimmer" style={{ width: 64, height: 10 }} />
+                <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+                <div className="skeleton-shimmer" style={{ width: '60%', height: 12 }} />
+              </div>
+            </DashCard>
+          </div>
+          <hr className="dash-divider" />
+          {/* Domain cards */}
+          <div className="dashboard-domains">
+            {[0, 1, 2, 3].map(i => (
+              <DashCard key={i}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div className="skeleton-shimmer" style={{ width: 112, height: 10 }} />
+                  <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+                  <div className="skeleton-shimmer" style={{ width: '60%', height: 12 }} />
+                </div>
+              </DashCard>
+            ))}
+          </div>
+        </div>
+        {/* Sidebar */}
+        <div className="dashboard-sidebar">
+          <DashCard>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="skeleton-shimmer" style={{ width: 96, height: 10 }} />
+              <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+              <div className="skeleton-shimmer" style={{ width: '70%', height: 12 }} />
+            </div>
+          </DashCard>
+          <hr className="dash-divider" />
+          <DashCard>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="skeleton-shimmer" style={{ width: 80, height: 10 }} />
+              <div className="skeleton-shimmer" style={{ width: '100%', height: 8 }} />
+            </div>
+          </DashCard>
+          <hr className="dash-divider" />
+          <DashCard>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="skeleton-shimmer" style={{ width: 80, height: 10 }} />
+              <div className="skeleton-shimmer" style={{ width: '100%', height: 8 }} />
+            </div>
+          </DashCard>
+        </div>
       </div>
     </div>
   )
@@ -1250,6 +1354,7 @@ export function Dashboard() {
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null)
   const [summaryProgress, setSummaryProgress] = useState<SummaryProgress | null>(null)
   const [loading, setLoading] = useState(true)
+  const [selectedDomain, setSelectedDomain] = useState<DomainDef | null>(null)
 
   const [showUpdatedBanner, setShowUpdatedBanner] = useState(false)
   const lastPipelineCompletedAt = useRef<string | null>(null)
@@ -1317,7 +1422,7 @@ export function Dashboard() {
   const hasSummary = summary && isStructuredOverall(summary.overall) && !!summary.overall.executive_summary
 
   return (
-    <div className="dashboard-root page-padding" style={{ maxWidth: 1024, margin: '0 auto', paddingLeft: '2.5rem', paddingRight: '2.5rem' }}>
+    <div className="dashboard-root page-padding" style={{ maxWidth: 1360, margin: '0 auto', paddingLeft: '2.5rem', paddingRight: '2.5rem' }}>
       <style>{DASH_CSS}</style>
 
       <AnimatePresence mode="wait">
@@ -1384,41 +1489,92 @@ export function Dashboard() {
               />
             </StaggerChild>
 
-            {/* Bento Grid */}
-            <div className="dashboard-grid" style={{ marginTop: '0.75rem' }}>
-              {/* Row 1: Exec Summary (2 cols) + Sentiment (1 col) */}
-              {summary && <StaggerChild index={1} className="dash-span-2"><ExecSummaryWidget summary={summary} /></StaggerChild>}
-              {summary && <StaggerChild index={2}><SentimentWidget summary={summary} report={report} /></StaggerChild>}
+            {/* Two-column layout: Main + Sidebar */}
+            <div className="dashboard-columns" style={{ marginTop: '0.75rem' }}>
+              {/* Main column */}
+              <div className="dashboard-main">
+                {summary && (
+                  <>
+                    {/* Executive Summary */}
+                    <StaggerChild index={1}>
+                      <ExecSummaryWidget summary={summary} />
+                    </StaggerChild>
 
-              {/* Row 2: Themes (2 cols) + Distribution (1 col) */}
-              {summary && <StaggerChild index={3} className="dash-span-2"><ThematicSectionsWidget summary={summary} /></StaggerChild>}
-              {report && <StaggerChild index={4}><CategoryDistributionWidget report={report} /></StaggerChild>}
+                    <hr className="dash-divider" />
 
-              {/* Row 3: Risk Intel + Macro + Source Health */}
-              {summary && <StaggerChild index={5}><RiskIntelPanel summary={summary} /></StaggerChild>}
-              {summary && <StaggerChild index={6}><MacroIntelWidget summary={summary} /></StaggerChild>}
-              {report && <StaggerChild index={7}><SourceHealthWidget report={report} /></StaggerChild>}
+                    {/* Investment Themes */}
+                    <StaggerChild index={2}>
+                      <ThematicSectionsWidget summary={summary} />
+                    </StaggerChild>
 
-              {/* Row 4: Trending (full width) */}
-              {report && <StaggerChild index={8} className="dash-span-full"><TrendingWidget report={report} summary={summary} /></StaggerChild>}
+                    <hr className="dash-divider" />
 
-              {/* Row 5: News + Social + China Trend */}
-              {summary && <StaggerChild index={9}><NewsTechWidget summary={summary} /></StaggerChild>}
-              {summary && <StaggerChild index={10}><SocialPulseWidget summary={summary} report={report} /></StaggerChild>}
-              {summary && <StaggerChild index={11}><ChinaTrendWidget summary={summary} /></StaggerChild>}
+                    {/* Intelligence + Sentiment row */}
+                    <div className="dashboard-intel-row">
+                      <StaggerChild index={3}>
+                        <RiskIntelPanel summary={summary} />
+                      </StaggerChild>
+                      <StaggerChild index={4}>
+                        <SentimentWidget summary={summary} report={report} />
+                      </StaggerChild>
+                    </div>
 
-              {/* Row 6: Research + Opinion + China Community */}
-              {summary && <StaggerChild index={12}><ResearchRadarWidget summary={summary} /></StaggerChild>}
-              {summary && <StaggerChild index={13}><OpinionDigestWidget summary={summary} /></StaggerChild>}
-              {summary && <StaggerChild index={14}><ChinaCommunityWidget summary={summary} /></StaggerChild>}
+                    <hr className="dash-divider" />
 
-              {/* Footer link */}
-              <div className="dash-span-full" style={{ textAlign: 'center', paddingTop: 2, paddingBottom: 4 }}>
-                <Link href="/data" style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--accent)', textDecoration: 'none' }}>
-                  View full feed &#8250;
-                </Link>
+                    {/* Domain cards grid */}
+                    <div className="dashboard-domains">
+                      {DOMAINS.map((domain, i) => (
+                        <StaggerChild key={domain.key} index={5 + i}>
+                          <DomainCardCompact
+                            domain={domain}
+                            summary={summary}
+                            onClick={() => setSelectedDomain(domain)}
+                          />
+                        </StaggerChild>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {/* Footer link */}
+                <div style={{ textAlign: 'center', paddingTop: 2, paddingBottom: 4 }}>
+                  <Link href="/data" style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--accent)', textDecoration: 'none' }}>
+                    View full feed &#8250;
+                  </Link>
+                </div>
+              </div>
+
+              {/* Sidebar */}
+              <div className="dashboard-sidebar">
+                {report && (
+                  <>
+                    <StaggerChild index={12}>
+                      <TrendingWidget report={report} summary={summary} />
+                    </StaggerChild>
+                    <hr className="dash-divider" />
+                    <StaggerChild index={13}>
+                      <CategoryDistributionWidget report={report} />
+                    </StaggerChild>
+                    <hr className="dash-divider" />
+                    <StaggerChild index={14}>
+                      <SourceHealthWidget report={report} />
+                    </StaggerChild>
+                  </>
+                )}
               </div>
             </div>
+
+            {/* Detail panel overlay */}
+            <AnimatePresence>
+              {selectedDomain && summary && (
+                <DetailPanel
+                  domain={selectedDomain}
+                  summary={summary}
+                  report={report}
+                  onClose={() => setSelectedDomain(null)}
+                />
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>

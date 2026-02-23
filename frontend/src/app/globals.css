@@ -787,35 +787,73 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
-/* ─── Dashboard Bento Grid ─────────────────────────────────────────────── */
+/* ─── Dashboard Layout ─────────────────────────────────────────────────── */
 
-/* Single-column by default (mobile), 2-col on tablet, 3-col on desktop.
-   Cards use .dash-span-* to claim multiple columns at each breakpoint. */
-.dashboard-grid {
+/* Two-column: main content + sidebar on desktop, stacked on mobile.
+   Main column gets intel & analysis; sidebar gets operational metrics. */
+.dashboard-columns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  align-items: start;
+}
+.dashboard-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.dashboard-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.dashboard-intel-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+.dashboard-domains {
   display: grid;
   grid-template-columns: 1fr;
   gap: 0.625rem;
 }
+.dash-divider {
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .dashboard-intel-row {
+    grid-template-columns: 1fr;
+  }
+}
 
 @media (min-width: 769px) {
-  .dashboard-grid {
+  .dashboard-domains {
     grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
   }
-  .dash-span-2,
-  .dash-span-full { grid-column: span 2; }
+}
+
+@media (min-width: 1080px) {
+  .dashboard-columns {
+    grid-template-columns: 1fr 320px;
+  }
+  .dashboard-sidebar {
+    position: sticky;
+    top: 1rem;
+  }
 }
 
 @media (min-width: 1280px) {
   .dashboard-root {
     max-width: 1360px !important;
   }
-  .dashboard-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.75rem;
+  .dashboard-columns {
+    grid-template-columns: 1fr 360px;
+    gap: 1rem;
   }
-  .dash-span-2 { grid-column: span 2; }
-  .dash-span-full { grid-column: span 3; }
 }
 
 /* Dashboard card — consistent padding + shadow tokens */

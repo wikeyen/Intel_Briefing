@@ -769,7 +769,7 @@ export function Sensors() {
             </div>
           ))}
 
-          {/* Discovery — dedicated section for Topics + Trends */}
+          {/* Trend — dedicated section for Topics + Trends */}
           {activeLanguage === 'row' && ((enabled.bluesky ?? true) || (enabled.mastodon ?? true)) && (
             <div>
               <div style={{
@@ -780,7 +780,7 @@ export function Sensors() {
                 color: 'var(--ink-faint)',
                 marginBottom: '0.5rem',
               }}>
-                Discovery
+                Trend
               </div>
               <div style={{
                 background: 'var(--surface)',

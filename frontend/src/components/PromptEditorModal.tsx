@@ -1,11 +1,10 @@
-// ABOUTME: Full-page prompt editor modal with blurred backdrop for editing long prompts.
-// ABOUTME: Read mode shows truncated text with edit icon; edit mode opens a centered modal overlay.
+// ABOUTME: Full-page prompt editor modal with animated backdrop for editing long prompts.
+// ABOUTME: Read mode shows full prompt text compactly with edit icon; edit mode opens a centered modal overlay.
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { inputBase, focus, blur } from '@/components/form-styles'
 
 const MODAL_CSS = `
-@keyframes promptModalFadeIn {
+@keyframes promptBackdropIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
@@ -177,13 +176,9 @@ export function PromptEditorModal({
         >
           <div style={{
             flex: 1,
-            fontSize: '0.8125rem',
-            lineHeight: 1.7,
+            fontSize: '0.75rem',
+            lineHeight: 1.5,
             color: value ? 'var(--ink)' : 'var(--ink-muted)',
-            display: '-webkit-box',
-            WebkitLineClamp: 4,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
           }}>
@@ -216,20 +211,19 @@ export function PromptEditorModal({
             alignItems: 'center',
             justifyContent: 'center',
             padding: '2rem',
-            animation: 'promptModalFadeIn 200ms ease both',
           }}
         >
           <style>{MODAL_CSS}</style>
 
-          {/* Backdrop */}
+          {/* Backdrop — solid colour with fade-in animation */}
           <div
             onClick={handleClose}
             style={{
               position: 'absolute',
               inset: 0,
-              background: 'rgba(0, 0, 0, 0.3)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
+              background: 'var(--bg, #f5f5f5)',
+              opacity: 0.92,
+              animation: 'promptBackdropIn 200ms ease both',
             }}
           />
 
@@ -254,16 +248,13 @@ export function PromptEditorModal({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: '1rem 1.5rem',
+              padding: '0.75rem 1.25rem',
               borderBottom: '1px solid var(--border-soft)',
               flexShrink: 0,
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                <span style={{ color: 'var(--ink-faint)' }}>
-                  <PencilIcon size={16} />
-                </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <h3 style={{
-                  fontSize: '0.9375rem',
+                  fontSize: '0.8125rem',
                   fontWeight: 600,
                   color: 'var(--ink)',
                   margin: 0,
@@ -272,11 +263,11 @@ export function PromptEditorModal({
                 </h3>
                 {draft !== '' && (
                   <span style={{
-                    fontSize: '0.625rem',
+                    fontSize: '0.5625rem',
                     fontWeight: 600,
                     letterSpacing: '0.05em',
                     textTransform: 'uppercase',
-                    padding: '0.125rem 0.375rem',
+                    padding: '0.0625rem 0.3125rem',
                     borderRadius: 3,
                     color: 'var(--accent)',
                     background: 'var(--accent-wash)',
@@ -308,7 +299,7 @@ export function PromptEditorModal({
             <div style={{
               flex: 1,
               overflow: 'auto',
-              padding: '1.25rem 1.5rem',
+              padding: '0',
             }}>
               <textarea
                 ref={textareaRef}
@@ -317,16 +308,18 @@ export function PromptEditorModal({
                 placeholder={defaultPrompt}
                 rows={20}
                 style={{
-                  ...inputBase,
                   width: '100%',
                   minHeight: 300,
-                  resize: 'vertical',
-                  lineHeight: 1.8,
-                  fontSize: '0.875rem',
-                  borderRadius: 6,
+                  resize: 'none',
+                  lineHeight: 1.7,
+                  fontSize: '0.8125rem',
+                  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+                  color: 'var(--ink)',
+                  background: 'var(--bg, #fafafa)',
+                  border: 'none',
+                  outline: 'none',
+                  padding: '1.25rem 1.5rem',
                 }}
-                onFocus={focus}
-                onBlur={blur}
               />
             </div>
 
@@ -335,7 +328,7 @@ export function PromptEditorModal({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: '0.875rem 1.5rem',
+              padding: '0.625rem 1.25rem',
               borderTop: '1px solid var(--border-soft)',
               flexShrink: 0,
             }}>

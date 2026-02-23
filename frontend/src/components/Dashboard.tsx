@@ -362,7 +362,8 @@ function ExecSummaryWidget({ summary }: { summary: BriefingSummary }) {
   if (!isStructuredOverall(overall) || !overall.executive_summary) return null
 
   const [expanded, setExpanded] = useState(false)
-  const isLong = overall.executive_summary.length > 400
+  const paragraphs = overall.executive_summary.split(/\n\n+/).filter(p => p.trim())
+  const isLong = paragraphs.length > 2
 
   return (
     <DashCard style={{ background: 'var(--accent-subtle)', borderColor: 'var(--accent-muted)' }}>
@@ -370,21 +371,37 @@ function ExecSummaryWidget({ summary }: { summary: BriefingSummary }) {
         <SectionLabel color="var(--accent)">Executive Summary</SectionLabel>
         <div
           style={{
-            fontSize: '0.8125rem',
-            lineHeight: 1.6,
-            color: 'var(--ink)',
-            overflowWrap: 'break-word',
-            wordBreak: 'break-word',
-            whiteSpace: 'pre-wrap',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.75rem',
             ...(!expanded && isLong ? {
-              maxHeight: 140,
+              maxHeight: 160,
               overflow: 'hidden',
               maskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
               WebkitMaskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
             } : {}),
           }}
         >
-          <InlineRefs text={overall.executive_summary} globalSources={overall.sources} />
+          {paragraphs.map((para, i) => (
+            <p
+              key={i}
+              style={{
+                fontSize: '0.8125rem',
+                lineHeight: 1.7,
+                color: i === 0 ? 'var(--ink)' : 'var(--ink-secondary)',
+                fontWeight: i === 0 ? 500 : 400,
+                margin: 0,
+                overflowWrap: 'break-word',
+                wordBreak: 'break-word',
+                ...(i > 0 ? {
+                  paddingLeft: '0.75rem',
+                  borderLeft: '2px solid var(--border-subtle)',
+                } : {}),
+              }}
+            >
+              <InlineRefs text={para.trim()} globalSources={overall.sources} />
+            </p>
+          ))}
         </div>
         {isLong && (
           <button
@@ -1113,6 +1130,8 @@ function DetailPanel({ domain, summary, report, onClose }: {
           borderLeft: '1px solid var(--border)',
           boxShadow: 'var(--shadow-lg)',
           overflowY: 'auto',
+          overflowX: 'hidden',
+          overscrollBehavior: 'contain',
           zIndex: 101,
           padding: '1.5rem',
           display: 'flex', flexDirection: 'column', gap: '0.75rem',
@@ -1139,7 +1158,7 @@ function DetailPanel({ domain, summary, report, onClose }: {
 
         {/* Mood summary for social domains */}
         {moodSummary && (
-          <p style={{ fontSize: '0.75rem', color: 'var(--ink)', lineHeight: 1.6, margin: 0 }}>
+          <p style={{ fontSize: '0.75rem', color: 'var(--ink)', lineHeight: 1.6, margin: 0, overflowWrap: 'break-word', wordBreak: 'break-word' }}>
             {moodSummary}
           </p>
         )}
@@ -1162,7 +1181,7 @@ function DetailPanel({ domain, summary, report, onClose }: {
             </div>
 
             {/* AI summary */}
-            <p style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.6, margin: 0 }}>
+            <p style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.6, margin: 0, overflowWrap: 'break-word', wordBreak: 'break-word' }}>
               {section.summary}
             </p>
 
@@ -1206,7 +1225,7 @@ function DetailPanel({ domain, summary, report, onClose }: {
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
                   >
                     <span style={{ width: 4, height: 4, borderRadius: '50%', background: domain.accent, flexShrink: 0, marginTop: 6 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ flex: 1, minWidth: 0, overflowWrap: 'break-word', wordBreak: 'break-word' }}>
                       <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink)', lineHeight: 1.5 }}>
                         {item.title}
                       </div>

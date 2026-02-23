@@ -17,6 +17,8 @@ export interface SensorGridProps {
   pipelineStatus: PipelineStatus | null
   selected: Set<string>
   onToggleSelect: (sensor: string) => void
+  onSelectAll: () => void
+  onSelectNone: () => void
   onRetry?: (sensor: string) => void
   onSkipSensor?: (sensor: string) => void
   dismissed: Set<string>
@@ -34,9 +36,27 @@ function countItemsBySensor(report: IntelReport | null): Record<string, number> 
   return counts
 }
 
+const headerLabelStyle: React.CSSProperties = {
+  fontSize: '0.625rem',
+  fontWeight: 500,
+  letterSpacing: '0.04em',
+  textTransform: 'uppercase',
+  color: 'var(--ink-faint)',
+}
+
+const toolbarLinkStyle: React.CSSProperties = {
+  fontSize: '0.6875rem',
+  color: 'var(--ink-muted)',
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  padding: '0.125rem 0',
+}
+
 export function SensorGrid({
   isRunning, isPaused, liveSensors, report, config, pipelineStatus,
-  selected, onToggleSelect, onRetry, onSkipSensor, dismissed, onDismiss,
+  selected, onToggleSelect, onSelectAll, onSelectNone,
+  onRetry, onSkipSensor, dismissed, onDismiss,
 }: SensorGridProps) {
   const sensorCounts = useMemo(() => countItemsBySensor(report), [report])
 
@@ -72,6 +92,8 @@ export function SensorGrid({
   }, [report, config, pipelineStatus, sensorCounts])
 
   const visibleSensors = allSensors.filter(s => !dismissed.has(s.sensorKey))
+  const selectedCount = selected.size
+  const showToolbar = !isRunning
 
   return (
     <div className="sensor-grid" style={{
@@ -83,10 +105,41 @@ export function SensorGrid({
       <style dangerouslySetInnerHTML={{ __html: CARD_CSS }} />
       <div className="sensor-list" style={{
         background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: 8,
+        borderRadius: 10,
+        boxShadow: 'var(--shadow-card)',
         overflow: 'hidden',
       }}>
+        {/* Toolbar + column labels */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem',
+          padding: '0.5rem 1rem',
+          borderBottom: '1px solid var(--border-soft)',
+        }}>
+          {showToolbar && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button type="button" onClick={onSelectAll} style={toolbarLinkStyle}>Select all</button>
+              <span style={{ color: 'var(--border)', fontSize: '0.75rem' }}>/</span>
+              <button type="button" onClick={onSelectNone} style={toolbarLinkStyle}>None</button>
+              {selectedCount > 0 && (
+                <span style={{
+                  fontFamily: 'ui-monospace, monospace',
+                  fontSize: '0.6875rem',
+                  color: 'var(--accent)',
+                  fontWeight: 600,
+                  marginLeft: '0.25rem',
+                }}>
+                  {selectedCount} selected
+                </span>
+              )}
+            </div>
+          )}
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: '1.5rem' }}>
+            <span style={headerLabelStyle}>Items</span>
+            <span style={headerLabelStyle}>Last Fetch</span>
+          </div>
+        </div>
         {visibleSensors.map(sensor => (
           <SensorRow
             key={sensor.sensorKey}

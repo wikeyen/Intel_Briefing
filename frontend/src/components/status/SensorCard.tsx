@@ -213,8 +213,8 @@ const categoryBadgeStyle: React.CSSProperties = {
   fontWeight: 500,
   color: 'var(--ink-faint)',
   background: 'var(--surface-alt)',
-  padding: '0.0625rem 0.375rem',
-  borderRadius: 3,
+  padding: '0.125rem 0.5rem',
+  borderRadius: 9,
   letterSpacing: '0.03em',
   textTransform: 'uppercase',
   flexShrink: 0,
@@ -263,12 +263,14 @@ const retryButtonStyle: React.CSSProperties = {
   ...buttonBase,
   border: '1px solid var(--accent)',
   color: 'var(--accent)',
+  borderRadius: 9,
 }
 
 const dismissButtonStyle: React.CSSProperties = {
   ...buttonBase,
   border: '1px solid var(--border)',
   color: 'var(--ink-muted)',
+  borderRadius: 9,
 }
 
 const progressBarTrack: React.CSSProperties = {
@@ -525,18 +527,18 @@ function rowContainerStyle(state: CardState, hovered: boolean): React.CSSPropert
     display: 'flex',
     alignItems: 'center',
     gap: '0.75rem',
-    padding: '0.5rem 0.875rem',
+    padding: '0.625rem 1rem',
     background: 'var(--surface)',
-    borderBottom: '1px solid var(--border-soft)',
-    transition: 'background 150ms ease',
+    borderBottom: '1px solid var(--border-soft, rgba(0,0,0,0.04))',
+    transition: 'background 200ms ease',
     cursor: 'pointer',
-    minHeight: 40,
+    minHeight: 42,
   }
 
-  if (state === 'disabled') return { ...base, opacity: 0.45, cursor: 'default' }
+  if (state === 'disabled') return { ...base, opacity: 0.4, cursor: 'default' }
 
   if (state === 'paused-failed' || state === 'failed-mid-run') {
-    return { ...base, borderLeft: '3px solid var(--err)', cursor: state === 'paused-failed' ? 'default' : base.cursor }
+    return { ...base, borderLeft: '3px solid var(--err)', paddingLeft: 'calc(1rem - 3px)', cursor: state === 'paused-failed' ? 'default' : base.cursor }
   }
 
   if (state === 'fetching' || state === 'summarizing' || state === 'waiting' || state === 'done') {
@@ -544,18 +546,24 @@ function rowContainerStyle(state: CardState, hovered: boolean): React.CSSPropert
   }
 
   if (state === 'selected') {
-    return { ...base, background: 'var(--accent-wash)' }
+    return {
+      ...base,
+      background: 'color-mix(in srgb, var(--accent) 8%, var(--surface))',
+      borderLeft: '3px solid var(--accent)',
+      paddingLeft: 'calc(1rem - 3px)',
+      ...(hovered && { background: 'color-mix(in srgb, var(--accent) 12%, var(--surface))' }),
+    }
   }
 
   if (state === 'failed') {
-    return { ...base, borderLeft: '3px solid var(--err)', ...(hovered && { background: 'var(--surface-alt)' }) }
+    return { ...base, borderLeft: '3px solid var(--err)', paddingLeft: 'calc(1rem - 3px)', ...(hovered && { background: 'var(--surface-alt)' }) }
   }
 
   if (state === 'config-error') {
-    return { ...base, borderLeft: '3px solid var(--warn)', ...(hovered && { background: 'var(--surface-alt)' }) }
+    return { ...base, borderLeft: '3px solid var(--warn)', paddingLeft: 'calc(1rem - 3px)', ...(hovered && { background: 'var(--surface-alt)' }) }
   }
 
-  return { ...base, ...(hovered && { background: 'var(--surface-alt)' }) }
+  return { ...base, ...(hovered && { background: 'var(--surface-alt, rgba(0,0,0,0.02))' }) }
 }
 
 function RowMetric({ state, props }: { state: CardState; props: SensorCardProps }) {
@@ -645,8 +653,12 @@ export const SensorRow = memo(function SensorRow(props: SensorCardProps) {
       onMouseEnter={(e) => { if (isClickable) Object.assign(e.currentTarget.style, { background: rowContainerStyle(state, true).background }) }}
       onMouseLeave={(e) => { if (isClickable) Object.assign(e.currentTarget.style, { background: rowContainerStyle(state, false).background }) }}
     >
-      <Dot state={state} />
-      <span style={{ ...nameStyle, fontSize: '0.8125rem', minWidth: 120, maxWidth: 140 }}>{label}</span>
+      {state === 'selected' ? (
+        <span style={{ width: DOT_SIZE, height: DOT_SIZE, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.5rem', color: 'var(--accent)', fontWeight: 700 }}>{'\u2713'}</span>
+      ) : (
+        <Dot state={state} />
+      )}
+      <span style={{ ...nameStyle, fontSize: '0.8125rem', minWidth: 120, maxWidth: 140, ...(state === 'selected' ? { color: 'var(--accent)' } : {}) }}>{label}</span>
       <span style={categoryBadgeStyle}>{category}</span>
       <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         <RowMetric state={state} props={props} />

@@ -327,6 +327,8 @@ export function Status() {
         pipelineStatus={pipelineStatus}
         selected={selectedSensors}
         onToggleSelect={toggleSensorSelect}
+        onSelectAll={selectAll}
+        onSelectNone={selectNone}
         onRetry={handleRetrySensor}
         onSkipSensor={handleSkipSensor}
         dismissed={dismissed}

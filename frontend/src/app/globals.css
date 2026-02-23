@@ -411,7 +411,7 @@ input[type="range"]::-moz-range-thumb {
 /* Consistent top breathing room on all pages that use .page-padding.
    Mobile overrides below replace this for the mobile layout. */
 .page-padding {
-  padding-top: 2rem;
+  padding-top: 2.5rem;
 }
 
 /* ─── Mobile Responsive ─────────────────────────────────────────────────── */

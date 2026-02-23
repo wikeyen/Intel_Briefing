@@ -1072,9 +1072,9 @@ function DashboardSkeleton() {
         <div className="skeleton-shimmer" style={{ width: 96, height: 10 }} />
         <div className="skeleton-shimmer" style={{ width: 64, height: 10 }} />
       </div>
-      <div className="dashboard-layout" style={{ marginTop: 14 }}>
+      <div className="dashboard-layout" style={{ marginTop: '1.25rem' }}>
         {/* Main skeleton */}
-        <div className="dashboard-main flex flex-col" style={{ gap: 14 }}>
+        <div className="dashboard-main flex flex-col" style={{ gap: '1.25rem' }}>
           {/* Exec summary skeleton */}
           <div className="flex flex-col gap-2" style={{
             background: 'var(--surface)',
@@ -1109,7 +1109,7 @@ function DashboardSkeleton() {
           ))}
         </div>
         {/* Sidebar skeleton */}
-        <div className="dashboard-sidebar flex flex-col" style={{ gap: 14 }}>
+        <div className="dashboard-sidebar flex flex-col" style={{ gap: '1.25rem' }}>
           <Card className="py-4" style={{ borderRadius: 12 }}><CardContent className="px-6 flex flex-col gap-2">
             <div className="skeleton-shimmer" style={{ width: 64, height: 10 }} />
             <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
@@ -1276,9 +1276,9 @@ export function Dashboard() {
             </StaggerChild>
 
             {/* Two-column layout: main content + right sidebar on xl screens */}
-            <div className="dashboard-layout" style={{ marginTop: 14 }}>
+            <div className="dashboard-layout" style={{ marginTop: '1.25rem' }}>
               {/* ── Main Content Column ── */}
-              <div className="dashboard-main flex flex-col" style={{ gap: 14 }}>
+              <div className="dashboard-main flex flex-col" style={{ gap: '1.25rem' }}>
                 {/* 1. Executive Summary */}
                 {summary && (
                   <StaggerChild index={1}>
@@ -1351,7 +1351,7 @@ export function Dashboard() {
               </div>
 
               {/* ── Right Sidebar (visible on xl screens, stacks below on smaller) ── */}
-              <div className="dashboard-sidebar flex flex-col" style={{ gap: 14 }}>
+              <div className="dashboard-sidebar flex flex-col" style={{ gap: '1.25rem' }}>
                 {/* Sentiment */}
                 {summary && (
                   <StaggerChild index={10}>

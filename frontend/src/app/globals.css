@@ -855,10 +855,23 @@ input[type="range"]::-moz-range-thumb {
   border-top: 1px solid var(--border-subtle);
   margin: 0;
 }
+/* Single-column override when sidebar is hidden (no summary state) */
+.dashboard-columns--full {
+  grid-template-columns: 1fr !important;
+}
+/* 2-column grid for Distribution + Source Health inside SummaryPendingCard */
+.dashboard-pending-widgets {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
 
 @media (min-width: 769px) {
   .dashboard-domains {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .dashboard-pending-widgets {
+    grid-template-columns: 1fr 1fr;
   }
 }
 

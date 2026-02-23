@@ -817,7 +817,7 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
 // Widget: Category Distribution Bar
 // ---------------------------------------------------------------------------
 
-function CategoryDistributionWidget({ report }: { report: IntelReport }) {
+function CategoryDistributionContent({ report }: { report: IntelReport }) {
   const counts: Record<string, number> = { 'high-trust': 0, news: 0, trend: 0, opinions: 0 }
   for (const [cat, items] of Object.entries(report.items)) {
     for (const item of items) {
@@ -836,39 +836,45 @@ function CategoryDistributionWidget({ report }: { report: IntelReport }) {
   ]
 
   return (
-    <DashCard>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <SectionLabel>Distribution</SectionLabel>
-          <span style={{ fontFamily: MONO, fontSize: '0.625rem', color: 'var(--ink-tertiary)' }}>{total} items</span>
-        </div>
-        {/* Segmented bar */}
-        <div style={{ display: 'flex', overflow: 'hidden', height: 8, borderRadius: 4, gap: 2 }}>
-          {segments.map(seg => seg.count > 0 ? (
-            <div key={seg.key} style={{
-              width: `${(seg.count / total) * 100}%`,
-              background: seg.color,
-              borderRadius: 4,
-              transition: 'width 500ms cubic-bezier(0.4, 0, 0.2, 1)',
-            }} />
-          ) : null)}
-        </div>
-        {/* Legend */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.25rem 0.75rem' }}>
-          {segments.map(seg => {
-            const pct = Math.round((seg.count / total) * 100)
-            return (
-              <div key={seg.key} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: seg.color, flexShrink: 0 }} />
-                <span style={{ fontSize: '0.6875rem', color: 'var(--ink-secondary)' }}>{seg.label}</span>
-                <span style={{ fontFamily: MONO, fontSize: '0.625rem', fontWeight: 600, color: 'var(--ink)', marginLeft: 'auto' }}>
-                  {seg.count} <span style={{ color: 'var(--ink-tertiary)' }}>({pct}%)</span>
-                </span>
-              </div>
-            )
-          })}
-        </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <SectionLabel>Distribution</SectionLabel>
+        <span style={{ fontFamily: MONO, fontSize: '0.625rem', color: 'var(--ink-tertiary)' }}>{total} items</span>
       </div>
+      {/* Segmented bar */}
+      <div style={{ display: 'flex', overflow: 'hidden', height: 8, borderRadius: 4, gap: 2 }}>
+        {segments.map(seg => seg.count > 0 ? (
+          <div key={seg.key} style={{
+            width: `${(seg.count / total) * 100}%`,
+            background: seg.color,
+            borderRadius: 4,
+            transition: 'width 500ms cubic-bezier(0.4, 0, 0.2, 1)',
+          }} />
+        ) : null)}
+      </div>
+      {/* Legend */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.25rem 0.75rem' }}>
+        {segments.map(seg => {
+          const pct = Math.round((seg.count / total) * 100)
+          return (
+            <div key={seg.key} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: seg.color, flexShrink: 0 }} />
+              <span style={{ fontSize: '0.6875rem', color: 'var(--ink-secondary)' }}>{seg.label}</span>
+              <span style={{ fontFamily: MONO, fontSize: '0.625rem', fontWeight: 600, color: 'var(--ink)', marginLeft: 'auto' }}>
+                {seg.count} <span style={{ color: 'var(--ink-tertiary)' }}>({pct}%)</span>
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function CategoryDistributionWidget({ report }: { report: IntelReport }) {
+  return (
+    <DashCard>
+      <CategoryDistributionContent report={report} />
     </DashCard>
   )
 }
@@ -877,7 +883,7 @@ function CategoryDistributionWidget({ report }: { report: IntelReport }) {
 // Widget: Source Health Dots
 // ---------------------------------------------------------------------------
 
-function SourceHealthWidget({ report }: { report: IntelReport }) {
+function SourceHealthContent({ report }: { report: IntelReport }) {
   const okSet = new Set(report.sources_ok)
   const failedSorted = [...report.sources_failed].sort()
   const okSorted = [...report.sources_ok].sort()
@@ -888,46 +894,52 @@ function SourceHealthWidget({ report }: { report: IntelReport }) {
   const healthPct = Math.round((report.sources_ok.length / all.length) * 100)
 
   return (
-    <DashCard>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <SectionLabel>Source Health</SectionLabel>
-          <span style={{
-            fontFamily: MONO,
-            fontSize: '0.625rem',
-            fontWeight: 600,
-            padding: '2px 6px',
-            borderRadius: 4,
-            background: hasFailed ? 'var(--sent-neg-bg)' : 'var(--sent-pos-bg)',
-            color: hasFailed ? 'var(--sent-neg-text)' : 'var(--sent-pos-text)',
-          }}>
-            {healthPct}% ok
-          </span>
-        </div>
-        {/* Health bar */}
-        <div style={{ display: 'flex', overflow: 'hidden', height: 4, borderRadius: 2, background: 'var(--border-subtle)' }}>
-          <div style={{
-            width: `${healthPct}%`,
-            background: hasFailed ? 'var(--sent-mixed)' : 'var(--sent-pos)',
-            transition: 'width 400ms ease',
-            borderRadius: 2,
-          }} />
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.25rem 0.75rem' }}>
-          {all.map(source => (
-            <div key={source} title={`${SENSOR_LABELS[source] ?? source}: ${okSet.has(source) ? 'OK' : 'Failed'}`}
-              style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span style={{
-                width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-                background: okSet.has(source) ? 'var(--sent-pos)' : 'var(--sent-neg)',
-              }} />
-              <span style={{ fontFamily: MONO, fontSize: '0.625rem', color: 'var(--ink-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {(SENSOR_LABELS[source] ?? source).slice(0, 14)}
-              </span>
-            </div>
-          ))}
-        </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <SectionLabel>Source Health</SectionLabel>
+        <span style={{
+          fontFamily: MONO,
+          fontSize: '0.625rem',
+          fontWeight: 600,
+          padding: '2px 6px',
+          borderRadius: 4,
+          background: hasFailed ? 'var(--sent-neg-bg)' : 'var(--sent-pos-bg)',
+          color: hasFailed ? 'var(--sent-neg-text)' : 'var(--sent-pos-text)',
+        }}>
+          {healthPct}% ok
+        </span>
       </div>
+      {/* Health bar */}
+      <div style={{ display: 'flex', overflow: 'hidden', height: 4, borderRadius: 2, background: 'var(--border-subtle)' }}>
+        <div style={{
+          width: `${healthPct}%`,
+          background: hasFailed ? 'var(--sent-mixed)' : 'var(--sent-pos)',
+          transition: 'width 400ms ease',
+          borderRadius: 2,
+        }} />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.25rem 0.75rem' }}>
+        {all.map(source => (
+          <div key={source} title={`${SENSOR_LABELS[source] ?? source}: ${okSet.has(source) ? 'OK' : 'Failed'}`}
+            style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{
+              width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+              background: okSet.has(source) ? 'var(--sent-pos)' : 'var(--sent-neg)',
+            }} />
+            <span style={{ fontFamily: MONO, fontSize: '0.625rem', color: 'var(--ink-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {(SENSOR_LABELS[source] ?? source).slice(0, 14)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function SourceHealthWidget({ report }: { report: IntelReport }) {
+  return (
+    <DashCard>
+      <SourceHealthContent report={report} />
     </DashCard>
   )
 }
@@ -1531,19 +1543,19 @@ function DashboardSkeleton() {
 // Widget: Summary Pending — shown when report exists but summary is not yet available
 // ---------------------------------------------------------------------------
 
-function SummaryPendingCard({ isActive }: { isActive: boolean }) {
+function SummaryPendingCard({ isActive, report }: { isActive: boolean; report: IntelReport | null }) {
   return (
     <DashCard style={{ background: 'var(--surface)' }}>
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '0.75rem',
-        padding: '2.5rem 1.5rem',
-        textAlign: 'center',
-      }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         {isActive ? (
-          <>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '2rem 1rem',
+            textAlign: 'center',
+          }}>
             <span style={{
               width: 10, height: 10, borderRadius: '50%',
               background: 'var(--accent)',
@@ -1561,19 +1573,48 @@ function SummaryPendingCard({ isActive }: { isActive: boolean }) {
               <div className="skeleton-shimmer" style={{ width: '85%', height: 10, borderRadius: 4 }} />
               <div className="skeleton-shimmer" style={{ width: '70%', height: 10, borderRadius: 4 }} />
             </div>
-          </>
+          </div>
         ) : (
-          <>
-            <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink-tertiary)' }}>
-              No summary available
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+            <div>
+              <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)', marginBottom: 2 }}>
+                Data fetched — no summary yet
+              </div>
+              <p style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)', margin: 0, lineHeight: 1.5 }}>
+                Run summarization to generate the executive briefing and domain analysis.
+              </p>
             </div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)', margin: 0, lineHeight: 1.6, maxWidth: 300 }}>
-              Data has been fetched but no AI summary has been generated yet. Run{' '}
-              <Link href="/status" style={{ color: 'var(--accent)', textDecoration: 'underline', textUnderlineOffset: 2 }}>
-                Summarize
-              </Link>
-              {' '}to generate the briefing.
-            </p>
+            <Link
+              href="/status"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                padding: '6px 14px',
+                borderRadius: 6,
+                background: 'var(--accent)',
+                color: 'var(--surface)',
+                fontSize: '0.6875rem',
+                fontWeight: 600,
+                textDecoration: 'none',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+                transition: 'opacity 150ms ease',
+              }}
+            >
+              Summarize &#8250;
+            </Link>
+          </div>
+        )}
+
+        {/* Inline Distribution + Source Health when report available */}
+        {report && (
+          <>
+            <div style={{ borderTop: '1px solid var(--border-subtle)' }} />
+            <div className="dashboard-pending-widgets">
+              <CategoryDistributionContent report={report} />
+              <SourceHealthContent report={report} />
+            </div>
           </>
         )}
       </div>
@@ -1728,8 +1769,8 @@ export function Dashboard() {
               </StaggerChild>
             </div>
 
-            {/* Two-column layout: Main + Sidebar */}
-            <div className="dashboard-columns" style={{ marginTop: '0.75rem' }}>
+            {/* Two-column layout: Main + Sidebar (single column when no summary) */}
+            <div className={`dashboard-columns${hasSummary ? '' : ' dashboard-columns--full'}`} style={{ marginTop: '0.75rem' }}>
               {/* Main column */}
               <div className="dashboard-main">
                 {summary ? (
@@ -1755,7 +1796,7 @@ export function Dashboard() {
                     </div>
                   </>
                 ) : hasReport && (
-                  <SummaryPendingCard isActive={isActive} />
+                  <SummaryPendingCard isActive={isActive} report={report} />
                 )}
 
                 {/* Footer link */}
@@ -1766,36 +1807,34 @@ export function Dashboard() {
                 </div>
               </div>
 
-              {/* Sidebar */}
-              <div className="dashboard-sidebar">
-                {summary && (
-                  <>
-                    <StaggerChild index={3}>
-                      <RiskIntelPanel summary={summary} />
-                    </StaggerChild>
-                    <hr className="dash-divider" />
-                    <StaggerChild index={4}>
-                      <SentimentWidget summary={summary} report={report} />
-                    </StaggerChild>
-                    <hr className="dash-divider" />
-                  </>
-                )}
-                {report && (
-                  <>
-                    <StaggerChild index={12}>
-                      <TrendingWidget report={report} summary={summary} />
-                    </StaggerChild>
-                    <hr className="dash-divider" />
-                    <StaggerChild index={13}>
-                      <CategoryDistributionWidget report={report} />
-                    </StaggerChild>
-                    <hr className="dash-divider" />
-                    <StaggerChild index={14}>
-                      <SourceHealthWidget report={report} />
-                    </StaggerChild>
-                  </>
-                )}
-              </div>
+              {/* Sidebar — only rendered when summary exists */}
+              {hasSummary && (
+                <div className="dashboard-sidebar">
+                  {summary && (
+                    <>
+                      <StaggerChild index={3}>
+                        <RiskIntelPanel summary={summary} />
+                      </StaggerChild>
+                      <StaggerChild index={4}>
+                        <SentimentWidget summary={summary} report={report} />
+                      </StaggerChild>
+                    </>
+                  )}
+                  {report && (
+                    <>
+                      <StaggerChild index={12}>
+                        <TrendingWidget report={report} summary={summary} />
+                      </StaggerChild>
+                      <StaggerChild index={13}>
+                        <CategoryDistributionWidget report={report} />
+                      </StaggerChild>
+                      <StaggerChild index={14}>
+                        <SourceHealthWidget report={report} />
+                      </StaggerChild>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Detail panel overlay */}

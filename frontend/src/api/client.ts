@@ -206,6 +206,7 @@ export interface BriefingSummary {
     label: string
     source_url: string
     summary: string
+    brief_summary?: string
     item_count: number
     items: SensorSummaryItem[]
   }[]

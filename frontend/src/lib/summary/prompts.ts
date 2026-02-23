@@ -15,6 +15,7 @@ const JSON_SENSOR_RULE = `
 输出格式（严格JSON，不要添加 markdown 代码块标记）：
 {
   "summary": "2-4句连贯的趋势分析段落",
+  "brief_summary": "1-2句精炼概括，提取summary中最核心的信号",
   "items": [
     { "title": "条目标题", "url": "原始链接", "brief": "一句话说明为什么值得关注" }
   ]
@@ -23,6 +24,7 @@ const JSON_SENSOR_RULE = `
 要求：
 - 所有输出文本必须使用简体中文。如果原文标题不是中文，将其翻译为简体中文。
 - summary: 综合趋势分析，严禁逐条列举，严禁编号列表
+- brief_summary: summary的精炼版本，1-2句话提取最核心的趋势或信号，用于卡片预览
 - items: 挑选最值得关注的3-8个条目，必须使用原文中提供的URL，标题翻译为简体中文
 - brief: 每个条目的brief必须准确描述该条目本身的内容和意义，严禁用总体趋势概括替代。例如：标题为"印度贸易代表团推迟访美"的brief应描述印度访美推迟的原因或影响，而不是AI趋势或消费升级。
 - 严格输出合法JSON
@@ -40,6 +42,7 @@ const JSON_SENSOR_RULE_EN = `
 Output format (strict JSON, no markdown code fences):
 {
   "summary": "A cohesive 2-4 sentence trend analysis paragraph",
+  "brief_summary": "1-2 sentence distillation of the most important signal from the summary",
   "items": [
     { "title": "Item title", "url": "Original link", "brief": "One sentence on why this matters" }
   ]
@@ -48,6 +51,7 @@ Output format (strict JSON, no markdown code fences):
 Requirements:
 - All output text must be in English. If source titles are not in English, translate them to English.
 - summary: Synthesized trend analysis; no bullet lists, no numbered lists
+- brief_summary: A condensed version of the summary — 1-2 sentences capturing the single most important signal, used for card previews
 - items: Pick the 3-8 most noteworthy items; use the exact URLs from the source text; translate titles to English
 - brief: Each item's brief MUST accurately describe that specific item's content and significance. Never substitute a general trend observation. For example, if the title is "India trade delegation postpones US visit", the brief should describe the postponement's cause or impact — not an unrelated AI or market trend.
 - Output strictly valid JSON

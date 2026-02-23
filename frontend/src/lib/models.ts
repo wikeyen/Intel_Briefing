@@ -157,6 +157,8 @@ export interface SensorSummary {
   label: string
   source_url: string
   summary: string
+  /** Condensed 1-2 sentence version of summary for card previews. */
+  brief_summary?: string
   item_count: number
   items: SensorSummaryItem[]
 }

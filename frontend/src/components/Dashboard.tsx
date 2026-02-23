@@ -949,10 +949,11 @@ function DomainCardCompact({ domain, summary, onClick }: {
   const totalItems = matchingSections.reduce((n, s) => n + s.item_count, 0)
   const totalNotable = matchingSections.reduce((n, s) => n + s.items.length, 0)
 
-  // Truncate combined summary to first 3 sentences for card display
-  const combinedSummary = matchingSections.map(s => s.summary).join(' ')
-  const sentences = combinedSummary.split(/(?<=[。！？.!?])\s*/).filter(s => s.trim())
-  const cardSummary = sentences.slice(0, 3).join('')
+  // Use LLM-generated brief summaries; fall back to first 3 sentences for old cached data
+  const briefs = matchingSections.map(s => s.brief_summary).filter(Boolean)
+  const cardSummary = briefs.length > 0
+    ? briefs.join(' ')
+    : matchingSections.map(s => s.summary).join(' ').split(/(?<=[。！？.!?])\s*/).filter(s => s.trim()).slice(0, 3).join('')
 
   return (
     <DashCard>

@@ -46,6 +46,7 @@ function robustJsonParse(text: string): Record<string, unknown> | null {
 /** Parsed sensor summary JSON from the LLM. */
 export interface ParsedSensorJson {
   summary: string
+  brief_summary: string
   items: SensorSummaryItem[]
 }
 
@@ -59,6 +60,7 @@ export function parseSensorJson(raw: string): ParsedSensorJson {
 
   if (parsed) {
     const summary = typeof parsed.summary === 'string' ? parsed.summary : cleaned
+    const brief_summary = typeof parsed.brief_summary === 'string' ? parsed.brief_summary : ''
     const items: SensorSummaryItem[] = Array.isArray(parsed.items)
       ? parsed.items
           .filter((it: unknown) => it && typeof it === 'object' && 'title' in it)
@@ -68,10 +70,10 @@ export function parseSensorJson(raw: string): ParsedSensorJson {
             brief: String(it.brief ?? ''),
           }))
       : []
-    return { summary, items }
+    return { summary, brief_summary, items }
   }
 
-  return { summary: raw.trim(), items: [] }
+  return { summary: raw.trim(), brief_summary: '', items: [] }
 }
 
 /** Parse a single briefing entry, extracting refs if present. */

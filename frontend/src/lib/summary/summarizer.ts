@@ -202,6 +202,7 @@ async function summarizeSensor(
     label,
     source_url: SOURCE_URLS[sensorName] ?? '',
     summary: parsed.summary,
+    brief_summary: parsed.brief_summary || '',
     item_count: items.length,
     items: correctedItems,
   }

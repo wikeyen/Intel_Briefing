@@ -618,9 +618,14 @@ function RowMetric({ state, props, t }: { state: CardState; props: SensorCardPro
       const label = retrying ? t('sensor.retrying') : t('sensor.fetching')
       const color = retrying ? 'var(--warn)' : 'var(--accent)'
       return (
-        <span style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
+        <span style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.6875rem', color, fontWeight: 500 }}>{label}</span>
           {liveSensor && <span style={{ ...mono, fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>{liveSensor.item_count}</span>}
+          {liveSensor?.fetch_detail && (
+            <span style={{ fontSize: '0.625rem', color: 'var(--ink-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 120 }}>
+              {liveSensor.fetch_detail}
+            </span>
+          )}
         </span>
       )
     }

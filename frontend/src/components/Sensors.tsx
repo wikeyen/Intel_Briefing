@@ -1,4 +1,4 @@
-// ABOUTME: Sources section — sensor toggles grouped by language/provider with inline pill controls.
+// ABOUTME: Sources section — sensor toggles grouped by category with inline pill controls.
 // ABOUTME: Per-sensor item limits, lookback hours, social accounts, and social topics configured inline.
 'use client'
 import { useState, useEffect } from 'react'
@@ -9,7 +9,7 @@ import { useToast } from '@/lib/toast-context'
 import { useAutoSave } from '@/lib/hooks/useAutoSave'
 import { AutoSaveIndicator } from '@/components/form-styles'
 import { sensorsByLanguageAndCategory } from '@/lib/sensors/taxonomy'
-import { normalizeRssFeeds, type RssFeedEntry, type RssFeedType } from '@/lib/models'
+import { normalizeRssFeeds, type RssFeedEntry } from '@/lib/models'
 import { SkeletonCard } from '@/components/Skeleton'
 
 interface SensorDef {
@@ -20,24 +20,28 @@ interface SensorDef {
 
 type Language = 'row' | 'cn'
 
-const LANGUAGE_GROUPS: Record<Language, { label: string; sensors: SensorDef[] }[]> = {
-  row: [],
-  cn: [],
+interface GroupDef {
+  label: string
+  language: Language
+  sensors: SensorDef[]
 }
+
+const ALL_GROUPS: GroupDef[] = []
 
 for (const lang of sensorsByLanguageAndCategory()) {
-  LANGUAGE_GROUPS[lang.language] = lang.categories.map(cat => ({
-    label: cat.label,
-    sensors: cat.sensors.map(s => ({ key: s.key, label: s.label, desc: s.desc })),
-  }))
+  for (const cat of lang.categories) {
+    ALL_GROUPS.push({
+      label: cat.label,
+      language: lang.language,
+      sensors: cat.sensors.map(s => ({ key: s.key, label: s.label, desc: s.desc })),
+    })
+  }
 }
 
-const ALL_SENSORS = Object.values(LANGUAGE_GROUPS).flat().flatMap(g => g.sensors)
+/** Virtual sensors that are display-only (controlled by a parent sensor). */
+const HIDDEN_SENSORS = new Set(['rss_news'])
 
-const LANGUAGE_TABS: { key: Language; label: string; desc: string }[] = [
-  { key: 'row', label: 'Global', desc: 'English-language sources' },
-  { key: 'cn', label: 'China', desc: 'Chinese-language sources' },
-]
+const ALL_SENSORS = ALL_GROUPS.flatMap(g => g.sensors)
 
 /** Maps sensor names to their default lookback hours. Sensors not listed have no lookback support. */
 const SENSOR_LOOKBACK_SUPPORT: Record<string, number> = {
@@ -64,16 +68,35 @@ function Badge({ status }: { status: SensorStatus | undefined }) {
   const s = map[status]
   return (
     <span style={{
-      fontSize: '0.6875rem',
+      fontSize: '0.625rem',
       fontWeight: 600,
       letterSpacing: '0.06em',
       textTransform: 'uppercase',
       background: s.bg,
       color: s.color,
-      padding: '0.2rem 0.625rem',
+      padding: '0.125rem 0.5rem',
       borderRadius: 999,
     }}>
       {s.label}
+    </span>
+  )
+}
+
+function LanguageBadge({ language }: { language: Language }) {
+  if (language === 'row') return null
+  return (
+    <span style={{
+      fontSize: '0.5625rem',
+      fontWeight: 700,
+      letterSpacing: '0.08em',
+      textTransform: 'uppercase',
+      background: 'var(--accent-bg)',
+      color: 'var(--accent)',
+      padding: '0.0625rem 0.375rem',
+      borderRadius: 999,
+      marginLeft: '0.375rem',
+    }}>
+      CN
     </span>
   )
 }
@@ -87,9 +110,9 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
       onClick={onClick}
       style={{
         position: 'relative',
-        width: 36,
-        height: 20,
-        borderRadius: 10,
+        width: 32,
+        height: 18,
+        borderRadius: 9,
         border: on ? 'none' : '1.5px solid var(--border)',
         background: on ? 'var(--accent)' : 'transparent',
         cursor: 'pointer',
@@ -100,9 +123,9 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
       <span style={{
         position: 'absolute',
         top: on ? 3 : 2,
-        left: on ? 19 : 2,
-        width: 14,
-        height: 14,
+        left: on ? 17 : 2,
+        width: 12,
+        height: 12,
         borderRadius: '50%',
         background: on ? 'var(--surface)' : 'var(--ink-faint)',
         transition: 'left 150ms, background 150ms',
@@ -126,12 +149,12 @@ function PillInput({ label, value, min, max, suffix, onChange }: PillInputProps)
     <label style={{
       display: 'inline-flex',
       alignItems: 'center',
-      gap: '0.25rem',
+      gap: '0.1875rem',
       borderRadius: 999,
       border: '1px solid var(--border)',
       background: 'var(--canvas)',
-      padding: '0.2rem 0.5rem 0.2rem 0.5rem',
-      fontSize: '0.75rem',
+      padding: '0.125rem 0.375rem',
+      fontSize: '0.6875rem',
       lineHeight: 1,
       cursor: 'text',
       whiteSpace: 'nowrap',
@@ -148,12 +171,12 @@ function PillInput({ label, value, min, max, suffix, onChange }: PillInputProps)
           if (!isNaN(n)) onChange(Math.max(min, Math.min(max, n)))
         }}
         style={{
-          width: suffix ? 28 : 32,
+          width: suffix ? 26 : 30,
           padding: 0,
           border: 'none',
           background: 'transparent',
           color: 'var(--ink)',
-          fontSize: '0.75rem',
+          fontSize: '0.6875rem',
           fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
           fontWeight: 600,
           textAlign: 'right',
@@ -233,7 +256,6 @@ export function Sensors() {
   const [sensorLimits, setSensorLimits] = useState<Record<string, number>>({})
   const [sensorLookback, setSensorLookback] = useState<Record<string, number>>({})
   const [defaultLimit, setDefaultLimit] = useState(10)
-  const [activeLanguage, setActiveLanguage] = useState<Language>('row')
   const [xScraperProvider, setXScraperProvider] = useState<'twitter-scraper' | 'apify' | 'mixed'>('twitter-scraper')
   const [loaded, setLoaded] = useState(false)
 
@@ -345,16 +367,16 @@ export function Sensors() {
   if (!loaded) {
     return (
       <div>
-        <div className="page-header" style={{ paddingBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.01em', marginBottom: '0.25rem' }}>
+        <div className="page-header" style={{ paddingBottom: '1rem' }}>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.01em', marginBottom: '0.125rem' }}>
             Sources
           </h2>
-          <p style={{ fontSize: '0.8125rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
+          <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
             Active data sources for your pipeline.
           </p>
         </div>
         <div style={{ paddingBottom: '4rem' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <SkeletonCard lines={4} />
             <SkeletonCard lines={5} />
             <SkeletonCard lines={3} />
@@ -368,73 +390,44 @@ export function Sensors() {
     <div>
       <style dangerouslySetInnerHTML={{ __html: HIDE_SPINNERS_CSS }} />
 
-      <div className="page-header" style={{ paddingBottom: '1.5rem' }}>
+      <div className="page-header" style={{ paddingBottom: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.01em', marginBottom: '0.25rem' }}>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.01em', marginBottom: '0.125rem' }}>
             Sources
           </h2>
           <AutoSaveIndicator status={saveStatus} />
         </div>
-        <p style={{ fontSize: '0.8125rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
+        <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
           Active data sources for your pipeline.
         </p>
       </div>
 
       <div style={{ paddingBottom: '4rem' }}>
 
-        {/* Language tabs */}
-        <div style={{
-          display: 'flex',
-          gap: '0.25rem',
-          marginBottom: '1.5rem',
-          borderBottom: '1px solid var(--border)',
-        }}>
-          {LANGUAGE_TABS.map(tab => {
-            const active = activeLanguage === tab.key
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setActiveLanguage(tab.key)}
-                style={{
-                  padding: '0.625rem 1.25rem',
-                  fontSize: '0.8125rem',
-                  fontWeight: active ? 600 : 400,
-                  color: active ? 'var(--ink)' : 'var(--ink-muted)',
-                  background: 'transparent',
-                  border: 'none',
-                  borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
-                  cursor: 'pointer',
-                  transition: 'color 120ms, border-color 120ms',
-                  marginBottom: -1,
-                }}
-              >
-                {tab.label}
-              </button>
-            )
-          })}
-        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-
-          {LANGUAGE_GROUPS[activeLanguage].map((group) => (
-            <div key={group.label}>
-              {/* Group label */}
+          {ALL_GROUPS.map((group) => (
+            <div key={`${group.language}-${group.label}`}>
+              {/* Group label with optional CN badge */}
               <div style={{
-                fontSize: '0.6875rem',
+                fontSize: '0.625rem',
                 fontWeight: 600,
                 letterSpacing: '0.09em',
                 textTransform: 'uppercase',
                 color: 'var(--ink-faint)',
-                marginBottom: '0.5rem',
+                marginBottom: '0.375rem',
+                display: 'flex',
+                alignItems: 'center',
               }}>
                 {group.label}
+                <LanguageBadge language={group.language} />
               </div>
 
               {/* Sensor cards in this group */}
               <div style={{
                 background: 'var(--surface)',
                 border: '1px solid var(--border)',
-                borderRadius: 8,
+                borderRadius: 6,
                 overflow: 'hidden',
                 boxShadow: 'var(--shadow-card)',
                 transition: 'box-shadow 200ms, border-color 200ms',
@@ -448,8 +441,8 @@ export function Sensors() {
                   ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'
                 }}
               >
-                {group.sensors.map(({ key, label, desc }, i) => {
-                  const isLast = i === group.sensors.length - 1
+                {group.sensors.filter(s => !HIDDEN_SENSORS.has(s.key)).map(({ key, label, desc }, i, arr) => {
+                  const isLast = i === arr.length - 1
                   const isX = key === 'x'
                   const isBluesky = key === 'bluesky'
                   const isMastodon = key === 'mastodon'
@@ -466,34 +459,33 @@ export function Sensors() {
                         style={{
                           display: 'flex',
                           alignItems: 'center',
-                          padding: '1rem 1.25rem',
+                          padding: '0.5rem 0.875rem',
                           borderBottom: hasPlatformSubConfig || !isLast ? '1px solid var(--border-soft)' : 'none',
                           transition: 'background 120ms',
-                          gap: '0.75rem',
+                          gap: '0.5rem',
                         }}
                         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--canvas)' }}
                         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)' }}
                       >
                         {/* Left: toggle + label */}
-                        <div className="sensor-row-left" style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flex: 1, minWidth: 0 }}>
+                        <div className="sensor-row-left" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flex: 1, minWidth: 0 }}>
                           <Toggle on={isOn} onClick={() => toggle(key)} />
                           <div style={{ minWidth: 0 }}>
                             <div style={{
-                              fontSize: '0.875rem',
+                              fontSize: '0.8125rem',
                               fontWeight: 500,
                               color: isOn ? 'var(--ink)' : 'var(--ink-faint)',
-                              marginBottom: '0.125rem',
                             }}>
                               {label}
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
+                            <div style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>
                               {desc}
                             </div>
                           </div>
                         </div>
 
                         {/* Right: inline pill controls + badge */}
-                        <div className="sensor-row-right" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                        <div className="sensor-row-right" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
                           {isOn && (
                             <PillInput
                               label="Items"
@@ -520,26 +512,25 @@ export function Sensors() {
                       {/* X sub-config */}
                       {isX && isOn && (
                         <div style={{
-                          padding: '1.25rem 1.25rem 1.25rem 1.25rem',
-                          paddingLeft: '1.25rem',
+                          padding: '0.625rem 0.875rem',
                           background: 'var(--canvas)',
                           borderBottom: isLast ? 'none' : '1px solid var(--border-soft)',
                           display: 'flex',
                           flexDirection: 'column',
-                          gap: '1rem',
+                          gap: '0.625rem',
                         }}>
                           <div>
-                            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                              <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--ink)' }} />
+                            <div style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: 'var(--ink)' }} />
                               Scraper
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <span style={{ fontSize: '0.8125rem', color: 'var(--ink)' }}>Twitter Scraper</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--ink)' }}>Twitter Scraper</span>
                             </div>
                           </div>
                           <div>
-                            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                              <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--ink)' }} />
+                            <div style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: 'var(--ink)' }} />
                               Accounts
                             </div>
                             <TagInput
@@ -559,17 +550,16 @@ export function Sensors() {
                       {/* Bluesky sub-config */}
                       {isBluesky && isOn && (
                         <div style={{
-                          padding: '1.25rem 1.25rem 1.25rem 1.25rem',
-                          paddingLeft: '1.25rem',
+                          padding: '0.625rem 0.875rem',
                           background: 'var(--canvas)',
                           borderBottom: isLast ? 'none' : '1px solid var(--border-soft)',
                           display: 'flex',
                           flexDirection: 'column',
-                          gap: '1rem',
+                          gap: '0.625rem',
                         }}>
                           <div>
-                            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                              <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--brand-bluesky)' }} />
+                            <div style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: 'var(--brand-bluesky)' }} />
                               Accounts
                             </div>
                             <TagInput
@@ -585,8 +575,8 @@ export function Sensors() {
                             <label style={{
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '0.5rem',
-                              marginTop: '0.5rem',
+                              gap: '0.375rem',
+                              marginTop: '0.375rem',
                               cursor: hasBlueskyCredentials ? 'pointer' : 'not-allowed',
                               opacity: hasBlueskyCredentials ? 1 : 0.4,
                             }}>
@@ -597,7 +587,7 @@ export function Sensors() {
                                 onChange={(e) => { setFollowingBluesky(e.target.checked); trigger() }}
                                 style={{ accentColor: 'var(--brand-bluesky)', cursor: 'inherit' }}
                               />
-                              <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
+                              <span style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>
                                 Include accounts I follow
                               </span>
                             </label>
@@ -608,17 +598,16 @@ export function Sensors() {
                       {/* Mastodon sub-config */}
                       {isMastodon && isOn && (
                         <div style={{
-                          padding: '1.25rem 1.25rem 1.25rem 1.25rem',
-                          paddingLeft: '1.25rem',
+                          padding: '0.625rem 0.875rem',
                           background: 'var(--canvas)',
                           borderBottom: isLast ? 'none' : '1px solid var(--border-soft)',
                           display: 'flex',
                           flexDirection: 'column',
-                          gap: '1rem',
+                          gap: '0.625rem',
                         }}>
                           <div>
-                            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                              <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--brand-mastodon)' }} />
+                            <div style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: 'var(--brand-mastodon)' }} />
                               Accounts
                             </div>
                             <TagInput
@@ -634,8 +623,8 @@ export function Sensors() {
                             <label style={{
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '0.5rem',
-                              marginTop: '0.5rem',
+                              gap: '0.375rem',
+                              marginTop: '0.375rem',
                               cursor: hasMastodonCredentials ? 'pointer' : 'not-allowed',
                               opacity: hasMastodonCredentials ? 1 : 0.4,
                             }}>
@@ -646,7 +635,7 @@ export function Sensors() {
                                 onChange={(e) => { setFollowingMastodon(e.target.checked); trigger() }}
                                 style={{ accentColor: 'var(--brand-mastodon)', cursor: 'inherit' }}
                               />
-                              <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
+                              <span style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>
                                 Include accounts I follow
                               </span>
                             </label>
@@ -657,12 +646,11 @@ export function Sensors() {
                       {/* Inline sub-config: RSS Feeds */}
                       {isRssFeeds && isOn && (
                         <div style={{
-                          padding: '1.25rem 1.25rem 1.25rem 1.25rem',
-                          paddingLeft: '1.25rem',
+                          padding: '0.625rem 0.875rem',
                           background: 'var(--canvas)',
                           borderBottom: isLast ? 'none' : '1px solid var(--border-soft)',
                         }}>
-                          <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem' }}>
+                          <div style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.25rem' }}>
                             Feed URLs
                           </div>
                           <TagInput
@@ -671,12 +659,10 @@ export function Sensors() {
                               const currentUrls = rssFeeds.map(f => f.url)
                               const added = tags.find((t) => !currentUrls.includes(t))
                               if (!added) {
-                                // Removal — keep entries that still exist in tags
                                 setRssFeeds(prev => prev.filter(f => tags.includes(f.url)))
                                 trigger()
                                 return
                               }
-                              // Addition — default new feeds to 'other'
                               setRssFeeds(prev => [...prev, { url: added, type: 'other' }])
                               api.discoverRssFeed(added).then((result) => {
                                 if (result.type === 'discovered' && result.feedUrl) {
@@ -697,68 +683,6 @@ export function Sensors() {
                             placeholder="https://example.com/feed.xml — press Enter"
                             validate={validateUrl}
                           />
-                          {/* Per-feed type selector */}
-                          {rssFeeds.length > 0 && (
-                            <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-                              <div style={{ fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' as const, color: 'var(--ink-faint)', marginBottom: '0.125rem' }}>
-                                Feed Types
-                              </div>
-                              {rssFeeds.map((feed) => {
-                                const typeColors: Record<RssFeedType, string> = {
-                                  news: 'var(--cat-news)',
-                                  blog: 'var(--cat-opinion)',
-                                  other: 'var(--ink-faint)',
-                                }
-                                const nextType: Record<RssFeedType, RssFeedType> = {
-                                  other: 'news',
-                                  news: 'blog',
-                                  blog: 'other',
-                                }
-                                const domain = (() => {
-                                  try { return new URL(feed.url).hostname.replace(/^www\./, '') } catch { return feed.url }
-                                })()
-                                return (
-                                  <div key={feed.url} style={{
-                                    display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                    padding: '0.25rem 0.5rem', borderRadius: 6,
-                                    background: 'var(--surface-inset)',
-                                  }}>
-                                    <button
-                                      onClick={() => {
-                                        setRssFeeds(prev => prev.map(f =>
-                                          f.url === feed.url ? { ...f, type: nextType[f.type] } : f,
-                                        ))
-                                        trigger()
-                                      }}
-                                      style={{
-                                        display: 'inline-flex', alignItems: 'center', gap: 4,
-                                        padding: '2px 8px', borderRadius: 4,
-                                        fontSize: '0.625rem', fontWeight: 700,
-                                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                                        letterSpacing: '0.04em', textTransform: 'uppercase' as const,
-                                        background: `color-mix(in srgb, ${typeColors[feed.type]} 15%, transparent)`,
-                                        color: typeColors[feed.type],
-                                        border: `1px solid color-mix(in srgb, ${typeColors[feed.type]} 30%, transparent)`,
-                                        cursor: 'pointer',
-                                        transition: 'background 150ms, border-color 150ms',
-                                      }}
-                                      title={`Click to cycle: other → news → blog → other`}
-                                    >
-                                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: typeColors[feed.type] }} />
-                                      {feed.type}
-                                    </button>
-                                    <span style={{
-                                      fontSize: '0.6875rem', color: 'var(--ink-secondary)',
-                                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                      flex: 1, minWidth: 0,
-                                    }}>
-                                      {domain}
-                                    </span>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          )}
                         </div>
                       )}
                     </div>
@@ -770,25 +694,25 @@ export function Sensors() {
           ))}
 
           {/* Trend — dedicated section for Topics + Trends */}
-          {activeLanguage === 'row' && ((enabled.bluesky ?? true) || (enabled.mastodon ?? true)) && (() => {
+          {((enabled.bluesky ?? true) || (enabled.mastodon ?? true)) && (() => {
             const topicsOn = (blueskyTopicsEnabled && (enabled.bluesky ?? true)) ||
               (mastodonTopicsEnabled && (enabled.mastodon ?? true))
             return (
               <div>
                 <div style={{
-                  fontSize: '0.6875rem',
+                  fontSize: '0.625rem',
                   fontWeight: 600,
                   letterSpacing: '0.09em',
                   textTransform: 'uppercase',
                   color: 'var(--ink-faint)',
-                  marginBottom: '0.5rem',
+                  marginBottom: '0.375rem',
                 }}>
                   Trend
                 </div>
                 <div style={{
                   background: 'var(--surface)',
                   border: '1px solid var(--border)',
-                  borderRadius: 8,
+                  borderRadius: 6,
                   overflow: 'hidden',
                   boxShadow: 'var(--shadow-card)',
                   transition: 'box-shadow 200ms, border-color 200ms',
@@ -802,22 +726,22 @@ export function Sensors() {
                     ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'
                   }}
                 >
-                  {/* Topics row — sensor-row style */}
+                  {/* Topics row */}
                   <div>
                     <div
                       className="sensor-row"
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        padding: '1rem 1.25rem',
+                        padding: '0.5rem 0.875rem',
                         borderBottom: topicsOn ? '1px solid var(--border-soft)' : (enabled.mastodon ?? true) ? '1px solid var(--border-soft)' : 'none',
                         transition: 'background 120ms',
-                        gap: '0.75rem',
+                        gap: '0.5rem',
                       }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--canvas)' }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)' }}
                     >
-                      <div className="sensor-row-left" style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flex: 1, minWidth: 0 }}>
+                      <div className="sensor-row-left" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flex: 1, minWidth: 0 }}>
                         <Toggle on={topicsOn} onClick={() => {
                           if (topicsOn) {
                             setBlueskyTopicsEnabled(false)
@@ -830,32 +754,31 @@ export function Sensors() {
                         }} />
                         <div style={{ minWidth: 0 }}>
                           <div style={{
-                            fontSize: '0.875rem',
+                            fontSize: '0.8125rem',
                             fontWeight: 500,
                             color: topicsOn ? 'var(--ink)' : 'var(--ink-faint)',
-                            marginBottom: '0.125rem',
                           }}>
                             Topics
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
+                          <div style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>
                             Search keywords across social platforms
                           </div>
                         </div>
                       </div>
-                      <div className="sensor-row-right" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                      <div className="sensor-row-right" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
                         {topicsOn && (enabled.bluesky ?? true) && (enabled.mastodon ?? true) && (
                           <>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.1875rem', cursor: 'pointer' }}>
                               <input type="checkbox" checked={blueskyTopicsEnabled}
                                 onChange={(e) => { setBlueskyTopicsEnabled(e.target.checked); trigger() }}
                                 style={{ accentColor: 'var(--brand-bluesky)' }} />
-                              <span style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>Bluesky</span>
+                              <span style={{ fontSize: '0.625rem', color: 'var(--ink-muted)' }}>Bluesky</span>
                             </label>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.1875rem', cursor: 'pointer' }}>
                               <input type="checkbox" checked={mastodonTopicsEnabled}
                                 onChange={(e) => { setMastodonTopicsEnabled(e.target.checked); trigger() }}
                                 style={{ accentColor: 'var(--brand-mastodon)' }} />
-                              <span style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>Mastodon</span>
+                              <span style={{ fontSize: '0.625rem', color: 'var(--ink-muted)' }}>Mastodon</span>
                             </label>
                           </>
                         )}
@@ -864,7 +787,7 @@ export function Sensors() {
                     {/* Keywords sub-config */}
                     {topicsOn && (
                       <div style={{
-                        padding: '1rem 1.25rem',
+                        padding: '0.5rem 0.875rem',
                         background: 'var(--canvas)',
                         borderBottom: (enabled.mastodon ?? true) ? '1px solid var(--border-soft)' : 'none',
                       }}>
@@ -877,38 +800,46 @@ export function Sensors() {
                     )}
                   </div>
 
-                  {/* Trending row — sensor-row style */}
-                  {(enabled.mastodon ?? true) && (
-                    <div
-                      className="sensor-row"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '1rem 1.25rem',
-                        transition: 'background 120ms',
-                        gap: '0.75rem',
-                      }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--canvas)' }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)' }}
-                    >
-                      <div className="sensor-row-left" style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flex: 1, minWidth: 0 }}>
-                        <Toggle on={mastodonTrendsEnabled} onClick={() => { setMastodonTrendsEnabled(!mastodonTrendsEnabled); trigger() }} />
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{
-                            fontSize: '0.875rem',
-                            fontWeight: 500,
-                            color: mastodonTrendsEnabled ? 'var(--ink)' : 'var(--ink-faint)',
-                            marginBottom: '0.125rem',
-                          }}>
-                            Trending
-                          </div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
-                            Trending posts from Mastodon
-                          </div>
+                  {/* Trending row */}
+                  <div
+                    className="sensor-row"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '0.5rem 0.875rem',
+                      transition: 'background 120ms',
+                      gap: '0.5rem',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--canvas)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)' }}
+                  >
+                    <div className="sensor-row-left" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flex: 1, minWidth: 0 }}>
+                      <Toggle on={mastodonTrendsEnabled} onClick={() => { setMastodonTrendsEnabled(!mastodonTrendsEnabled); trigger() }} />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{
+                          fontSize: '0.8125rem',
+                          fontWeight: 500,
+                          color: mastodonTrendsEnabled ? 'var(--ink)' : 'var(--ink-faint)',
+                        }}>
+                          Trending
+                        </div>
+                        <div style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>
+                          Trending posts from social platforms
                         </div>
                       </div>
                     </div>
-                  )}
+                    <div className="sensor-row-right" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
+                      {mastodonTrendsEnabled && (
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.1875rem', cursor: (enabled.mastodon ?? true) ? 'pointer' : 'not-allowed', opacity: (enabled.mastodon ?? true) ? 1 : 0.4 }}>
+                          <input type="checkbox" checked={mastodonTrendsEnabled && (enabled.mastodon ?? true)}
+                            disabled={!(enabled.mastodon ?? true)}
+                            onChange={(e) => { setMastodonTrendsEnabled(e.target.checked); trigger() }}
+                            style={{ accentColor: 'var(--brand-mastodon)' }} />
+                          <span style={{ fontSize: '0.625rem', color: 'var(--ink-muted)' }}>Mastodon</span>
+                        </label>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             )

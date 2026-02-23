@@ -1,35 +1,35 @@
-/* ABOUTME: Global styles and design tokens for Intel Briefing — premium data platform aesthetic. */
-/* ABOUTME: All color, type, spacing, and shadow tokens defined here as CSS custom properties. */
+/* ABOUTME: Global styles and design tokens for Intel Briefing — Swiss-spa data platform aesthetic. */
+/* ABOUTME: Deep teal accent with warm stone neutrals. All tokens defined as CSS custom properties. */
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
 :root {
-  /* Surfaces */
-  --canvas:          #FAFAFA;
+  /* Surfaces — warm off-white base */
+  --canvas:          #FAFAF8;
   --surface:         #FFFFFF;
   --surface-raised:  #FFFFFF;
-  --surface-inset:   #F5F5F5;
+  --surface-inset:   #F5F4F1;
   --surface-overlay: #FFFFFF;
 
-  /* Borders */
-  --border:          #E5E5E5;
-  --border-subtle:   #F0F0F0;
-  --border-strong:   #D4D4D4;
+  /* Borders — warm sand tones */
+  --border:          #E8E6E1;
+  --border-subtle:   #F0EEE9;
+  --border-strong:   #D5D2CC;
 
-  /* Text */
-  --ink:             #171717;
-  --ink-secondary:   #525252;
-  --ink-tertiary:    #A3A3A3;
-  --ink-disabled:    #D4D4D4;
+  /* Text — warm neutrals */
+  --ink:             #1A1A18;
+  --ink-secondary:   #6B6B63;
+  --ink-tertiary:    #A8A69F;
+  --ink-disabled:    #D5D2CC;
 
-  /* Accent — Electric indigo */
-  --accent:          #6366F1;
-  --accent-hover:    #4F46E5;
-  --accent-subtle:   #EEF2FF;
-  --accent-muted:    #A5B4FC;
-  --accent-strong:   #4338CA;
+  /* Accent — Deep teal */
+  --accent:          #1A7A6D;
+  --accent-hover:    #15675C;
+  --accent-subtle:   #F0FAF8;
+  --accent-muted:    #7CBFB5;
+  --accent-strong:   #0F5349;
 
   /* Semantic status */
   --ok:              #22C55E;
@@ -42,24 +42,24 @@
   --err-subtle:      #FEF2F2;
   --err-text:        #B91C1C;
 
-  /* Sidebar (dark) */
-  --sb:              #0A0A0A;
-  --sb-surface:      #111111;
-  --sb-border:       #1C1C1C;
-  --sb-ink:          #FAFAFA;
-  --sb-secondary:    #A3A3A3;
-  --sb-tertiary:     #525252;
-  --sb-accent:       #818CF8;
+  /* Sidebar (dark) — warm-tinted dark */
+  --sb:              #0C0C0B;
+  --sb-surface:      #131312;
+  --sb-border:       #1E1D1B;
+  --sb-ink:          #FAFAF8;
+  --sb-secondary:    #A8A69F;
+  --sb-tertiary:     #5A5A53;
+  --sb-accent:       #5CC4B4;
 
-  /* Category spectrum — indigo-anchored palette */
-  --cat-research:      #6366F1;
-  --cat-news:          #3B82F6;
-  --cat-trend:         #F59E0B;
-  --cat-opinion:       #8B5CF6;
-  --cat-research-bg:   rgba(99, 102, 241, 0.08);
-  --cat-news-bg:       rgba(59, 130, 246, 0.08);
-  --cat-trend-bg:      rgba(245, 158, 11, 0.08);
-  --cat-opinion-bg:    rgba(139, 92, 246, 0.08);
+  /* Category spectrum — teal-anchored palette */
+  --cat-research:      #1A7A6D;
+  --cat-news:          #2E7D9A;
+  --cat-trend:         #C4851C;
+  --cat-opinion:       #7E6B9A;
+  --cat-research-bg:   rgba(26, 122, 109, 0.08);
+  --cat-news-bg:       rgba(46, 125, 154, 0.08);
+  --cat-trend-bg:      rgba(196, 133, 28, 0.08);
+  --cat-opinion-bg:    rgba(126, 107, 154, 0.08);
 
   /* Sentiment — distinct from ok/err/warn, tuned for data viz */
   --sent-pos:        #0D9488;
@@ -78,26 +78,26 @@
   --sent-mixed:      #D97706;
   --sent-mixed-text: #B45309;
 
-  /* Heatmap intensity (indigo-based) */
+  /* Heatmap intensity (teal-based) */
   --heat-0:          var(--surface-inset);
-  --heat-1:          rgba(99, 102, 241, 0.15);
-  --heat-2:          rgba(99, 102, 241, 0.35);
-  --heat-3:          rgba(99, 102, 241, 0.60);
-  --heat-4:          rgba(99, 102, 241, 0.85);
+  --heat-1:          rgba(26, 122, 109, 0.15);
+  --heat-2:          rgba(26, 122, 109, 0.35);
+  --heat-3:          rgba(26, 122, 109, 0.60);
+  --heat-4:          rgba(26, 122, 109, 0.85);
 
-  /* Shadows */
-  --shadow-xs:       0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm:       0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md:       0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg:       0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
-  --shadow-card:     0 1px 3px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.03);
-  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  /* Shadows — soft, diffused */
+  --shadow-xs:       0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-sm:       0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md:       0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+  --shadow-lg:       0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
+  --shadow-card:     0 1px 3px rgba(0, 0, 0, 0.03), 0 0 0 1px rgba(0, 0, 0, 0.02);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.03);
 
   /* Focus */
-  --focus-ring:      0 0 0 2px var(--surface), 0 0 0 4px rgba(99, 102, 241, 0.5);
+  --focus-ring:      0 0 0 2px var(--surface), 0 0 0 4px rgba(26, 122, 109, 0.5);
 
   /* Utility — fades, tints */
-  --canvas-fade:     rgba(250, 250, 250, 0.9);
+  --canvas-fade:     rgba(250, 250, 248, 0.9);
   --warn-tint:       rgba(234, 179, 8, 0.06);
   --warn-border:     rgba(234, 179, 8, 0.3);
   --err-tint:        rgba(239, 68, 68, 0.08);
@@ -109,7 +109,7 @@
   --ink-faint:       var(--ink-tertiary);
   --accent-wash:     var(--accent-subtle);
   --accent-dim:      var(--accent-muted);
-  --accent-tint:     rgba(99, 102, 241, 0.08);
+  --accent-tint:     rgba(26, 122, 109, 0.08);
   --ok-bg:           var(--ok-subtle);
   --warn-bg:         var(--warn-subtle);
   --err-bg:          var(--err-subtle);
@@ -123,22 +123,22 @@
   color-scheme: light dark;
 
   /* ─── shadcn design tokens — mapped to our palette ─── */
-  --background:          #FAFAFA;
-  --foreground:          #171717;
+  --background:          #FAFAF8;
+  --foreground:          #1A1A18;
   --card:                #FFFFFF;
-  --card-foreground:     #171717;
+  --card-foreground:     #1A1A18;
   --popover:             #FFFFFF;
-  --popover-foreground:  #171717;
-  --primary:             #6366F1;
+  --popover-foreground:  #1A1A18;
+  --primary:             #1A7A6D;
   --primary-foreground:  #FFFFFF;
-  --secondary:           #F5F5F5;
-  --secondary-foreground:#171717;
-  --muted:               #F5F5F5;
-  --muted-foreground:    #525252;
-  --accent-foreground:   #6366F1;
+  --secondary:           #F5F4F1;
+  --secondary-foreground:#1A1A18;
+  --muted:               #F5F4F1;
+  --muted-foreground:    #6B6B63;
+  --accent-foreground:   #1A7A6D;
   --destructive:         #EF4444;
-  --input:               #E5E5E5;
-  --ring:                #6366F1;
+  --input:               #E8E6E1;
+  --ring:                #1A7A6D;
   --radius:              0.75rem;
 
   /* Typography */
@@ -158,30 +158,30 @@
 /* ─── Dark Mode ─────────────────────────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Surfaces */
-    --canvas:          #0A0A0A;
-    --surface:         #141414;
-    --surface-raised:  #1A1A1A;
-    --surface-inset:   #0F0F0F;
-    --surface-overlay: #1E1E1E;
+    /* Surfaces — warm dark */
+    --canvas:          #0C0C0B;
+    --surface:         #151514;
+    --surface-raised:  #1B1B19;
+    --surface-inset:   #101010;
+    --surface-overlay: #1F1F1D;
 
-    /* Borders */
-    --border:          #262626;
-    --border-subtle:   #1C1C1C;
-    --border-strong:   #333333;
+    /* Borders — warm dark */
+    --border:          #282724;
+    --border-subtle:   #1E1D1B;
+    --border-strong:   #353430;
 
-    /* Text */
-    --ink:             #FAFAFA;
-    --ink-secondary:   #A3A3A3;
-    --ink-tertiary:    #666666;
-    --ink-disabled:    #404040;
+    /* Text — warm dark */
+    --ink:             #FAFAF8;
+    --ink-secondary:   #A8A69F;
+    --ink-tertiary:    #6B6B63;
+    --ink-disabled:    #434340;
 
-    /* Accent — brighter indigo for dark surfaces */
-    --accent:          #818CF8;
-    --accent-hover:    #6366F1;
-    --accent-subtle:   rgba(99, 102, 241, 0.12);
-    --accent-muted:    #6366F1;
-    --accent-strong:   #A5B4FC;
+    /* Accent — bright teal for dark surfaces */
+    --accent:          #5CC4B4;
+    --accent-hover:    #4AAFA0;
+    --accent-subtle:   rgba(92, 196, 180, 0.12);
+    --accent-muted:    #3D9E8F;
+    --accent-strong:   #7DD5C8;
 
     /* Semantic status — brighter for contrast */
     --ok:              #4ADE80;
@@ -194,24 +194,24 @@
     --err-subtle:      rgba(248, 113, 113, 0.10);
     --err-text:        #F87171;
 
-    /* Sidebar — darker than canvas for distinction */
-    --sb:              #0A0A0A;
-    --sb-surface:      #111111;
-    --sb-border:       #1C1C1C;
-    --sb-ink:          #FAFAFA;
-    --sb-secondary:    #A3A3A3;
-    --sb-tertiary:     #525252;
-    --sb-accent:       #818CF8;
+    /* Sidebar — warm dark, slightly deeper than canvas */
+    --sb:              #0C0C0B;
+    --sb-surface:      #131312;
+    --sb-border:       #1E1D1B;
+    --sb-ink:          #FAFAF8;
+    --sb-secondary:    #A8A69F;
+    --sb-tertiary:     #5A5A53;
+    --sb-accent:       #5CC4B4;
 
     /* Category spectrum — brightened for dark bg */
-    --cat-research:      #818CF8;
-    --cat-news:          #60A5FA;
-    --cat-trend:         #FBBF24;
-    --cat-opinion:       #A78BFA;
-    --cat-research-bg:   rgba(129, 140, 248, 0.10);
-    --cat-news-bg:       rgba(96, 165, 250, 0.10);
-    --cat-trend-bg:      rgba(251, 191, 36, 0.10);
-    --cat-opinion-bg:    rgba(167, 139, 250, 0.10);
+    --cat-research:      #5CC4B4;
+    --cat-news:          #5AAFC6;
+    --cat-trend:         #E0A838;
+    --cat-opinion:       #A494BE;
+    --cat-research-bg:   rgba(92, 196, 180, 0.10);
+    --cat-news-bg:       rgba(90, 175, 198, 0.10);
+    --cat-trend-bg:      rgba(224, 168, 56, 0.10);
+    --cat-opinion-bg:    rgba(164, 148, 190, 0.10);
 
     /* Sentiment — brighter for dark surfaces */
     --sent-pos:        #2DD4BF;
@@ -230,12 +230,12 @@
     --sent-mixed:      #FBBF24;
     --sent-mixed-text: #FBBF24;
 
-    /* Heatmap intensity */
+    /* Heatmap intensity (teal-based) */
     --heat-0:          var(--surface-inset);
-    --heat-1:          rgba(129, 140, 248, 0.15);
-    --heat-2:          rgba(129, 140, 248, 0.30);
-    --heat-3:          rgba(129, 140, 248, 0.50);
-    --heat-4:          rgba(129, 140, 248, 0.75);
+    --heat-1:          rgba(92, 196, 180, 0.15);
+    --heat-2:          rgba(92, 196, 180, 0.30);
+    --heat-3:          rgba(92, 196, 180, 0.50);
+    --heat-4:          rgba(92, 196, 180, 0.75);
 
     /* Shadows — deeper for dark mode */
     --shadow-xs:       0 1px 2px rgba(0, 0, 0, 0.20);
@@ -246,32 +246,32 @@
     --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.06);
 
     /* Focus */
-    --focus-ring:      0 0 0 2px var(--surface), 0 0 0 4px rgba(129, 140, 248, 0.5);
+    --focus-ring:      0 0 0 2px var(--surface), 0 0 0 4px rgba(92, 196, 180, 0.5);
 
     /* Utility — dark-appropriate values */
-    --canvas-fade:     rgba(10, 10, 10, 0.9);
+    --canvas-fade:     rgba(12, 12, 11, 0.9);
     --warn-tint:       rgba(250, 204, 21, 0.08);
     --warn-border:     rgba(250, 204, 21, 0.3);
     --err-tint:        rgba(248, 113, 113, 0.1);
-    --accent-tint:     rgba(129, 140, 248, 0.12);
+    --accent-tint:     rgba(92, 196, 180, 0.12);
 
     /* shadcn dark overrides */
-    --background:          #0A0A0A;
-    --foreground:          #FAFAFA;
-    --card:                #141414;
-    --card-foreground:     #FAFAFA;
-    --popover:             #141414;
-    --popover-foreground:  #FAFAFA;
-    --primary:             #818CF8;
-    --primary-foreground:  #0A0A0A;
-    --secondary:           #1A1A1A;
-    --secondary-foreground:#FAFAFA;
-    --muted:               #1A1A1A;
-    --muted-foreground:    #A3A3A3;
-    --accent-foreground:   #818CF8;
+    --background:          #0C0C0B;
+    --foreground:          #FAFAF8;
+    --card:                #151514;
+    --card-foreground:     #FAFAF8;
+    --popover:             #151514;
+    --popover-foreground:  #FAFAF8;
+    --primary:             #5CC4B4;
+    --primary-foreground:  #0C0C0B;
+    --secondary:           #1B1B19;
+    --secondary-foreground:#FAFAF8;
+    --muted:               #1B1B19;
+    --muted-foreground:    #A8A69F;
+    --accent-foreground:   #5CC4B4;
     --destructive:         #F87171;
-    --input:               #262626;
-    --ring:                #818CF8;
+    --input:               #282724;
+    --ring:                #5CC4B4;
   }
 }
 
@@ -564,7 +564,7 @@ input[type="range"]::-moz-range-thumb {
     margin: -0.375rem 0;
     min-height: 2.75rem;
     font-size: 0.6875rem !important;
-    -webkit-tap-highlight-color: rgba(29, 107, 79, 0.15);
+    -webkit-tap-highlight-color: rgba(26, 122, 109, 0.15);
   }
 
   /* ── Briefing progress banner ── */

@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import type { IntelItem } from '@/api/client'
 import { SENSOR_LABELS } from '@/lib/sensors/taxonomy'
+import { useTranslation } from '@/lib/i18n'
 import { Highlight } from './Highlight'
 
 const SOURCE_LABELS: Record<string, string> = { ...SENSOR_LABELS }
@@ -44,11 +45,11 @@ function SourceChip({ source, label }: { source: string; label?: string }) {
   )
 }
 
-function relativeDate(iso: string): string {
+function relativeDate(iso: string, t: (key: string, params?: Record<string, string>) => string): string {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
-  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
-  return `${Math.floor(diff / 86400)}d ago`
+  if (diff < 3600) return t('time.minutes_ago', { n: String(Math.floor(diff / 60)) })
+  if (diff < 86400) return t('time.hours_ago', { n: String(Math.floor(diff / 3600)) })
+  return t('time.days_ago', { n: String(Math.floor(diff / 86400)) })
 }
 
 function sourcePostUrl(item: IntelItem): string | null {
@@ -66,6 +67,7 @@ function sourcePostUrl(item: IntelItem): string | null {
 }
 
 export function ItemCard({ item, index = 0, searchQuery }: { item: IntelItem; index?: number; searchQuery?: string }) {
+  const { t } = useTranslation()
   const isArxiv = item.source === 'arxiv'
   const [abstractExpanded, setAbstractExpanded] = useState(false)
   const [contentExpanded, setContentExpanded] = useState(false)
@@ -147,7 +149,7 @@ export function ItemCard({ item, index = 0, searchQuery }: { item: IntelItem; in
               borderRadius: 3,
             }}
           >
-            unverified
+            {t('item.unverified')}
           </span>
         )}
         {item.heat && (
@@ -170,7 +172,7 @@ export function ItemCard({ item, index = 0, searchQuery }: { item: IntelItem; in
                 fontWeight: 600,
                 color: 'var(--warn)',
               }}>
-                NEW
+                {t('item.new')}
               </span>
             )}
           </span>
@@ -184,7 +186,7 @@ export function ItemCard({ item, index = 0, searchQuery }: { item: IntelItem; in
               : item.velocity.changePercent < 0 ? 'var(--err)'
               : 'var(--ink-faint)',
           }}>
-            {item.velocity.changePercent == null ? 'NEW' : `${item.velocity.changePercent > 0 ? '+' : ''}${item.velocity.changePercent}%`}
+            {item.velocity.changePercent == null ? t('item.new') : `${item.velocity.changePercent > 0 ? '+' : ''}${item.velocity.changePercent}%`}
           </span>
         )}
         {item.velocity && item.velocity.hoursOnTrend != null && item.velocity.hoursOnTrend > 0 && (
@@ -192,8 +194,8 @@ export function ItemCard({ item, index = 0, searchQuery }: { item: IntelItem; in
             <span style={{ color: 'var(--border)', fontSize: '0.75rem' }}>·</span>
             <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)', fontFamily: 'ui-monospace, monospace' }}>
               {item.velocity.hoursOnTrend < 1
-                ? '<1h on trend'
-                : `${Math.round(item.velocity.hoursOnTrend)}h on trend`}
+                ? t('item.on_trend_short')
+                : t('item.on_trend', { hours: String(Math.round(item.velocity.hoursOnTrend)) })}
             </span>
           </>
         )}
@@ -201,7 +203,7 @@ export function ItemCard({ item, index = 0, searchQuery }: { item: IntelItem; in
           <>
             <span style={{ color: 'var(--border)', fontSize: '0.75rem' }}>·</span>
             <span style={{ fontSize: '0.75rem', color: 'var(--ink-faint)', fontFamily: 'ui-monospace, monospace' }}>
-              {relativeDate(item.published_at)}
+              {relativeDate(item.published_at, t)}
             </span>
           </>
         )}
@@ -233,7 +235,7 @@ export function ItemCard({ item, index = 0, searchQuery }: { item: IntelItem; in
               onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'underline' }}
               onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.textDecoration = 'none' }}
             >
-              discuss
+              {t('item.discuss')}
             </a>
           </>
         )}
@@ -269,7 +271,7 @@ export function ItemCard({ item, index = 0, searchQuery }: { item: IntelItem; in
                 textUnderlineOffset: '2px',
               }}
             >
-              {abstractExpanded ? 'collapse' : 'expand abstract'}
+              {abstractExpanded ? t('item.collapse') : t('item.expand_abstract')}
             </button>
           )}
         </div>
@@ -305,7 +307,7 @@ export function ItemCard({ item, index = 0, searchQuery }: { item: IntelItem; in
               textUnderlineOffset: '2px',
             }}
           >
-            {contentExpanded ? 'collapse' : 'more'}
+            {contentExpanded ? t('item.collapse') : t('item.more')}
           </button>
         </div>
       )}

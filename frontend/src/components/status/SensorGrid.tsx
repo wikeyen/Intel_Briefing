@@ -4,6 +4,7 @@
 
 import { useMemo } from 'react'
 import type { IntelReport, ConfigSettings, PipelineStatus, SensorJobProgress } from '@/api/client'
+import { useTranslation } from '@/lib/i18n'
 import { SECTION_SENSORS, SENSOR_LABEL_MAP } from './constants'
 import { SensorRow, CARD_CSS } from './SensorCard'
 import { timeAgo } from './time-helpers'
@@ -61,6 +62,7 @@ export function SensorGrid({
   retryAttempt, selected, onToggleSelect, onSelectAll, onSelectNone,
   onRetry, onSkipSensor, dismissed, onDismiss, autoRetryExhausted,
 }: SensorGridProps) {
+  const { t } = useTranslation()
   const sensorCounts = useMemo(() => countItemsBySensor(report), [report])
 
   // Set of sensor names actively tracked in the current pipeline run
@@ -134,9 +136,9 @@ export function SensorGrid({
         }}>
           {showToolbar && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <button type="button" onClick={onSelectAll} style={toolbarLinkStyle}>Select all</button>
+              <button type="button" onClick={onSelectAll} style={toolbarLinkStyle}>{t('status.select_all')}</button>
               <span style={{ color: 'var(--border)', fontSize: '0.75rem' }}>/</span>
-              <button type="button" onClick={onSelectNone} style={toolbarLinkStyle}>None</button>
+              <button type="button" onClick={onSelectNone} style={toolbarLinkStyle}>{t('status.select_none')}</button>
               {selectedCount > 0 && (
                 <span style={{
                   fontFamily: 'ui-monospace, monospace',
@@ -145,14 +147,14 @@ export function SensorGrid({
                   fontWeight: 600,
                   marginLeft: '0.25rem',
                 }}>
-                  {selectedCount} selected
+                  {t('status.n_selected', { count: String(selectedCount) })}
                 </span>
               )}
             </div>
           )}
           <div style={{ marginLeft: 'auto', display: 'flex', gap: '1.5rem' }}>
-            <span style={headerLabelStyle}>#</span>
-            <span style={headerLabelStyle}>Last Fetch</span>
+            <span style={headerLabelStyle}>{t('status.col_count')}</span>
+            <span style={headerLabelStyle}>{t('status.col_last_fetch')}</span>
           </div>
         </div>
         {visibleSensors.map(sensor => {

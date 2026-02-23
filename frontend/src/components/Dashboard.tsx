@@ -8,6 +8,7 @@ import { api } from '@/api/client'
 import type { IntelReport, IntelItem, BriefingSummary, PipelineStatus, SummaryProgress, OverallBriefing, BriefingSource, SentimentEntry } from '@/api/client'
 import { SENSOR_LABELS, SENSOR_DISPLAY_MAP, CATEGORY_TO_DISPLAY } from '@/lib/sensors/taxonomy'
 import type { CategoryKey, DisplayCategoryKey } from '@/lib/sensors/taxonomy'
+import { useTranslation } from '@/lib/i18n'
 
 // ---------------------------------------------------------------------------
 // Animated height container — measures content and smoothly transitions height
@@ -45,12 +46,12 @@ function AnimatedHeight({ children, activeKey }: { children: React.ReactNode; ac
 // Helpers
 // ---------------------------------------------------------------------------
 
-function timeAgo(isoString: string): string {
+function timeAgo(isoString: string, t: (key: string, params?: Record<string, string>) => string): string {
   const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000)
-  if (diff < 60) return `${diff}s ago`
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
-  return `${Math.floor(diff / 86400)}d ago`
+  if (diff < 60) return t('time.seconds_ago', { n: String(diff) })
+  if (diff < 3600) return t('time.minutes_ago', { n: String(Math.floor(diff / 60)) })
+  if (diff < 86400) return t('time.hours_ago', { n: String(Math.floor(diff / 3600)) })
+  return t('time.days_ago', { n: String(Math.floor(diff / 86400)) })
 }
 
 function isStructuredOverall(overall: OverallBriefing | string): overall is OverallBriefing {
@@ -308,6 +309,7 @@ function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
   pipelineStatus: PipelineStatus | null
   summaryProgress: SummaryProgress | null
 }) {
+  const { t } = useTranslation()
   const isActive = !!(summaryProgress?.running) || !!(pipelineStatus?.running && pipelineStatus.alive !== false)
 
   const allItems: IntelItem[] = report ? Object.values(report.items).flat() : []
@@ -359,7 +361,7 @@ function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
           ...(isActive ? { animation: 'pulseDot 1.6s ease-in-out infinite' } : {}),
         }} />
         <span style={{ fontWeight: 600, color: isActive ? 'var(--accent)' : 'var(--ink-tertiary)' }}>
-          {isActive ? 'Updating' : 'Idle'}
+          {isActive ? t('ticker.updating') : t('ticker.idle')}
         </span>
       </span>
 
@@ -367,13 +369,13 @@ function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
 
       {/* Last fetch */}
       <span className="dashboard-ticker-hide-mobile" style={{ flexShrink: 0 }}>
-        {report ? `Fetched ${timeAgo(report.fetched_at)}` : 'No data'}
+        {report ? t('ticker.fetched_ago', { time: timeAgo(report.fetched_at, t) }) : t('ticker.no_data')}
       </span>
 
       {/* Last summary */}
       {summary && (
         <span className="dashboard-ticker-hide-mobile" style={{ flexShrink: 0 }}>
-          Summary {timeAgo(summary.generated_at)}
+          {t('ticker.summary_ago', { time: timeAgo(summary.generated_at, t) })}
         </span>
       )}
 
@@ -384,12 +386,12 @@ function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
         <span style={{ color: sourcesOk === sourcesTotal ? 'var(--ok-text)' : 'var(--warn-text)' }}>
           {sourcesOk}/{sourcesTotal}
         </span>
-        {' '}src
+        {' '}{t('ticker.src')}
       </span>
 
       {/* Items */}
       <span className="dashboard-ticker-hide-mobile" style={{ flexShrink: 0 }}>
-        {allItems.length} items
+        {t('ticker.items', { count: String(allItems.length) })}
       </span>
 
       {/* Mood */}
@@ -399,7 +401,7 @@ function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: moodDotColors[mood] ?? 'var(--ink-tertiary)' }} />
             <span style={{ fontWeight: 600, textTransform: 'capitalize' as const, color: moodColors[mood] ?? 'var(--ink-tertiary)' }}>
-              {mood}
+              {t('sentiment.' + mood)}
             </span>
           </span>
         </>
@@ -416,7 +418,7 @@ function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
           fontSize: '0.625rem',
           flexShrink: 0,
         }}>
-          {riskCount} risk{riskCount !== 1 ? 's' : ''}
+          {t(riskCount !== 1 ? 'ticker.risks_plural' : 'ticker.risks', { count: String(riskCount) })}
         </span>
       )}
     </div>
@@ -428,6 +430,7 @@ function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
 // ---------------------------------------------------------------------------
 
 function ExecSummaryWidget({ summary }: { summary: BriefingSummary }) {
+  const { t } = useTranslation()
   const overall = summary.overall
   if (!isStructuredOverall(overall) || !overall.executive_summary) return null
 
@@ -438,7 +441,7 @@ function ExecSummaryWidget({ summary }: { summary: BriefingSummary }) {
   return (
     <DashCard style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        <SectionLabel color="var(--accent)">Executive Summary</SectionLabel>
+        <SectionLabel color="var(--accent)">{t('dash.exec_summary')}</SectionLabel>
 
         {/* Lead paragraph — larger, bolder */}
         {paragraphs.length > 0 && (
@@ -490,14 +493,14 @@ function ExecSummaryWidget({ summary }: { summary: BriefingSummary }) {
               border: 'none', padding: 0, cursor: 'pointer',
             }}
           >
-            {expanded ? 'Show less' : 'Show more'}
+            {expanded ? t('dash.show_less') : t('dash.show_more')}
           </button>
         )}
 
         {/* Quick Scan bullets */}
         {(expanded || !isLong) && overall.quick_scan && overall.quick_scan.length > 0 && (
           <div style={{ paddingTop: '0.5rem', borderTop: '1px solid var(--border-subtle)' }}>
-            <SectionLabel color="var(--accent)" style={{ marginBottom: '0.375rem' }}>Quick Scan</SectionLabel>
+            <SectionLabel color="var(--accent)" style={{ marginBottom: '0.375rem' }}>{t('dash.quick_scan')}</SectionLabel>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
               {overall.quick_scan.map((entry, i) => (
                 <div key={i} style={{ display: 'flex', gap: '0.5rem', fontSize: '0.6875rem', color: 'var(--ink-secondary)', lineHeight: 1.6 }}>
@@ -518,15 +521,16 @@ function ExecSummaryWidget({ summary }: { summary: BriefingSummary }) {
 // ---------------------------------------------------------------------------
 
 function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
+  const { t } = useTranslation()
   const overall = summary.overall
   if (!isStructuredOverall(overall)) return null
   const sentiment = overall.sentiment
   if (!sentiment) return null
 
   const tabData = [
-    { key: 'risk' as const, label: 'Risk', items: sentiment.risk_flags ?? [], color: 'var(--sent-neg-text)', dot: 'var(--sent-neg)' },
-    { key: 'controversies' as const, label: 'Controversies', items: sentiment.controversies ?? [], color: 'var(--sent-mixed-text)', dot: 'var(--sent-mixed)' },
-    { key: 'shifts' as const, label: 'Shifts', items: sentiment.opinion_shifts ?? [], color: 'var(--accent)', dot: 'var(--accent)' },
+    { key: 'risk' as const, label: t('dash.risk'), items: sentiment.risk_flags ?? [], color: 'var(--sent-neg-text)', dot: 'var(--sent-neg)' },
+    { key: 'controversies' as const, label: t('dash.controversies'), items: sentiment.controversies ?? [], color: 'var(--sent-mixed-text)', dot: 'var(--sent-mixed)' },
+    { key: 'shifts' as const, label: t('dash.shifts'), items: sentiment.opinion_shifts ?? [], color: 'var(--accent)', dot: 'var(--accent)' },
   ]
 
   const totalAlerts = tabData.reduce((n, t) => n + t.items.length, 0)
@@ -549,7 +553,7 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <SectionLabel>Intelligence</SectionLabel>
+          <SectionLabel>{t('dash.intelligence')}</SectionLabel>
           {totalAlerts > 0 && (
             <span style={{
               fontFamily: MONO,
@@ -560,7 +564,7 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
               background: sentiment.risk_flags?.length ? 'var(--sent-neg-bg)' : 'var(--surface-inset)',
               color: sentiment.risk_flags?.length ? 'var(--sent-neg-text)' : 'var(--ink-tertiary)',
             }}>
-              {totalAlerts} alert{totalAlerts !== 1 ? 's' : ''}
+              {t(totalAlerts !== 1 ? 'dash.alerts_plural' : 'dash.alerts', { count: String(totalAlerts) })}
             </span>
           )}
         </div>
@@ -585,7 +589,7 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
           >
             {current.items.length === 0 ? (
               <div style={{ padding: '1rem 0', textAlign: 'center', fontSize: '0.75rem', color: 'var(--ink-tertiary)' }}>
-                None detected
+                {t('dash.none_detected')}
               </div>
             ) : (
               current.items.map((entry: SentimentEntry, i: number) => (
@@ -685,6 +689,7 @@ function SentimentRing({ positive, neutral, negative, size = 80 }: {
 // ---------------------------------------------------------------------------
 
 function SentimentWidget({ summary, report }: { summary: BriefingSummary; report: IntelReport | null }) {
+  const { t } = useTranslation()
   const overall = summary.overall
   if (!isStructuredOverall(overall)) return null
   const sentiment = overall.sentiment
@@ -729,7 +734,7 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
         {/* Header: mood pill */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <SectionLabel>Sentiment</SectionLabel>
+          <SectionLabel>{t('dash.sentiment')}</SectionLabel>
           <div style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -748,7 +753,7 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
               textTransform: 'capitalize' as const,
               color: moodColors[sentiment.overall_mood] ?? 'var(--ink-tertiary)',
             }}>
-              {sentiment.overall_mood}
+              {t('sentiment.' + sentiment.overall_mood)}
             </span>
           </div>
         </div>
@@ -765,11 +770,11 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
               <div style={{ display: 'flex', gap: 8, fontFamily: MONO, fontSize: '0.625rem' }}>
-                <span style={{ color: 'var(--sent-pos-text)', fontWeight: 600 }}>{overallPosPct}% pos</span>
-                <span style={{ color: 'var(--ink-tertiary)' }}>{overallNeuPct}% neu</span>
-                <span style={{ color: 'var(--sent-neg-text)', fontWeight: 600 }}>{overallNegPct}% neg</span>
+                <span style={{ color: 'var(--sent-pos-text)', fontWeight: 600 }}>{overallPosPct}% {t('dash.pos')}</span>
+                <span style={{ color: 'var(--ink-tertiary)' }}>{overallNeuPct}% {t('dash.neu')}</span>
+                <span style={{ color: 'var(--sent-neg-text)', fontWeight: 600 }}>{overallNegPct}% {t('dash.neg')}</span>
               </div>
-              <span style={{ fontFamily: MONO, fontSize: '0.625rem', color: 'var(--ink-faint)' }}>{totalSocial} posts</span>
+              <span style={{ fontFamily: MONO, fontSize: '0.625rem', color: 'var(--ink-faint)' }}>{t('dash.posts', { count: String(totalSocial) })}</span>
             </div>
             <div style={{ display: 'flex', overflow: 'hidden', height: 6, borderRadius: 3, background: 'var(--border-subtle)', gap: 1 }}>
               {overallPosPct > 0 && <div style={{ width: `${overallPosPct}%`, background: 'var(--sent-pos)', transition: 'width 400ms ease' }} />}
@@ -818,6 +823,7 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
 // ---------------------------------------------------------------------------
 
 function CategoryDistributionContent({ report }: { report: IntelReport }) {
+  const { t } = useTranslation()
   const counts: Record<string, number> = { 'high-trust': 0, news: 0, trend: 0, opinions: 0 }
   for (const [cat, items] of Object.entries(report.items)) {
     for (const item of items) {
@@ -829,17 +835,17 @@ function CategoryDistributionContent({ report }: { report: IntelReport }) {
   if (total === 0) return null
 
   const segments: { key: string; label: string; count: number; color: string }[] = [
-    { key: 'high-trust', label: 'Research', count: counts['high-trust'], color: 'var(--cat-research)' },
-    { key: 'news', label: 'News', count: counts.news, color: 'var(--cat-news)' },
-    { key: 'trend', label: 'Trend', count: counts.trend, color: 'var(--cat-trend)' },
-    { key: 'opinions', label: 'Opinion', count: counts.opinions, color: 'var(--cat-opinion)' },
+    { key: 'high-trust', label: t('cat.research'), count: counts['high-trust'], color: 'var(--cat-research)' },
+    { key: 'news', label: t('cat.news'), count: counts.news, color: 'var(--cat-news)' },
+    { key: 'trend', label: t('cat.trend'), count: counts.trend, color: 'var(--cat-trend)' },
+    { key: 'opinions', label: t('cat.opinion'), count: counts.opinions, color: 'var(--cat-opinion)' },
   ]
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <SectionLabel>Distribution</SectionLabel>
-        <span style={{ fontFamily: MONO, fontSize: '0.625rem', color: 'var(--ink-tertiary)' }}>{total} items</span>
+        <SectionLabel>{t('dash.distribution')}</SectionLabel>
+        <span style={{ fontFamily: MONO, fontSize: '0.625rem', color: 'var(--ink-tertiary)' }}>{t('dash.items', { count: String(total) })}</span>
       </div>
       {/* Segmented bar */}
       <div style={{ display: 'flex', overflow: 'hidden', height: 8, borderRadius: 4, gap: 2 }}>
@@ -884,6 +890,7 @@ function CategoryDistributionWidget({ report }: { report: IntelReport }) {
 // ---------------------------------------------------------------------------
 
 function SourceHealthContent({ report }: { report: IntelReport }) {
+  const { t } = useTranslation()
   const okSet = new Set(report.sources_ok)
   const failedSorted = [...report.sources_failed].sort()
   const okSorted = [...report.sources_ok].sort()
@@ -896,7 +903,7 @@ function SourceHealthContent({ report }: { report: IntelReport }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <SectionLabel>Source Health</SectionLabel>
+        <SectionLabel>{t('dash.source_health')}</SectionLabel>
         <span style={{
           fontFamily: MONO,
           fontSize: '0.625rem',
@@ -906,7 +913,7 @@ function SourceHealthContent({ report }: { report: IntelReport }) {
           background: hasFailed ? 'var(--sent-neg-bg)' : 'var(--sent-pos-bg)',
           color: hasFailed ? 'var(--sent-neg-text)' : 'var(--sent-pos-text)',
         }}>
-          {healthPct}% ok
+          {healthPct}% {t('dash.ok')}
         </span>
       </div>
       {/* Health bar */}
@@ -953,6 +960,7 @@ function DomainCardCompact({ domain, summary, onClick }: {
   summary: BriefingSummary
   onClick: () => void
 }) {
+  const { t } = useTranslation()
   const matchingSections = summary.sections.filter(s => domain.sensors.includes(s.sensor_name))
   if (matchingSections.length === 0) return null
 
@@ -981,7 +989,7 @@ function DomainCardCompact({ domain, summary, onClick }: {
         style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', cursor: 'pointer', userSelect: 'none' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <SectionLabel color={domain.accent}>{domain.label}</SectionLabel>
+          <SectionLabel color={domain.accent}>{t('domain.' + domain.key)}</SectionLabel>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
             <span style={{
               fontFamily: MONO, fontSize: '0.5625rem', fontWeight: 600,
@@ -992,7 +1000,7 @@ function DomainCardCompact({ domain, summary, onClick }: {
             </span>
             {totalNotable > 0 && (
               <span style={{ fontFamily: MONO, fontSize: '0.5625rem', color: 'var(--ink-tertiary)' }}>
-                {totalNotable} notable
+                {t('dash.notable', { count: String(totalNotable) })}
               </span>
             )}
             <span style={{ fontSize: '0.75rem', color: 'var(--ink-tertiary)', lineHeight: 1 }}>&#8250;</span>
@@ -1019,7 +1027,7 @@ function DomainCardCompact({ domain, summary, onClick }: {
                       ? { background: '#c8102e', color: '#ffe066' }
                       : { background: '#1a4b8c', color: '#fff' }),
                   }}>
-                    {group.label}
+                    {t('dash.' + group.label.toLowerCase())}
                   </span>
                   {text}
                 </p>
@@ -1044,6 +1052,7 @@ function DomainCardCompact({ domain, summary, onClick }: {
 // ---------------------------------------------------------------------------
 
 function TrendingWidget({ report, summary }: { report: IntelReport; summary?: BriefingSummary | null }) {
+  const { t } = useTranslation()
   const briefMap = new Map<string, string>()
   if (summary) {
     for (const section of summary.sections) {
@@ -1069,9 +1078,9 @@ function TrendingWidget({ report, summary }: { report: IntelReport; summary?: Br
     <DashCard>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-          <SectionLabel>Trending & Momentum</SectionLabel>
+          <SectionLabel>{t('dash.trending')}</SectionLabel>
           <Link href="/data" style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--accent)', textDecoration: 'none' }}>
-            View all &#8250;
+            {t('dash.view_all')} &#8250;
           </Link>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -1144,7 +1153,7 @@ function TrendingWidget({ report, summary }: { report: IntelReport; summary?: Br
                         color: isRapid ? 'var(--cat-trend)' : 'var(--ink-tertiary)',
                         whiteSpace: 'nowrap',
                       }}>
-                        {isRapid ? 'RAPID' : 'SUSTAINED'} &middot; {v.hoursOnTrend}h
+                        {isRapid ? t('dash.rapid') : t('dash.sustained')} &middot; {v.hoursOnTrend}h
                       </span>
                     )}
                   </div>
@@ -1172,6 +1181,7 @@ function DetailSectionContent({ section, domain, platformSentiment }: {
   domain: DomainDef
   platformSentiment: Record<string, { positive: number; negative: number; neutral: number; total: number }>
 }) {
+  const { t } = useTranslation()
   return (
     <>
       {/* Source header */}
@@ -1202,9 +1212,9 @@ function DetailSectionContent({ section, domain, platformSentiment }: {
         return (
           <div>
             <div style={{ display: 'flex', gap: 6, fontFamily: MONO, fontSize: '0.625rem', color: 'var(--ink-tertiary)', marginBottom: 2 }}>
-              <span style={{ color: 'var(--sent-pos-text)' }}>{posPct}% pos</span>
-              <span>{neuPct}% neu</span>
-              <span style={{ color: 'var(--sent-neg-text)' }}>{negPct}% neg</span>
+              <span style={{ color: 'var(--sent-pos-text)' }}>{posPct}% {t('dash.pos')}</span>
+              <span>{neuPct}% {t('dash.neu')}</span>
+              <span style={{ color: 'var(--sent-neg-text)' }}>{negPct}% {t('dash.neg')}</span>
             </div>
             <div style={{ display: 'flex', overflow: 'hidden', height: 4, borderRadius: 2, background: 'var(--border-subtle)', gap: 1 }}>
               {posPct > 0 && <div style={{ width: `${posPct}%`, background: 'var(--sent-pos)', transition: 'width 400ms ease' }} />}
@@ -1261,6 +1271,7 @@ function DetailPanel({ domain, summary, report, onClose }: {
   report: IntelReport | null
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const matchingSections = summary.sections.filter(s => domain.sensors.includes(s.sensor_name))
 
   // Per-platform sentiment for social domains
@@ -1333,7 +1344,7 @@ function DetailPanel({ domain, summary, report, onClose }: {
       >
         {/* Header with close button */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <SectionLabel color={domain.accent}>{domain.label}</SectionLabel>
+          <SectionLabel color={domain.accent}>{t('domain.' + domain.key)}</SectionLabel>
           <button
             onClick={onClose}
             style={{
@@ -1393,7 +1404,7 @@ function DetailPanel({ domain, summary, report, onClose }: {
                   background: 'var(--surface-inset)', color: 'var(--ink-faint)',
                   letterSpacing: '0.04em',
                 }}>
-                  {group.label}
+                  {t('dash.' + group.label.toLowerCase())}
                 </span>
               </div>
               {groupSections.map((section, sIdx) => (
@@ -1415,7 +1426,7 @@ function DetailPanel({ domain, summary, report, onClose }: {
         {/* Empty state */}
         {matchingSections.length === 0 && (
           <div style={{ padding: '2rem 0', textAlign: 'center', fontSize: '0.75rem', color: 'var(--ink-tertiary)' }}>
-            No data available for this domain
+            {t('dash.no_domain_data')}
           </div>
         )}
       </motion.div>
@@ -1544,6 +1555,7 @@ function DashboardSkeleton() {
 // ---------------------------------------------------------------------------
 
 function SummaryPendingCard({ isActive }: { isActive: boolean }) {
+  const { t } = useTranslation()
   return (
     <DashCard style={{ background: 'var(--surface)' }}>
       {isActive ? (
@@ -1561,10 +1573,10 @@ function SummaryPendingCard({ isActive }: { isActive: boolean }) {
             animation: 'pulseDot 1.6s ease-in-out infinite',
           }} />
           <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)' }}>
-            Generating briefing
+            {t('dash.generating_briefing')}
           </div>
           <p style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)', margin: 0, lineHeight: 1.6, maxWidth: 300 }}>
-            The pipeline is running. Executive summary and domain analysis will appear here once summarization completes.
+            {t('dash.generating_desc')}
           </p>
           <div style={{ width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', gap: 8, marginTop: '0.5rem' }}>
             <div className="skeleton-shimmer" style={{ width: '100%', height: 10, borderRadius: 4 }} />
@@ -1576,10 +1588,14 @@ function SummaryPendingCard({ isActive }: { isActive: boolean }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
           <div>
             <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)', marginBottom: 2 }}>
-              Data fetched — no summary yet
+              {t('dash.no_summary_title')}
             </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)', margin: 0, lineHeight: 1.5 }}>
-              Run summarization to generate the executive briefing and domain analysis.
+              {t('dash.no_summary_desc').split('{link}')[0]}
+              <Link href="/status" style={{ color: 'var(--accent)', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                {t('dash.summarize_link')}
+              </Link>
+              {t('dash.no_summary_desc').split('{link}')[1]}
             </p>
           </div>
           <Link
@@ -1600,7 +1616,7 @@ function SummaryPendingCard({ isActive }: { isActive: boolean }) {
               transition: 'opacity 150ms ease',
             }}
           >
-            Summarize &#8250;
+            {t('dash.summarize_link')} &#8250;
           </Link>
         </div>
       )}
@@ -1613,6 +1629,7 @@ function SummaryPendingCard({ isActive }: { isActive: boolean }) {
 // ---------------------------------------------------------------------------
 
 function CollectionPanel({ report }: { report: IntelReport }) {
+  const { t } = useTranslation()
   const counts: Record<string, number> = { 'high-trust': 0, news: 0, trend: 0, opinions: 0 }
   for (const [cat, items] of Object.entries(report.items)) {
     for (const item of items) {
@@ -1624,10 +1641,10 @@ function CollectionPanel({ report }: { report: IntelReport }) {
   if (total === 0) return null
 
   const segments = [
-    { key: 'trend', label: 'Trend', count: counts.trend, color: 'var(--cat-trend)' },
-    { key: 'news', label: 'News', count: counts.news, color: 'var(--cat-news)' },
-    { key: 'opinions', label: 'Opinion', count: counts.opinions, color: 'var(--cat-opinion)' },
-    { key: 'high-trust', label: 'Research', count: counts['high-trust'], color: 'var(--cat-research)' },
+    { key: 'trend', label: t('cat.trend'), count: counts.trend, color: 'var(--cat-trend)' },
+    { key: 'news', label: t('cat.news'), count: counts.news, color: 'var(--cat-news)' },
+    { key: 'opinions', label: t('cat.opinion'), count: counts.opinions, color: 'var(--cat-opinion)' },
+    { key: 'high-trust', label: t('cat.research'), count: counts['high-trust'], color: 'var(--cat-research)' },
   ].sort((a, b) => b.count - a.count)
 
   const maxCount = Math.max(...segments.map(s => s.count))
@@ -1659,7 +1676,7 @@ function CollectionPanel({ report }: { report: IntelReport }) {
           letterSpacing: '0.08em',
           color: 'var(--ink-faint)',
         }}>
-          ITEMS COLLECTED
+          {t('dash.items_collected')}
         </span>
       </div>
 
@@ -1721,6 +1738,7 @@ function CollectionPanel({ report }: { report: IntelReport }) {
 function HealthRing({ okCount, totalCount, size = 72 }: {
   okCount: number; totalCount: number; size?: number
 }) {
+  const { t } = useTranslation()
   const pct = totalCount > 0 ? okCount / totalCount : 0
   const circumference = 2 * Math.PI * 40
   const arc = pct * circumference
@@ -1744,13 +1762,14 @@ function HealthRing({ okCount, totalCount, size = 72 }: {
       </text>
       <text x="50" y="64" textAnchor="middle" fill="var(--ink-faint)"
         style={{ fontSize: '0.5rem', fontWeight: 700, letterSpacing: '0.08em' }}>
-        PERCENT
+        {t('dash.percent')}
       </text>
     </svg>
   )
 }
 
 function SourcesPanel({ report }: { report: IntelReport }) {
+  const { t } = useTranslation()
   const okSet = new Set(report.sources_ok)
   const failedSorted = [...report.sources_failed].sort()
   const okSorted = [...report.sources_ok].sort()
@@ -1777,7 +1796,7 @@ function SourcesPanel({ report }: { report: IntelReport }) {
           letterSpacing: '0.08em',
           color: 'var(--ink-faint)',
         }}>
-          SOURCE HEALTH
+          {t('dash.source_health').toUpperCase()}
         </span>
         <span style={{
           fontFamily: MONO,
@@ -1788,7 +1807,7 @@ function SourcesPanel({ report }: { report: IntelReport }) {
           background: hasFailed ? 'var(--sent-neg-bg)' : 'var(--sent-pos-bg)',
           color: hasFailed ? 'var(--sent-neg-text)' : 'var(--sent-pos-text)',
         }}>
-          {report.sources_ok.length}/{all.length} online
+          {t('dash.online', { ok: String(report.sources_ok.length), total: String(all.length) })}
         </span>
       </div>
 
@@ -1828,6 +1847,7 @@ function SourcesPanel({ report }: { report: IntelReport }) {
 // ---------------------------------------------------------------------------
 
 export function Dashboard() {
+  const { t } = useTranslation()
   const [report, setReport] = useState<IntelReport | null>(null)
   const [summary, setSummary] = useState<BriefingSummary | null>(null)
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null)
@@ -1914,14 +1934,14 @@ export function Dashboard() {
             <DashCard style={{ padding: '4rem 2rem', textAlign: 'center' }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
                 <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--ink-tertiary)' }}>
-                  No briefing data yet
+                  {t('dash.no_data_title')}
                 </div>
                 <p style={{ fontSize: '0.8125rem', color: 'var(--ink-secondary)', margin: 0 }}>
-                  Run the pipeline from the{' '}
+                  {t('dash.no_data_desc').split('{link}')[0]}
                   <Link href="/status" style={{ textDecoration: 'underline', textUnderlineOffset: 2, color: 'var(--accent)' }}>
-                    Status page
+                    {t('dash.no_data_link')}
                   </Link>
-                  {' '}to fetch data and generate your first briefing.
+                  {t('dash.no_data_desc').split('{link}')[1]}
                 </p>
               </div>
             </DashCard>
@@ -1953,7 +1973,7 @@ export function Dashboard() {
                   }}
                 >
                   <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)' }} />
-                  Briefing updated
+                  {t('dash.briefing_updated')}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -2011,7 +2031,7 @@ export function Dashboard() {
                 {/* Footer link */}
                 <div style={{ textAlign: 'center', paddingTop: 2, paddingBottom: 4 }}>
                   <Link href="/data" style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--accent)', textDecoration: 'none' }}>
-                    View full feed &#8250;
+                    {t('dash.view_full_feed')} &#8250;
                   </Link>
                 </div>
               </div>

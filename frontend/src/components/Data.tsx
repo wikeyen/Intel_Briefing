@@ -9,6 +9,7 @@ import { SENSOR_TOKEN_FIELD } from '@/lib/sensors/constants'
 import { ALL_CATEGORIES, SENSOR_LABELS, sensorsForCategory, DISPLAY_CATEGORIES, DISPLAY_CATEGORY_META, SENSOR_DISPLAY_MAP, CATEGORY_TO_DISPLAY, itemsByDisplayCategory } from '@/lib/sensors/taxonomy'
 import type { CategoryKey, DisplayCategoryKey } from '@/lib/sensors/taxonomy'
 import { useToast } from '@/lib/toast-context'
+import { useTranslation } from '@/lib/i18n'
 import { Pagination } from './Pagination'
 import { StaleProcessBanner, detectStale } from './StaleProcessBanner'
 import { ItemCard, LINE_CLAMP_CSS } from './data/ItemCard'
@@ -82,7 +83,7 @@ function filterKey(item: IntelItem, section: string): string {
   return item.source
 }
 
-function EmptySection({ needsKey }: { needsKey?: boolean }) {
+function EmptySection({ needsKey, t }: { needsKey?: boolean; t: (key: string, params?: Record<string, string>) => string }) {
   return (
     <div style={{
       padding: '4rem 1.5rem',
@@ -94,8 +95,8 @@ function EmptySection({ needsKey }: { needsKey?: boolean }) {
       borderRadius: 8,
     }}>
       {needsKey
-        ? 'No items — the sensors for this section need an API key. Configure them on the Credentials page.'
-        : 'No items in this section yet — run the pipeline to fetch data.'}
+        ? t('feed.no_items_key')
+        : t('feed.no_items')}
     </div>
   )
 }
@@ -107,6 +108,7 @@ const contentVariants = {
 }
 
 export function Data() {
+  const { t } = useTranslation()
   const showToast = useToast()
   const [report, setReport] = useState<IntelReport | null>(null)
   const [config, setConfig] = useState<ConfigSettings | null>(null)
@@ -277,12 +279,12 @@ export function Data() {
             letterSpacing: '-0.01em',
             marginBottom: '0.25rem',
           }}>
-            Feed
+            {t('feed.title')}
           </h2>
           <p style={{ fontSize: '0.8125rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
             {report
-              ? `${totalItems} items from ${report.sources_ok.length} sources · ${report.date}`
-              : loading ? '\u00A0' : 'Fetched items from all configured sources.'}
+              ? t('feed.desc', { count: String(totalItems), sources: String(report.sources_ok.length), date: report.date })
+              : loading ? '\u00A0' : t('feed.desc_empty')}
           </p>
         </div>
       </div>
@@ -374,7 +376,7 @@ export function Data() {
               flexWrap: 'wrap',
             }}>
               <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--ink-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '0.25rem' }}>
-                {activeSection === 'feeds' ? 'Feed' : 'Source'}
+                {activeSection === 'feeds' ? t('feed.feed') : t('feed.source')}
               </span>
               {availableFilters.length === 0 ? (
                 <span style={{ fontSize: '0.75rem', color: 'var(--ink-faint)' }}>—</span>
@@ -402,7 +404,7 @@ export function Data() {
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-muted)' }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-faint)' }}
                     >
-                      All
+                      {t('feed.all')}
                     </button>
                   )}
                 </>
@@ -413,7 +415,7 @@ export function Data() {
                   type="text"
                   value={searchQuery}
                   onChange={e => { setSearchQuery(e.target.value); setPage(1) }}
-                  placeholder="Search…"
+                  placeholder={t('feed.search')}
                   style={{
                     fontSize: '0.75rem',
                     padding: '0.3rem 0.625rem',
@@ -488,12 +490,12 @@ export function Data() {
               border: '1px solid var(--border)',
               borderRadius: 8,
             }}>
-              No data available. Trigger a pipeline run from the Status page.
+              {t('feed.no_data')}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {filteredItems.length === 0
-                ? <EmptySection needsKey={sectionNeedsKey(activeSection, config)} />
+                ? <EmptySection needsKey={sectionNeedsKey(activeSection, config)} t={t} />
                 : (
                   <>
                     {/* Item range indicator */}

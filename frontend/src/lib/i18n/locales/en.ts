@@ -35,7 +35,7 @@ const en: TranslationDict = {
   'page.data.title': 'Feed',
   'page.data.desc': 'AI summary and items from all sources',
 
-  // ── Status ticker ───────────────────────────────────────────────────────────
+  // ── Status ticker (Dashboard) ─────────────────────────────────────────────
   'ticker.updating': 'Updating',
   'ticker.idle': 'Idle',
   'ticker.fetched_ago': 'Fetched {time}',
@@ -52,7 +52,7 @@ const en: TranslationDict = {
   'time.hours_ago': '{n}h ago',
   'time.days_ago': '{n}d ago',
 
-  // ── Dashboard widgets ───────────────────────────────────────────────────────
+  // ── Dashboard widgets ─────────────────────────────────────────────────────
   'dash.exec_summary': 'Executive Summary',
   'dash.quick_scan': 'Quick Scan',
   'dash.show_more': 'Show more',
@@ -81,14 +81,29 @@ const en: TranslationDict = {
   'dash.no_domain_data': 'No data available for this domain',
   'dash.rapid': 'RAPID',
   'dash.sustained': 'SUSTAINED',
+  'dash.global': 'Global',
+  'dash.china': 'China',
+  'dash.posts': '{count} posts',
+  'dash.pos': 'pos',
+  'dash.neu': 'neu',
+  'dash.neg': 'neg',
+  'dash.items': '{count} items',
+  'dash.generating_briefing': 'Generating briefing',
+  'dash.generating_desc': 'The pipeline is running. Executive summary and domain analysis will appear here once summarization completes.',
+  'dash.no_summary_title': 'No summary available',
+  'dash.no_summary_desc': 'Data has been fetched but no AI summary has been generated yet. Run {link} to generate the briefing.',
+  'dash.summarize_link': 'Summarize',
+  'dash.items_collected': 'ITEMS COLLECTED',
+  'dash.percent': 'PERCENT',
+  'dash.online': '{ok}/{total} online',
 
-  // ── Category distribution labels ────────────────────────────────────────────
+  // ── Category distribution labels ──────────────────────────────────────────
   'cat.research': 'Research',
   'cat.news': 'News',
   'cat.trend': 'Trend',
   'cat.opinion': 'Opinion',
 
-  // ── Domain labels ───────────────────────────────────────────────────────────
+  // ── Domain labels ─────────────────────────────────────────────────────────
   'domain.macro': 'Macro & Finance',
   'domain.news': 'News & Tech',
   'domain.social': 'Social Pulse',
@@ -96,25 +111,198 @@ const en: TranslationDict = {
   'domain.research': 'Research Radar',
   'domain.opinion': 'Opinion Digest',
   'domain.china-community': 'China Community',
+  'domain.products': 'Product & Opportunities',
+  'domain.forums': 'Community & Forums',
 
-  // ── Sentiment ───────────────────────────────────────────────────────────────
+  // ── Sentiment ─────────────────────────────────────────────────────────────
   'sentiment.bullish': 'Bullish',
   'sentiment.bearish': 'Bearish',
   'sentiment.mixed': 'Mixed',
   'sentiment.neutral': 'Neutral',
 
-  // ── Sidebar ─────────────────────────────────────────────────────────────────
-  'sidebar.loading': 'loading\u2026',
+  // ── Sidebar ───────────────────────────────────────────────────────────────
+  'sidebar.loading': 'loading…',
   'sidebar.language': 'Language',
 
-  // ── Sentiment detail labels ─────────────────────────────────────────────────
+  // ── Sentiment detail labels ───────────────────────────────────────────────
   'sent.pos': 'pos',
   'sent.neu': 'neu',
   'sent.neg': 'neg',
 
-  // ── Mobile menu ─────────────────────────────────────────────────────────────
+  // ── Mobile menu ───────────────────────────────────────────────────────────
   'menu.open': 'Open menu',
   'menu.close': 'Close menu',
+
+  // ── Feed page (Data.tsx) ──────────────────────────────────────────────────
+  'feed.title': 'Feed',
+  'feed.desc': '{count} items from {sources} sources · {date}',
+  'feed.desc_empty': 'Fetched items from all configured sources.',
+  'feed.source': 'Source',
+  'feed.feed': 'Feed',
+  'feed.all': 'All',
+  'feed.search': 'Search…',
+  'feed.no_data': 'No data available. Trigger a pipeline run from the Status page.',
+  'feed.no_items': 'No items in this section yet — run the pipeline to fetch data.',
+  'feed.no_items_key': 'No items — the sensors for this section need an API key. Configure them on the Credentials page.',
+
+  // ── Item card (ItemCard.tsx) ──────────────────────────────────────────────
+  'item.unverified': 'unverified',
+  'item.new': 'NEW',
+  'item.on_trend': '{hours}h on trend',
+  'item.on_trend_short': '<1h on trend',
+  'item.discuss': 'discuss',
+  'item.collapse': 'collapse',
+  'item.expand_abstract': 'expand abstract',
+  'item.more': 'more',
+
+  // ── Status page — ControlBar ──────────────────────────────────────────────
+  'status.fetching': 'Fetching',
+  'status.summarizing': 'Summarizing',
+  'status.briefing': 'Briefing',
+  'status.stopping': 'Stopping',
+  'status.paused': 'Paused',
+  'status.sensors': 'sensors',
+  'status.retrying': 'retrying',
+  'status.failed': 'failed',
+  'status.run_all': 'Run All',
+  'status.run_n': 'Run {count}',
+  'status.stop': 'Stop',
+  'status.stopping_btn': 'Stopping…',
+  'status.sources': 'sources',
+  'status.items': 'items',
+  'status.all': 'All',
+  'status.none': 'None',
+  'status.failed_btn': 'Failed',
+  'status.n_sel': '{count} sel',
+  'status.all_sel': 'All',
+  'status.next': 'Next: {time}',
+  'status.no_schedule': 'No schedule',
+  'status.failed_retry': '{count} failed — retry or skip above',
+  'status.generate_summary': 'Generate Summary',
+  'status.mode_fetch': 'Fetch',
+  'status.mode_fetch_summarize': 'Fetch + Summarize',
+  'status.mode_summarize': 'Summarize',
+
+  // ── Status page — SensorGrid ──────────────────────────────────────────────
+  'status.select_all': 'Select all',
+  'status.select_none': 'None',
+  'status.n_selected': '{count} selected',
+  'status.col_count': '#',
+  'status.col_last_fetch': 'Last Fetch',
+
+  // ── Status page — SensorCard ──────────────────────────────────────────────
+  'sensor.disabled': 'Disabled',
+  'sensor.needs_api_key': 'Needs API key',
+  'sensor.fetching': 'Fetching',
+  'sensor.retrying': 'Retrying',
+  'sensor.summarizing': 'Summarizing',
+  'sensor.queued': 'Queued…',
+  'sensor.skipped': 'Skipped',
+  'sensor.done': 'Done',
+  'sensor.failed': 'Failed',
+  'sensor.retry': 'Retry',
+  'sensor.dismiss': 'Dismiss',
+  'sensor.skip': 'Skip',
+  'sensor.chunks': '{done}/{total} chunks',
+
+  // ── Stale process banner ──────────────────────────────────────────────────
+  'stale.pipeline': 'Pipeline',
+  'stale.summary': 'Summary',
+  'stale.interrupted': '{label} interrupted',
+  'stale.started': 'started {time}',
+  'stale.progress': '{pct}% complete ({done}/{total} sensors)',
+  'stale.n_failed': '{count} failed',
+  'stale.lost': 'the process was lost, likely due to an app restart.',
+  'stale.resume_summary': 'Resume will re-run summaries only',
+  'stale.resume_full': 'Resume will re-fetch and summarize',
+  'stale.abort': 'Abort',
+  'stale.resume': 'Resume',
+  'stale.restart': 'Restart',
+
+  // ── Pipeline page ─────────────────────────────────────────────────────────
+  'pipeline.title': 'Pipeline',
+  'pipeline.desc': 'Scheduling, ranking filters, and output limits for the generated briefing.',
+  'pipeline.schedule': 'Schedule',
+  'pipeline.daily_fetch_time': 'Daily Fetch Time',
+  'pipeline.timezone': 'Timezone',
+  'pipeline.concurrency': 'Default Concurrency',
+  'pipeline.concurrency_desc': 'Parallel limit for fetching and summarization. Applies to both stages.',
+  'pipeline.local_concurrency': 'Local Model Summary Concurrency',
+  'pipeline.local_concurrency_desc': 'Override for local models (Ollama). Cloud providers use the default concurrency above.',
+  'pipeline.cache_ttl': 'Cache TTL',
+  'pipeline.cache_desc': 'Data older than this threshold is flagged as stale.',
+  'pipeline.mark_stale': 'Mark Stale Now',
+  'pipeline.marking': 'Marking…',
+  'pipeline.post_expiry': 'Post Expiry',
+  'pipeline.post_expiry_desc': 'Posts older than this are automatically deleted by the cleanup cron job.',
+  'pipeline.delete_expired': 'Delete Expired Now',
+  'pipeline.cleaning': 'Cleaning…',
+  'pipeline.filters': 'Filters',
+  'pipeline.boost': 'Boost Keywords',
+  'pipeline.boost_desc': 'Items matching these terms rank higher within their section.',
+  'pipeline.suppress': 'Suppress Keywords',
+  'pipeline.suppress_desc': 'Items matching these terms are removed from the briefing entirely.',
+  'pipeline.output': 'Output',
+  'pipeline.default_items': 'Default Items per Section',
+  'pipeline.per_section': 'Per-Section Overrides',
+
+  // ── Sources page (Sensors.tsx) ────────────────────────────────────────────
+  'sources.title': 'Sources',
+  'sources.desc': 'Active data sources for your pipeline.',
+  'sources.items': 'Items',
+  'sources.lookback': 'Lookback',
+  'sources.badge_ok': 'OK',
+  'sources.badge_failed': 'Failed',
+  'sources.badge_off': 'Off',
+  'sources.accounts': 'Accounts',
+  'sources.feed_urls': 'Feed URLs',
+  'sources.scraper': 'Scraper',
+  'sources.twitter_scraper': 'Twitter Scraper',
+  'sources.include_following': 'Include accounts I follow',
+  'sources.topics': 'Topics',
+  'sources.topics_desc': 'Search keywords across social platforms',
+  'sources.trend': 'Trend',
+  'sources.trending': 'Trending',
+  'sources.trending_desc': 'Trending posts from social platforms',
+
+  // ── Credentials page (ApiKeys.tsx) ────────────────────────────────────────
+  'creds.title': 'Credentials',
+  'creds.desc': 'Credentials for external data sources and AI providers. Saved keys can be revealed on demand.',
+  'creds.ai_providers': 'AI Providers',
+  'creds.data_sources': 'Data Sources',
+  'creds.social_platforms': 'Social Platforms',
+
+  // ── AI Summary page ───────────────────────────────────────────────────────
+  'ai.title': 'AI Summary',
+  'ai.desc': 'Generate per-source summaries and an executive briefing after each fetch using an LLM.',
+  'ai.connection': 'Connection',
+  'ai.provider': 'Provider',
+  'ai.model': 'Model',
+  'ai.disabled': 'Disabled',
+  'ai.openrouter': 'OpenRouter',
+  'ai.local': 'Local (Ollama)',
+  'ai.attribution_model': 'Attribution Model',
+  'ai.attribution_desc': 'Cheaper model for per-section citation matching. Falls back to generation model if unset.',
+  'ai.summary_language': 'Summary Language',
+  'ai.lang_zh': 'Chinese',
+  'ai.lang_en': 'English',
+  'ai.lang_desc': 'Language for generated summaries. Does not affect custom prompt overrides.',
+  'ai.base_url': 'Base URL',
+  'ai.base_url_ollama': 'Points to your local Ollama instance. Change if running on a different host or port.',
+  'ai.base_url_openrouter': 'OpenAI-compatible endpoint. Only change if using a custom proxy.',
+  'ai.summary_concurrency': 'Summary Concurrency',
+  'ai.concurrency_desc': 'Number of per-sensor LLM calls to run in parallel. Keep low for local models to avoid OOM.',
+  'ai.connection_test': 'Connection Test',
+  'ai.test_desc': 'Saves settings, then sends a test prompt to verify the LLM responds.',
+  'ai.test_now': 'Test Now',
+  'ai.testing': 'Testing…',
+  'ai.prompts': 'Prompts',
+  'ai.exec_prompt': 'Executive Summary Prompt',
+  'ai.exec_prompt_desc': 'System prompt for the final executive summary that synthesizes all sensor summaries.',
+  'ai.per_sensor_prompts': 'Per-Sensor Prompts',
+  'ai.customized': 'Customized',
+  'ai.reset': 'Reset',
+  'ai.reset_default': 'Reset to default',
 }
 
 export default en

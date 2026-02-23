@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { api } from '@/api/client'
 import { TagInput } from '@/components/TagInput'
 
+import { useTranslation } from '@/lib/i18n'
 import { useToast } from '@/lib/toast-context'
 import { useAutoSave } from '@/lib/hooks/useAutoSave'
 import { inputBase, focus, blur, SubLabel, AutoSaveIndicator } from '@/components/form-styles'
@@ -56,6 +57,7 @@ const actionBtnBase: React.CSSProperties = {
 }
 
 export function Pipeline() {
+  const { t } = useTranslation()
   const showToast = useToast()
   const [fetchTime, setFetchTime] = useState('07:00')
   const [timezone, setTimezone] = useState('UTC')
@@ -143,10 +145,10 @@ export function Pipeline() {
       <section id="pipeline">
         <div className="page-header" style={{ paddingBottom: '1.5rem' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ink)', marginBottom: '0.25rem' }}>
-            Pipeline
+            {t('pipeline.title')}
           </h2>
           <p style={{ fontSize: '0.8125rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
-            Scheduling, ranking filters, and output limits for the generated briefing.
+            {t('pipeline.desc')}
           </p>
         </div>
         <PipelineSkeleton />
@@ -160,12 +162,12 @@ export function Pipeline() {
       <div className="page-header" style={{ paddingBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ink)', marginBottom: '0.25rem' }}>
-            Pipeline
+            {t('pipeline.title')}
           </h2>
           <AutoSaveIndicator status={saveStatus} />
         </div>
         <p style={{ fontSize: '0.8125rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
-          Scheduling, ranking filters, and output limits for the generated briefing.
+          {t('pipeline.desc')}
         </p>
       </div>
 
@@ -173,12 +175,12 @@ export function Pipeline() {
 
         {/* ── Schedule ── */}
         <div style={cardStyle}>
-          <SubLabel>Schedule</SubLabel>
+          <SubLabel>{t('pipeline.schedule')}</SubLabel>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '0.5rem' }}>
-                  Daily Fetch Time
+                  {t('pipeline.daily_fetch_time')}
                 </label>
                 <input
                   type="time"
@@ -191,7 +193,7 @@ export function Pipeline() {
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '0.5rem' }}>
-                  Timezone
+                  {t('pipeline.timezone')}
                 </label>
                 <div style={{ position: 'relative' }}>
                   <select
@@ -231,7 +233,7 @@ export function Pipeline() {
             <div>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
                 <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
-                  Default Concurrency
+                  {t('pipeline.concurrency')}
                 </label>
                 <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--ink)', fontFamily: 'ui-monospace, monospace' }}>
                   {defaultConcurrency}
@@ -245,14 +247,14 @@ export function Pipeline() {
                 onChange={(e) => { setDefaultConcurrency(Number(e.target.value)); trigger() }}
               />
               <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, marginTop: '0.5rem' }}>
-                Parallel limit for fetching and summarization. Applies to both stages.
+                {t('pipeline.concurrency_desc')}
               </p>
             </div>
 
             <div>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
                 <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
-                  Local Model Summary Concurrency
+                  {t('pipeline.local_concurrency')}
                 </label>
                 <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--ink)', fontFamily: 'ui-monospace, monospace' }}>
                   {localSummaryConcurrency}
@@ -266,14 +268,14 @@ export function Pipeline() {
                 onChange={(e) => { setLocalSummaryConcurrency(Number(e.target.value)); trigger() }}
               />
               <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, marginTop: '0.5rem' }}>
-                Override for local models (Ollama). Cloud providers use the default concurrency above.
+                {t('pipeline.local_concurrency_desc')}
               </p>
             </div>
 
             <div>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
                 <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
-                  Cache TTL
+                  {t('pipeline.cache_ttl')}
                 </label>
                 <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--ink)', fontFamily: 'ui-monospace, monospace' }}>
                   {cacheTtl}h
@@ -288,7 +290,7 @@ export function Pipeline() {
               />
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem' }}>
                 <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, margin: 0 }}>
-                  Data older than this threshold is flagged as stale.
+                  {t('pipeline.cache_desc')}
                 </p>
                 <button
                   onClick={handleInvalidate}
@@ -303,7 +305,7 @@ export function Pipeline() {
                     cursor: invalidating ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  {invalidating ? 'Marking...' : 'Mark Stale Now'}
+                  {invalidating ? t('pipeline.marking') : t('pipeline.mark_stale')}
                 </button>
               </div>
             </div>
@@ -311,7 +313,7 @@ export function Pipeline() {
             <div>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
                 <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
-                  Post Expiry
+                  {t('pipeline.post_expiry')}
                 </label>
                 <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--ink)', fontFamily: 'ui-monospace, monospace' }}>
                   {postExpiryDays}d
@@ -326,7 +328,7 @@ export function Pipeline() {
               />
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem' }}>
                 <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, margin: 0 }}>
-                  Posts older than this are automatically deleted by the cleanup cron job.
+                  {t('pipeline.post_expiry_desc')}
                 </p>
                 <button
                   onClick={handleCleanup}
@@ -341,7 +343,7 @@ export function Pipeline() {
                     cursor: cleaning ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  {cleaning ? 'Cleaning...' : 'Delete Expired Now'}
+                  {cleaning ? t('pipeline.cleaning') : t('pipeline.delete_expired')}
                 </button>
               </div>
             </div>
@@ -350,7 +352,7 @@ export function Pipeline() {
 
         {/* ── Filters ── */}
         <div style={cardStyle}>
-          <SubLabel>Filters</SubLabel>
+          <SubLabel>{t('pipeline.filters')}</SubLabel>
           <div style={{
             background: 'var(--surface)',
             border: '1px solid var(--border)',
@@ -361,24 +363,24 @@ export function Pipeline() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.875rem' }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--ok)', flexShrink: 0 }} />
                 <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
-                  Boost Keywords
+                  {t('pipeline.boost')}
                 </label>
               </div>
               <TagInput tags={boost} onChange={(tags) => { setBoost(tags); trigger() }} placeholder="keyword — press Enter" />
               <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.5rem' }}>
-                Items matching these terms rank higher within their section.
+                {t('pipeline.boost_desc')}
               </p>
             </div>
             <div style={{ padding: '1.25rem 1.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.875rem' }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--err)', flexShrink: 0 }} />
                 <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
-                  Suppress Keywords
+                  {t('pipeline.suppress')}
                 </label>
               </div>
               <TagInput tags={suppress} onChange={(tags) => { setSuppress(tags); trigger() }} placeholder="keyword — press Enter" />
               <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.5rem' }}>
-                Items matching these terms are removed from the briefing entirely.
+                {t('pipeline.suppress_desc')}
               </p>
             </div>
           </div>
@@ -386,13 +388,13 @@ export function Pipeline() {
 
         {/* ── Output ── */}
         <div style={cardStyle}>
-          <SubLabel>Output</SubLabel>
+          <SubLabel>{t('pipeline.output')}</SubLabel>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
             <div>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
                 <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
-                  Default Items per Section
+                  {t('pipeline.default_items')}
                 </label>
                 <span style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--ink)', fontFamily: 'ui-monospace, monospace', letterSpacing: '-0.02em' }}>
                   {defaultLimit}
@@ -409,7 +411,7 @@ export function Pipeline() {
 
             <div>
               <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '1rem' }}>
-                Per-Section Overrides
+                {t('pipeline.per_section')}
               </label>
               <div style={{
                 background: 'var(--surface)',

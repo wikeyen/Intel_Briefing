@@ -4,6 +4,7 @@
 
 import { memo } from 'react'
 import type { SensorJobProgress } from '@/api/client'
+import { useTranslation } from '@/lib/i18n'
 
 export interface SensorCardProps {
   sensorKey: string
@@ -303,7 +304,9 @@ const chunkTextStyle: React.CSSProperties = {
   marginTop: '0.125rem',
 }
 
-function PrimaryMetric({ state, props }: { state: CardState; props: SensorCardProps }) {
+type TFn = (key: string, params?: Record<string, string>) => string
+
+function PrimaryMetric({ state, props, t }: { state: CardState; props: SensorCardProps; t: TFn }) {
   const { liveSensor, itemCount, fetchError, summaryError } = props
 
   switch (state) {
@@ -312,19 +315,19 @@ function PrimaryMetric({ state, props }: { state: CardState; props: SensorCardPr
       return <span style={metricStyle}>{itemCount}</span>
 
     case 'disabled':
-      return <span style={{ ...metricStyle, fontSize: '0.75rem', color: 'var(--ink-faint)', fontWeight: 500 }}>Disabled</span>
+      return <span style={{ ...metricStyle, fontSize: '0.75rem', color: 'var(--ink-faint)', fontWeight: 500 }}>{t('sensor.disabled')}</span>
 
     case 'config-error':
-      return <span style={{ ...errorTextStyle, color: 'var(--warn)' }}>Needs API key</span>
+      return <span style={{ ...errorTextStyle, color: 'var(--warn)' }}>{t('sensor.needs_api_key')}</span>
 
     case 'failed':
-      return <span style={errorTextStyle}>{fetchError || summaryError || 'Failed'}</span>
+      return <span style={errorTextStyle}>{fetchError || summaryError || t('sensor.failed')}</span>
 
     case 'fetching':
       return (
         <span style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
           <span style={{ ...metricStyle, color: 'var(--accent)', fontWeight: 500, fontSize: '0.75rem' }}>
-            Fetching
+            {t('sensor.fetching')}
           </span>
           {liveSensor && (
             <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>
@@ -337,15 +340,15 @@ function PrimaryMetric({ state, props }: { state: CardState; props: SensorCardPr
     case 'summarizing':
       return (
         <span style={{ ...metricStyle, color: 'var(--accent)', fontWeight: 500, fontSize: '0.75rem' }}>
-          Summarizing
+          {t('sensor.summarizing')}
         </span>
       )
 
     case 'waiting':
-      return <span style={{ ...metricStyle, color: 'var(--ink-faint)', fontWeight: 400, fontSize: '0.75rem' }}>Queued{'\u2026'}</span>
+      return <span style={{ ...metricStyle, color: 'var(--ink-faint)', fontWeight: 400, fontSize: '0.75rem' }}>{t('sensor.queued')}</span>
 
     case 'skipped':
-      return <span style={{ ...metricStyle, color: 'var(--ink-faint)', fontWeight: 400, fontSize: '0.75rem' }}>Skipped</span>
+      return <span style={{ ...metricStyle, color: 'var(--ink-faint)', fontWeight: 400, fontSize: '0.75rem' }}>{t('sensor.skipped')}</span>
 
     case 'done':
       return (
@@ -360,7 +363,7 @@ function PrimaryMetric({ state, props }: { state: CardState; props: SensorCardPr
             borderRadius: 3,
             letterSpacing: '0.02em',
           }}>
-            Done
+            {t('sensor.done')}
           </span>
         </span>
       )
@@ -369,13 +372,13 @@ function PrimaryMetric({ state, props }: { state: CardState; props: SensorCardPr
     case 'paused-failed':
       return (
         <span style={errorTextStyle}>
-          {liveSensor?.fetch_error || liveSensor?.summary_error || 'Failed'}
+          {liveSensor?.fetch_error || liveSensor?.summary_error || t('sensor.failed')}
         </span>
       )
   }
 }
 
-function SecondaryContent({ state, props }: { state: CardState; props: SensorCardProps }) {
+function SecondaryContent({ state, props, t }: { state: CardState; props: SensorCardProps; t: TFn }) {
   const { liveSensor, lastFetchAgo, onRetry, onSkip, onDismiss } = props
 
   switch (state) {
@@ -391,7 +394,7 @@ function SecondaryContent({ state, props }: { state: CardState; props: SensorCar
               style={retryButtonStyle}
               onClick={(e) => { e.stopPropagation(); onRetry() }}
             >
-              Retry
+              {t('sensor.retry')}
             </button>
           )}
           {onDismiss && (
@@ -399,7 +402,7 @@ function SecondaryContent({ state, props }: { state: CardState; props: SensorCar
               style={dismissButtonStyle}
               onClick={(e) => { e.stopPropagation(); onDismiss() }}
             >
-              Dismiss
+              {t('sensor.dismiss')}
             </button>
           )}
         </div>
@@ -413,7 +416,7 @@ function SecondaryContent({ state, props }: { state: CardState; props: SensorCar
               style={retryButtonStyle}
               onClick={(e) => { e.stopPropagation(); onRetry() }}
             >
-              Retry
+              {t('sensor.retry')}
             </button>
           )}
           {onSkip && (
@@ -421,7 +424,7 @@ function SecondaryContent({ state, props }: { state: CardState; props: SensorCar
               style={dismissButtonStyle}
               onClick={(e) => { e.stopPropagation(); onSkip() }}
             >
-              Skip
+              {t('sensor.skip')}
             </button>
           )}
         </div>
@@ -443,7 +446,7 @@ function SecondaryContent({ state, props }: { state: CardState; props: SensorCar
           <div style={progressBarTrack}>
             <div style={progressBarFill(pct)} />
           </div>
-          <span style={chunkTextStyle}>{done}/{total} chunks</span>
+          <span style={chunkTextStyle}>{t('sensor.chunks', { done: String(done), total: String(total) })}</span>
         </div>
       )
     }
@@ -459,6 +462,7 @@ function SecondaryContent({ state, props }: { state: CardState; props: SensorCar
 }
 
 export const SensorCard = memo(function SensorCard(props: SensorCardProps) {
+  const { t } = useTranslation()
   const { label, category, isDisabled, isRunning, isPaused, onToggleSelect } = props
   const state = deriveState(props)
   const isClickable = !isDisabled && !isRunning && !isPaused
@@ -518,8 +522,8 @@ export const SensorCard = memo(function SensorCard(props: SensorCardProps) {
 
       {/* Row 2+: metric and secondary content pushed to bottom */}
       <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
-        <PrimaryMetric state={state} props={props} />
-        <SecondaryContent state={state} props={props} />
+        <PrimaryMetric state={state} props={props} t={t} />
+        <SecondaryContent state={state} props={props} t={t} />
       </div>
     </div>
   )
@@ -577,7 +581,7 @@ function rowContainerStyle(state: CardState, hovered: boolean): React.CSSPropert
   return { ...base, ...(hovered && { background: 'var(--surface-alt, rgba(0,0,0,0.02))' }) }
 }
 
-function RowMetric({ state, props }: { state: CardState; props: SensorCardProps }) {
+function RowMetric({ state, props, t }: { state: CardState; props: SensorCardProps; t: TFn }) {
   const { liveSensor, itemCount, fetchError, summaryError } = props
   const mono: React.CSSProperties = { fontFamily: 'ui-monospace, monospace', fontSize: '0.75rem', fontWeight: 600 }
 
@@ -586,14 +590,14 @@ function RowMetric({ state, props }: { state: CardState; props: SensorCardProps 
     case 'selected':
       return <span style={{ ...mono, color: 'var(--ink)' }}>{itemCount}</span>
     case 'disabled':
-      return <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>Disabled</span>
+      return <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>{t('sensor.disabled')}</span>
     case 'config-error':
-      return <span style={{ fontSize: '0.6875rem', color: 'var(--warn)' }}>Needs API key</span>
+      return <span style={{ fontSize: '0.6875rem', color: 'var(--warn)' }}>{t('sensor.needs_api_key')}</span>
     case 'failed':
-      return <span style={{ fontSize: '0.6875rem', color: 'var(--err)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fetchError || summaryError || 'Failed'}</span>
+      return <span style={{ fontSize: '0.6875rem', color: 'var(--err)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fetchError || summaryError || t('sensor.failed')}</span>
     case 'fetching': {
       const retrying = props.isRetrying
-      const label = retrying ? 'Retrying' : 'Fetching'
+      const label = retrying ? t('sensor.retrying') : t('sensor.fetching')
       const color = retrying ? 'var(--warn)' : 'var(--accent)'
       return (
         <span style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
@@ -603,27 +607,27 @@ function RowMetric({ state, props }: { state: CardState; props: SensorCardProps 
       )
     }
     case 'summarizing':
-      return <span style={{ fontSize: '0.6875rem', color: 'var(--accent)', fontWeight: 500 }}>Summarizing</span>
+      return <span style={{ fontSize: '0.6875rem', color: 'var(--accent)', fontWeight: 500 }}>{t('sensor.summarizing')}</span>
     case 'waiting':
       return props.isRetrying
-        ? <span style={{ fontSize: '0.6875rem', color: 'var(--warn)', fontWeight: 500 }}>Retrying{'\u2026'}</span>
-        : <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>Queued{'\u2026'}</span>
+        ? <span style={{ fontSize: '0.6875rem', color: 'var(--warn)', fontWeight: 500 }}>{t('sensor.retrying')}{'\u2026'}</span>
+        : <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>{t('sensor.queued')}</span>
     case 'skipped':
-      return <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>Skipped</span>
+      return <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>{t('sensor.skipped')}</span>
     case 'done':
       return (
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
           <span style={{ ...mono, color: 'var(--ink)' }}>{liveSensor?.item_count ?? itemCount}</span>
-          <span style={{ fontSize: '0.5625rem', fontWeight: 600, color: 'var(--ok)', background: 'var(--ok-bg)', padding: '0.0625rem 0.3125rem', borderRadius: 3 }}>Done</span>
+          <span style={{ fontSize: '0.5625rem', fontWeight: 600, color: 'var(--ok)', background: 'var(--ok-bg)', padding: '0.0625rem 0.3125rem', borderRadius: 3 }}>{t('sensor.done')}</span>
         </span>
       )
     case 'failed-mid-run':
     case 'paused-failed':
-      return <span style={{ fontSize: '0.6875rem', color: 'var(--err)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{liveSensor?.fetch_error || liveSensor?.summary_error || 'Failed'}</span>
+      return <span style={{ fontSize: '0.6875rem', color: 'var(--err)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{liveSensor?.fetch_error || liveSensor?.summary_error || t('sensor.failed')}</span>
   }
 }
 
-function RowActions({ state, props }: { state: CardState; props: SensorCardProps }) {
+function RowActions({ state, props, t }: { state: CardState; props: SensorCardProps; t: TFn }) {
   const { lastFetchAgo, onRetry, onSkip, onDismiss } = props
   const fetchColor = props.isFreshFetch ? 'var(--ok)' : 'var(--warn)'
 
@@ -634,8 +638,8 @@ function RowActions({ state, props }: { state: CardState; props: SensorCardProps
   if (state === 'failed') {
     return (onRetry || onDismiss) ? (
       <div style={{ display: 'flex', gap: '0.375rem' }}>
-        {onRetry && <button style={retryButtonStyle} onClick={(e) => { e.stopPropagation(); onRetry() }}>Retry</button>}
-        {onDismiss && <button style={dismissButtonStyle} onClick={(e) => { e.stopPropagation(); onDismiss() }}>Dismiss</button>}
+        {onRetry && <button style={retryButtonStyle} onClick={(e) => { e.stopPropagation(); onRetry() }}>{t('sensor.retry')}</button>}
+        {onDismiss && <button style={dismissButtonStyle} onClick={(e) => { e.stopPropagation(); onDismiss() }}>{t('sensor.dismiss')}</button>}
       </div>
     ) : null
   }
@@ -643,15 +647,15 @@ function RowActions({ state, props }: { state: CardState; props: SensorCardProps
   if (state === 'paused-failed') {
     return (
       <div style={{ display: 'flex', gap: '0.375rem' }}>
-        {onRetry && <button style={retryButtonStyle} onClick={(e) => { e.stopPropagation(); onRetry() }}>Retry</button>}
-        {onSkip && <button style={dismissButtonStyle} onClick={(e) => { e.stopPropagation(); onSkip() }}>Skip</button>}
+        {onRetry && <button style={retryButtonStyle} onClick={(e) => { e.stopPropagation(); onRetry() }}>{t('sensor.retry')}</button>}
+        {onSkip && <button style={dismissButtonStyle} onClick={(e) => { e.stopPropagation(); onSkip() }}>{t('sensor.skip')}</button>}
       </div>
     )
   }
 
   if (state === 'failed-mid-run') {
     return onRetry ? (
-      <button style={retryButtonStyle} onClick={(e) => { e.stopPropagation(); onRetry() }}>Retry</button>
+      <button style={retryButtonStyle} onClick={(e) => { e.stopPropagation(); onRetry() }}>{t('sensor.retry')}</button>
     ) : null
   }
 
@@ -659,6 +663,7 @@ function RowActions({ state, props }: { state: CardState; props: SensorCardProps
 }
 
 export const SensorRow = memo(function SensorRow(props: SensorCardProps) {
+  const { t } = useTranslation()
   const { label, category, isDisabled, isRunning, isPaused, onToggleSelect } = props
   const state = deriveState(props)
   const isClickable = !isDisabled && !isRunning && !isPaused
@@ -682,8 +687,8 @@ export const SensorRow = memo(function SensorRow(props: SensorCardProps) {
       <span style={{ ...nameStyle, fontSize: '0.8125rem', minWidth: 120, maxWidth: 140, ...(state === 'selected' ? { color: 'var(--accent)' } : {}) }}>{label}</span>
       <span style={categoryBadgeStyle}>{category}</span>
       <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <RowMetric state={state} props={props} />
-        <RowActions state={state} props={props} />
+        <RowMetric state={state} props={props} t={t} />
+        <RowActions state={state} props={props} t={t} />
       </span>
     </div>
   )

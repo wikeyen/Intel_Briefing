@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react'
 import { api } from '@/api/client'
 import type { ConfigSettings } from '@/api/client'
+import { useTranslation } from '@/lib/i18n'
 import { useToast } from '@/lib/toast-context'
 import { useAutoSave } from '@/lib/hooks/useAutoSave'
 import { inputBase as _inputBase, focus, blur, AutoSaveIndicator } from '@/components/form-styles'
@@ -20,20 +21,20 @@ interface FieldGroup {
 
 const KEY_GROUPS: FieldGroup[] = [
   {
-    title: 'AI Providers',
+    title: 'creds.ai_providers',
     secrets: [
       { field: 'summary_api_key',       label: 'OpenRouter API Key',       hint: 'API key for LLM summarization via OpenRouter. Get one at openrouter.ai/keys.' },
     ],
   },
   {
-    title: 'Data Sources',
+    title: 'creds.data_sources',
     secrets: [
       { field: 'github_token',          label: 'GitHub Token',             hint: 'Personal access token for GitHub Trending sensor.' },
       { field: 'producthunt_token',     label: 'Product Hunt Token',       hint: 'API token for Product Hunt daily launches.' },
     ],
   },
   {
-    title: 'Social Platforms',
+    title: 'creds.social_platforms',
     secrets: [
       { field: 'twitter_auth_token',    label: 'Twitter auth_token Cookie', hint: 'Cookie from a logged-in x.com session. Open DevTools > Application > Cookies > x.com and copy the auth_token value.' },
       { field: 'twitter_ct0',           label: 'Twitter ct0 Cookie',        hint: 'CSRF token cookie from x.com. Same steps as above — copy the ct0 value.' },
@@ -61,6 +62,7 @@ const GROUP_CARD_BASE: React.CSSProperties = {
 }
 
 export function ApiKeys() {
+  const { t } = useTranslation()
   const showToast = useToast()
   // savedFlags: which fields have a key stored server-side
   const [savedFlags, setSavedFlags] = useState<Record<string, boolean>>({})
@@ -130,11 +132,11 @@ export function ApiKeys() {
             fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink)',
             letterSpacing: '-0.01em',
             marginBottom: '0.25rem',
-          }}>Credentials</h2>
+          }}>{t('creds.title')}</h2>
           <p style={{
             fontSize: '0.8125rem', color: 'var(--ink-muted)', lineHeight: 1.5,
           }}>
-            Credentials for external data sources and AI providers. Saved keys can be revealed on demand.
+            {t('creds.desc')}
           </p>
         </div>
         <ConnectionsSkeleton />
@@ -150,13 +152,13 @@ export function ApiKeys() {
             fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink)',
             letterSpacing: '-0.01em',
             marginBottom: '0.25rem',
-          }}>Credentials</h2>
+          }}>{t('creds.title')}</h2>
           <AutoSaveIndicator status={saveStatus} />
         </div>
         <p style={{
           fontSize: '0.8125rem', color: 'var(--ink-muted)', lineHeight: 1.5,
         }}>
-          Credentials for external data sources and AI providers. Saved keys can be revealed on demand.
+          {t('creds.desc')}
         </p>
       </div>
 
@@ -182,7 +184,7 @@ export function ApiKeys() {
               color: 'var(--ink-faint)',
               marginBottom: '1.5rem',
             }}>
-              {group.title}
+              {t(group.title)}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               {group.secrets.map(({ field, label, hint }) => (

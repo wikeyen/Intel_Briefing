@@ -35,7 +35,7 @@ const zh: TranslationDict = {
   'page.data.title': '信息流',
   'page.data.desc': 'AI 摘要与所有来源的条目',
 
-  // ── Status ticker ───────────────────────────────────────────────────────────
+  // ── Status ticker (Dashboard) ─────────────────────────────────────────────
   'ticker.updating': '更新中',
   'ticker.idle': '空闲',
   'ticker.fetched_ago': '获取于 {time}',
@@ -52,7 +52,7 @@ const zh: TranslationDict = {
   'time.hours_ago': '{n}小时前',
   'time.days_ago': '{n}天前',
 
-  // ── Dashboard widgets ───────────────────────────────────────────────────────
+  // ── Dashboard widgets ─────────────────────────────────────────────────────
   'dash.exec_summary': '综合摘要',
   'dash.quick_scan': '快速扫描',
   'dash.show_more': '展开更多',
@@ -81,14 +81,29 @@ const zh: TranslationDict = {
   'dash.no_domain_data': '该领域暂无数据',
   'dash.rapid': '快速',
   'dash.sustained': '持续',
+  'dash.global': '全球',
+  'dash.china': '中国',
+  'dash.posts': '{count} 条帖子',
+  'dash.pos': '正面',
+  'dash.neu': '中性',
+  'dash.neg': '负面',
+  'dash.items': '{count} 条',
+  'dash.generating_briefing': '正在生成简报',
+  'dash.generating_desc': '管道运行中。综合摘要和领域分析将在摘要完成后展示。',
+  'dash.no_summary_title': '暂无摘要',
+  'dash.no_summary_desc': '数据已获取，但尚未生成 AI 摘要。运行{link}以生成简报。',
+  'dash.summarize_link': '生成摘要',
+  'dash.items_collected': '已收集条目',
+  'dash.percent': '百分比',
+  'dash.online': '{ok}/{total} 在线',
 
-  // ── Category distribution labels ────────────────────────────────────────────
+  // ── Category distribution labels ──────────────────────────────────────────
   'cat.research': '研究',
   'cat.news': '新闻',
   'cat.trend': '趋势',
   'cat.opinion': '观点',
 
-  // ── Domain labels ───────────────────────────────────────────────────────────
+  // ── Domain labels ─────────────────────────────────────────────────────────
   'domain.macro': '宏观与金融',
   'domain.news': '新闻与科技',
   'domain.social': '社交脉搏',
@@ -96,25 +111,198 @@ const zh: TranslationDict = {
   'domain.research': '研究雷达',
   'domain.opinion': '观点荟萃',
   'domain.china-community': '中文社区',
+  'domain.products': '产品与机遇',
+  'domain.forums': '社区与论坛',
 
-  // ── Sentiment ───────────────────────────────────────────────────────────────
+  // ── Sentiment ─────────────────────────────────────────────────────────────
   'sentiment.bullish': '看涨',
   'sentiment.bearish': '看跌',
   'sentiment.mixed': '分歧',
   'sentiment.neutral': '中性',
 
-  // ── Sidebar ─────────────────────────────────────────────────────────────────
-  'sidebar.loading': '加载中\u2026',
+  // ── Sidebar ───────────────────────────────────────────────────────────────
+  'sidebar.loading': '加载中…',
   'sidebar.language': '语言',
 
-  // ── Sentiment detail labels ─────────────────────────────────────────────────
+  // ── Sentiment detail labels ───────────────────────────────────────────────
   'sent.pos': '正面',
   'sent.neu': '中性',
   'sent.neg': '负面',
 
-  // ── Mobile menu ─────────────────────────────────────────────────────────────
+  // ── Mobile menu ───────────────────────────────────────────────────────────
   'menu.open': '打开菜单',
   'menu.close': '关闭菜单',
+
+  // ── Feed page (Data.tsx) ──────────────────────────────────────────────────
+  'feed.title': '信息流',
+  'feed.desc': '{count} 条来自 {sources} 个来源 · {date}',
+  'feed.desc_empty': '从所有已配置来源获取的条目。',
+  'feed.source': '来源',
+  'feed.feed': '订阅',
+  'feed.all': '全部',
+  'feed.search': '搜索…',
+  'feed.no_data': '暂无数据。从状态页面触发管道运行。',
+  'feed.no_items': '此分类暂无条目 — 运行管道以获取数据。',
+  'feed.no_items_key': '无条目 — 此分类的传感器需要 API 密钥，请在凭证页面配置。',
+
+  // ── Item card (ItemCard.tsx) ──────────────────────────────────────────────
+  'item.unverified': '未验证',
+  'item.new': '新',
+  'item.on_trend': '{hours}小时上榜',
+  'item.on_trend_short': '<1小时上榜',
+  'item.discuss': '讨论',
+  'item.collapse': '收起',
+  'item.expand_abstract': '展开摘要',
+  'item.more': '更多',
+
+  // ── Status page — ControlBar ──────────────────────────────────────────────
+  'status.fetching': '获取中',
+  'status.summarizing': '摘要中',
+  'status.briefing': '生成简报',
+  'status.stopping': '停止中',
+  'status.paused': '已暂停',
+  'status.sensors': '传感器',
+  'status.retrying': '重试中',
+  'status.failed': '失败',
+  'status.run_all': '运行全部',
+  'status.run_n': '运行 {count} 个',
+  'status.stop': '停止',
+  'status.stopping_btn': '停止中…',
+  'status.sources': '来源',
+  'status.items': '条目',
+  'status.all': '全部',
+  'status.none': '无',
+  'status.failed_btn': '失败',
+  'status.n_sel': '已选 {count}',
+  'status.all_sel': '全部',
+  'status.next': '下次: {time}',
+  'status.no_schedule': '无计划',
+  'status.failed_retry': '{count} 个失败 — 请重试或跳过',
+  'status.generate_summary': '生成摘要',
+  'status.mode_fetch': '获取',
+  'status.mode_fetch_summarize': '获取 + 摘要',
+  'status.mode_summarize': '摘要',
+
+  // ── Status page — SensorGrid ──────────────────────────────────────────────
+  'status.select_all': '全选',
+  'status.select_none': '取消',
+  'status.n_selected': '已选 {count}',
+  'status.col_count': '#',
+  'status.col_last_fetch': '上次获取',
+
+  // ── Status page — SensorCard ──────────────────────────────────────────────
+  'sensor.disabled': '已禁用',
+  'sensor.needs_api_key': '需要 API 密钥',
+  'sensor.fetching': '获取中',
+  'sensor.retrying': '重试中',
+  'sensor.summarizing': '摘要中',
+  'sensor.queued': '排队中…',
+  'sensor.skipped': '已跳过',
+  'sensor.done': '完成',
+  'sensor.failed': '失败',
+  'sensor.retry': '重试',
+  'sensor.dismiss': '忽略',
+  'sensor.skip': '跳过',
+  'sensor.chunks': '{done}/{total} 片段',
+
+  // ── Stale process banner ──────────────────────────────────────────────────
+  'stale.pipeline': '管道',
+  'stale.summary': '摘要',
+  'stale.interrupted': '{label}已中断',
+  'stale.started': '开始于 {time}',
+  'stale.progress': '{pct}% 完成 ({done}/{total} 传感器)',
+  'stale.n_failed': '{count} 个失败',
+  'stale.lost': '进程丢失，可能是由于应用重启。',
+  'stale.resume_summary': '恢复将仅重新运行摘要',
+  'stale.resume_full': '恢复将重新获取并生成摘要',
+  'stale.abort': '终止',
+  'stale.resume': '恢复',
+  'stale.restart': '重新开始',
+
+  // ── Pipeline page ─────────────────────────────────────────────────────────
+  'pipeline.title': '管道',
+  'pipeline.desc': '调度、排名过滤与输出限制配置。',
+  'pipeline.schedule': '调度',
+  'pipeline.daily_fetch_time': '每日获取时间',
+  'pipeline.timezone': '时区',
+  'pipeline.concurrency': '默认并发数',
+  'pipeline.concurrency_desc': '获取和摘要的并行限制，两个阶段均适用。',
+  'pipeline.local_concurrency': '本地模型摘要并发',
+  'pipeline.local_concurrency_desc': '本地模型 (Ollama) 的覆盖设置。云端提供商使用上方的默认并发数。',
+  'pipeline.cache_ttl': '缓存有效期',
+  'pipeline.cache_desc': '超过此阈值的数据将被标记为过期。',
+  'pipeline.mark_stale': '立即标记过期',
+  'pipeline.marking': '标记中…',
+  'pipeline.post_expiry': '帖子过期',
+  'pipeline.post_expiry_desc': '超过此时间的帖子将被清理任务自动删除。',
+  'pipeline.delete_expired': '立即删除过期',
+  'pipeline.cleaning': '清理中…',
+  'pipeline.filters': '过滤器',
+  'pipeline.boost': '提升关键词',
+  'pipeline.boost_desc': '匹配这些词的条目在其分类中排名更高。',
+  'pipeline.suppress': '屏蔽关键词',
+  'pipeline.suppress_desc': '匹配这些词的条目将从简报中完全移除。',
+  'pipeline.output': '输出',
+  'pipeline.default_items': '每分类默认条目数',
+  'pipeline.per_section': '按分类覆盖',
+
+  // ── Sources page (Sensors.tsx) ────────────────────────────────────────────
+  'sources.title': '数据源',
+  'sources.desc': '管道中的活跃数据源。',
+  'sources.items': '条目',
+  'sources.lookback': '回溯',
+  'sources.badge_ok': '正常',
+  'sources.badge_failed': '失败',
+  'sources.badge_off': '关闭',
+  'sources.accounts': '账号',
+  'sources.feed_urls': '订阅源 URL',
+  'sources.scraper': '爬虫',
+  'sources.twitter_scraper': 'Twitter 爬虫',
+  'sources.include_following': '包含我关注的账号',
+  'sources.topics': '话题',
+  'sources.topics_desc': '跨社交平台搜索关键词',
+  'sources.trend': '趋势',
+  'sources.trending': '热门',
+  'sources.trending_desc': '社交平台热门帖子',
+
+  // ── Credentials page (ApiKeys.tsx) ────────────────────────────────────────
+  'creds.title': '凭证',
+  'creds.desc': '外部数据源和 AI 提供商的凭证。已保存的密钥可按需查看。',
+  'creds.ai_providers': 'AI 提供商',
+  'creds.data_sources': '数据来源',
+  'creds.social_platforms': '社交平台',
+
+  // ── AI Summary page ───────────────────────────────────────────────────────
+  'ai.title': 'AI 摘要',
+  'ai.desc': '每次获取后使用 LLM 生成每源摘要和综合简报。',
+  'ai.connection': '连接',
+  'ai.provider': '提供商',
+  'ai.model': '模型',
+  'ai.disabled': '已禁用',
+  'ai.openrouter': 'OpenRouter',
+  'ai.local': '本地 (Ollama)',
+  'ai.attribution_model': '归因模型',
+  'ai.attribution_desc': '用于每分类引用匹配的低成本模型。未设置时回退到生成模型。',
+  'ai.summary_language': '摘要语言',
+  'ai.lang_zh': '中文',
+  'ai.lang_en': '英文',
+  'ai.lang_desc': '生成摘要的语言。不影响自定义提示词覆盖。',
+  'ai.base_url': '基础 URL',
+  'ai.base_url_ollama': '指向本地 Ollama 实例。如果在不同主机或端口运行，请更改。',
+  'ai.base_url_openrouter': 'OpenAI 兼容端点。仅在使用自定义代理时更改。',
+  'ai.summary_concurrency': '摘要并发',
+  'ai.concurrency_desc': '并行运行的每传感器 LLM 调用数。本地模型建议保持较低以避免 OOM。',
+  'ai.connection_test': '连接测试',
+  'ai.test_desc': '保存设置后发送测试提示以验证 LLM 响应。',
+  'ai.test_now': '立即测试',
+  'ai.testing': '测试中…',
+  'ai.prompts': '提示词',
+  'ai.exec_prompt': '综合摘要提示词',
+  'ai.exec_prompt_desc': '综合所有传感器摘要的最终综合摘要系统提示词。',
+  'ai.per_sensor_prompts': '每传感器提示词',
+  'ai.customized': '已自定义',
+  'ai.reset': '重置',
+  'ai.reset_default': '恢复默认',
 }
 
 export default zh

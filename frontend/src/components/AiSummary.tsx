@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { api, type SummaryLanguage } from '@/api/client'
 import { DEFAULT_SENSOR_PROMPTS, DEFAULT_OVERALL_PROMPT } from '@/lib/summary/prompts'
 
+import { useTranslation } from '@/lib/i18n'
 import { useToast } from '@/lib/toast-context'
 import { useAutoSave } from '@/lib/hooks/useAutoSave'
 import { inputBase, focus, blur, SubLabel, FieldLabel, HelpText, AutoSaveIndicator } from '@/components/form-styles'
@@ -31,6 +32,7 @@ const PROMPT_SENSORS: Array<{ key: string; label: string }> = [
 ]
 
 function StatusBadge({ isCustom }: { isCustom: boolean }) {
+  const { t } = useTranslation()
   if (!isCustom) return null
   return (
     <span style={{
@@ -44,7 +46,7 @@ function StatusBadge({ isCustom }: { isCustom: boolean }) {
       background: 'var(--accent-wash)',
       flexShrink: 0,
     }}>
-      Customized
+      {t('ai.customized')}
     </span>
   )
 }
@@ -52,6 +54,7 @@ function StatusBadge({ isCustom }: { isCustom: boolean }) {
 /* ─── Main Component ────────────────────────────────────────────────── */
 
 export function AiSummary() {
+  const { t } = useTranslation()
   const showToast = useToast()
 
   const [summaryProvider, setSummaryProvider] = useState<'openrouter' | 'local' | null>(null)
@@ -159,10 +162,10 @@ export function AiSummary() {
             letterSpacing: '-0.01em',
             marginBottom: '0.25rem',
           }}>
-            AI Summary
+            {t('ai.title')}
           </h2>
           <p style={{ fontSize: '0.8125rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
-            Generate per-source summaries and an executive briefing after each fetch using an LLM.
+            {t('ai.desc')}
           </p>
         </div>
         <AiSummarySkeleton />
@@ -183,12 +186,12 @@ export function AiSummary() {
             letterSpacing: '-0.01em',
             marginBottom: '0.25rem',
           }}>
-            AI Summary
+            {t('ai.title')}
           </h2>
           <AutoSaveIndicator status={saveStatus} />
         </div>
         <p style={{ fontSize: '0.8125rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
-          Generate per-source summaries and an executive briefing after each fetch using an LLM.
+          {t('ai.desc')}
         </p>
       </div>
 
@@ -196,7 +199,7 @@ export function AiSummary() {
 
         {/* ── Connection ─────────────────────────────────────── */}
         <div>
-          <SubLabel>Connection</SubLabel>
+          <SubLabel>{t('ai.connection')}</SubLabel>
           <div style={{
             background: 'var(--surface)',
             border: '1px solid var(--border)',
@@ -211,7 +214,7 @@ export function AiSummary() {
             {/* Provider + Model — side by side */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }} className="settings-grid-2col">
               <div>
-                <FieldLabel>Provider</FieldLabel>
+                <FieldLabel>{t('ai.provider')}</FieldLabel>
                 <div style={{ position: 'relative' }}>
                   <select
                     value={summaryProvider ?? ''}
@@ -227,9 +230,9 @@ export function AiSummary() {
                     onFocus={focus}
                     onBlur={blur}
                   >
-                    <option value="">Disabled</option>
-                    <option value="openrouter">OpenRouter</option>
-                    <option value="local">Local (Ollama)</option>
+                    <option value="">{t('ai.disabled')}</option>
+                    <option value="openrouter">{t('ai.openrouter')}</option>
+                    <option value="local">{t('ai.local')}</option>
                   </select>
                   <span style={{
                     position: 'absolute',
@@ -246,7 +249,7 @@ export function AiSummary() {
                 </div>
               </div>
               <div>
-                <FieldLabel>Model</FieldLabel>
+                <FieldLabel>{t('ai.model')}</FieldLabel>
                 {isOllama ? (
                   <OllamaModelPicker
                     value={summaryModel}
@@ -280,7 +283,7 @@ export function AiSummary() {
             {/* Attribution Model */}
             {isEnabled && (
               <div>
-                <FieldLabel>Attribution Model</FieldLabel>
+                <FieldLabel>{t('ai.attribution_model')}</FieldLabel>
                 {isOllama ? (
                   <OllamaModelPicker
                     value={attributionModel}
@@ -294,7 +297,7 @@ export function AiSummary() {
                   />
                 )}
                 <HelpText>
-                  Cheaper model for per-section citation matching. Falls back to generation model if unset.
+                  {t('ai.attribution_desc')}
                 </HelpText>
               </div>
             )}
@@ -302,7 +305,7 @@ export function AiSummary() {
             {/* Summary Language */}
             {isEnabled && (
               <div>
-                <FieldLabel>Summary Language</FieldLabel>
+                <FieldLabel>{t('ai.summary_language')}</FieldLabel>
                 <div style={{ position: 'relative' }}>
                   <select
                     value={summaryLanguage}
@@ -318,8 +321,8 @@ export function AiSummary() {
                     onFocus={focus}
                     onBlur={blur}
                   >
-                    <option value="zh">Chinese</option>
-                    <option value="en">English</option>
+                    <option value="zh">{t('ai.lang_zh')}</option>
+                    <option value="en">{t('ai.lang_en')}</option>
                   </select>
                   <span style={{
                     position: 'absolute',
@@ -335,7 +338,7 @@ export function AiSummary() {
                   </span>
                 </div>
                 <HelpText>
-                  Language for generated summaries. Does not affect custom prompt overrides.
+                  {t('ai.lang_desc')}
                 </HelpText>
               </div>
             )}
@@ -343,7 +346,7 @@ export function AiSummary() {
             {/* Base URL */}
             {isEnabled && (
               <div>
-                <FieldLabel>Base URL</FieldLabel>
+                <FieldLabel>{t('ai.base_url')}</FieldLabel>
                 <input
                   type="text"
                   value={summaryBaseUrl}
@@ -354,9 +357,7 @@ export function AiSummary() {
                   onBlur={blur}
                 />
                 <HelpText>
-                  {isOllama
-                    ? 'Points to your local Ollama instance. Change if running on a different host or port.'
-                    : 'OpenAI-compatible endpoint. Only change if using a custom proxy.'}
+                  {isOllama ? t('ai.base_url_ollama') : t('ai.base_url_openrouter')}
                 </HelpText>
               </div>
             )}
@@ -364,7 +365,7 @@ export function AiSummary() {
             {/* Concurrency — local models only */}
             {isOllama && (
               <div>
-                <FieldLabel hint="1–8">Summary Concurrency</FieldLabel>
+                <FieldLabel hint="1–8">{t('ai.summary_concurrency')}</FieldLabel>
                 <input
                   type="number"
                   min={1}
@@ -376,7 +377,7 @@ export function AiSummary() {
                   onBlur={blur}
                 />
                 <HelpText>
-                  Number of per-sensor LLM calls to run in parallel. Keep low for local models to avoid OOM.
+                  {t('ai.concurrency_desc')}
                 </HelpText>
               </div>
             )}
@@ -392,10 +393,10 @@ export function AiSummary() {
               }}>
                 <div>
                   <span style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
-                    Connection Test
+                    {t('ai.connection_test')}
                   </span>
                   <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', margin: '0.125rem 0 0' }}>
-                    Saves settings, then sends a test prompt to verify the LLM responds.
+                    {t('ai.test_desc')}
                   </p>
                 </div>
                 <button
@@ -418,7 +419,7 @@ export function AiSummary() {
                     transition: 'color 120ms, border-color 120ms, background 120ms',
                   }}
                 >
-                  {testingLlm ? 'Testing\u2026' : 'Test Now'}
+                  {testingLlm ? t('ai.testing') : t('ai.test_now')}
                 </button>
               </div>
             )}
@@ -428,7 +429,7 @@ export function AiSummary() {
         {/* ── Prompt Customization ──────────────────────────── */}
         {isEnabled && (
           <div>
-            <SubLabel>Prompts</SubLabel>
+            <SubLabel>{t('ai.prompts')}</SubLabel>
             <div style={{
               background: 'var(--surface)',
               border: '1px solid var(--border)',
@@ -443,7 +444,7 @@ export function AiSummary() {
               {/* Overall Prompt */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <FieldLabel>Executive Summary Prompt</FieldLabel>
+                  <FieldLabel>{t('ai.exec_prompt')}</FieldLabel>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <StatusBadge isCustom={!!overallPrompt} />
                     {overallPrompt && (
@@ -459,7 +460,7 @@ export function AiSummary() {
                           padding: 0,
                         }}
                       >
-                        Reset
+                        {t('ai.reset')}
                       </button>
                     )}
                   </div>
@@ -479,7 +480,7 @@ export function AiSummary() {
                   onBlur={blur}
                 />
                 <HelpText>
-                  System prompt for the final executive summary that synthesizes all sensor summaries.
+                  {t('ai.exec_prompt_desc')}
                 </HelpText>
               </div>
 
@@ -501,7 +502,7 @@ export function AiSummary() {
                   }}
                 >
                   <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>
-                    Per-Sensor Prompts
+                    {t('ai.per_sensor_prompts')}
                   </span>
                   <span style={{
                     fontSize: '0.625rem',
@@ -591,7 +592,7 @@ export function AiSummary() {
                                     marginTop: '0.375rem',
                                   }}
                                 >
-                                  Reset to default
+                                  {t('ai.reset_default')}
                                 </button>
                               )}
                             </div>

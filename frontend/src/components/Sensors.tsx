@@ -1,27 +1,71 @@
-// ABOUTME: Sources section — 4 foldable sections: General, Social Accounts, Trend, RSS.
-// ABOUTME: Per-sensor item limits, lookback hours, social accounts, topics, and RSS feeds configured inline.
+// ABOUTME: Sources section — sensor toggles grouped by category with inline pill controls.
+// ABOUTME: Per-sensor item limits, lookback hours, social accounts, and social topics configured inline.
 'use client'
 import { useState, useEffect } from 'react'
 import { api } from '@/api/client'
 import { TagInput } from '@/components/TagInput'
+
+import { useTranslation } from '@/lib/i18n'
 import { useToast } from '@/lib/toast-context'
 import { useAutoSave } from '@/lib/hooks/useAutoSave'
 import { AutoSaveIndicator } from '@/components/form-styles'
-import { SENSORS } from '@/lib/sensors/taxonomy'
+import { sensorsByLanguageAndCategory } from '@/lib/sensors/taxonomy'
 import { normalizeRssFeeds, type RssFeedEntry } from '@/lib/models'
 import { SkeletonCard } from '@/components/Skeleton'
-import { SOURCE_SECTIONS, HIDDEN_SENSORS, SENSOR_LOOKBACK_SUPPORT } from '@/components/sources/sections'
-import { FoldableSection } from '@/components/sources/FoldableSection'
-import { RssFeedList } from '@/components/sources/RssFeedList'
+
+interface SensorDef {
+  key: string
+  label: string
+  desc: string
+}
+
+type Language = 'row' | 'cn'
+
+interface GroupDef {
+  label: string
+  language: Language
+  sensors: SensorDef[]
+}
+
+const ALL_GROUPS: GroupDef[] = []
+
+for (const lang of sensorsByLanguageAndCategory()) {
+  for (const cat of lang.categories) {
+    ALL_GROUPS.push({
+      label: cat.label,
+      language: lang.language,
+      sensors: cat.sensors.map(s => ({ key: s.key, label: s.label, desc: s.desc })),
+    })
+  }
+}
+
+/** Virtual sensors that are display-only (controlled by a parent sensor). */
+const HIDDEN_SENSORS = new Set(['rss_news'])
+
+const ALL_SENSORS = ALL_GROUPS.flatMap(g => g.sensors)
+
+/** Maps sensor names to their default lookback hours. Sensors not listed have no lookback support. */
+const SENSOR_LOOKBACK_SUPPORT: Record<string, number> = {
+  hacker_news: 24,
+  github: 168,
+  x: 48,
+  bluesky: 48,
+  mastodon: 48,
+  hn_blogs: 72,
+  arxiv: 72,
+  wallstreetcn: 24,
+  rss_feeds: 72,
+}
 
 type SensorStatus = 'ok' | 'failed' | 'disabled'
 
 function Badge({ status }: { status: SensorStatus | undefined }) {
+  const { t } = useTranslation()
   if (!status) return null
   const map: Record<string, { bg: string; color: string; label: string }> = {
-    ok:       { bg: 'var(--ok-bg)',       color: 'var(--ok)',        label: 'OK' },
-    failed:   { bg: 'var(--err-bg)',      color: 'var(--err)',       label: 'Failed' },
-    disabled: { bg: 'var(--surface-alt)', color: 'var(--ink-faint)', label: 'Off' },
+    ok:       { bg: 'var(--ok-bg)',       color: 'var(--ok)',        label: t('sources.badge_ok') },
+    failed:   { bg: 'var(--err-bg)',      color: 'var(--err)',       label: t('sources.badge_failed') },
+    disabled: { bg: 'var(--surface-alt)', color: 'var(--ink-faint)', label: t('sources.badge_off') },
   }
   const s = map[status]
   return (
@@ -40,18 +84,19 @@ function Badge({ status }: { status: SensorStatus | undefined }) {
   )
 }
 
-function CnBadge() {
+function LanguageBadge({ language }: { language: Language }) {
+  if (language === 'row') return null
   return (
     <span style={{
-      fontSize: '0.5rem',
+      fontSize: '0.5625rem',
       fontWeight: 700,
       letterSpacing: '0.08em',
       textTransform: 'uppercase',
-      background: '#c8102e',
-      color: '#ffe066',
-      padding: '0.0625rem 0.3125rem',
-      borderRadius: 3,
-      marginLeft: '0.25rem',
+      background: 'var(--accent-bg)',
+      color: 'var(--accent)',
+      padding: '0.0625rem 0.375rem',
+      borderRadius: 999,
+      marginLeft: '0.375rem',
     }}>
       CN
     </span>
@@ -170,6 +215,16 @@ function validateMastodonHandle(value: string): string | null {
   return null
 }
 
+function validateUrl(value: string): string | null {
+  try {
+    const u = new URL(value)
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return 'Must be an HTTP(S) URL'
+    return null
+  } catch {
+    return 'Invalid URL'
+  }
+}
+
 function normalizeMastodonHandle(value: string): string {
   return value.startsWith('@') ? value : `@${value}`
 }
@@ -183,124 +238,8 @@ input[type=number]::-webkit-outer-spin-button {
 }
 `
 
-/* ─── Sub-label style for sub-config sections ────────────────────────── */
-const subLabelStyle: React.CSSProperties = {
-  fontSize: '0.6875rem',
-  fontWeight: 500,
-  color: 'var(--ink-muted)',
-  marginBottom: '0.25rem',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.25rem',
-}
-
-const subConfigStyle: React.CSSProperties = {
-  padding: '0.625rem 0.875rem',
-  background: 'var(--canvas)',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.625rem',
-}
-
-const sectionLabelStyle: React.CSSProperties = {
-  fontSize: '0.5625rem',
-  fontWeight: 600,
-  letterSpacing: '0.08em',
-  textTransform: 'uppercase',
-  color: 'var(--ink-faint)',
-  padding: '0.5rem 0.875rem 0.25rem',
-}
-
-/* ─── Sensor row component ───────────────────────────────────────────── */
-
-interface SensorRowProps {
-  sensorKey: string
-  label: string
-  desc: string
-  language: 'cn' | 'row'
-  isOn: boolean
-  onToggle: () => void
-  status: SensorStatus | undefined
-  sensorLimits: Record<string, number>
-  sensorLookback: Record<string, number>
-  defaultLimit: number
-  updateSensorLimit: (key: string, value: number) => void
-  updateSensorLookback: (key: string, value: number) => void
-  isLast: boolean
-  hasSubConfig?: boolean
-  children?: React.ReactNode
-}
-
-function SensorRow({
-  sensorKey, label, language, isOn, onToggle, status,
-  sensorLimits, sensorLookback, defaultLimit,
-  updateSensorLimit, updateSensorLookback,
-  isLast, hasSubConfig, children,
-}: SensorRowProps) {
-  const hasLookback = sensorKey in SENSOR_LOOKBACK_SUPPORT
-  const showBorder = hasSubConfig || !isLast
-
-  return (
-    <div>
-      <div
-        className="sensor-row"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0.5rem 0.875rem',
-          borderBottom: showBorder ? '1px solid var(--border-soft)' : 'none',
-          transition: 'background 120ms',
-          gap: '0.5rem',
-        }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--canvas)' }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)' }}
-      >
-        <div className="sensor-row-left" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flex: 1, minWidth: 0 }}>
-          <Toggle on={isOn} onClick={onToggle} />
-          <div style={{ minWidth: 0 }}>
-            <div style={{
-              fontSize: '0.8125rem',
-              fontWeight: 500,
-              color: isOn ? 'var(--ink)' : 'var(--ink-faint)',
-              display: 'flex',
-              alignItems: 'center',
-            }}>
-              {label}
-              {language === 'cn' && <CnBadge />}
-            </div>
-          </div>
-        </div>
-        <div className="sensor-row-right" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
-          {isOn && (
-            <PillInput
-              label="Items"
-              value={sensorLimits[sensorKey] ?? defaultLimit}
-              min={1}
-              max={200}
-              onChange={(v) => updateSensorLimit(sensorKey, v)}
-            />
-          )}
-          {isOn && hasLookback && (
-            <PillInput
-              label="Lookback"
-              value={sensorLookback[sensorKey] ?? SENSOR_LOOKBACK_SUPPORT[sensorKey]}
-              min={1}
-              max={336}
-              suffix="h"
-              onChange={(v) => updateSensorLookback(sensorKey, v)}
-            />
-          )}
-          <Badge status={status} />
-        </div>
-      </div>
-      {children}
-    </div>
-  )
-}
-
-/* ─── Main component ─────────────────────────────────────────────────── */
-
 export function Sensors() {
+  const { t } = useTranslation()
   const showToast = useToast()
   const [enabled, setEnabled] = useState<Record<string, boolean>>({})
   const [statuses, setStatuses] = useState<Record<string, SensorStatus>>({})
@@ -347,7 +286,7 @@ export function Sensors() {
   useEffect(() => {
     api.getConfig().then((cfg) => {
       const defaults: Record<string, boolean> = {}
-      for (const s of SENSORS) defaults[s.key] = true
+      for (const { key } of ALL_SENSORS) defaults[key] = true
       setEnabled({ ...defaults, ...cfg.sensors_enabled })
       setSocialAccountsX(cfg.social_accounts_x)
       setSocialAccountsBluesky(cfg.social_accounts_bluesky)
@@ -428,65 +367,15 @@ export function Sensors() {
   const getBadge = (key: string): SensorStatus | undefined =>
     !enabled[key] ? 'disabled' : statuses[key]
 
-  /* ─── Section helpers ─────────────────────────────────────── */
-
-  const generalSection = SOURCE_SECTIONS.find(s => s.key === 'general')!
-  const socialSection = SOURCE_SECTIONS.find(s => s.key === 'social')!
-  const trendSection = SOURCE_SECTIONS.find(s => s.key === 'trend')!
-  const rssSection = SOURCE_SECTIONS.find(s => s.key === 'rss')!
-
-  const countEnabled = (sensors: { key: string }[]) =>
-    sensors.filter(s => !HIDDEN_SENSORS.has(s.key) && (enabled[s.key] ?? true)).length
-
-  const countVisible = (sensors: { key: string }[]) =>
-    sensors.filter(s => !HIDDEN_SENSORS.has(s.key)).length
-
-  // Trend section: count trending platforms + topics as a combined total
-  const trendPlatforms = trendSection.sensors.filter(s => !HIDDEN_SENSORS.has(s.key))
-  const topicsOn = (blueskyTopicsEnabled && (enabled.bluesky ?? true)) ||
-    (mastodonTopicsEnabled && (enabled.mastodon ?? true))
-  const trendTotalCount = trendPlatforms.length + 2 + 1 // platforms + (X trends, Mastodon trends) + topics
-  const trendEnabledCount = trendPlatforms.filter(s => enabled[s.key] ?? true).length +
-    (mastodonTrendsEnabled ? 1 : 0) + // Mastodon trends
-    (topicsOn ? 1 : 0)
-
-  /* ─── RSS add handler with feed discovery ─────────────────── */
-
-  const handleRssAdd = (url: string) => {
-    setRssFeeds(prev => [{ url, type: 'other' }, ...prev])
-    api.discoverRssFeed(url).then((result) => {
-      if (result.type === 'discovered' && result.feedUrl) {
-        setRssFeeds((prev) => prev.map((f) => f.url === url ? { ...f, url: result.feedUrl! } : f))
-        showToast(`Feed discovered: ${result.feedTitle ?? result.feedUrl}`)
-      } else if (result.type === 'not_found') {
-        setRssFeeds((prev) => prev.filter((f) => f.url !== url))
-        showToast('No RSS feed found at that URL')
-      } else if (result.type === 'error') {
-        setRssFeeds((prev) => prev.filter((f) => f.url !== url))
-        showToast(`Feed discovery failed: ${result.message}`)
-      }
-      trigger()
-    }).catch(() => {
-      trigger()
-    })
-  }
-
-  /* ─── Shared row props ────────────────────────────────────── */
-
-  const rowProps = {
-    sensorLimits, sensorLookback, defaultLimit,
-    updateSensorLimit, updateSensorLookback,
-  }
-
   if (!loaded) {
     return (
       <div>
         <div className="page-header" style={{ paddingBottom: '1rem' }}>
           <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.01em', marginBottom: '0.125rem' }}>
-            Sources
+            {t('sources.title')}
           </h2>
           <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
-            Active data sources for your pipeline.
+            {t('sources.desc')}
           </p>
         </div>
         <div style={{ paddingBottom: '4rem' }}>
@@ -507,379 +396,459 @@ export function Sensors() {
       <div className="page-header" style={{ paddingBottom: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.01em', marginBottom: '0.125rem' }}>
-            Sources
+            {t('sources.title')}
           </h2>
           <AutoSaveIndicator status={saveStatus} />
         </div>
         <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
-          Active data sources for your pipeline.
+          {t('sources.desc')}
         </p>
       </div>
 
       <div style={{ paddingBottom: '4rem' }}>
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
 
-          {/* ═══ General Section ═══════════════════════════════════════ */}
-          <FoldableSection
-            title={generalSection.label}
-            enabledCount={countEnabled(generalSection.sensors)}
-            totalCount={countVisible(generalSection.sensors)}
-          >
-            {generalSection.sensors.filter(s => !HIDDEN_SENSORS.has(s.key)).map((sensor, i, arr) => (
-              <SensorRow
-                key={sensor.key}
-                sensorKey={sensor.key}
-                label={sensor.label}
-                desc={sensor.desc}
-                language={sensor.language}
-                isOn={enabled[sensor.key] ?? true}
-                onToggle={() => toggle(sensor.key)}
-                status={getBadge(sensor.key)}
-                isLast={i === arr.length - 1}
-                {...rowProps}
-              />
-            ))}
-          </FoldableSection>
-
-          {/* ═══ Social Accounts Section ═══════════════════════════════ */}
-          <FoldableSection
-            title={socialSection.label}
-            enabledCount={countEnabled(socialSection.sensors)}
-            totalCount={countVisible(socialSection.sensors)}
-          >
-            {socialSection.sensors.filter(s => !HIDDEN_SENSORS.has(s.key)).map((sensor, i, arr) => {
-              const isOn = enabled[sensor.key] ?? true
-              const isLast = i === arr.length - 1
-              const isX = sensor.key === 'x'
-              const isBluesky = sensor.key === 'bluesky'
-              const isMastodon = sensor.key === 'mastodon'
-
-              return (
-                <SensorRow
-                  key={sensor.key}
-                  sensorKey={sensor.key}
-                  label={sensor.label}
-                  desc={sensor.desc}
-                  language={sensor.language}
-                  isOn={isOn}
-                  onToggle={() => toggle(sensor.key)}
-                  status={getBadge(sensor.key)}
-                  isLast={isLast}
-                  hasSubConfig={isOn}
-                  {...rowProps}
-                >
-                  {/* X accounts sub-config */}
-                  {isX && isOn && (
-                    <div style={{ ...subConfigStyle, borderBottom: isLast ? 'none' : '1px solid var(--border-soft)' }}>
-                      <div>
-                        <div style={subLabelStyle}>
-                          <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: 'var(--ink)' }} />
-                          Accounts
-                        </div>
-                        <TagInput
-                          tags={socialAccountsX}
-                          onChange={(tags) => { setSocialAccountsX(tags.map(normalizeXHandle)); trigger() }}
-                          placeholder="@handle — press Enter"
-                          validate={validateXHandle}
-                          disabledTags={disabledAccounts}
-                          onToggleDisabled={toggleAccountDisabled}
-                          onEnableAll={() => enableAllAccounts(socialAccountsX)}
-                          onDisableAll={() => disableAllAccounts(socialAccountsX)}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Bluesky accounts sub-config */}
-                  {isBluesky && isOn && (
-                    <div style={{ ...subConfigStyle, borderBottom: isLast ? 'none' : '1px solid var(--border-soft)' }}>
-                      <div>
-                        <div style={subLabelStyle}>
-                          <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: 'var(--brand-bluesky)' }} />
-                          Accounts
-                        </div>
-                        <TagInput
-                          tags={socialAccountsBluesky}
-                          onChange={(tags) => { setSocialAccountsBluesky(tags); trigger() }}
-                          placeholder="name.bsky.social — press Enter"
-                          validate={validateBlueskyHandle}
-                          disabledTags={disabledAccounts}
-                          onToggleDisabled={toggleAccountDisabled}
-                          onEnableAll={() => enableAllAccounts(socialAccountsBluesky)}
-                          onDisableAll={() => disableAllAccounts(socialAccountsBluesky)}
-                        />
-                        <label style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.375rem',
-                          marginTop: '0.375rem',
-                          cursor: hasBlueskyCredentials ? 'pointer' : 'not-allowed',
-                          opacity: hasBlueskyCredentials ? 1 : 0.4,
-                        }}>
-                          <input
-                            type="checkbox"
-                            checked={followingBluesky}
-                            disabled={!hasBlueskyCredentials}
-                            onChange={(e) => { setFollowingBluesky(e.target.checked); trigger() }}
-                            style={{ accentColor: 'var(--brand-bluesky)', cursor: 'inherit' }}
-                          />
-                          <span style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>
-                            Include accounts I follow
-                          </span>
-                        </label>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Mastodon accounts sub-config */}
-                  {isMastodon && isOn && (
-                    <div style={{ ...subConfigStyle, borderBottom: isLast ? 'none' : '1px solid var(--border-soft)' }}>
-                      <div>
-                        <div style={subLabelStyle}>
-                          <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: 'var(--brand-mastodon)' }} />
-                          Accounts
-                        </div>
-                        <TagInput
-                          tags={socialAccountsMastodon}
-                          onChange={(tags) => { setSocialAccountsMastodon(tags.map(normalizeMastodonHandle)); trigger() }}
-                          placeholder="@user@mastodon.social — press Enter"
-                          validate={validateMastodonHandle}
-                          disabledTags={disabledAccounts}
-                          onToggleDisabled={toggleAccountDisabled}
-                          onEnableAll={() => enableAllAccounts(socialAccountsMastodon)}
-                          onDisableAll={() => disableAllAccounts(socialAccountsMastodon)}
-                        />
-                        <label style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.375rem',
-                          marginTop: '0.375rem',
-                          cursor: hasMastodonCredentials ? 'pointer' : 'not-allowed',
-                          opacity: hasMastodonCredentials ? 1 : 0.4,
-                        }}>
-                          <input
-                            type="checkbox"
-                            checked={followingMastodon}
-                            disabled={!hasMastodonCredentials}
-                            onChange={(e) => { setFollowingMastodon(e.target.checked); trigger() }}
-                            style={{ accentColor: 'var(--brand-mastodon)', cursor: 'inherit' }}
-                          />
-                          <span style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>
-                            Include accounts I follow
-                          </span>
-                        </label>
-                      </div>
-                    </div>
-                  )}
-                </SensorRow>
-              )
-            })}
-          </FoldableSection>
-
-          {/* ═══ Trend Section ═════════════════════════════════════════ */}
-          <FoldableSection
-            title="Trend"
-            enabledCount={trendEnabledCount}
-            totalCount={trendTotalCount}
-          >
-            {/* ── Trending Platforms sub-section ── */}
-            <div style={sectionLabelStyle}>Trending Platforms</div>
-
-            {/* Mastodon Trends */}
-            <div>
-              <div
-                className="sensor-row"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '0.5rem 0.875rem',
-                  borderBottom: '1px solid var(--border-soft)',
-                  transition: 'background 120ms',
-                  gap: '0.5rem',
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--canvas)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)' }}
-              >
-                <div className="sensor-row-left" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flex: 1, minWidth: 0 }}>
-                  <Toggle on={mastodonTrendsEnabled} onClick={() => { setMastodonTrendsEnabled(!mastodonTrendsEnabled); trigger() }} />
-                  <div style={{
-                    fontSize: '0.8125rem',
-                    fontWeight: 500,
-                    color: mastodonTrendsEnabled ? 'var(--ink)' : 'var(--ink-faint)',
-                  }}>
-                    Mastodon Trends
-                  </div>
-                </div>
-                <div className="sensor-row-right" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
-                  {mastodonTrendsEnabled && (
-                    <PillInput
-                      label="Items"
-                      value={sensorLimits['social_trends'] ?? defaultLimit}
-                      min={1}
-                      max={200}
-                      onChange={(v) => updateSensorLimit('social_trends', v)}
-                    />
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Weibo + Xiaohongshu (from trend sensors) */}
-            {trendPlatforms.map((sensor, i) => (
-              <SensorRow
-                key={sensor.key}
-                sensorKey={sensor.key}
-                label={sensor.label}
-                desc={sensor.desc}
-                language={sensor.language}
-                isOn={enabled[sensor.key] ?? true}
-                onToggle={() => toggle(sensor.key)}
-                status={getBadge(sensor.key)}
-                isLast={i === trendPlatforms.length - 1}
-                {...rowProps}
-              />
-            ))}
-
-            {/* ── Topics sub-section ── */}
-            <div style={{ ...sectionLabelStyle, borderTop: '1px solid var(--border-soft)' }}>Topics</div>
-
-            <div>
-              <div
-                className="sensor-row"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '0.5rem 0.875rem',
-                  borderBottom: topicsOn ? '1px solid var(--border-soft)' : 'none',
-                  transition: 'background 120ms',
-                  gap: '0.5rem',
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--canvas)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)' }}
-              >
-                <div className="sensor-row-left" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flex: 1, minWidth: 0 }}>
-                  <Toggle on={topicsOn} onClick={() => {
-                    if (topicsOn) {
-                      setBlueskyTopicsEnabled(false)
-                      setMastodonTopicsEnabled(false)
-                    } else {
-                      if (enabled.bluesky ?? true) setBlueskyTopicsEnabled(true)
-                      if (enabled.mastodon ?? true) setMastodonTopicsEnabled(true)
-                    }
-                    trigger()
-                  }} />
-                  <div style={{
-                    fontSize: '0.8125rem',
-                    fontWeight: 500,
-                    color: topicsOn ? 'var(--ink)' : 'var(--ink-faint)',
-                  }}>
-                    Search Topics
-                  </div>
-                </div>
-                <div className="sensor-row-right" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
-                  {topicsOn && (
-                    <>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.1875rem', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={blueskyTopicsEnabled}
-                          onChange={(e) => { setBlueskyTopicsEnabled(e.target.checked); trigger() }}
-                          style={{ accentColor: 'var(--brand-bluesky)' }} />
-                        <span style={{ fontSize: '0.625rem', color: 'var(--ink-muted)' }}>Bluesky</span>
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.1875rem', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={mastodonTopicsEnabled}
-                          onChange={(e) => { setMastodonTopicsEnabled(e.target.checked); trigger() }}
-                          style={{ accentColor: 'var(--brand-mastodon)' }} />
-                        <span style={{ fontSize: '0.625rem', color: 'var(--ink-muted)' }}>Mastodon</span>
-                      </label>
-                    </>
-                  )}
-                </div>
-              </div>
-              {topicsOn && (
-                <div style={{
-                  padding: '0.5rem 0.875rem',
-                  background: 'var(--canvas)',
-                }}>
-                  <TagInput
-                    tags={socialTopicsKeywords}
-                    onChange={(tags) => { setSocialTopicsKeywords(tags); trigger() }}
-                    placeholder="keyword or #hashtag — press Enter"
-                  />
-                </div>
-              )}
-            </div>
-          </FoldableSection>
-
-          {/* ═══ RSS Section ═══════════════════════════════════════════ */}
-          <FoldableSection
-            title={rssSection.label}
-            enabledCount={enabled.rss_feeds ?? true ? 1 : 0}
-            totalCount={1}
-          >
-            {/* Single RSS toggle row */}
-            <div
-              className="sensor-row"
-              style={{
+          {ALL_GROUPS.map((group) => (
+            <div key={`${group.language}-${group.label}`}>
+              {/* Group label with optional CN badge */}
+              <div style={{
+                fontSize: '0.625rem',
+                fontWeight: 600,
+                letterSpacing: '0.09em',
+                textTransform: 'uppercase',
+                color: 'var(--ink-faint)',
+                marginBottom: '0.375rem',
                 display: 'flex',
                 alignItems: 'center',
-                padding: '0.5rem 0.875rem',
-                borderBottom: (enabled.rss_feeds ?? true) ? '1px solid var(--border-soft)' : 'none',
-                transition: 'background 120ms',
-                gap: '0.5rem',
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--canvas)' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)' }}
-            >
-              <div className="sensor-row-left" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flex: 1, minWidth: 0 }}>
-                <Toggle on={enabled.rss_feeds ?? true} onClick={() => toggle('rss_feeds')} />
-                <div style={{
-                  fontSize: '0.8125rem',
-                  fontWeight: 500,
-                  color: (enabled.rss_feeds ?? true) ? 'var(--ink)' : 'var(--ink-faint)',
-                }}>
-                  RSS Feeds
-                </div>
+              }}>
+                {group.label}
+                <LanguageBadge language={group.language} />
               </div>
-              <div className="sensor-row-right" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
-                {(enabled.rss_feeds ?? true) && (
-                  <>
-                    <PillInput
-                      label="Items"
-                      value={sensorLimits['rss_feeds'] ?? defaultLimit}
-                      min={1}
-                      max={200}
-                      onChange={(v) => updateSensorLimit('rss_feeds', v)}
-                    />
-                    <PillInput
-                      label="Lookback"
-                      value={sensorLookback['rss_feeds'] ?? SENSOR_LOOKBACK_SUPPORT['rss_feeds']}
-                      min={1}
-                      max={336}
-                      suffix="h"
-                      onChange={(v) => updateSensorLookback('rss_feeds', v)}
-                    />
-                  </>
-                )}
-                <Badge status={getBadge('rss_feeds')} />
+
+              {/* Sensor cards in this group */}
+              <div style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: 6,
+                overflow: 'hidden',
+                boxShadow: 'var(--shadow-card)',
+                transition: 'box-shadow 200ms, border-color 200ms',
+              }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-card-hover)'
+                  ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-card)'
+                  ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'
+                }}
+              >
+                {group.sensors.filter(s => !HIDDEN_SENSORS.has(s.key)).map(({ key, label, desc }, i, arr) => {
+                  const isLast = i === arr.length - 1
+                  const isX = key === 'x'
+                  const isBluesky = key === 'bluesky'
+                  const isMastodon = key === 'mastodon'
+                  const isRssFeeds = key === 'rss_feeds'
+                  const isOn = enabled[key] ?? true
+                  const hasLookback = key in SENSOR_LOOKBACK_SUPPORT
+                  const hasPlatformSubConfig = (isX || isBluesky || isMastodon || isRssFeeds) && isOn
+
+                  return (
+                    <div key={key}>
+                      {/* Sensor row — toggle, label, inline pills, badge */}
+                      <div
+                        className="sensor-row"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '0.5rem 0.875rem',
+                          borderBottom: hasPlatformSubConfig || !isLast ? '1px solid var(--border-soft)' : 'none',
+                          transition: 'background 120ms',
+                          gap: '0.5rem',
+                        }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--canvas)' }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)' }}
+                      >
+                        {/* Left: toggle + label */}
+                        <div className="sensor-row-left" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flex: 1, minWidth: 0 }}>
+                          <Toggle on={isOn} onClick={() => toggle(key)} />
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{
+                              fontSize: '0.8125rem',
+                              fontWeight: 500,
+                              color: isOn ? 'var(--ink)' : 'var(--ink-faint)',
+                            }}>
+                              {label}
+                            </div>
+                            <div style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>
+                              {desc}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right: inline pill controls + badge */}
+                        <div className="sensor-row-right" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
+                          {isOn && (
+                            <PillInput
+                              label={t('sources.items')}
+                              value={sensorLimits[key] ?? defaultLimit}
+                              min={1}
+                              max={200}
+                              onChange={(v) => updateSensorLimit(key, v)}
+                            />
+                          )}
+                          {isOn && hasLookback && (
+                            <PillInput
+                              label={t('sources.lookback')}
+                              value={sensorLookback[key] ?? SENSOR_LOOKBACK_SUPPORT[key]}
+                              min={1}
+                              max={336}
+                              suffix="h"
+                              onChange={(v) => updateSensorLookback(key, v)}
+                            />
+                          )}
+                          <Badge status={getBadge(key)} />
+                        </div>
+                      </div>
+
+                      {/* X sub-config */}
+                      {isX && isOn && (
+                        <div style={{
+                          padding: '0.625rem 0.875rem',
+                          background: 'var(--canvas)',
+                          borderBottom: isLast ? 'none' : '1px solid var(--border-soft)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.625rem',
+                        }}>
+                          <div>
+                            <div style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: 'var(--ink)' }} />
+                              {t('sources.scraper')}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--ink)' }}>{t('sources.twitter_scraper')}</span>
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: 'var(--ink)' }} />
+                              {t('sources.accounts')}
+                            </div>
+                            <TagInput
+                              tags={socialAccountsX}
+                              onChange={(tags) => { setSocialAccountsX(tags.map(normalizeXHandle)); trigger() }}
+                              placeholder="@handle — press Enter"
+                              validate={validateXHandle}
+                              disabledTags={disabledAccounts}
+                              onToggleDisabled={toggleAccountDisabled}
+                              onEnableAll={() => enableAllAccounts(socialAccountsX)}
+                              onDisableAll={() => disableAllAccounts(socialAccountsX)}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Bluesky sub-config */}
+                      {isBluesky && isOn && (
+                        <div style={{
+                          padding: '0.625rem 0.875rem',
+                          background: 'var(--canvas)',
+                          borderBottom: isLast ? 'none' : '1px solid var(--border-soft)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.625rem',
+                        }}>
+                          <div>
+                            <div style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: 'var(--brand-bluesky)' }} />
+                              {t('sources.accounts')}
+                            </div>
+                            <TagInput
+                              tags={socialAccountsBluesky}
+                              onChange={(tags) => { setSocialAccountsBluesky(tags); trigger() }}
+                              placeholder="name.bsky.social — press Enter"
+                              validate={validateBlueskyHandle}
+                              disabledTags={disabledAccounts}
+                              onToggleDisabled={toggleAccountDisabled}
+                              onEnableAll={() => enableAllAccounts(socialAccountsBluesky)}
+                              onDisableAll={() => disableAllAccounts(socialAccountsBluesky)}
+                            />
+                            <label style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.375rem',
+                              marginTop: '0.375rem',
+                              cursor: hasBlueskyCredentials ? 'pointer' : 'not-allowed',
+                              opacity: hasBlueskyCredentials ? 1 : 0.4,
+                            }}>
+                              <input
+                                type="checkbox"
+                                checked={followingBluesky}
+                                disabled={!hasBlueskyCredentials}
+                                onChange={(e) => { setFollowingBluesky(e.target.checked); trigger() }}
+                                style={{ accentColor: 'var(--brand-bluesky)', cursor: 'inherit' }}
+                              />
+                              <span style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>
+                                {t('sources.include_following')}
+                              </span>
+                            </label>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Mastodon sub-config */}
+                      {isMastodon && isOn && (
+                        <div style={{
+                          padding: '0.625rem 0.875rem',
+                          background: 'var(--canvas)',
+                          borderBottom: isLast ? 'none' : '1px solid var(--border-soft)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.625rem',
+                        }}>
+                          <div>
+                            <div style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: 'var(--brand-mastodon)' }} />
+                              {t('sources.accounts')}
+                            </div>
+                            <TagInput
+                              tags={socialAccountsMastodon}
+                              onChange={(tags) => { setSocialAccountsMastodon(tags.map(normalizeMastodonHandle)); trigger() }}
+                              placeholder="@user@mastodon.social — press Enter"
+                              validate={validateMastodonHandle}
+                              disabledTags={disabledAccounts}
+                              onToggleDisabled={toggleAccountDisabled}
+                              onEnableAll={() => enableAllAccounts(socialAccountsMastodon)}
+                              onDisableAll={() => disableAllAccounts(socialAccountsMastodon)}
+                            />
+                            <label style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.375rem',
+                              marginTop: '0.375rem',
+                              cursor: hasMastodonCredentials ? 'pointer' : 'not-allowed',
+                              opacity: hasMastodonCredentials ? 1 : 0.4,
+                            }}>
+                              <input
+                                type="checkbox"
+                                checked={followingMastodon}
+                                disabled={!hasMastodonCredentials}
+                                onChange={(e) => { setFollowingMastodon(e.target.checked); trigger() }}
+                                style={{ accentColor: 'var(--brand-mastodon)', cursor: 'inherit' }}
+                              />
+                              <span style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>
+                                {t('sources.include_following')}
+                              </span>
+                            </label>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Inline sub-config: RSS Feeds */}
+                      {isRssFeeds && isOn && (
+                        <div style={{
+                          padding: '0.625rem 0.875rem',
+                          background: 'var(--canvas)',
+                          borderBottom: isLast ? 'none' : '1px solid var(--border-soft)',
+                        }}>
+                          <div style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.25rem' }}>
+                            {t('sources.feed_urls')}
+                          </div>
+                          <TagInput
+                            tags={rssFeeds.map(f => f.url)}
+                            onChange={(tags) => {
+                              const currentUrls = rssFeeds.map(f => f.url)
+                              const added = tags.find((t) => !currentUrls.includes(t))
+                              if (!added) {
+                                setRssFeeds(prev => prev.filter(f => tags.includes(f.url)))
+                                trigger()
+                                return
+                              }
+                              setRssFeeds(prev => [...prev, { url: added, type: 'other' }])
+                              api.discoverRssFeed(added).then((result) => {
+                                if (result.type === 'discovered' && result.feedUrl) {
+                                  setRssFeeds((prev) => prev.map((f) => f.url === added ? { ...f, url: result.feedUrl! } : f))
+                                  showToast(`Feed discovered: ${result.feedTitle ?? result.feedUrl}`)
+                                } else if (result.type === 'not_found') {
+                                  setRssFeeds((prev) => prev.filter((f) => f.url !== added))
+                                  showToast('No RSS feed found at that URL')
+                                } else if (result.type === 'error') {
+                                  setRssFeeds((prev) => prev.filter((f) => f.url !== added))
+                                  showToast(`Feed discovery failed: ${result.message}`)
+                                }
+                                trigger()
+                              }).catch(() => {
+                                trigger()
+                              })
+                            }}
+                            placeholder="https://example.com/feed.xml — press Enter"
+                            validate={validateUrl}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+
               </div>
             </div>
+          ))}
 
-            {/* RSS feed list */}
-            {(enabled.rss_feeds ?? true) && (
-              <div style={{
-                padding: '0.625rem 0.875rem',
-                background: 'var(--canvas)',
-              }}>
-                <RssFeedList
-                  feeds={rssFeeds}
-                  onChange={(feeds) => { setRssFeeds(feeds); trigger() }}
-                  onAdd={handleRssAdd}
-                />
+          {/* Trend — dedicated section for Topics + Trends */}
+          {((enabled.bluesky ?? true) || (enabled.mastodon ?? true)) && (() => {
+            const topicsOn = (blueskyTopicsEnabled && (enabled.bluesky ?? true)) ||
+              (mastodonTopicsEnabled && (enabled.mastodon ?? true))
+            return (
+              <div>
+                <div style={{
+                  fontSize: '0.625rem',
+                  fontWeight: 600,
+                  letterSpacing: '0.09em',
+                  textTransform: 'uppercase',
+                  color: 'var(--ink-faint)',
+                  marginBottom: '0.375rem',
+                }}>
+                  {t('sources.trend')}
+                </div>
+                <div style={{
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 6,
+                  overflow: 'hidden',
+                  boxShadow: 'var(--shadow-card)',
+                  transition: 'box-shadow 200ms, border-color 200ms',
+                }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-card-hover)'
+                    ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-card)'
+                    ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'
+                  }}
+                >
+                  {/* Topics row */}
+                  <div>
+                    <div
+                      className="sensor-row"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '0.5rem 0.875rem',
+                        borderBottom: topicsOn ? '1px solid var(--border-soft)' : (enabled.mastodon ?? true) ? '1px solid var(--border-soft)' : 'none',
+                        transition: 'background 120ms',
+                        gap: '0.5rem',
+                      }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--canvas)' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)' }}
+                    >
+                      <div className="sensor-row-left" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flex: 1, minWidth: 0 }}>
+                        <Toggle on={topicsOn} onClick={() => {
+                          if (topicsOn) {
+                            setBlueskyTopicsEnabled(false)
+                            setMastodonTopicsEnabled(false)
+                          } else {
+                            if (enabled.bluesky ?? true) setBlueskyTopicsEnabled(true)
+                            if (enabled.mastodon ?? true) setMastodonTopicsEnabled(true)
+                          }
+                          trigger()
+                        }} />
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{
+                            fontSize: '0.8125rem',
+                            fontWeight: 500,
+                            color: topicsOn ? 'var(--ink)' : 'var(--ink-faint)',
+                          }}>
+                            {t('sources.topics')}
+                          </div>
+                          <div style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>
+                            {t('sources.topics_desc')}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="sensor-row-right" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
+                        {topicsOn && (enabled.bluesky ?? true) && (enabled.mastodon ?? true) && (
+                          <>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.1875rem', cursor: 'pointer' }}>
+                              <input type="checkbox" checked={blueskyTopicsEnabled}
+                                onChange={(e) => { setBlueskyTopicsEnabled(e.target.checked); trigger() }}
+                                style={{ accentColor: 'var(--brand-bluesky)' }} />
+                              <span style={{ fontSize: '0.625rem', color: 'var(--ink-muted)' }}>Bluesky</span>
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.1875rem', cursor: 'pointer' }}>
+                              <input type="checkbox" checked={mastodonTopicsEnabled}
+                                onChange={(e) => { setMastodonTopicsEnabled(e.target.checked); trigger() }}
+                                style={{ accentColor: 'var(--brand-mastodon)' }} />
+                              <span style={{ fontSize: '0.625rem', color: 'var(--ink-muted)' }}>Mastodon</span>
+                            </label>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    {/* Keywords sub-config */}
+                    {topicsOn && (
+                      <div style={{
+                        padding: '0.5rem 0.875rem',
+                        background: 'var(--canvas)',
+                        borderBottom: (enabled.mastodon ?? true) ? '1px solid var(--border-soft)' : 'none',
+                      }}>
+                        <TagInput
+                          tags={socialTopicsKeywords}
+                          onChange={(tags) => { setSocialTopicsKeywords(tags); trigger() }}
+                          placeholder="keyword or #hashtag — press Enter"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Trending row */}
+                  <div
+                    className="sensor-row"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '0.5rem 0.875rem',
+                      transition: 'background 120ms',
+                      gap: '0.5rem',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--canvas)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)' }}
+                  >
+                    <div className="sensor-row-left" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flex: 1, minWidth: 0 }}>
+                      <Toggle on={mastodonTrendsEnabled} onClick={() => { setMastodonTrendsEnabled(!mastodonTrendsEnabled); trigger() }} />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{
+                          fontSize: '0.8125rem',
+                          fontWeight: 500,
+                          color: mastodonTrendsEnabled ? 'var(--ink)' : 'var(--ink-faint)',
+                        }}>
+                          {t('sources.trending')}
+                        </div>
+                        <div style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>
+                          {t('sources.trending_desc')}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="sensor-row-right" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
+                      {mastodonTrendsEnabled && (
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.1875rem', cursor: (enabled.mastodon ?? true) ? 'pointer' : 'not-allowed', opacity: (enabled.mastodon ?? true) ? 1 : 0.4 }}>
+                          <input type="checkbox" checked={mastodonTrendsEnabled && (enabled.mastodon ?? true)}
+                            disabled={!(enabled.mastodon ?? true)}
+                            onChange={(e) => { setMastodonTrendsEnabled(e.target.checked); trigger() }}
+                            style={{ accentColor: 'var(--brand-mastodon)' }} />
+                          <span style={{ fontSize: '0.625rem', color: 'var(--ink-muted)' }}>Mastodon</span>
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
-          </FoldableSection>
-
+            )
+          })()}
         </div>
+
       </div>
     </div>
   )

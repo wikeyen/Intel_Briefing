@@ -55,7 +55,7 @@ const inputBase: React.CSSProperties = { ..._inputBase, width: '100%', fontFamil
 const GROUP_CARD_BASE: React.CSSProperties = {
   border: '1px solid var(--border)',
   borderRadius: 8,
-  padding: '1.5rem 1.75rem',
+  padding: '1.25rem 1.5rem',
   background: 'var(--surface)',
   boxShadow: 'var(--shadow-card)',
   transition: 'box-shadow 200ms ease, border-color 200ms ease',
@@ -127,7 +127,7 @@ export function ApiKeys() {
   if (!loaded) {
     return (
       <section id="api-keys">
-        <div className="page-header" style={{ paddingBottom: '1.5rem' }}>
+        <div className="page-header" style={{ paddingBottom: '1rem' }}>
           <h2 style={{
             fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink)',
             letterSpacing: '-0.01em',
@@ -146,7 +146,7 @@ export function ApiKeys() {
 
   return (
     <section id="api-keys">
-      <div className="page-header" style={{ paddingBottom: '1.5rem' }}>
+      <div className="page-header" style={{ paddingBottom: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{
             fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink)',
@@ -162,7 +162,7 @@ export function ApiKeys() {
         </p>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', paddingBottom: '4rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {KEY_GROUPS.map((group) => (
           <div
             key={group.title}
@@ -182,11 +182,11 @@ export function ApiKeys() {
               letterSpacing: '0.09em',
               textTransform: 'uppercase',
               color: 'var(--ink-faint)',
-              marginBottom: '1.5rem',
+              marginBottom: '1rem',
             }}>
               {t(group.title)}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {group.secrets.map(({ field, label, hint }) => (
                 <MaskedInput
                   key={field}

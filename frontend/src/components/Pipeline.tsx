@@ -38,7 +38,7 @@ const cardStyle: React.CSSProperties = {
   border: '1px solid var(--border)',
   borderRadius: 8,
   boxShadow: 'var(--shadow-card)',
-  padding: '1.5rem',
+  padding: '1.25rem 1.5rem',
   transition: 'box-shadow 200ms ease, border-color 200ms ease',
 }
 
@@ -143,7 +143,7 @@ export function Pipeline() {
   if (!loaded) {
     return (
       <section id="pipeline">
-        <div className="page-header" style={{ paddingBottom: '1.5rem' }}>
+        <div className="page-header" style={{ paddingBottom: '1rem' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ink)', marginBottom: '0.25rem' }}>
             {t('pipeline.title')}
           </h2>
@@ -159,7 +159,7 @@ export function Pipeline() {
   return (
     <section id="pipeline">
 
-      <div className="page-header" style={{ paddingBottom: '1.5rem' }}>
+      <div className="page-header" style={{ paddingBottom: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ink)', marginBottom: '0.25rem' }}>
             {t('pipeline.title')}
@@ -171,12 +171,12 @@ export function Pipeline() {
         </p>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '2.5rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
         {/* ── Schedule ── */}
         <div style={cardStyle}>
           <SubLabel>{t('pipeline.schedule')}</SubLabel>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '0.5rem' }}>
@@ -359,7 +359,7 @@ export function Pipeline() {
             borderRadius: 6,
             overflow: 'hidden',
           }}>
-            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-soft)' }}>
+            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-soft)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.875rem' }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--ok)', flexShrink: 0 }} />
                 <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
@@ -371,7 +371,7 @@ export function Pipeline() {
                 {t('pipeline.boost_desc')}
               </p>
             </div>
-            <div style={{ padding: '1.25rem 1.5rem' }}>
+            <div style={{ padding: '1rem 1.25rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.875rem' }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--err)', flexShrink: 0 }} />
                 <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
@@ -389,7 +389,7 @@ export function Pipeline() {
         {/* ── Output ── */}
         <div style={cardStyle}>
           <SubLabel>{t('pipeline.output')}</SubLabel>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
             <div>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.625rem' }}>

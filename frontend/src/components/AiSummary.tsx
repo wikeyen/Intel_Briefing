@@ -154,7 +154,7 @@ export function AiSummary() {
   if (!loaded) {
     return (
       <section id="ai-summary">
-        <div className="page-header" style={{ paddingBottom: '1.5rem' }}>
+        <div className="page-header" style={{ paddingBottom: '1rem' }}>
           <h2 style={{
             fontSize: '1.25rem',
             fontWeight: 600,
@@ -177,7 +177,7 @@ export function AiSummary() {
     <section id="ai-summary">
 
       {/* ── Page Header ─────────────────────────────────────── */}
-      <div className="page-header" style={{ paddingBottom: '1.5rem' }}>
+      <div className="page-header" style={{ paddingBottom: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{
             fontSize: '1.25rem',
@@ -195,7 +195,7 @@ export function AiSummary() {
         </p>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '4rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
         {/* ── Connection ─────────────────────────────────────── */}
         <div>
@@ -205,10 +205,10 @@ export function AiSummary() {
             border: '1px solid var(--border)',
             borderRadius: 8,
             boxShadow: 'var(--shadow-card)',
-            padding: '1.5rem',
+            padding: '1.25rem 1.5rem',
             display: 'flex',
             flexDirection: 'column',
-            gap: '1.25rem',
+            gap: '1rem',
           }}>
 
             {/* Provider + Model — side by side */}
@@ -435,10 +435,10 @@ export function AiSummary() {
               border: '1px solid var(--border)',
               borderRadius: 8,
               boxShadow: 'var(--shadow-card)',
-              padding: '1.5rem',
+              padding: '1.25rem 1.5rem',
               display: 'flex',
               flexDirection: 'column',
-              gap: '1.25rem',
+              gap: '1rem',
             }}>
 
               {/* Overall Prompt */}

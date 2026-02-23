@@ -1209,7 +1209,7 @@ export function Dashboard() {
   const hasSummary = summary && isStructuredOverall(summary.overall) && !!summary.overall.executive_summary
 
   return (
-    <div className="dashboard-root page-padding" style={{ maxWidth: 1024, margin: '0 auto', padding: '0 3rem' }}>
+    <div className="dashboard-root page-padding" style={{ maxWidth: 1024, margin: '0 auto', paddingLeft: '3rem', paddingRight: '3rem' }}>
       <style>{PULSE_CSS}</style>
 
       <AnimatePresence mode="wait">

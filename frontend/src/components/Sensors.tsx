@@ -344,7 +344,7 @@ export function Sensors() {
   if (!loaded) {
     return (
       <div>
-        <div className="page-header" style={{ paddingTop: '2.5rem', paddingBottom: '1.5rem' }}>
+        <div className="page-header" style={{ paddingBottom: '1.5rem' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.01em', marginBottom: '0.25rem' }}>
             Sources
           </h2>
@@ -367,7 +367,7 @@ export function Sensors() {
     <div>
       <style dangerouslySetInnerHTML={{ __html: HIDE_SPINNERS_CSS }} />
 
-      <div className="page-header" style={{ paddingTop: '2.5rem', paddingBottom: '1.5rem' }}>
+      <div className="page-header" style={{ paddingBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.01em', marginBottom: '0.25rem' }}>
             Sources

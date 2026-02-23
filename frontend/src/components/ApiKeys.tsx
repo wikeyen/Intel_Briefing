@@ -121,7 +121,7 @@ export function ApiKeys() {
 
   return (
     <section id="api-keys">
-      <div className="page-header" style={{ paddingTop: '2.5rem', paddingBottom: '1.5rem' }}>
+      <div className="page-header" style={{ paddingBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{
             fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink)',

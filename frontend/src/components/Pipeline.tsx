@@ -138,7 +138,7 @@ export function Pipeline() {
   return (
     <section id="pipeline">
 
-      <div className="page-header" style={{ paddingTop: '2.5rem', paddingBottom: '1.5rem' }}>
+      <div className="page-header" style={{ paddingBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ink)', marginBottom: '0.25rem' }}>
             Pipeline

@@ -105,18 +105,21 @@ Respond with ONLY JSON:
 
 const VALID_SENTIMENTS = new Set(['positive', 'negative', 'neutral', 'mixed'])
 
-/** Strip markdown code fences (```json ... ```) that LLMs sometimes add. */
-function stripCodeFences(text: string): string {
-  const fenced = text.match(/```(?:json)?\s*\n?([\s\S]*?)```/)
-  return fenced ? fenced[1].trim() : text.trim()
+/** Strip LLM reasoning blocks (<think>...</think>) and markdown code fences. */
+function stripLlmWrapper(text: string): string {
+  // Remove <think>...</think> blocks (Qwen, DeepSeek, etc.)
+  let cleaned = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
+  // Remove markdown code fences
+  const fenced = cleaned.match(/```(?:json)?\s*\n?([\s\S]*?)```/)
+  return fenced ? fenced[1].trim() : cleaned
 }
 
 /**
  * Robustly parse a JSON object from LLM output.
  * Tries: direct parse -> extract outermost braces -> jsonrepair.
  */
-function robustJsonParse(raw: string): Record<string, unknown> | null {
-  const cleaned = stripCodeFences(raw)
+export function robustJsonParse(raw: string): Record<string, unknown> | null {
+  const cleaned = stripLlmWrapper(raw)
 
   // 1. Direct parse
   try {
@@ -207,7 +210,10 @@ export async function analyzeTrendIntelligence(
     )
 
     const parsed = robustJsonParse(raw)
-    if (!parsed) return null
+    if (!parsed) {
+      console.error('[intelligence] trend: failed to parse LLM JSON. First 200 chars:', raw.slice(0, 200))
+      return null
+    }
 
     const topics: TrendTopic[] = Array.isArray(parsed.topics)
       ? parsed.topics
@@ -280,7 +286,10 @@ export async function analyzeTopicIntelligence(
     )
 
     const parsed = robustJsonParse(raw)
-    if (!parsed) return null
+    if (!parsed) {
+      console.error('[intelligence] topic: failed to parse LLM JSON. First 200 chars:', raw.slice(0, 200))
+      return null
+    }
 
     const topics: TopicSentimentEntry[] = Array.isArray(parsed.topics)
       ? parsed.topics
@@ -354,7 +363,10 @@ export async function analyzeAccountsIntelligence(
     )
 
     const parsed = robustJsonParse(raw)
-    if (!parsed) return null
+    if (!parsed) {
+      console.error('[intelligence] accounts: failed to parse LLM JSON. First 200 chars:', raw.slice(0, 200))
+      return null
+    }
 
     const accounts: AccountFocus[] = Array.isArray(parsed.accounts)
       ? parsed.accounts

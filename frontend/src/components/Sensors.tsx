@@ -1,7 +1,7 @@
 // ABOUTME: Sources page — sensor configuration grouped into 4 foldable sections.
 // ABOUTME: General, Social Accounts, Trend, and RSS with inline controls and i18n.
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { api } from '@/api/client'
 import { TagInput } from '@/components/TagInput'
 import { useTranslation } from '@/lib/i18n'
@@ -110,6 +110,18 @@ interface PillInputProps {
 }
 
 function PillInput({ label, value, min, max, suffix, onChange }: PillInputProps) {
+  const [draft, setDraft] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const commit = () => {
+    if (draft === null) return
+    const n = Number(draft)
+    if (!isNaN(n) && n >= min) {
+      onChange(Math.max(min, Math.min(max, n)))
+    }
+    setDraft(null)
+  }
+
   return (
     <label style={{
       display: 'inline-flex',
@@ -127,14 +139,14 @@ function PillInput({ label, value, min, max, suffix, onChange }: PillInputProps)
     }}>
       <span style={{ color: 'var(--ink-muted)', fontWeight: 500 }}>{label}</span>
       <input
+        ref={inputRef}
         type="number"
         min={min}
         max={max}
-        value={value}
-        onChange={(e) => {
-          const n = Number(e.target.value)
-          if (!isNaN(n)) onChange(Math.max(min, Math.min(max, n)))
-        }}
+        value={draft ?? value}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => { if (e.key === 'Enter') { commit(); inputRef.current?.blur() } }}
         style={{
           width: suffix ? 26 : 30,
           padding: 0,

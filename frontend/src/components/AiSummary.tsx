@@ -239,10 +239,10 @@ export function AiSummary() {
                     transform: 'translateY(-50%)',
                     pointerEvents: 'none',
                     color: 'var(--ink-faint)',
-                    fontSize: '0.875rem',
+                    fontSize: '1.25rem',
                     userSelect: 'none',
                   }}>
-                    ▾
+                    ▼
                   </span>
                 </div>
               </div>
@@ -462,12 +462,12 @@ export function AiSummary() {
                     {t('ai.per_sensor_prompts')}
                   </span>
                   <span style={{
-                    fontSize: '0.875rem',
+                    fontSize: '1.25rem',
                     color: 'var(--ink-muted)',
                     transition: 'transform 200ms',
                     transform: promptsExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
                   }}>
-                    ▾
+                    ▼
                   </span>
                 </button>
 
@@ -504,12 +504,12 @@ export function AiSummary() {
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                               <span style={{
-                                fontSize: '0.875rem',
+                                fontSize: '1.25rem',
                                 color: 'var(--ink-faint)',
                                 transition: 'transform 200ms',
                                 transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
                               }}>
-                                ▸
+                                ▶
                               </span>
                               <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>
                                 {sensor.label}

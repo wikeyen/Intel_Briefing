@@ -221,10 +221,10 @@ export function Pipeline() {
                     transform: 'translateY(-50%)',
                     pointerEvents: 'none',
                     color: 'var(--ink-faint)',
-                    fontSize: '0.875rem',
+                    fontSize: '1.25rem',
                     userSelect: 'none',
                   }}>
-                    ▾
+                    ▼
                   </span>
                 </div>
               </div>

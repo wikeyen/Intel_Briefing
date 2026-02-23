@@ -125,11 +125,11 @@ export function OpenRouterModelPicker({
           transform: `translateY(-50%) rotate(${open ? '180deg' : '0deg'})`,
           pointerEvents: 'none',
           color: 'var(--ink-faint)',
-          fontSize: '0.875rem',
+          fontSize: '1.25rem',
           transition: 'transform 150ms',
           userSelect: 'none',
         }}>
-          ▾
+          ▼
         </span>
       </div>
 

@@ -1052,7 +1052,103 @@ function DomainCardCompact({ domain, summary, onClick }: {
 // Widget: Trending & Momentum
 // ---------------------------------------------------------------------------
 
-function TrendingWidget({ report, summary }: { report: IntelReport; summary?: BriefingSummary | null }) {
+/** Collect all trend items from a report, grouped by source and sorted by velocity. */
+function collectTrendsBySource(report: IntelReport): Map<string, IntelItem[]> {
+  const bySource = new Map<string, IntelItem[]>()
+  for (const [cat, items] of Object.entries(report.items)) {
+    for (const item of items) {
+      if (displayCategoryOf(item, cat) === 'trend' && item.velocity) {
+        const list = bySource.get(item.source) ?? []
+        list.push(item)
+        bySource.set(item.source, list)
+      }
+    }
+  }
+  for (const list of bySource.values()) {
+    list.sort((a, b) => Math.abs(b.velocity?.changePercent ?? 0) - Math.abs(a.velocity?.changePercent ?? 0))
+  }
+  return bySource
+}
+
+/** Single trend row — reused in widget and detail panel. */
+function TrendRow({ item, rank, brief, isLast }: {
+  item: IntelItem; rank: number; brief?: string; isLast: boolean
+}) {
+  const { t } = useTranslation()
+  const v = item.velocity!
+  const pctStr = v.changePercent != null ? `${v.changePercent > 0 ? '+' : ''}${v.changePercent}%` : null
+  const pctColor = v.changePercent != null
+    ? v.changePercent > 0 ? 'var(--sent-pos-text)' : v.changePercent < 0 ? 'var(--sent-neg-text)' : 'var(--ink-tertiary)'
+    : 'var(--ink-tertiary)'
+  const displayTitle = item.source === 'github' ? item.title.split(' — ')[0] : item.title
+  const isRapid = v.hoursOnTrend != null && v.hoursOnTrend <= 6
+
+  return (
+    <a
+      key={item.id}
+      href={item.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '0.5rem',
+        textDecoration: 'none',
+        padding: '6px 1.25rem',
+        margin: '0 -1.25rem',
+        ...(!isLast ? { borderBottom: '1px solid var(--border-subtle)' } : {}),
+      }}
+    >
+      {/* Rank */}
+      <span style={{
+        fontFamily: MONO,
+        fontSize: '0.625rem',
+        fontWeight: 700,
+        color: rank <= 3 ? 'var(--accent)' : 'var(--ink-disabled)',
+        minWidth: '1rem',
+        flexShrink: 0,
+        marginTop: 2,
+      }}>
+        {rank}
+      </span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {displayTitle}
+        </div>
+        {brief && (
+          <div style={{ fontSize: '0.6875rem', color: 'var(--ink-tertiary)', lineHeight: 1.5, marginTop: 1 }}>
+            {brief}
+          </div>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 3, fontSize: '0.625rem', color: 'var(--ink-tertiary)' }}>
+          {item.heat && <span style={{ whiteSpace: 'nowrap' }}>{item.heat}</span>}
+          {v.hoursOnTrend != null && (
+            <span style={{
+              fontFamily: MONO,
+              fontWeight: 600,
+              padding: '1px 6px',
+              borderRadius: 4,
+              background: isRapid ? 'var(--cat-trend-bg)' : 'var(--surface-alt)',
+              color: isRapid ? 'var(--cat-trend)' : 'var(--ink-tertiary)',
+              whiteSpace: 'nowrap',
+            }}>
+              {isRapid ? t('dash.rapid') : t('dash.sustained')} &middot; {v.hoursOnTrend}h
+            </span>
+          )}
+        </div>
+      </div>
+      {pctStr && (
+        <span style={{ fontFamily: MONO, fontSize: '0.625rem', fontWeight: 700, color: pctColor, flexShrink: 0, marginTop: 2 }}>
+          {pctStr}
+        </span>
+      )}
+    </a>
+  )
+}
+
+function TrendingWidget({ report, summary, onViewAll }: {
+  report: IntelReport; summary?: BriefingSummary | null; onViewAll: () => void
+}) {
   const { t } = useTranslation()
   const briefMap = new Map<string, string>()
   if (summary) {
@@ -1063,113 +1159,193 @@ function TrendingWidget({ report, summary }: { report: IntelReport; summary?: Br
     }
   }
 
-  const trendItems: IntelItem[] = []
-  for (const [cat, items] of Object.entries(report.items)) {
-    for (const item of items) {
-      if (displayCategoryOf(item, cat) === 'trend' && item.velocity) trendItems.push(item)
-    }
-  }
+  const bySource = collectTrendsBySource(report)
+  if (bySource.size === 0) return null
 
-  trendItems.sort((a, b) => Math.abs(b.velocity?.changePercent ?? 0) - Math.abs(a.velocity?.changePercent ?? 0))
-
-  const top = trendItems.slice(0, 5)
-  if (top.length === 0) return null
+  const TOP_N = 3
 
   return (
     <DashCard>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
           <SectionLabel>{t('dash.trending')}</SectionLabel>
-          <Link href="/data" style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--accent)', textDecoration: 'none' }}>
+          <button
+            onClick={onViewAll}
+            style={{
+              fontSize: '0.6875rem', fontWeight: 500, color: 'var(--accent)',
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+            }}
+          >
             {t('dash.view_all')} &#8250;
-          </Link>
+          </button>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {top.map((item, idx) => {
-            const v = item.velocity!
-            const pctStr = v.changePercent != null ? `${v.changePercent > 0 ? '+' : ''}${v.changePercent}%` : null
-            const pctColor = v.changePercent != null
-              ? v.changePercent > 0 ? 'var(--sent-pos-text)' : v.changePercent < 0 ? 'var(--sent-neg-text)' : 'var(--ink-tertiary)'
-              : 'var(--ink-tertiary)'
-            const displayTitle = item.source === 'github' ? item.title.split(' — ')[0] : item.title
-            const brief = briefMap.get(item.url)
-            const isRapid = v.hoursOnTrend != null && v.hoursOnTrend <= 6
-
-            return (
-              <a
-                key={item.id}
-                href={item.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '0.5rem',
-                  textDecoration: 'none',
-                  padding: '8px 1.25rem',
-                  margin: '0 -1.25rem',
-                  ...(idx < top.length - 1 ? { borderBottom: '1px solid var(--border-subtle)' } : {}),
-                }}
-              >
-                {/* Rank */}
+        {[...bySource.entries()].map(([source, items], gIdx) => {
+          const top = items.slice(0, TOP_N)
+          return (
+            <div key={source} style={{ ...(gIdx > 0 ? { marginTop: '0.5rem' } : {}) }}>
+              {/* Source header */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '0.375rem',
+                padding: '0 0', marginBottom: '0.125rem',
+              }}>
                 <span style={{
-                  fontFamily: MONO,
-                  fontSize: '0.625rem',
-                  fontWeight: 700,
-                  color: idx < 3 ? 'var(--accent)' : 'var(--ink-disabled)',
-                  minWidth: '1rem',
-                  flexShrink: 0,
-                  marginTop: 2,
+                  fontFamily: MONO, fontSize: '0.5625rem', fontWeight: 700,
+                  padding: '2px 6px', borderRadius: 3,
+                  background: 'var(--surface-inset)', color: 'var(--ink-faint)',
+                  letterSpacing: '0.04em', textTransform: 'uppercase',
                 }}>
-                  {idx + 1}
+                  {SENSOR_LABELS[source] ?? source}
                 </span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {displayTitle}
-                  </div>
-                  {brief && (
-                    <div style={{ fontSize: '0.6875rem', color: 'var(--ink-tertiary)', lineHeight: 1.5, marginTop: 1 }}>
-                      {brief}
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 3, fontSize: '0.625rem', color: 'var(--ink-tertiary)' }}>
-                    <span style={{
-                      fontFamily: MONO,
-                      fontWeight: 500,
-                      padding: '1px 6px',
-                      borderRadius: 4,
-                      background: 'var(--surface-alt)',
-                      whiteSpace: 'nowrap',
-                    }}>
-                      {SENSOR_LABELS[item.source] ?? item.source}
-                    </span>
-                    {item.heat && <span style={{ whiteSpace: 'nowrap' }}>{item.heat}</span>}
-                    {v.hoursOnTrend != null && (
-                      <span style={{
-                        fontFamily: MONO,
-                        fontWeight: 600,
-                        padding: '1px 6px',
-                        borderRadius: 4,
-                        background: isRapid ? 'var(--cat-trend-bg)' : 'var(--surface-alt)',
-                        color: isRapid ? 'var(--cat-trend)' : 'var(--ink-tertiary)',
-                        whiteSpace: 'nowrap',
-                      }}>
-                        {isRapid ? t('dash.rapid') : t('dash.sustained')} &middot; {v.hoursOnTrend}h
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {pctStr && (
-                  <span style={{ fontFamily: MONO, fontSize: '0.625rem', fontWeight: 700, color: pctColor, flexShrink: 0, marginTop: 2 }}>
-                    {pctStr}
-                  </span>
-                )}
-              </a>
-            )
-          })}
-        </div>
+                <span style={{ fontSize: '0.5625rem', color: 'var(--ink-disabled)' }}>
+                  {items.length}
+                </span>
+              </div>
+              {top.map((item, idx) => (
+                <TrendRow
+                  key={item.id}
+                  item={item}
+                  rank={idx + 1}
+                  brief={briefMap.get(item.url)}
+                  isLast={idx === top.length - 1}
+                />
+              ))}
+            </div>
+          )
+        })}
       </div>
     </DashCard>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Trend Detail Panel — slide-out showing all trends grouped by source
+// ---------------------------------------------------------------------------
+
+function TrendDetailPanel({ report, summary, onClose }: {
+  report: IntelReport; summary?: BriefingSummary | null; onClose: () => void
+}) {
+  const { t } = useTranslation()
+  const briefMap = new Map<string, string>()
+  if (summary) {
+    for (const section of summary.sections) {
+      for (const item of section.items) {
+        if (item.brief && item.url) briefMap.set(item.url, item.brief)
+      }
+    }
+  }
+
+  const bySource = collectTrendsBySource(report)
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  // Prevent body scroll while panel is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [])
+
+  return (
+    <>
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 100,
+          background: 'rgba(0, 0, 0, 0.3)',
+          backdropFilter: 'blur(2px)',
+          WebkitBackdropFilter: 'blur(2px)',
+        }}
+      />
+      {/* Panel */}
+      <motion.div
+        initial={{ x: '100%' }}
+        animate={{ x: 0 }}
+        exit={{ x: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        onClick={e => e.stopPropagation()}
+        style={{
+          position: 'fixed', top: 0, right: 0, bottom: 0,
+          width: 560, maxWidth: '90vw',
+          background: 'var(--surface)',
+          borderLeft: '1px solid var(--border)',
+          boxShadow: 'var(--shadow-lg)',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          overscrollBehavior: 'contain',
+          zIndex: 101,
+          padding: '1.5rem',
+          display: 'flex', flexDirection: 'column', gap: '0.75rem',
+        }}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <SectionLabel color="var(--cat-trend)">{t('dash.trending')}</SectionLabel>
+          <button
+            onClick={onClose}
+            style={{
+              width: 28, height: 28, borderRadius: 6,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'var(--surface-inset)', color: 'var(--ink-tertiary)',
+              fontSize: '1rem', lineHeight: 1, border: 'none', cursor: 'pointer',
+              transition: 'background 150ms, color 150ms',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--border)'; e.currentTarget.style.color = 'var(--ink)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface-inset)'; e.currentTarget.style.color = 'var(--ink-tertiary)' }}
+          >
+            &times;
+          </button>
+        </div>
+
+        {/* Source groups */}
+        {[...bySource.entries()].map(([source, items], gIdx) => (
+          <div key={source}>
+            {gIdx > 0 && <div style={{ borderBottom: '1px solid var(--border)', margin: '0.25rem 0 0.5rem' }} />}
+            {/* Source header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '0.375rem',
+              marginBottom: '0.375rem',
+            }}>
+              <span style={{
+                fontFamily: MONO, fontSize: '0.5625rem', fontWeight: 700,
+                padding: '2px 6px', borderRadius: 3,
+                background: 'var(--surface-inset)', color: 'var(--ink-faint)',
+                letterSpacing: '0.04em', textTransform: 'uppercase',
+              }}>
+                {SENSOR_LABELS[source] ?? source}
+              </span>
+              <span style={{ fontSize: '0.5625rem', color: 'var(--ink-disabled)' }}>
+                {items.length} {items.length === 1 ? 'item' : 'items'}
+              </span>
+            </div>
+            {items.map((item, idx) => (
+              <TrendRow
+                key={item.id}
+                item={item}
+                rank={idx + 1}
+                brief={briefMap.get(item.url)}
+                isLast={idx === items.length - 1}
+              />
+            ))}
+          </div>
+        ))}
+
+        {/* Empty state */}
+        {bySource.size === 0 && (
+          <div style={{ padding: '2rem 0', textAlign: 'center', fontSize: '0.75rem', color: 'var(--ink-tertiary)' }}>
+            {t('dash.no_domain_data')}
+          </div>
+        )}
+      </motion.div>
+    </>
   )
 }
 
@@ -1855,6 +2031,7 @@ export function Dashboard() {
   const [summaryProgress, setSummaryProgress] = useState<SummaryProgress | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedDomain, setSelectedDomain] = useState<DomainDef | null>(null)
+  const [showTrendPanel, setShowTrendPanel] = useState(false)
 
   const [showUpdatedBanner, setShowUpdatedBanner] = useState(false)
   const lastPipelineCompletedAt = useRef<string | null>(null)
@@ -2046,7 +2223,7 @@ export function Dashboard() {
                   {report && (
                     <>
                       <StaggerChild index={12}>
-                        <TrendingWidget report={report} summary={summary} />
+                        <TrendingWidget report={report} summary={summary} onViewAll={() => setShowTrendPanel(true)} />
                       </StaggerChild>
                       <StaggerChild index={13}>
                         <CategoryDistributionWidget report={report} />
@@ -2060,7 +2237,7 @@ export function Dashboard() {
               )}
             </div>
 
-            {/* Detail panel overlay */}
+            {/* Detail panel overlays */}
             <AnimatePresence>
               {selectedDomain && summary && (
                 <DetailPanel
@@ -2068,6 +2245,13 @@ export function Dashboard() {
                   summary={summary}
                   report={report}
                   onClose={() => setSelectedDomain(null)}
+                />
+              )}
+              {showTrendPanel && report && (
+                <TrendDetailPanel
+                  report={report}
+                  summary={summary}
+                  onClose={() => setShowTrendPanel(false)}
                 />
               )}
             </AnimatePresence>

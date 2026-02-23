@@ -13,7 +13,7 @@ import { verifyLink } from '../utils/verifier'
 import { fetchContent } from '../utils/jina-reader'
 import { decodeItemEntities } from '../utils/decode-entities'
 import { suppressItems, boostItems } from './keyword-filter'
-import { writeReport } from './cache'
+import { readReport, writeReport } from './cache'
 import { SENSOR_CATEGORY_MAP } from '../sensors/taxonomy'
 import type { LlmConfig } from '../summary/llm'
 import { enrichSentiment } from './sentiment'
@@ -21,6 +21,8 @@ import { enrichSentiment } from './sentiment'
 export interface AssembleReportOptions {
   llmConfig?: LlmConfig | null
   signal?: AbortSignal
+  /** When set, merge results into the existing cached report instead of replacing it. */
+  sensorFilter?: string[]
 }
 
 /**
@@ -113,14 +115,31 @@ export async function assembleReport(
   await Promise.allSettled(postProcessTasks)
 
   const now = new Date()
-  const report = createReport({
+  const nowIso = now.toISOString().replace(/\.\d+Z$/, 'Z')
+
+  // Build per-sensor fetch timestamps for sensors in this run
+  const fetchedAt: Record<string, string> = {}
+  for (const name of sourcesOk) fetchedAt[name] = nowIso
+
+  const newReport = createReport({
     date: now.toISOString().slice(0, 10),
-    fetched_at: now.toISOString().replace(/\.\d+Z$/, 'Z'),
+    fetched_at: nowIso,
     stale: false,
     sources_ok: sourcesOk.sort(),
     sources_failed: sourcesFailed.sort(),
     items: dedupedSections as Record<CategoryKey, IntelItem[]>,
+    sources_fetched_at: fetchedAt,
   })
+
+  // Partial run: merge new results into the existing cached report
+  const sensorFilter = opts?.sensorFilter
+  let report = newReport
+  if (sensorFilter?.length) {
+    const existing = await readReport().catch(() => null)
+    if (existing) {
+      report = mergePartialReport(existing, newReport, sensorFilter)
+    }
+  }
 
   // Write to cache
   try {
@@ -130,4 +149,47 @@ export async function assembleReport(
   }
 
   return report
+}
+
+/**
+ * Merge a partial pipeline run into an existing report.
+ * Keeps items from sensors NOT in the run, replaces items from sensors that ARE in the run.
+ */
+function mergePartialReport(
+  existing: IntelReport,
+  partial: IntelReport,
+  sensorsInRun: string[],
+): IntelReport {
+  const runSet = new Set(sensorsInRun)
+
+  // Merge items: keep existing items from sensors NOT in this run
+  const merged = emptyItemsMap()
+  for (const key of Object.keys(existing.items) as CategoryKey[]) {
+    const kept = (existing.items[key] ?? []).filter(item => !runSet.has(item.source))
+    merged[key] = kept
+  }
+  // Add all items from the new partial report
+  for (const key of Object.keys(partial.items) as CategoryKey[]) {
+    merged[key].push(...(partial.items[key] ?? []))
+  }
+
+  // Merge sources_ok / sources_failed: remove run sensors from existing lists, add new ones
+  const existingOk = existing.sources_ok.filter(s => !runSet.has(s))
+  const existingFailed = existing.sources_failed.filter(s => !runSet.has(s))
+
+  // Merge sources_fetched_at: keep existing timestamps, overlay new ones
+  const mergedFetchedAt: Record<string, string> = {
+    ...(existing.sources_fetched_at ?? {}),
+    ...(partial.sources_fetched_at ?? {}),
+  }
+
+  return createReport({
+    date: partial.date,
+    fetched_at: partial.fetched_at,
+    stale: false,
+    sources_ok: [...existingOk, ...partial.sources_ok].sort(),
+    sources_failed: [...existingFailed, ...partial.sources_failed].sort(),
+    items: merged,
+    sources_fetched_at: mergedFetchedAt,
+  })
 }

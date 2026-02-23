@@ -35,7 +35,6 @@ describe('SensorCard', () => {
   it('shows item count for healthy sensor', () => {
     render(<SensorCard {...buildProps()} />)
     expect(screen.getByText('15')).toBeInTheDocument()
-    expect(screen.getByText('items')).toBeInTheDocument()
   })
 
   it('shows last fetch time for healthy sensor', () => {

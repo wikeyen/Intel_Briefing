@@ -24,6 +24,8 @@ export interface SensorGridProps {
   onSkipSensor?: (sensor: string) => void
   dismissed: Set<string>
   onDismiss: (sensor: string) => void
+  /** Sensors whose automatic retries are exhausted — show manual Retry button. */
+  autoRetryExhausted?: Set<string>
 }
 
 function countItemsBySensor(report: IntelReport | null): Record<string, number> {
@@ -57,12 +59,22 @@ const toolbarLinkStyle: React.CSSProperties = {
 export function SensorGrid({
   isRunning, isPaused, liveSensors, report, config, pipelineStatus,
   retryAttempt, selected, onToggleSelect, onSelectAll, onSelectNone,
-  onRetry, onSkipSensor, dismissed, onDismiss,
+  onRetry, onSkipSensor, dismissed, onDismiss, autoRetryExhausted,
 }: SensorGridProps) {
   const sensorCounts = useMemo(() => countItemsBySensor(report), [report])
 
+  // Set of sensor names actively tracked in the current pipeline run
+  const pipelineSensorSet = useMemo(() => {
+    if (!pipelineStatus?.sensors) return new Set<string>()
+    return new Set(pipelineStatus.sensors.map(s => s.name))
+  }, [pipelineStatus])
+
+  // The most recent fetched_at timestamp — sensors matching this are "fresh"
+  const latestFetchedAt = report?.fetched_at ?? ''
+
   /* Flat list of all sensors, ordered by category (SECTION_SENSORS preserves grouping) */
   const allSensors = useMemo(() => {
+    const perSensorTs = report?.sources_fetched_at ?? {}
     return SECTION_SENSORS.flatMap(section =>
       section.sensors.map(sensorKey => {
         const label = SENSOR_LABEL_MAP[sensorKey] ?? sensorKey
@@ -73,6 +85,7 @@ export function SensorGrid({
         const isConfigErr = isFailed && lastSp?.fetch_error_kind === 'config'
         const isApiErr = isFailed && lastSp?.fetch_error_kind === 'api'
         const count = sensorCounts[sensorKey] ?? 0
+        const sensorFetchedAt = perSensorTs[sensorKey]
 
         return {
           sensorKey,
@@ -86,11 +99,12 @@ export function SensorGrid({
           fetchError: lastSp?.fetch_error ?? undefined,
           summaryError: lastSp?.summary_error ?? undefined,
           itemCount: count,
-          lastFetchAgo: report?.fetched_at ? timeAgo(report.fetched_at) : undefined,
+          lastFetchAgo: sensorFetchedAt ? timeAgo(sensorFetchedAt) : (report?.fetched_at ? timeAgo(report.fetched_at) : undefined),
+          isFreshFetch: sensorFetchedAt === latestFetchedAt,
         }
       }),
     )
-  }, [report, config, pipelineStatus, sensorCounts])
+  }, [report, config, pipelineStatus, sensorCounts, latestFetchedAt])
 
   const visibleSensors = allSensors.filter(s => !dismissed.has(s.sensorKey))
   const selectedCount = selected.size
@@ -137,7 +151,7 @@ export function SensorGrid({
             </div>
           )}
           <div style={{ marginLeft: 'auto', display: 'flex', gap: '1.5rem' }}>
-            <span style={headerLabelStyle}>Items</span>
+            <span style={headerLabelStyle}>#</span>
             <span style={headerLabelStyle}>Last Fetch</span>
           </div>
         </div>
@@ -156,6 +170,7 @@ export function SensorGrid({
               liveSensor={live}
               itemCount={sensor.itemCount}
               lastFetchAgo={sensor.lastFetchAgo}
+              isFreshFetch={sensor.isFreshFetch}
               isOk={sensor.isOk}
               isFailed={sensor.isFailed}
               isDisabled={sensor.isDisabled}
@@ -165,8 +180,9 @@ export function SensorGrid({
               summaryError={sensor.summaryError ?? live?.summary_error ?? undefined}
               isSelected={selected.has(sensor.sensorKey)}
               isRetrying={liveRetrying}
+              isSkipped={isRunning && !live && !sensor.isDisabled && !pipelineSensorSet.has(sensor.sensorKey)}
               onToggleSelect={() => onToggleSelect(sensor.sensorKey)}
-              onRetry={(sensor.isFailed || liveFailed) && onRetry ? () => onRetry(sensor.sensorKey) : undefined}
+              onRetry={(sensor.isFailed || liveFailed) && onRetry && (isPaused || autoRetryExhausted?.has(sensor.sensorKey)) ? () => onRetry(sensor.sensorKey) : undefined}
               onSkip={isPaused && onSkipSensor ? () => onSkipSensor(sensor.sensorKey) : undefined}
               onDismiss={sensor.isFailed && !isPaused ? () => onDismiss(sensor.sensorKey) : undefined}
             />

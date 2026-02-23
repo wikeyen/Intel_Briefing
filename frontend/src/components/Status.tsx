@@ -274,8 +274,7 @@ export function Status() {
     <section id="status" className="status-page" style={{
       display: 'flex',
       flexDirection: 'column',
-      height: '100%',
-      overflow: 'hidden',
+      minHeight: '100%',
     }}>
       <style dangerouslySetInnerHTML={{ __html: CONTROL_BAR_CSS }} />
 

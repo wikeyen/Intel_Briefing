@@ -103,7 +103,7 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
         width: 14,
         height: 14,
         borderRadius: '50%',
-        background: on ? '#FFFFFF' : 'var(--ink-faint)',
+        background: on ? 'var(--surface)' : 'var(--ink-faint)',
         transition: 'left 150ms, background 150ms',
         boxShadow: on ? 'var(--shadow-sm)' : 'none',
       }} />
@@ -568,7 +568,7 @@ export function Sensors() {
                         }}>
                           <div>
                             <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                              <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#0085FF' }} />
+                              <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--brand-bluesky)' }} />
                               Accounts
                             </div>
                             <TagInput
@@ -594,7 +594,7 @@ export function Sensors() {
                                 checked={followingBluesky}
                                 disabled={!hasBlueskyCredentials}
                                 onChange={(e) => { setFollowingBluesky(e.target.checked); trigger() }}
-                                style={{ accentColor: '#0085FF', cursor: 'inherit' }}
+                                style={{ accentColor: 'var(--brand-bluesky)', cursor: 'inherit' }}
                               />
                               <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
                                 Include accounts I follow
@@ -617,7 +617,7 @@ export function Sensors() {
                         }}>
                           <div>
                             <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                              <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#6364FF' }} />
+                              <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--brand-mastodon)' }} />
                               Accounts
                             </div>
                             <TagInput
@@ -643,7 +643,7 @@ export function Sensors() {
                                 checked={followingMastodon}
                                 disabled={!hasMastodonCredentials}
                                 onChange={(e) => { setFollowingMastodon(e.target.checked); trigger() }}
-                                style={{ accentColor: '#6364FF', cursor: 'inherit' }}
+                                style={{ accentColor: 'var(--brand-mastodon)', cursor: 'inherit' }}
                               />
                               <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
                                 Include accounts I follow
@@ -723,8 +723,8 @@ export function Sensors() {
                           <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: 'pointer' }}>
                             <input type="checkbox" checked={blueskyTopicsEnabled}
                               onChange={(e) => { setBlueskyTopicsEnabled(e.target.checked); trigger() }}
-                              style={{ accentColor: '#0085FF' }} />
-                            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#0085FF' }} />
+                              style={{ accentColor: 'var(--brand-bluesky)' }} />
+                            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--brand-bluesky)' }} />
                             <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Bluesky</span>
                           </label>
                         )}
@@ -732,8 +732,8 @@ export function Sensors() {
                           <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: 'pointer' }}>
                             <input type="checkbox" checked={mastodonTopicsEnabled}
                               onChange={(e) => { setMastodonTopicsEnabled(e.target.checked); trigger() }}
-                              style={{ accentColor: '#6364FF' }} />
-                            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#6364FF' }} />
+                              style={{ accentColor: 'var(--brand-mastodon)' }} />
+                            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--brand-mastodon)' }} />
                             <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Mastodon</span>
                           </label>
                         )}
@@ -761,8 +761,8 @@ export function Sensors() {
                           <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: 'pointer' }}>
                             <input type="checkbox" checked={mastodonTrendsEnabled}
                               onChange={(e) => { setMastodonTrendsEnabled(e.target.checked); trigger() }}
-                              style={{ accentColor: '#6364FF' }} />
-                            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#6364FF' }} />
+                              style={{ accentColor: 'var(--brand-mastodon)' }} />
+                            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--brand-mastodon)' }} />
                             <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Mastodon</span>
                           </label>
                         </div>

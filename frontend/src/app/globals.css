@@ -51,6 +51,18 @@
   --sb-tertiary:     #5A5A53;
   --sb-accent:       #5CC4B4;
 
+  /* Platform brands — consistent cross-component tokens */
+  --brand-bluesky:     #0085FF;
+  --brand-bluesky-bg:  rgba(0, 133, 255, 0.08);
+  --brand-mastodon:    #6364FF;
+  --brand-mastodon-bg: rgba(99, 100, 255, 0.08);
+  --brand-rss:         #E97B20;
+  --brand-rss-bg:      rgba(233, 123, 32, 0.08);
+
+  /* Subsection accents — analysis sub-headings */
+  --accent-controversy: #D97706;
+  --accent-opinion:     #7C3AED;
+
   /* Category spectrum — teal-anchored palette */
   --cat-research:      #1A7A6D;
   --cat-news:          #2E7D9A;
@@ -202,6 +214,18 @@
     --sb-secondary:    #A8A69F;
     --sb-tertiary:     #5A5A53;
     --sb-accent:       #5CC4B4;
+
+    /* Platform brands — same across themes (brand colors) */
+    --brand-bluesky:     #0085FF;
+    --brand-bluesky-bg:  rgba(0, 133, 255, 0.12);
+    --brand-mastodon:    #8B8CFF;
+    --brand-mastodon-bg: rgba(139, 140, 255, 0.12);
+    --brand-rss:         #F09A4A;
+    --brand-rss-bg:      rgba(240, 154, 74, 0.12);
+
+    /* Subsection accents — brightened for dark bg */
+    --accent-controversy: #F59E0B;
+    --accent-opinion:     #A78BFA;
 
     /* Category spectrum — brightened for dark bg */
     --cat-research:      #5CC4B4;
@@ -369,23 +393,23 @@ input[type="range"]::-webkit-slider-thumb {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: var(--ink);
+  background: var(--accent);
   border: 2px solid var(--surface);
-  box-shadow: 0 0 0 1.5px var(--border);
+  box-shadow: 0 0 0 1.5px var(--accent-muted);
   transition: background 120ms ease, transform 120ms ease;
 }
 input[type="range"]::-webkit-slider-thumb:hover {
-  background: var(--accent);
-  box-shadow: 0 0 0 1.5px var(--accent-dim);
+  background: var(--accent-hover);
+  box-shadow: 0 0 0 1.5px var(--accent);
   transform: scale(1.1);
 }
 input[type="range"]::-moz-range-thumb {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: var(--ink);
+  background: var(--accent);
   border: 2px solid var(--surface);
-  box-shadow: 0 0 0 1.5px var(--border);
+  box-shadow: 0 0 0 1.5px var(--accent-muted);
   cursor: pointer;
 }
 

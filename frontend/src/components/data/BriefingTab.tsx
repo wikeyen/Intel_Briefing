@@ -923,8 +923,8 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
 
                 const PLATFORM_COLORS: Record<string, string> = {
                   x: 'var(--ink)',
-                  bluesky: '#0085FF',
-                  mastodon: '#6364FF',
+                  bluesky: 'var(--brand-bluesky)',
+                  mastodon: 'var(--brand-mastodon)',
                 }
 
                 return (
@@ -983,19 +983,19 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                               {posPct > 0 && (
                                 <div
                                   title={`${counts.positive} positive (${posPct}%)`}
-                                  style={{ width: `${posPct}%`, background: '#22c55e', transition: 'width 300ms' }}
+                                  style={{ width: `${posPct}%`, background: 'var(--sent-pos)', transition: 'width 300ms' }}
                                 />
                               )}
                               {neuPct > 0 && (
                                 <div
                                   title={`${counts.neutral} neutral (${neuPct}%)`}
-                                  style={{ width: `${neuPct}%`, background: '#9ca3af', transition: 'width 300ms' }}
+                                  style={{ width: `${neuPct}%`, background: 'var(--sent-neu)', transition: 'width 300ms' }}
                                 />
                               )}
                               {negPct > 0 && (
                                 <div
                                   title={`${counts.negative} negative (${negPct}%)`}
-                                  style={{ width: `${negPct}%`, background: '#ef4444', transition: 'width 300ms' }}
+                                  style={{ width: `${negPct}%`, background: 'var(--sent-neg)', transition: 'width 300ms' }}
                                 />
                               )}
                             </div>
@@ -1006,9 +1006,9 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                               fontSize: '0.625rem',
                               color: 'var(--ink-faint)',
                             }}>
-                              <span><span style={{ color: '#22c55e' }}>{posPct}%</span> positive</span>
-                              <span><span style={{ color: '#9ca3af' }}>{neuPct}%</span> neutral</span>
-                              <span><span style={{ color: '#ef4444' }}>{negPct}%</span> negative</span>
+                              <span><span style={{ color: 'var(--sent-pos)' }}>{posPct}%</span> positive</span>
+                              <span><span style={{ color: 'var(--sent-neu)' }}>{neuPct}%</span> neutral</span>
+                              <span><span style={{ color: 'var(--sent-neg)' }}>{negPct}%</span> negative</span>
                             </div>
                           </div>
                         )
@@ -1022,10 +1022,10 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
               {summary.overall.sentiment && (summary.overall.sentiment.mood_summary || summary.overall.sentiment.controversies.length > 0 || summary.overall.sentiment.opinion_shifts.length > 0 || summary.overall.sentiment.risk_flags.length > 0) && (() => {
                 const s = summary.overall.sentiment
                 const moodConfig: Record<string, { dot: string; label: string }> = {
-                  bullish: { dot: '#22c55e', label: '偏多' },
-                  bearish: { dot: '#ef4444', label: '偏空' },
-                  mixed:   { dot: '#eab308', label: '多空分歧' },
-                  neutral: { dot: '#9ca3af', label: '中性' },
+                  bullish: { dot: 'var(--sent-bullish)', label: '偏多' },
+                  bearish: { dot: 'var(--sent-bearish)', label: '偏空' },
+                  mixed:   { dot: 'var(--sent-mixed)', label: '多空分歧' },
+                  neutral: { dot: 'var(--sent-neu)', label: '中性' },
                 }
                 const mood = moodConfig[s.overall_mood] ?? moodConfig.neutral
 
@@ -1092,9 +1092,9 @@ export function BriefingTabContent({ summary, summaryProgress, pipelineStatus, c
                         <Highlight text={s.mood_summary} query={q} />
                       </div>
                     )}
-                    {renderSubSection('#f59e0b', '争议焦点', s.controversies)}
-                    {renderSubSection('#8b5cf6', '舆论转向', s.opinion_shifts)}
-                    {renderSubSection('#ef4444', '风险信号', s.risk_flags)}
+                    {renderSubSection('var(--accent-controversy)', '争议焦点', s.controversies)}
+                    {renderSubSection('var(--accent-opinion)', '舆论转向', s.opinion_shifts)}
+                    {renderSubSection('var(--sent-neg)', '风险信号', s.risk_flags)}
                   </div>
                 )
               })()}

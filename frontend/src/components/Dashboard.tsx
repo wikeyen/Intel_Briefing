@@ -402,7 +402,7 @@ function StatusTicker({ report, summary, pipelineStatus, summaryProgress }: {
         <span style={{
           fontWeight: 600,
           background: 'var(--sent-neg)',
-          color: '#fff',
+          color: 'var(--surface)',
           borderRadius: 4,
           padding: '2px 6px',
           fontSize: '0.625rem',
@@ -718,7 +718,7 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
   }
 
   const PLATFORM_COLORS: Record<string, string> = {
-    x: 'var(--ink)', bluesky: '#0085FF', mastodon: '#6364FF',
+    x: 'var(--ink)', bluesky: 'var(--brand-bluesky)', mastodon: 'var(--brand-mastodon)',
   }
 
   const totalSocial = totalPos + totalNeu + totalNeg

@@ -21,9 +21,9 @@ export const LINE_CLAMP_CSS = `
 
 const PLATFORM_COLORS: Record<string, { color: string; bg: string }> = {
   x:        { color: 'var(--ink)', bg: 'var(--surface-alt)' },
-  bluesky:  { color: '#0085FF', bg: 'rgba(0,133,255,0.08)' },
-  mastodon: { color: '#6364FF', bg: 'rgba(99,100,255,0.08)' },
-  rss_feeds: { color: '#E97B20', bg: 'rgba(233,123,32,0.08)' },
+  bluesky:  { color: 'var(--brand-bluesky)', bg: 'var(--brand-bluesky-bg)' },
+  mastodon: { color: 'var(--brand-mastodon)', bg: 'var(--brand-mastodon-bg)' },
+  rss_feeds: { color: 'var(--brand-rss)', bg: 'var(--brand-rss-bg)' },
 }
 
 function SourceChip({ source, label }: { source: string; label?: string }) {
@@ -128,7 +128,7 @@ export function ItemCard({ item, index = 0, searchQuery }: { item: IntelItem; in
               width: 6,
               height: 6,
               borderRadius: '50%',
-              background: item.sentiment.label === 'positive' ? '#22c55e' : '#ef4444',
+              background: item.sentiment.label === 'positive' ? 'var(--sent-pos)' : 'var(--sent-neg)',
               flexShrink: 0,
             }}
           />
@@ -158,7 +158,7 @@ export function ItemCard({ item, index = 0, searchQuery }: { item: IntelItem; in
                 marginLeft: '0.25rem',
                 fontSize: '0.625rem',
                 fontWeight: 600,
-                color: item.velocity.changePercent > 0 ? '#22c55e' : item.velocity.changePercent < 0 ? '#ef4444' : 'var(--ink-faint)',
+                color: item.velocity.changePercent > 0 ? 'var(--ok)' : item.velocity.changePercent < 0 ? 'var(--err)' : 'var(--ink-faint)',
               }}>
                 {item.velocity.changePercent > 0 ? '+' : ''}{item.velocity.changePercent}%
               </span>
@@ -168,7 +168,7 @@ export function ItemCard({ item, index = 0, searchQuery }: { item: IntelItem; in
                 marginLeft: '0.25rem',
                 fontSize: '0.625rem',
                 fontWeight: 600,
-                color: '#eab308',
+                color: 'var(--warn)',
               }}>
                 NEW
               </span>
@@ -179,9 +179,9 @@ export function ItemCard({ item, index = 0, searchQuery }: { item: IntelItem; in
           <span style={{
             fontSize: '0.625rem',
             fontWeight: 600,
-            color: item.velocity.changePercent == null ? '#eab308'
-              : item.velocity.changePercent > 0 ? '#22c55e'
-              : item.velocity.changePercent < 0 ? '#ef4444'
+            color: item.velocity.changePercent == null ? 'var(--warn)'
+              : item.velocity.changePercent > 0 ? 'var(--ok)'
+              : item.velocity.changePercent < 0 ? 'var(--err)'
               : 'var(--ink-faint)',
           }}>
             {item.velocity.changePercent == null ? 'NEW' : `${item.velocity.changePercent > 0 ? '+' : ''}${item.velocity.changePercent}%`}

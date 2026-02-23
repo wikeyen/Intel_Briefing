@@ -1,7 +1,7 @@
 // ABOUTME: Dashboard home page — intelligence terminal organized by domain with AI-generated briefs.
 // ABOUTME: Premium data platform aesthetic using shadcn/ui, Tailwind, and Framer Motion animations.
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { api } from '@/api/client'
@@ -1136,8 +1136,33 @@ export function Dashboard() {
   const [summaryProgress, setSummaryProgress] = useState<SummaryProgress | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const [showUpdatedBanner, setShowUpdatedBanner] = useState(false)
   const lastPipelineCompletedAt = useRef<string | null>(null)
   const lastSummaryAt = useRef<string | null>(null)
+  const prevFetchedAtRef = useRef<string | null>(null)
+
+  // Write fetched_at to localStorage so the sidebar can detect unviewed data.
+  const markViewed = useCallback((fetchedAt: string) => {
+    try { localStorage.setItem('ib:dashboard:lastViewedFetch', fetchedAt) } catch {}
+  }, [])
+
+  // Track when displayed data changes — mark as viewed + show "updated" flash
+  useEffect(() => {
+    if (!report?.fetched_at) return
+    const prev = prevFetchedAtRef.current
+    prevFetchedAtRef.current = report.fetched_at
+    markViewed(report.fetched_at)
+    if (prev && prev !== report.fetched_at) {
+      setShowUpdatedBanner(true)
+    }
+  }, [report?.fetched_at, markViewed])
+
+  // Auto-dismiss the "updated" banner
+  useEffect(() => {
+    if (!showUpdatedBanner) return
+    const t = setTimeout(() => setShowUpdatedBanner(false), 4000)
+    return () => clearTimeout(t)
+  }, [showUpdatedBanner])
 
   // Initial data fetch
   useEffect(() => {
@@ -1211,6 +1236,35 @@ export function Dashboard() {
           </motion.div>
         ) : (
           <motion.div key="content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+            {/* "Briefing updated" flash — appears when data auto-refreshes */}
+            <AnimatePresence>
+              {showUpdatedBanner && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.3 }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    padding: '0.5rem 1rem',
+                    borderRadius: 10,
+                    background: 'var(--accent-subtle)',
+                    border: '1px solid var(--accent-muted)',
+                    marginBottom: 10,
+                    fontSize: '0.75rem',
+                    fontWeight: 500,
+                    color: 'var(--accent)',
+                  }}
+                >
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)' }} />
+                  Briefing updated
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Status Ticker — full width above the two-column layout */}
             <StaggerChild index={0}>
               <StatusTicker

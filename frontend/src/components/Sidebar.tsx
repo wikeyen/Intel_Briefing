@@ -92,6 +92,25 @@ export function Sidebar({ onNavigate }: Props) {
   const isJobRunning = !!(pipelineStatus?.running || summaryProgress?.running)
   const showBadge = hasErrors && !!runId && runId !== seenRun
 
+  // Track whether the dashboard has unviewed data.
+  // Dashboard writes its report.fetched_at to localStorage; we compare against health.last_fetch.
+  const [lastViewedFetch, setLastViewedFetch] = useState<string | null>(null)
+  const onDashboard = pathname === '/dashboard'
+
+  useEffect(() => {
+    try { setLastViewedFetch(localStorage.getItem('ib:dashboard:lastViewedFetch')) } catch {}
+  }, [])
+
+  // Re-read localStorage whenever health updates (every 30s) to catch Dashboard writes
+  useEffect(() => {
+    try { setLastViewedFetch(localStorage.getItem('ib:dashboard:lastViewedFetch')) } catch {}
+  }, [health?.last_fetch])
+
+  const hasNewBriefing = !onDashboard
+    && !!health?.last_fetch
+    && lastViewedFetch !== null
+    && health.last_fetch !== lastViewedFetch
+
   // Pipeline progress percentage for the mini bar
   const pipelinePct = (() => {
     if (!isJobRunning) return null
@@ -199,6 +218,17 @@ export function Sidebar({ onNavigate }: Props) {
         <SideLabel>Overview</SideLabel>
         <NavLink href="/dashboard" active={pathname === '/dashboard'} onClick={onNavigate}>
           Dashboard
+          {hasNewBriefing && (
+            <span style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: 'var(--sb-accent)',
+              marginLeft: 'auto',
+              flexShrink: 0,
+              animation: 'pulseDot 1.6s ease-in-out infinite',
+            }} />
+          )}
         </NavLink>
         <NavLink href="/status" active={pathname === '/status'} onClick={onNavigate}>
           Status

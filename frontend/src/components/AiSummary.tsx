@@ -421,9 +421,9 @@ export function AiSummary() {
 
                 {promptsExpanded && (
                   <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.75rem',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                    gap: '0.5rem',
                   }}>
                     {PROMPT_SENSORS.map((sensor) => {
                       const isCustom = !!sensorPrompts[sensor.key]

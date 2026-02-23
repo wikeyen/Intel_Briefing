@@ -125,80 +125,55 @@ export function PromptEditorModal({
 
   return (
     <>
-      {/* ── Read Mode ─────────────────────────────────────────── */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
-          <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
-            {label}
-          </label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            {isCustom && (
-              <span style={{
-                fontSize: '0.625rem',
-                fontWeight: 600,
-                letterSpacing: '0.05em',
-                textTransform: 'uppercase',
-                padding: '0.125rem 0.375rem',
-                borderRadius: 3,
-                color: 'var(--accent)',
-                background: 'var(--accent-wash)',
-                flexShrink: 0,
-              }}>
-                {customBadgeLabel}
-              </span>
-            )}
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={handleOpen}
-          style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '0.75rem',
-            width: '100%',
-            textAlign: 'left',
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: 6,
-            padding: '0.75rem 1rem',
-            cursor: 'pointer',
-            transition: 'border-color 120ms, box-shadow 120ms',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.borderColor = 'var(--accent-dim)'
-            e.currentTarget.style.boxShadow = 'var(--shadow-xs)'
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.borderColor = 'var(--border)'
-            e.currentTarget.style.boxShadow = 'none'
-          }}
-        >
-          <div style={{
-            flex: 1,
-            fontSize: '0.75rem',
-            lineHeight: 1.5,
-            color: value ? 'var(--ink)' : 'var(--ink-muted)',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-          }}>
-            {displayText}
-          </div>
+      {/* ── Read Mode — clickable card ────────────────────────── */}
+      <button
+        type="button"
+        onClick={handleOpen}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.625rem',
+          width: '100%',
+          textAlign: 'left',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          padding: '0.5rem 0.75rem',
+          cursor: 'pointer',
+          borderRadius: 6,
+          transition: 'border-color 120ms, box-shadow 120ms, transform 120ms',
+        }}
+        onMouseEnter={e => {
+          e.currentTarget.style.borderColor = 'var(--accent-dim)'
+          e.currentTarget.style.boxShadow = 'var(--shadow-xs)'
+          e.currentTarget.style.transform = 'translateY(-1px)'
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.borderColor = 'var(--border)'
+          e.currentTarget.style.boxShadow = 'none'
+          e.currentTarget.style.transform = 'none'
+        }}
+      >
+        {isCustom && (
           <span style={{
-            color: 'var(--ink-faint)',
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            background: 'var(--accent)',
             flexShrink: 0,
-            marginTop: 2,
-            transition: 'color 120ms',
-          }}>
-            <PencilIcon size={14} />
-          </span>
-        </button>
-        {helpText && (
-          <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, marginTop: '0.25rem' }}>
-            {helpText}
-          </p>
+          }} />
         )}
-      </div>
+        <span style={{
+          fontSize: '0.8125rem',
+          fontWeight: 500,
+          color: 'var(--ink)',
+          flex: 1,
+        }}>
+          {label}
+        </span>
+        <span style={{ color: 'var(--ink-faint)', flexShrink: 0, opacity: 0.5 }}>
+          <PencilIcon size={12} />
+        </span>
+      </button>
 
       {/* ── Modal Overlay ─────────────────────────────────────── */}
       {open && (

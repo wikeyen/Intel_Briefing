@@ -44,3 +44,11 @@ make test                          # frontend (vitest)
 
 - **Frontend**: `cd frontend && npx vitest run` — uses jsdom environment for component tests
 - Vitest config: `frontend/vitest.config.ts`
+
+## UI Verification
+
+All UI changes must be visually verified on both desktop and mobile viewports before merging. Use Playwright (via the MCP browser tools) to:
+
+1. **Desktop** — navigate to each affected page at default viewport (1280×800) and take a screenshot. Check for broken layouts, overlapping elements, or awkward spacing.
+2. **Mobile** — resize the browser to 390×844 (iPhone 14 equivalent) and repeat. Check that responsive styles work: no horizontal overflow, tap targets are usable, text is readable.
+3. If anything looks broken or awkward, fix it before merging.

@@ -2,7 +2,7 @@
 // ABOUTME: Includes collapsible prompt customization for per-sensor and overall summary prompts.
 'use client'
 import { useState, useEffect } from 'react'
-import { api, type SummaryLanguage } from '@/api/client'
+import { api } from '@/api/client'
 import { DEFAULT_SENSOR_PROMPTS, DEFAULT_OVERALL_PROMPT } from '@/lib/summary/prompts'
 
 import { useTranslation } from '@/lib/i18n'
@@ -54,7 +54,7 @@ function StatusBadge({ isCustom }: { isCustom: boolean }) {
 /* ─── Main Component ────────────────────────────────────────────────── */
 
 export function AiSummary() {
-  const { t } = useTranslation()
+  const { locale, t } = useTranslation()
   const showToast = useToast()
 
   const [summaryProvider, setSummaryProvider] = useState<'openrouter' | 'local' | null>(null)
@@ -69,7 +69,6 @@ export function AiSummary() {
   const [promptsExpanded, setPromptsExpanded] = useState(false)
   const [expandedSensor, setExpandedSensor] = useState<string | null>(null)
   const [localConcurrency, setLocalConcurrency] = useState(1)
-  const [summaryLanguage, setSummaryLanguage] = useState<SummaryLanguage>('zh')
   const [loaded, setLoaded] = useState(false)
 
   const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
@@ -83,7 +82,7 @@ export function AiSummary() {
       summary_attribution_model: attributionModel,
       summary_sensor_prompts: sensorPrompts,
       summary_overall_prompt: overallPrompt,
-      summary_language: summaryLanguage,
+      summary_language: locale,
       ...(summaryProvider === 'local' ? { local_summary_concurrency: localConcurrency } : {}),
     }),
     { onError: (e) => showToast('Save failed: ' + e.message) },
@@ -98,7 +97,6 @@ export function AiSummary() {
       setSensorPrompts(cfg.summary_sensor_prompts ?? {})
       setOverallPrompt(cfg.summary_overall_prompt ?? '')
       setLocalConcurrency(cfg.local_summary_concurrency ?? 1)
-      setSummaryLanguage(cfg.summary_language ?? 'zh')
       setLoaded(true)
     })
   }, [])
@@ -302,47 +300,6 @@ export function AiSummary() {
               </div>
             )}
 
-            {/* Summary Language */}
-            {isEnabled && (
-              <div>
-                <FieldLabel>{t('ai.summary_language')}</FieldLabel>
-                <div style={{ position: 'relative' }}>
-                  <select
-                    value={summaryLanguage}
-                    onChange={(e) => { setSummaryLanguage(e.target.value as SummaryLanguage); trigger() }}
-                    style={{
-                      ...inputBase,
-                      width: '100%',
-                      appearance: 'none',
-                      WebkitAppearance: 'none',
-                      paddingRight: '2.25rem',
-                      cursor: 'pointer',
-                    }}
-                    onFocus={focus}
-                    onBlur={blur}
-                  >
-                    <option value="zh">{t('ai.lang_zh')}</option>
-                    <option value="en">{t('ai.lang_en')}</option>
-                  </select>
-                  <span style={{
-                    position: 'absolute',
-                    right: '0.875rem',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    pointerEvents: 'none',
-                    color: 'var(--ink-faint)',
-                    fontSize: '0.625rem',
-                    userSelect: 'none',
-                  }}>
-                    ▾
-                  </span>
-                </div>
-                <HelpText>
-                  {t('ai.lang_desc')}
-                </HelpText>
-              </div>
-            )}
-
             {/* Base URL */}
             {isEnabled && (
               <div>
@@ -493,12 +450,14 @@ export function AiSummary() {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     width: '100%',
-                    padding: 0,
+                    padding: '0.5rem 0.75rem',
                     marginBottom: promptsExpanded ? '0.75rem' : 0,
-                    background: 'none',
-                    border: 'none',
+                    background: 'var(--surface-raised, var(--surface))',
+                    border: '1px solid var(--border)',
+                    borderRadius: 6,
                     cursor: 'pointer',
                     color: 'var(--ink)',
+                    transition: 'border-color 120ms',
                   }}
                 >
                   <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>
@@ -506,7 +465,7 @@ export function AiSummary() {
                   </span>
                   <span style={{
                     fontSize: '0.625rem',
-                    color: 'var(--ink-faint)',
+                    color: 'var(--ink-muted)',
                     transition: 'transform 200ms',
                     transform: promptsExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
                   }}>

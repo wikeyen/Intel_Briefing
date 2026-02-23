@@ -71,6 +71,8 @@ export interface IntelReport {
   sources_ok: string[]
   sources_failed: string[]
   items: Record<CategoryKey, IntelItem[]>
+  /** Per-sensor ISO timestamp of last successful fetch. */
+  sources_fetched_at?: Record<string, string>
 }
 
 export function createReport(

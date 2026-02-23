@@ -299,12 +299,12 @@ export async function runPipeline(
       if (signal.aborted) {
         const completed = [...resultMap.values()]
         if (completed.length > 0) {
-          report = await assembleReport(completed, config, { llmConfig, signal })
+          report = await assembleReport(completed, config, { llmConfig, signal, sensorFilter })
         }
         return { report, summary: null }
       }
 
-      report = await assembleReport([...resultMap.values()], config, { llmConfig, signal })
+      report = await assembleReport([...resultMap.values()], config, { llmConfig, signal, sensorFilter })
 
       // Mark failed sensors' summaries as skipped — they don't pass to the next stage
       if (shouldSummarize) {

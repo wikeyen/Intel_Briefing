@@ -315,8 +315,8 @@ function ThematicSectionsWidget({ summary }: { summary: BriefingSummary }) {
       <SectionLabel>Investment Themes</SectionLabel>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {sections.map((section, i) => (
-          <Card key={i} className="dashboard-card py-7 gap-3" style={{ borderRadius: 12 }}>
-            <CardContent className="px-6 py-1 flex flex-col gap-2">
+          <Card key={i} className="dashboard-card" style={{ borderRadius: 12 }}>
+            <CardContent className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <span className="font-semibold" style={{ fontSize: '0.8125rem', color: 'var(--ink)' }}>
                   {section.title}
@@ -373,8 +373,8 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
   const defaultTab = tabData.find(t => t.items.length > 0)?.key ?? 'risk'
 
   return (
-    <Card className="dashboard-card py-7 gap-4" style={{ borderRadius: 12 }}>
-      <CardContent className="px-6 py-1 flex flex-col gap-4">
+    <Card className="dashboard-card" style={{ borderRadius: 12 }}>
+      <CardContent className="flex flex-col gap-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <SectionLabel>Intelligence</SectionLabel>
@@ -572,8 +572,8 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
   }
 
   return (
-    <Card className="dashboard-card py-7 gap-4" style={{ borderRadius: 12 }}>
-      <CardContent className="px-6 py-1 flex flex-col gap-3">
+    <Card className="dashboard-card" style={{ borderRadius: 12 }}>
+      <CardContent className="flex flex-col gap-3">
         {/* Header: mood pill */}
         <div className="flex items-center justify-between">
           <SectionLabel>Sentiment</SectionLabel>
@@ -671,8 +671,8 @@ function CategoryDistributionWidget({ report }: { report: IntelReport }) {
   ]
 
   return (
-    <Card className="dashboard-card py-7 gap-4" style={{ borderRadius: 12 }}>
-      <CardContent className="px-6 py-1 flex flex-col gap-3">
+    <Card className="dashboard-card" style={{ borderRadius: 12 }}>
+      <CardContent className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <SectionLabel>Distribution</SectionLabel>
           <span className="font-mono" style={{ fontSize: '0.625rem', color: 'var(--ink-tertiary)' }}>{total} items</span>
@@ -726,8 +726,8 @@ function SourceHealthWidget({ report }: { report: IntelReport }) {
   const healthPct = Math.round((report.sources_ok.length / all.length) * 100)
 
   return (
-    <Card className="dashboard-card py-7 gap-4" style={{ borderRadius: 12 }}>
-      <CardContent className="px-6 py-1 flex flex-col gap-3">
+    <Card className="dashboard-card" style={{ borderRadius: 12 }}>
+      <CardContent className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <SectionLabel>Source Health</SectionLabel>
           <span className="font-mono font-semibold" style={{
@@ -799,8 +799,8 @@ function SensorDomainCard({ sectionLabel, accentColor, sensorNames, summary, rep
   }
 
   return (
-    <Card className="dashboard-card py-7 gap-4" style={{ borderRadius: 12 }}>
-      <CardContent className="px-6 py-1 flex flex-col gap-4">
+    <Card className="dashboard-card" style={{ borderRadius: 12 }}>
+      <CardContent className="flex flex-col gap-4">
         <SectionLabel style={{ color: accentColor }}>{sectionLabel}</SectionLabel>
 
         {moodSummary && (
@@ -974,8 +974,8 @@ function TrendingWidget({ report, summary }: { report: IntelReport; summary?: Br
   if (top.length === 0) return null
 
   return (
-    <Card className="dashboard-card py-7 gap-4" style={{ borderRadius: 12 }}>
-      <CardContent className="px-6 py-1 flex flex-col gap-0">
+    <Card className="dashboard-card" style={{ borderRadius: 12 }}>
+      <CardContent className="flex flex-col gap-0">
         <div className="flex items-center justify-between mb-2.5">
           <SectionLabel>Trending & Momentum</SectionLabel>
           <Link href="/data" className="font-medium no-underline hover:underline" style={{ fontSize: '0.75rem', color: 'var(--accent)' }}>
@@ -1099,7 +1099,7 @@ function DashboardSkeleton() {
           {/* Investment themes skeleton */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {[0, 1].map(i => (
-              <Card key={i} className="py-4" style={{ borderRadius: 12 }}><CardContent className="px-6 flex flex-col gap-2">
+              <Card key={i} className="dashboard-card" style={{ borderRadius: 12 }}><CardContent className="flex flex-col gap-2">
                 <div className="skeleton-shimmer" style={{ width: 120, height: 10 }} />
                 <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
                 <div className="skeleton-shimmer" style={{ width: '80%', height: 12 }} />
@@ -1108,7 +1108,7 @@ function DashboardSkeleton() {
           </div>
           {/* Domain cards skeleton */}
           {[0, 1, 2].map(i => (
-            <Card key={i} className="py-4" style={{ borderRadius: 12 }}><CardContent className="px-6 flex flex-col gap-2">
+            <Card key={i} className="dashboard-card" style={{ borderRadius: 12 }}><CardContent className="flex flex-col gap-2">
               <div className="skeleton-shimmer" style={{ width: 112, height: 10 }} />
               <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
               <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
@@ -1118,12 +1118,12 @@ function DashboardSkeleton() {
         </div>
         {/* Sidebar skeleton */}
         <div className="dashboard-sidebar flex flex-col" style={{ gap: '1.25rem' }}>
-          <Card className="py-4" style={{ borderRadius: 12 }}><CardContent className="px-6 flex flex-col gap-2">
+          <Card className="dashboard-card" style={{ borderRadius: 12 }}><CardContent className="flex flex-col gap-2">
             <div className="skeleton-shimmer" style={{ width: 64, height: 10 }} />
             <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
             <div className="skeleton-shimmer" style={{ width: '70%', height: 12 }} />
           </CardContent></Card>
-          <Card className="py-4" style={{ borderRadius: 12 }}><CardContent className="px-6 flex flex-col gap-2">
+          <Card className="dashboard-card" style={{ borderRadius: 12 }}><CardContent className="flex flex-col gap-2">
             <div className="skeleton-shimmer" style={{ width: 80, height: 10 }} />
             <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
           </CardContent></Card>
@@ -1227,7 +1227,7 @@ export function Dashboard() {
           </motion.div>
         ) : !hasSummary && !hasReport ? (
           <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <Card className="py-20 text-center" style={{ borderRadius: 12 }}>
+            <Card className="dashboard-card text-center" style={{ borderRadius: 12, paddingTop: '5rem', paddingBottom: '5rem' }}>
               <CardContent className="flex flex-col items-center gap-2">
                 <div className="text-lg font-semibold" style={{ color: 'var(--ink-tertiary)' }}>
                   No briefing data yet

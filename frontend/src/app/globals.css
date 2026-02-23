@@ -720,11 +720,8 @@ input[type="range"]::-moz-range-thumb {
     display: none !important;
   }
   /* Card internal padding tighter on mobile */
-  .dashboard-card [data-slot="card-content"] {
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
-    padding-top: 0.25rem !important;
-    padding-bottom: 0.25rem !important;
+  .dashboard-card {
+    padding: 1rem !important;
   }
 
   /* ── Touch interactions ── */
@@ -818,10 +815,14 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
-/* Dashboard card — override shadcn shadow with our token + hover transition */
+/* Dashboard card — consistent padding + shadow tokens */
 .dashboard-card {
   box-shadow: var(--shadow-card) !important;
   transition: box-shadow 200ms ease, border-color 200ms ease;
+  padding: 1.5rem !important;
+}
+.dashboard-card [data-slot="card-content"] {
+  padding: 0 !important;
 }
 .dashboard-card:hover {
   box-shadow: var(--shadow-card-hover) !important;

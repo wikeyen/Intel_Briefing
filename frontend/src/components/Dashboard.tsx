@@ -857,8 +857,13 @@ function SensorDomainCard({ sectionLabel, accentColor, sensorNames, summary, rep
   showSentimentBars?: boolean
   moodSummary?: string | null
 }) {
+  const [expanded, setExpanded] = useState(false)
   const matchingSections = summary.sections.filter(s => sensorNames.includes(s.sensor_name))
   if (matchingSections.length === 0) return null
+
+  const totalItems = matchingSections.reduce((n, s) => n + s.item_count, 0)
+  const totalNotable = matchingSections.reduce((n, s) => n + s.items.length, 0)
+  const firstSummary = matchingSections[0]?.summary ?? ''
 
   const platformSentiment: Record<string, { positive: number; negative: number; neutral: number; total: number }> = {}
   if (showSentimentBars && report) {
@@ -874,105 +879,148 @@ function SensorDomainCard({ sectionLabel, accentColor, sensorNames, summary, rep
 
   return (
     <DashCard>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        <SectionLabel color={accentColor}>{sectionLabel}</SectionLabel>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: expanded ? '0.75rem' : '0.375rem' }}>
+        {/* Header — clickable to toggle */}
+        <div
+          onClick={() => setExpanded(prev => !prev)}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', userSelect: 'none' }}
+        >
+          <SectionLabel color={accentColor}>{sectionLabel}</SectionLabel>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+            <span style={{
+              fontFamily: MONO, fontSize: '0.5625rem', fontWeight: 600,
+              background: 'var(--surface-alt)', borderRadius: 4,
+              padding: '1px 5px', color: 'var(--ink-faint)',
+            }}>
+              {totalItems}
+            </span>
+            {totalNotable > 0 && !expanded && (
+              <span style={{ fontFamily: MONO, fontSize: '0.5625rem', color: 'var(--ink-tertiary)' }}>
+                {totalNotable} notable
+              </span>
+            )}
+            <span style={{
+              fontSize: '0.75rem', color: 'var(--ink-tertiary)',
+              transition: 'transform 200ms ease',
+              transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+              lineHeight: 1,
+            }}>
+              &#8250;
+            </span>
+          </div>
+        </div>
 
-        {moodSummary && (
-          <p style={{ fontSize: '0.75rem', color: 'var(--ink)', lineHeight: 1.6, margin: 0 }}>
-            {moodSummary}
+        {/* Collapsed: show first summary truncated to 2 lines */}
+        {!expanded && (
+          <p style={{
+            fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.5, margin: 0,
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden',
+          }}>
+            {firstSummary}
           </p>
         )}
 
-        {matchingSections.map((section, sIdx) => (
-          <div key={section.sensor_name} style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-            {/* Source header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-              <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)' }}>
-                {section.label}
-              </span>
-              <span style={{
-                fontFamily: MONO,
-                fontSize: '0.5625rem',
-                fontWeight: 600,
-                background: 'var(--surface-alt)',
-                borderRadius: 4,
-                padding: '1px 5px',
-                color: 'var(--ink-faint)',
-              }}>
-                {section.item_count}
-              </span>
-            </div>
+        {/* Expanded: full content */}
+        {expanded && (
+          <>
+            {moodSummary && (
+              <p style={{ fontSize: '0.75rem', color: 'var(--ink)', lineHeight: 1.6, margin: 0 }}>
+                {moodSummary}
+              </p>
+            )}
 
-            {/* AI summary */}
-            <p style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.6, margin: 0 }}>
-              {section.summary}
-            </p>
-
-            {/* Sentiment bar */}
-            {showSentimentBars && platformSentiment[section.sensor_name] && (() => {
-              const counts = platformSentiment[section.sensor_name]
-              const posPct = Math.round((counts.positive / counts.total) * 100)
-              const negPct = Math.round((counts.negative / counts.total) * 100)
-              const neuPct = 100 - posPct - negPct
-              return (
-                <div>
-                  <div style={{ display: 'flex', gap: 6, fontFamily: MONO, fontSize: '0.625rem', color: 'var(--ink-tertiary)', marginBottom: 2 }}>
-                    <span style={{ color: 'var(--sent-pos-text)' }}>{posPct}% pos</span>
-                    <span>{neuPct}% neu</span>
-                    <span style={{ color: 'var(--sent-neg-text)' }}>{negPct}% neg</span>
-                  </div>
-                  <div style={{ display: 'flex', overflow: 'hidden', height: 4, borderRadius: 2, background: 'var(--border-subtle)', gap: 1 }}>
-                    {posPct > 0 && <div style={{ width: `${posPct}%`, background: 'var(--sent-pos)', transition: 'width 400ms ease' }} />}
-                    {neuPct > 0 && <div style={{ width: `${neuPct}%`, background: 'var(--sent-neu)', opacity: 0.4, transition: 'width 400ms ease' }} />}
-                    {negPct > 0 && <div style={{ width: `${negPct}%`, background: 'var(--sent-neg)', transition: 'width 400ms ease' }} />}
-                  </div>
+            {matchingSections.map((section, sIdx) => (
+              <div key={section.sensor_name} style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                {/* Source header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                  <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)' }}>
+                    {section.label}
+                  </span>
+                  <span style={{
+                    fontFamily: MONO,
+                    fontSize: '0.5625rem',
+                    fontWeight: 600,
+                    background: 'var(--surface-alt)',
+                    borderRadius: 4,
+                    padding: '1px 5px',
+                    color: 'var(--ink-faint)',
+                  }}>
+                    {section.item_count}
+                  </span>
                 </div>
-              )
-            })()}
 
-            {/* Notable items */}
-            {section.items.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                {section.items.map((item, idx) => (
-                  <a
-                    key={idx}
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: 'flex',
-                      gap: '0.5rem',
-                      textDecoration: 'none',
-                      borderRadius: 6,
-                      padding: '6px 10px',
-                      margin: '0 -10px',
-                      transition: 'background 150ms ease',
-                    }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-inset)' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
-                  >
-                    <span style={{ width: 4, height: 4, borderRadius: '50%', background: accentColor, flexShrink: 0, marginTop: 6 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink)', lineHeight: 1.5 }}>
-                        {item.title}
+                {/* AI summary */}
+                <p style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.6, margin: 0 }}>
+                  {section.summary}
+                </p>
+
+                {/* Sentiment bar */}
+                {showSentimentBars && platformSentiment[section.sensor_name] && (() => {
+                  const counts = platformSentiment[section.sensor_name]
+                  const posPct = Math.round((counts.positive / counts.total) * 100)
+                  const negPct = Math.round((counts.negative / counts.total) * 100)
+                  const neuPct = 100 - posPct - negPct
+                  return (
+                    <div>
+                      <div style={{ display: 'flex', gap: 6, fontFamily: MONO, fontSize: '0.625rem', color: 'var(--ink-tertiary)', marginBottom: 2 }}>
+                        <span style={{ color: 'var(--sent-pos-text)' }}>{posPct}% pos</span>
+                        <span>{neuPct}% neu</span>
+                        <span style={{ color: 'var(--sent-neg-text)' }}>{negPct}% neg</span>
                       </div>
-                      {item.brief && (
-                        <div style={{ fontSize: '0.6875rem', color: 'var(--ink-tertiary)', lineHeight: 1.5, marginTop: 1 }}>
-                          {item.brief}
-                        </div>
-                      )}
+                      <div style={{ display: 'flex', overflow: 'hidden', height: 4, borderRadius: 2, background: 'var(--border-subtle)', gap: 1 }}>
+                        {posPct > 0 && <div style={{ width: `${posPct}%`, background: 'var(--sent-pos)', transition: 'width 400ms ease' }} />}
+                        {neuPct > 0 && <div style={{ width: `${neuPct}%`, background: 'var(--sent-neu)', opacity: 0.4, transition: 'width 400ms ease' }} />}
+                        {negPct > 0 && <div style={{ width: `${negPct}%`, background: 'var(--sent-neg)', transition: 'width 400ms ease' }} />}
+                      </div>
                     </div>
-                  </a>
-                ))}
-              </div>
-            )}
+                  )
+                })()}
 
-            {/* Divider between sources */}
-            {sIdx < matchingSections.length - 1 && (
-              <div style={{ borderBottom: '1px solid var(--border-subtle)', marginTop: 2 }} />
-            )}
-          </div>
-        ))}
+                {/* Notable items */}
+                {section.items.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    {section.items.map((item, idx) => (
+                      <a
+                        key={idx}
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'flex',
+                          gap: '0.5rem',
+                          textDecoration: 'none',
+                          borderRadius: 6,
+                          padding: '6px 10px',
+                          margin: '0 -10px',
+                          transition: 'background 150ms ease',
+                        }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-inset)' }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
+                      >
+                        <span style={{ width: 4, height: 4, borderRadius: '50%', background: accentColor, flexShrink: 0, marginTop: 6 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink)', lineHeight: 1.5 }}>
+                            {item.title}
+                          </div>
+                          {item.brief && (
+                            <div style={{ fontSize: '0.6875rem', color: 'var(--ink-tertiary)', lineHeight: 1.5, marginTop: 1 }}>
+                              {item.brief}
+                            </div>
+                          )}
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                )}
+
+                {/* Divider between sources */}
+                {sIdx < matchingSections.length - 1 && (
+                  <div style={{ borderBottom: '1px solid var(--border-subtle)', marginTop: 2 }} />
+                )}
+              </div>
+            ))}
+          </>
+        )}
       </div>
     </DashCard>
   )
@@ -1035,7 +1083,7 @@ function TrendingWidget({ report, summary }: { report: IntelReport; summary?: Br
 
   trendItems.sort((a, b) => Math.abs(b.velocity?.changePercent ?? 0) - Math.abs(a.velocity?.changePercent ?? 0))
 
-  const top = trendItems.slice(0, 10)
+  const top = trendItems.slice(0, 5)
   if (top.length === 0) return null
 
   return (
@@ -1157,9 +1205,9 @@ function DashboardSkeleton() {
         <div className="skeleton-shimmer" style={{ width: 96, height: 10 }} />
         <div className="skeleton-shimmer" style={{ width: 64, height: 10 }} />
       </div>
-      <div className="dashboard-layout" style={{ marginTop: '0.75rem' }}>
-        <div className="dashboard-main" style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-          {/* Exec summary */}
+      <div className="dashboard-grid" style={{ marginTop: '0.75rem' }}>
+        {/* Exec summary — span 2 */}
+        <div className="dash-span-2">
           <DashCard accent="var(--accent)">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div className="skeleton-shimmer" style={{ width: 96, height: 10 }} />
@@ -1168,45 +1216,25 @@ function DashboardSkeleton() {
               <div className="skeleton-shimmer" style={{ width: '70%', height: 12 }} />
             </div>
           </DashCard>
-          {/* Theme cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.5rem' }}>
-            {[0, 1].map(i => (
-              <DashCard key={i}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div className="skeleton-shimmer" style={{ width: 120, height: 10 }} />
-                  <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-                  <div className="skeleton-shimmer" style={{ width: '80%', height: 12 }} />
-                </div>
-              </DashCard>
-            ))}
+        </div>
+        {/* Sentiment */}
+        <DashCard>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="skeleton-shimmer" style={{ width: 64, height: 10 }} />
+            <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
+            <div className="skeleton-shimmer" style={{ width: '70%', height: 12 }} />
           </div>
-          {/* Domain cards */}
-          {[0, 1, 2].map(i => (
-            <DashCard key={i}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div className="skeleton-shimmer" style={{ width: 112, height: 10 }} />
-                <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-                <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-                <div className="skeleton-shimmer" style={{ width: '60%', height: 12 }} />
-              </div>
-            </DashCard>
-          ))}
-        </div>
-        <div className="dashboard-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-          <DashCard>
+        </DashCard>
+        {/* Domain cards */}
+        {[0, 1, 2, 3, 4, 5].map(i => (
+          <DashCard key={i}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div className="skeleton-shimmer" style={{ width: 64, height: 10 }} />
+              <div className="skeleton-shimmer" style={{ width: 112, height: 10 }} />
               <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-              <div className="skeleton-shimmer" style={{ width: '70%', height: 12 }} />
+              <div className="skeleton-shimmer" style={{ width: '60%', height: 12 }} />
             </div>
           </DashCard>
-          <DashCard>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div className="skeleton-shimmer" style={{ width: 80, height: 10 }} />
-              <div className="skeleton-shimmer" style={{ width: '100%', height: 12 }} />
-            </div>
-          </DashCard>
-        </div>
+        ))}
       </div>
     </div>
   )
@@ -1356,34 +1384,39 @@ export function Dashboard() {
               />
             </StaggerChild>
 
-            {/* Two-column layout */}
-            <div className="dashboard-layout" style={{ marginTop: '0.75rem' }}>
-              {/* Main Content */}
-              <div className="dashboard-main" style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-                {summary && <StaggerChild index={1}><ExecSummaryWidget summary={summary} /></StaggerChild>}
-                {summary && <StaggerChild index={2}><ThematicSectionsWidget summary={summary} /></StaggerChild>}
-                {summary && <StaggerChild index={3}><RiskIntelPanel summary={summary} /></StaggerChild>}
-                {summary && <StaggerChild index={4}><MacroIntelWidget summary={summary} /></StaggerChild>}
-                {summary && <StaggerChild index={5}><NewsTechWidget summary={summary} /></StaggerChild>}
-                {summary && <StaggerChild index={6}><SocialPulseWidget summary={summary} report={report} /></StaggerChild>}
-                {report && <StaggerChild index={7}><TrendingWidget report={report} summary={summary} /></StaggerChild>}
-                {summary && <StaggerChild index={8}><ChinaTrendWidget summary={summary} /></StaggerChild>}
-                {summary && <StaggerChild index={9}><ResearchRadarWidget summary={summary} /></StaggerChild>}
-                {summary && <StaggerChild index={10}><OpinionDigestWidget summary={summary} /></StaggerChild>}
-                {summary && <StaggerChild index={11}><ChinaCommunityWidget summary={summary} /></StaggerChild>}
+            {/* Bento Grid */}
+            <div className="dashboard-grid" style={{ marginTop: '0.75rem' }}>
+              {/* Row 1: Exec Summary (2 cols) + Sentiment (1 col) */}
+              {summary && <StaggerChild index={1}><div className="dash-span-2"><ExecSummaryWidget summary={summary} /></div></StaggerChild>}
+              {summary && <StaggerChild index={2}><SentimentWidget summary={summary} report={report} /></StaggerChild>}
 
-                <div style={{ textAlign: 'center', paddingTop: 2, paddingBottom: 4 }}>
-                  <Link href="/data" style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--accent)', textDecoration: 'none' }}>
-                    View full feed &#8250;
-                  </Link>
-                </div>
-              </div>
+              {/* Row 2: Themes (2 cols) + Distribution (1 col) */}
+              {summary && <StaggerChild index={3}><div className="dash-span-2"><ThematicSectionsWidget summary={summary} /></div></StaggerChild>}
+              {report && <StaggerChild index={4}><CategoryDistributionWidget report={report} /></StaggerChild>}
 
-              {/* Right Sidebar */}
-              <div className="dashboard-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-                {summary && <StaggerChild index={12}><SentimentWidget summary={summary} report={report} /></StaggerChild>}
-                {report && <StaggerChild index={13}><CategoryDistributionWidget report={report} /></StaggerChild>}
-                {report && <StaggerChild index={14}><SourceHealthWidget report={report} /></StaggerChild>}
+              {/* Row 3: Risk Intel + Macro + Source Health */}
+              {summary && <StaggerChild index={5}><RiskIntelPanel summary={summary} /></StaggerChild>}
+              {summary && <StaggerChild index={6}><MacroIntelWidget summary={summary} /></StaggerChild>}
+              {report && <StaggerChild index={7}><SourceHealthWidget report={report} /></StaggerChild>}
+
+              {/* Row 4: Trending (full width) */}
+              {report && <StaggerChild index={8}><div className="dash-span-full"><TrendingWidget report={report} summary={summary} /></div></StaggerChild>}
+
+              {/* Row 5: News + Social + China Trend */}
+              {summary && <StaggerChild index={9}><NewsTechWidget summary={summary} /></StaggerChild>}
+              {summary && <StaggerChild index={10}><SocialPulseWidget summary={summary} report={report} /></StaggerChild>}
+              {summary && <StaggerChild index={11}><ChinaTrendWidget summary={summary} /></StaggerChild>}
+
+              {/* Row 6: Research + Opinion + China Community */}
+              {summary && <StaggerChild index={12}><ResearchRadarWidget summary={summary} /></StaggerChild>}
+              {summary && <StaggerChild index={13}><OpinionDigestWidget summary={summary} /></StaggerChild>}
+              {summary && <StaggerChild index={14}><ChinaCommunityWidget summary={summary} /></StaggerChild>}
+
+              {/* Footer link */}
+              <div className="dash-span-full" style={{ textAlign: 'center', paddingTop: 2, paddingBottom: 4 }}>
+                <Link href="/data" style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--accent)', textDecoration: 'none' }}>
+                  View full feed &#8250;
+                </Link>
               </div>
             </div>
           </motion.div>

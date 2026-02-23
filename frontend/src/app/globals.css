@@ -787,35 +787,35 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
-/* ─── Dashboard Layout ──────────────────────────────────────────────────── */
+/* ─── Dashboard Bento Grid ─────────────────────────────────────────────── */
 
-/* Main + sidebar: stacks vertically by default, side-by-side on wide screens */
-.dashboard-layout {
-  display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
+/* Single-column by default (mobile), 2-col on tablet, 3-col on desktop.
+   Cards use .dash-span-* to claim multiple columns at each breakpoint. */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.625rem;
 }
-.dashboard-main { flex: 1; min-width: 0; }
-.dashboard-sidebar { /* stacks below main by default */ }
 
-/* Wide screens: main + right sidebar side-by-side.
-   The dashboard-root is 1024px max like other pages, but we expand it
-   to accommodate the sidebar when there's room. */
+@media (min-width: 769px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  .dash-span-2,
+  .dash-span-full { grid-column: span 2; }
+}
+
 @media (min-width: 1280px) {
   .dashboard-root {
     max-width: 1360px !important;
   }
-  .dashboard-layout {
-    flex-direction: row;
-    gap: 1.25rem;
+  .dashboard-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
   }
-  .dashboard-sidebar {
-    width: 300px;
-    flex-shrink: 0;
-    position: sticky;
-    top: 1rem;
-    align-self: flex-start;
-  }
+  .dash-span-2 { grid-column: span 2; }
+  .dash-span-full { grid-column: span 3; }
 }
 
 /* Dashboard card — consistent padding + shadow tokens */

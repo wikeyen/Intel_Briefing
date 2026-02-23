@@ -706,6 +706,7 @@ input[type="range"]::-moz-range-thumb {
 
   /* ── Dashboard mobile overrides ── */
   .dashboard-root {
+    padding-top: 0.25rem !important;
     padding-left: 0.75rem !important;
     padding-right: 0.75rem !important;
     padding-bottom: 0.75rem !important;

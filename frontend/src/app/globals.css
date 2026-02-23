@@ -846,10 +846,7 @@ input[type="range"]::-moz-range-thumb {
     grid-template-columns: 1fr 320px;
   }
   .dashboard-sidebar {
-    position: sticky;
-    top: 3rem;
-    max-height: calc(100vh - 4rem);
-    overflow-y: auto;
+    align-self: start;
   }
 }
 
@@ -877,17 +874,6 @@ input[type="range"]::-moz-range-thumb {
   border-color: var(--border-strong);
 }
 
-/* Risk/Intelligence grid — 2-column on desktop, single column on narrow screens */
-.risk-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.625rem;
-}
-@media (max-width: 768px) {
-  .risk-grid {
-    grid-template-columns: 1fr;
-  }
-}
 
 /* ─── Animations ────────────────────────────────────────────────────────── */
 @keyframes fadeInUp {

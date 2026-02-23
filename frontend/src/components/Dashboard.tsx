@@ -544,7 +544,7 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
         />
 
         {/* Tab content */}
-        <div className="risk-grid" style={{ minHeight: 60 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', minHeight: 60 }}>
           {current.items.length === 0 ? (
             <div style={{ padding: '1rem 0', textAlign: 'center', fontSize: '0.75rem', color: 'var(--ink-tertiary)' }}>
               None detected
@@ -552,33 +552,20 @@ function RiskIntelPanel({ summary }: { summary: BriefingSummary }) {
           ) : (
             current.items.map((entry: SentimentEntry, i: number) => (
               <div key={i} style={{
-                display: 'flex',
-                flexDirection: 'column',
                 padding: '0.625rem 0.75rem',
-                borderRadius: 6,
+                borderRadius: 8,
                 background: 'var(--surface-inset)',
-                borderLeft: `3px solid ${current.dot}`,
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.25rem' }}>
-                  <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)', lineHeight: 1.3 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: 3 }}>
+                  <span style={{
+                    width: 7, height: 7, borderRadius: '50%',
+                    background: current.dot, flexShrink: 0,
+                  }} />
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--ink)', lineHeight: 1.4 }}>
                     {entry.topic}
                   </span>
-                  <span style={{
-                    fontFamily: MONO,
-                    fontSize: '0.5625rem',
-                    fontWeight: 600,
-                    textTransform: 'uppercase' as const,
-                    padding: '1px 5px',
-                    borderRadius: 4,
-                    background: current.key === 'risk' ? 'var(--sent-neg-bg)' : current.key === 'controversies' ? 'var(--sent-neu-bg)' : 'var(--accent-subtle)',
-                    color: current.color,
-                    letterSpacing: '0.04em',
-                    flexShrink: 0,
-                  }}>
-                    {current.label}
-                  </span>
                 </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.6 }}>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--ink-secondary)', lineHeight: 1.6, paddingLeft: '1.0625rem', overflowWrap: 'break-word', wordBreak: 'break-word' }}>
                   <InlineRefs text={entry.analysis} globalSources={overall.sources} />
                 </div>
               </div>

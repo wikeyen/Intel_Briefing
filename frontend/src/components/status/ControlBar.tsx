@@ -20,6 +20,7 @@ export interface ControlBarProps {
   progress: { done: number; total: number }
   detail?: string
   failedCount: number
+  retryingCount: number
   isPaused: boolean
   selectedCount: number
   totalSensors: number
@@ -127,14 +128,14 @@ const stopBtnBase: React.CSSProperties = {
   borderRadius: 6,
   fontSize: '0.8125rem',
   fontWeight: 600,
-  border: '1px solid var(--err)',
-  color: 'var(--err)',
-  background: 'transparent',
+  border: 'none',
+  color: 'white',
+  background: 'var(--err)',
   cursor: 'pointer',
   display: 'flex',
   alignItems: 'center',
   gap: '0.375rem',
-  transition: 'background 150ms ease, color 150ms ease',
+  transition: 'opacity 150ms ease',
 }
 
 const barStyle: React.CSSProperties = {
@@ -162,8 +163,8 @@ const rowStyle: React.CSSProperties = {
 const progressTrackStyle: React.CSSProperties = {
   position: 'absolute',
   bottom: 0,
-  left: 0,
-  right: 0,
+  left: '3rem',
+  right: '3rem',
   height: 2,
   background: 'var(--border)',
 }
@@ -179,6 +180,7 @@ export function ControlBar({
   progress,
   detail,
   failedCount,
+  retryingCount,
   isPaused,
   selectedCount,
   totalSensors,
@@ -254,7 +256,7 @@ export function ControlBar({
     const dotColor = 'var(--accent)'
 
     return (
-      <div className="control-bar page-padding" style={{ ...barStyle, borderBottom: 'none' }}>
+      <div className="control-bar page-padding" style={{ ...barStyle, borderBottom: 'none', paddingBottom: 6 }}>
         <div className="control-bar-row" style={rowStyle}>
           {/* Left: pulsing dot + phase + detail */}
           <div className="control-bar-left" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
@@ -281,6 +283,13 @@ export function ControlBar({
           <div className="control-bar-center" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0 auto' }}>
             <span style={{ ...MONO, fontSize: '0.8125rem', fontWeight: 600 }}>{progress.done}/{progress.total}</span>
             <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>sensors</span>
+            {retryingCount > 0 && (
+              <>
+                <span style={{ color: 'var(--ink-faint)' }}>·</span>
+                <span style={{ ...MONO, fontSize: '0.8125rem', fontWeight: 600, color: 'var(--warn)' }}>{retryingCount}</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--warn)' }}>retrying</span>
+              </>
+            )}
             {failedCount > 0 && (
               <>
                 <span style={{ color: 'var(--ink-faint)' }}>·</span>
@@ -428,7 +437,7 @@ function StopButton({
       style={{
         ...stopBtnBase,
         ...(isStopping ? { opacity: 0.5, cursor: 'not-allowed' } : {}),
-        ...(hovered && !isStopping ? { background: 'var(--err)', color: 'white' } : {}),
+        ...(hovered && !isStopping ? { opacity: 0.85 } : {}),
       }}
     >
       <span style={{ fontSize: '0.5rem' }}>■</span>

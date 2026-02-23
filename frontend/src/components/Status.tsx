@@ -255,6 +255,10 @@ export function Status() {
     ? pipelineStatus.sensors.filter(s => s.fetch === 'failed' || s.summary === 'failed').length
     : 0
 
+  const retryingCount = pipelineStatus && pipelineStatus.retry_attempt > 0
+    ? pipelineStatus.sensors.filter(s => s.fetch === 'running' || s.fetch === 'queued').length
+    : 0
+
   const totalItems = useMemo(() => {
     if (!report) return 0
     return Object.values(report.items).reduce((sum, items) => sum + items.length, 0)
@@ -279,7 +283,7 @@ export function Status() {
       <style dangerouslySetInnerHTML={{ __html: CONTROL_BAR_CSS }} />
 
       {staleInfo && !isRunning && (
-        <div style={{ maxWidth: 1024, margin: '0 auto', width: '100%', padding: '0.5rem 0.75rem 0' }}>
+        <div style={{ maxWidth: 1024, margin: '0 auto', width: '100%', padding: '0.75rem 3rem 0' }}>
           <StaleProcessBanner
             stale={staleInfo}
             onAbort={handleAbortStale}
@@ -300,6 +304,7 @@ export function Status() {
         progress={progress}
         detail={phaseDetail}
         failedCount={failedCount}
+        retryingCount={retryingCount}
         isPaused={isPaused}
         selectedCount={selectedSensors.size}
         totalSensors={allEnabledSensors.length}
@@ -325,6 +330,7 @@ export function Status() {
         report={report}
         config={config}
         pipelineStatus={pipelineStatus}
+        retryAttempt={pipelineStatus?.retry_attempt ?? 0}
         selected={selectedSensors}
         onToggleSelect={toggleSensorSelect}
         onSelectAll={selectAll}

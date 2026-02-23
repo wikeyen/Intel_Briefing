@@ -15,6 +15,7 @@ export interface SensorGridProps {
   report: IntelReport | null
   config: ConfigSettings | null
   pipelineStatus: PipelineStatus | null
+  retryAttempt: number
   selected: Set<string>
   onToggleSelect: (sensor: string) => void
   onSelectAll: () => void
@@ -55,7 +56,7 @@ const toolbarLinkStyle: React.CSSProperties = {
 
 export function SensorGrid({
   isRunning, isPaused, liveSensors, report, config, pipelineStatus,
-  selected, onToggleSelect, onSelectAll, onSelectNone,
+  retryAttempt, selected, onToggleSelect, onSelectAll, onSelectNone,
   onRetry, onSkipSensor, dismissed, onDismiss,
 }: SensorGridProps) {
   const sensorCounts = useMemo(() => countItemsBySensor(report), [report])
@@ -140,31 +141,37 @@ export function SensorGrid({
             <span style={headerLabelStyle}>Last Fetch</span>
           </div>
         </div>
-        {visibleSensors.map(sensor => (
-          <SensorRow
-            key={sensor.sensorKey}
-            sensorKey={sensor.sensorKey}
-            label={sensor.label}
-            category={sensor.category}
-            isRunning={isRunning}
-            isPaused={isPaused}
-            liveSensor={liveSensors[sensor.sensorKey]}
-            itemCount={sensor.itemCount}
-            lastFetchAgo={sensor.lastFetchAgo}
-            isOk={sensor.isOk}
-            isFailed={sensor.isFailed}
-            isDisabled={sensor.isDisabled}
-            isConfigError={sensor.isConfigError}
-            isApiError={sensor.isApiError}
-            fetchError={sensor.fetchError}
-            summaryError={sensor.summaryError}
-            isSelected={selected.has(sensor.sensorKey)}
-            onToggleSelect={() => onToggleSelect(sensor.sensorKey)}
-            onRetry={sensor.isFailed && onRetry ? () => onRetry(sensor.sensorKey) : undefined}
-            onSkip={isPaused && onSkipSensor ? () => onSkipSensor(sensor.sensorKey) : undefined}
-            onDismiss={sensor.isFailed && !isPaused ? () => onDismiss(sensor.sensorKey) : undefined}
-          />
-        ))}
+        {visibleSensors.map(sensor => {
+          const live = liveSensors[sensor.sensorKey]
+          const liveFailed = live?.fetch === 'failed' || live?.summary === 'failed'
+          const liveRetrying = retryAttempt > 0 && (live?.fetch === 'running' || live?.fetch === 'queued')
+          return (
+            <SensorRow
+              key={sensor.sensorKey}
+              sensorKey={sensor.sensorKey}
+              label={sensor.label}
+              category={sensor.category}
+              isRunning={isRunning}
+              isPaused={isPaused}
+              liveSensor={live}
+              itemCount={sensor.itemCount}
+              lastFetchAgo={sensor.lastFetchAgo}
+              isOk={sensor.isOk}
+              isFailed={sensor.isFailed}
+              isDisabled={sensor.isDisabled}
+              isConfigError={sensor.isConfigError}
+              isApiError={sensor.isApiError}
+              fetchError={sensor.fetchError ?? live?.fetch_error ?? undefined}
+              summaryError={sensor.summaryError ?? live?.summary_error ?? undefined}
+              isSelected={selected.has(sensor.sensorKey)}
+              isRetrying={liveRetrying}
+              onToggleSelect={() => onToggleSelect(sensor.sensorKey)}
+              onRetry={(sensor.isFailed || liveFailed) && onRetry ? () => onRetry(sensor.sensorKey) : undefined}
+              onSkip={isPaused && onSkipSensor ? () => onSkipSensor(sensor.sensorKey) : undefined}
+              onDismiss={sensor.isFailed && !isPaused ? () => onDismiss(sensor.sensorKey) : undefined}
+            />
+          )
+        })}
       </div>
     </div>
   )

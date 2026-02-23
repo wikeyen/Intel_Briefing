@@ -22,6 +22,7 @@ export interface SensorCardProps {
   fetchError?: string
   summaryError?: string
   isSelected: boolean
+  isRetrying?: boolean
   onToggleSelect: () => void
   onRetry?: () => void
   onSkip?: () => void
@@ -591,17 +592,23 @@ function RowMetric({ state, props }: { state: CardState; props: SensorCardProps 
       return <span style={{ fontSize: '0.6875rem', color: 'var(--warn)' }}>Needs API key</span>
     case 'failed':
       return <span style={{ fontSize: '0.6875rem', color: 'var(--err)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fetchError || summaryError || 'Failed'}</span>
-    case 'fetching':
+    case 'fetching': {
+      const retrying = props.isRetrying
+      const label = retrying ? 'Retrying' : 'Fetching'
+      const color = retrying ? 'var(--warn)' : 'var(--accent)'
       return (
         <span style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
-          <span style={{ fontSize: '0.6875rem', color: 'var(--accent)', fontWeight: 500 }}>Fetching</span>
+          <span style={{ fontSize: '0.6875rem', color, fontWeight: 500 }}>{label}</span>
           {liveSensor && <span style={{ ...mono, fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>{liveSensor.item_count}</span>}
         </span>
       )
+    }
     case 'summarizing':
       return <span style={{ fontSize: '0.6875rem', color: 'var(--accent)', fontWeight: 500 }}>Summarizing</span>
     case 'waiting':
-      return <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>Queued{'\u2026'}</span>
+      return props.isRetrying
+        ? <span style={{ fontSize: '0.6875rem', color: 'var(--warn)', fontWeight: 500 }}>Retrying{'\u2026'}</span>
+        : <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>Queued{'\u2026'}</span>
     case 'done':
       return (
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
@@ -638,6 +645,12 @@ function RowActions({ state, props }: { state: CardState; props: SensorCardProps
         {onSkip && <button style={dismissButtonStyle} onClick={(e) => { e.stopPropagation(); onSkip() }}>Skip</button>}
       </div>
     )
+  }
+
+  if (state === 'failed-mid-run') {
+    return onRetry ? (
+      <button style={retryButtonStyle} onClick={(e) => { e.stopPropagation(); onRetry() }}>Retry</button>
+    ) : null
   }
 
   return null

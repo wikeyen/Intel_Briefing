@@ -10,6 +10,7 @@ import { useAutoSave } from '@/lib/hooks/useAutoSave'
 import { inputBase, focus, blur, SubLabel, FieldLabel, HelpText, AutoSaveIndicator } from '@/components/form-styles'
 import { OllamaModelPicker } from '@/components/OllamaModelPicker'
 import { OpenRouterModelPicker } from '@/components/OpenRouterModelPicker'
+import { AiSummarySkeleton } from '@/components/Skeleton'
 
 /* ─── Prompt Customization Sub-components ───────────────────────────── */
 
@@ -66,6 +67,7 @@ export function AiSummary() {
   const [expandedSensor, setExpandedSensor] = useState<string | null>(null)
   const [localConcurrency, setLocalConcurrency] = useState(1)
   const [summaryLanguage, setSummaryLanguage] = useState<SummaryLanguage>('zh')
+  const [loaded, setLoaded] = useState(false)
 
   const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
   const OLLAMA_BASE_URL = 'http://localhost:11434/v1'
@@ -94,6 +96,7 @@ export function AiSummary() {
       setOverallPrompt(cfg.summary_overall_prompt ?? '')
       setLocalConcurrency(cfg.local_summary_concurrency ?? 1)
       setSummaryLanguage(cfg.summary_language ?? 'zh')
+      setLoaded(true)
     })
   }, [])
 
@@ -144,6 +147,28 @@ export function AiSummary() {
 
   const isOllama = summaryProvider === 'local'
   const isEnabled = summaryProvider !== null
+
+  if (!loaded) {
+    return (
+      <section id="ai-summary">
+        <div className="page-header" style={{ paddingBottom: '1.5rem' }}>
+          <h2 style={{
+            fontSize: '1.25rem',
+            fontWeight: 600,
+            color: 'var(--ink)',
+            letterSpacing: '-0.01em',
+            marginBottom: '0.25rem',
+          }}>
+            AI Summary
+          </h2>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
+            Generate per-source summaries and an executive briefing after each fetch using an LLM.
+          </p>
+        </div>
+        <AiSummarySkeleton />
+      </section>
+    )
+  }
 
   return (
     <section id="ai-summary">

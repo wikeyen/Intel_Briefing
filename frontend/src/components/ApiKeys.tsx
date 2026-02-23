@@ -8,6 +8,7 @@ import { useToast } from '@/lib/toast-context'
 import { useAutoSave } from '@/lib/hooks/useAutoSave'
 import { inputBase as _inputBase, focus, blur, AutoSaveIndicator } from '@/components/form-styles'
 import { MaskedInput } from '@/components/MaskedInput'
+import { ConnectionsSkeleton } from '@/components/Skeleton'
 
 interface KeyFieldDef { field: keyof ConfigSettings; label: string; hint: string }
 interface PlainFieldDef { field: keyof ConfigSettings; label: string; hint?: string; placeholder?: string }
@@ -67,6 +68,7 @@ export function ApiKeys() {
   const [pendingValues, setPendingValues] = useState<Record<string, string>>({})
   // plainValues: non-secret config fields (bluesky_handle)
   const [plainValues, setPlainValues] = useState<Record<string, string>>({})
+  const [loaded, setLoaded] = useState(false)
 
   const loadConfig = () => {
     api.getConfig().then((cfg) => {
@@ -79,6 +81,7 @@ export function ApiKeys() {
       setPlainValues({
         bluesky_handle: cfg.bluesky_handle ?? '',
       })
+      setLoaded(true)
     })
   }
 
@@ -118,6 +121,26 @@ export function ApiKeys() {
   useEffect(() => { loadConfig() }, [])
 
   const inputStyle: React.CSSProperties = { ...inputBase, fontFamily: 'inherit' }
+
+  if (!loaded) {
+    return (
+      <section id="api-keys">
+        <div className="page-header" style={{ paddingBottom: '1.5rem' }}>
+          <h2 style={{
+            fontSize: '1.25rem', fontWeight: 600, color: 'var(--ink)',
+            letterSpacing: '-0.01em',
+            marginBottom: '0.25rem',
+          }}>Credentials</h2>
+          <p style={{
+            fontSize: '0.8125rem', color: 'var(--ink-muted)', lineHeight: 1.5,
+          }}>
+            Credentials for external data sources and AI providers. Saved keys can be revealed on demand.
+          </p>
+        </div>
+        <ConnectionsSkeleton />
+      </section>
+    )
+  }
 
   return (
     <section id="api-keys">

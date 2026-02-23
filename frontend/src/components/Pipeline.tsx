@@ -9,6 +9,7 @@ import { useToast } from '@/lib/toast-context'
 import { useAutoSave } from '@/lib/hooks/useAutoSave'
 import { inputBase, focus, blur, SubLabel, AutoSaveIndicator } from '@/components/form-styles'
 import { ALL_CATEGORIES, CATEGORY_META } from '@/lib/sensors/taxonomy'
+import { PipelineSkeleton } from '@/components/Skeleton'
 
 const OUTPUT_SECTIONS = ALL_CATEGORIES.map(key => ({
   key,
@@ -70,6 +71,7 @@ export function Pipeline() {
   const [cleaning, setCleaning] = useState(false)
   const [hoverInvalidate, setHoverInvalidate] = useState(false)
   const [hoverCleanup, setHoverCleanup] = useState(false)
+  const [loaded, setLoaded] = useState(false)
 
   const { status: saveStatus, trigger } = useAutoSave(
     () => ({
@@ -99,6 +101,7 @@ export function Pipeline() {
       setSuppress(cfg.suppress_keywords)
       setDefaultLimit(cfg.default_limit)
       setSectionLimits(cfg.sensor_limits ?? {})
+      setLoaded(true)
     })
   }, [])
 
@@ -133,6 +136,22 @@ export function Pipeline() {
     } finally {
       setCleaning(false)
     }
+  }
+
+  if (!loaded) {
+    return (
+      <section id="pipeline">
+        <div className="page-header" style={{ paddingBottom: '1.5rem' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ink)', marginBottom: '0.25rem' }}>
+            Pipeline
+          </h2>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
+            Scheduling, ranking filters, and output limits for the generated briefing.
+          </p>
+        </div>
+        <PipelineSkeleton />
+      </section>
+    )
   }
 
   return (

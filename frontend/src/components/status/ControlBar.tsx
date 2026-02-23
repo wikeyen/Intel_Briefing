@@ -150,7 +150,13 @@ const barStyle: React.CSSProperties = {
   flexDirection: 'column',
   justifyContent: 'center',
   background: 'var(--canvas)',
-  borderBottom: '1px solid var(--border)',
+}
+
+const barDividerStyle: React.CSSProperties = {
+  height: 1,
+  background: 'var(--border)',
+  margin: '0 3rem',
+  flexShrink: 0,
 }
 
 const rowStyle: React.CSSProperties = {
@@ -256,7 +262,7 @@ export function ControlBar({
     const dotColor = 'var(--accent)'
 
     return (
-      <div className="control-bar page-padding" style={{ ...barStyle, borderBottom: 'none', paddingBottom: 6 }}>
+      <div className="control-bar page-padding" style={{ ...barStyle, paddingBottom: 6 }}>
         <div className="control-bar-row" style={rowStyle}>
           {/* Left: pulsing dot + phase + detail */}
           <div className="control-bar-left" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
@@ -412,6 +418,7 @@ export function ControlBar({
           {schedule ? `Next: ${schedule}` : 'No schedule'}
         </span>
       </div>
+      <div className="control-bar-divider" style={barDividerStyle} />
     </div>
   )
 }

@@ -684,6 +684,9 @@ input[type="range"]::-moz-range-thumb {
   .control-bar-schedule {
     padding: 0 0.75rem 0.375rem !important;
   }
+  .control-bar-divider {
+    margin: 0 0.75rem !important;
+  }
   .control-bar-center {
     margin: 0 !important;
   }

@@ -384,50 +384,38 @@ export function StatusSkeleton() {
         </div>
       </div>
 
-      {/* Sensor card grid */}
+      {/* Sensor list */}
       <div className="sensor-grid" style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: '0.75rem',
-        flex: 1,
-        alignContent: 'start',
-        overflowY: 'auto',
-        padding: '1rem 3rem',
-        paddingBottom: '1rem',
         maxWidth: 1024,
         margin: '0 auto',
         width: '100%',
+        padding: '0.75rem 3rem 1.5rem',
       }}>
-        {Array.from({ length: 16 }, (_, i) => (
-          <div key={i} style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            boxShadow: 'var(--shadow-card)',
-            padding: '0.75rem 0.875rem',
-            minHeight: 100,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.375rem',
-          }}>
-            {/* Header: dot + name + category badge */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.375rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', minWidth: 0 }}>
-                <Skeleton width={6} height={6} borderRadius={3} />
-                <Skeleton width={SENSOR_NAME_WIDTHS[i]} height={11} />
-              </div>
-              <Skeleton width={CATEGORY_BADGE_WIDTHS[i]} height={14} borderRadius={3} style={{ flexShrink: 0 }} />
-            </div>
-            {/* Bottom: item count + time ago */}
-            <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
+        <div style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 8,
+          overflow: 'hidden',
+        }}>
+          {Array.from({ length: 16 }, (_, i) => (
+            <div key={i} style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              padding: '0.5rem 0.875rem',
+              borderBottom: i < 15 ? '1px solid var(--border-soft)' : 'none',
+              minHeight: 40,
+            }}>
+              <Skeleton width={6} height={6} borderRadius={3} />
+              <Skeleton width={SENSOR_NAME_WIDTHS[i]} height={11} />
+              <Skeleton width={CATEGORY_BADGE_WIDTHS[i]} height={14} borderRadius={3} />
+              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <Skeleton width={20 + (i % 3) * 8} height={11} />
-                <Skeleton width={28} height={9} />
+                <Skeleton width={40 + (i % 2) * 12} height={9} />
               </div>
-              <Skeleton width={40 + (i % 2) * 12} height={9} />
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   )

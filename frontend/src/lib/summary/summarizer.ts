@@ -360,9 +360,14 @@ export async function generateOverallBriefing(
   }
 
   // Format context: numbered source list + per-sensor trend summaries
+  // NOTE: briefs are intentionally excluded from the source list context.
+  // Per-sensor briefs are unreliable — the LLM often generates trend-level
+  // observations rather than item-specific descriptions, causing the overall
+  // LLM to misinterpret and miscategorize items. The overall LLM already has
+  // titles + sensor names + per-sensor trend summaries, which is sufficient.
   const sourceList = globalSources.length > 0
     ? m.sourceListHeader + globalSources.map(s =>
-        `[${s.id}] "${s.title}" — ${s.sensor}${s.brief ? ` — ${s.brief}` : ''}`
+        `[${s.id}] "${s.title}" — ${s.sensor}`
       ).join('\n')
     : ''
 

@@ -23,6 +23,7 @@ const JSON_SENSOR_RULE = `
 要求：
 - summary: 综合趋势分析，严禁逐条列举，严禁编号列表
 - items: 挑选最值得关注的3-8个条目，必须使用原文中提供的URL和标题
+- brief: 每个条目的brief必须准确描述该条目本身的内容和意义，严禁用总体趋势概括替代。例如：标题为"印度贸易代表团推迟访美"的brief应描述印度访美推迟的原因或影响，而不是AI趋势或消费升级。
 - 严格输出合法JSON
 
 准确性要求：
@@ -46,6 +47,7 @@ Output format (strict JSON, no markdown code fences):
 Requirements:
 - summary: Synthesized trend analysis; no bullet lists, no numbered lists
 - items: Pick the 3-8 most noteworthy items; use the exact URLs and titles from the source text
+- brief: Each item's brief MUST accurately describe that specific item's content and significance. Never substitute a general trend observation. For example, if the title is "India trade delegation postpones US visit", the brief should describe the postponement's cause or impact — not an unrelated AI or market trend.
 - Output strictly valid JSON
 
 Accuracy:
@@ -227,9 +229,13 @@ export const DEFAULT_OVERALL_PROMPT = `你是一名全球投资情报分析师�
 板块说明：
 - 综合分析（executive_summary）：跨领域的深度趋势分析。先总览全局，再逐个展开2-3个核心主题，包含关键事实和投资启示。
 - 科技产品：重要科技产品和平台的发布与更新（不限于AI）。包含产品名称、功能亮点、市场意义。
-- 宏观与政策：宏观经济数据、央行政策、监管动向、地缘政治事件及其对投资市场的影响。
+- 宏观与政策：宏观经济数据、央行政策、监管动向、地缘政治事件。每个条目必须与金融市场或投资决策有明确关联。不属于此类的一般新闻（自然灾害、地方冲突、太空探索等）不要放入此板块。
 - 行业声音：重要企业家、投资人和行业从业者发布的事实和观点。提炼其判断和立场，分析潜在影响。注明发言者身份。
 - 投融资动向：投融资事件、并购、估值变化、VC动向。包含具体金额、估值和投资方（如有）。分析对行业格局的影响和投资启示。
+
+条目文本准确性：
+- 每个条目的text必须忠实反映原文内容，严禁添加原文中不存在的解读或因果推断
+- 如果原文只是一条简短新闻事实，text也应简洁陈述事实，不要强行附加"折射""体现"等分析性解读
 
 舆情分析说明：
 - overall_mood：基于所有来源的综合基调判断（bullish=偏多/乐观, bearish=偏空/悲观, mixed=多空分歧, neutral=中性平淡）
@@ -283,9 +289,13 @@ Output format (strict JSON, no markdown code fences):
 Section guidelines:
 - Executive Summary: In-depth cross-domain analysis. Frame the overall landscape, then drill into 2-3 core themes with key facts and investment implications.
 - Tech Products: Major tech product and platform launches and updates (not limited to AI). Include product names, feature highlights, and market significance.
-- Macro & Policy: Macroeconomic data, central bank policy, regulatory developments, geopolitical events, and their impact on investment markets.
+- Macro & Policy: Macroeconomic data, central bank policy, regulatory developments, geopolitical events. Each entry must have a clear connection to financial markets or investment decisions. Do not place general news here (natural disasters, local conflicts, space exploration, etc.) unless they have direct market impact.
 - Industry Voices: Facts and opinions from notable entrepreneurs, investors, and industry practitioners. Synthesize their judgments and stances, analyze potential impact. Note speaker identity.
 - Funding & Deals: Funding events, M&A, valuation changes, VC activity. Include specific amounts, valuations, and investors where available. Analyze industry landscape impact and investment implications.
+
+Entry text accuracy:
+- Each entry's text must faithfully reflect the source content. Never add interpretations or causal inferences not present in the original.
+- If the source is a brief news fact, the entry text should state the fact concisely — do not force analytical framing like "reflects" or "signals".
 
 Sentiment analysis guidelines:
 - overall_mood: Based on aggregate sentiment across all sources (bullish=optimistic, bearish=pessimistic, mixed=divided, neutral=flat)

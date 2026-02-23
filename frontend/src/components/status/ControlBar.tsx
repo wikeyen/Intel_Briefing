@@ -5,6 +5,7 @@
 import { useState } from 'react'
 import type { HealthResponse, ConfigSettings, RunMode } from '@/api/client'
 import { useTranslation } from '@/lib/i18n'
+import { PlayIcon } from '@/components/form-styles'
 import { STATUS_META } from './constants'
 import { timeAgo, nextFetchIn } from './time-helpers'
 
@@ -225,7 +226,7 @@ export function ControlBar({
               onClick={onGenerateOverall}
               style={runBtnBase}
             >
-              <span style={{ fontSize: '1.25rem' }}>▶</span>
+              <PlayIcon size={12} />
               {t('status.generate_summary')}
             </button>
           </div>
@@ -389,7 +390,7 @@ export function ControlBar({
               ...(runDisabled ? { opacity: 0.4, cursor: 'not-allowed' } : {}),
             }}
           >
-            <span style={{ fontSize: '1.25rem' }}>▶</span>
+            <PlayIcon size={12} />
             {runLabel}
           </button>
         </div>

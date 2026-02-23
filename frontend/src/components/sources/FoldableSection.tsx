@@ -2,6 +2,7 @@
 // ABOUTME: Collapsible card with header showing title, enabled count, and chevron.
 'use client'
 import { useState, type ReactNode } from 'react'
+import { ChevronRight } from '@/components/form-styles'
 
 interface FoldableSectionProps {
   title: string
@@ -32,13 +33,12 @@ export function FoldableSection({ title, enabledCount, totalCount, children, def
         }}
       >
         <span style={{
-          fontSize: '1.25rem',
           color: 'var(--ink-faint)',
           transition: 'transform 150ms',
           transform: open ? 'rotate(90deg)' : 'rotate(0deg)',
-          display: 'inline-block',
+          display: 'inline-flex',
         }}>
-          ▶
+          <ChevronRight size={14} />
         </span>
         <span style={{
           fontSize: '0.625rem',

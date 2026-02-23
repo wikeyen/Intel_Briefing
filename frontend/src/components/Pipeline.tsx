@@ -8,7 +8,7 @@ import { TagInput } from '@/components/TagInput'
 import { useTranslation } from '@/lib/i18n'
 import { useToast } from '@/lib/toast-context'
 import { useAutoSave } from '@/lib/hooks/useAutoSave'
-import { inputBase, focus, blur, SubLabel, AutoSaveIndicator } from '@/components/form-styles'
+import { inputBase, focus, blur, SubLabel, AutoSaveIndicator, ChevronDown } from '@/components/form-styles'
 import { ALL_CATEGORIES, CATEGORY_META } from '@/lib/sensors/taxonomy'
 import { PipelineSkeleton } from '@/components/Skeleton'
 
@@ -216,15 +216,13 @@ export function Pipeline() {
                   </select>
                   <span style={{
                     position: 'absolute',
-                    right: '0.875rem',
+                    right: '0.75rem',
                     top: '50%',
                     transform: 'translateY(-50%)',
                     pointerEvents: 'none',
                     color: 'var(--ink-faint)',
-                    fontSize: '1.25rem',
-                    userSelect: 'none',
                   }}>
-                    ▼
+                    <ChevronDown size={18} />
                   </span>
                 </div>
               </div>

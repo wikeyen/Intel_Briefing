@@ -10,20 +10,20 @@ import { ToastContext } from '@/lib/toast-context'
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/status': 'Status',
-  '/api-keys': 'Credentials',
-  '/settings': 'Settings',
+  '/connections': 'Credentials',
   '/pipeline': 'Pipeline',
-  '/sensors': 'Sensors',
+  '/sources': 'Sources',
+  '/ai': 'AI Summary',
   '/data': 'Feed',
 }
 
 const PAGE_DESCS: Record<string, string> = {
   '/dashboard': 'Executive summary, sentiment, and trending',
   '/status': 'Pipeline health, briefing, and sensor errors',
-  '/api-keys': 'Credentials for data sources and AI',
-  '/settings': 'Sources, limits, scheduling, and filters',
+  '/connections': 'Credentials for data sources and AI',
   '/pipeline': 'Scheduling, filters, and output limits',
-  '/sensors': 'Active data sources for your pipeline',
+  '/sources': 'Active data sources for your pipeline',
+  '/ai': 'LLM provider, model, and prompts',
   '/data': 'AI summary and items from all sources',
 }
 

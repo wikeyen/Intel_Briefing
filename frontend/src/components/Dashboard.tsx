@@ -173,7 +173,7 @@ function DashCard({ children, accent, style }: {
         background: 'var(--surface)',
         border: '1px solid var(--border)',
         borderRadius: 8,
-        padding: '1rem 1.25rem',
+        padding: '0.75rem 1rem',
         boxShadow: 'var(--shadow-card)',
         transition: 'box-shadow 200ms, border-color 200ms',
         overflow: 'hidden',
@@ -436,62 +436,72 @@ function ExecSummaryWidget({ summary }: { summary: BriefingSummary }) {
   const isLong = paragraphs.length > 2
 
   return (
-    <DashCard style={{ background: 'var(--accent-subtle)', borderColor: 'var(--accent-muted)' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+    <DashCard style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <SectionLabel color="var(--accent)">Executive Summary</SectionLabel>
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem',
-            ...(!expanded && isLong ? {
-              maxHeight: 160,
-              overflow: 'hidden',
-              maskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
-              WebkitMaskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
-            } : {}),
-          }}
-        >
-          {paragraphs.map((para, i) => (
-            <p
-              key={i}
-              style={{
-                fontSize: '0.8125rem',
-                lineHeight: 1.7,
-                color: i === 0 ? 'var(--ink)' : 'var(--ink-secondary)',
-                fontWeight: i === 0 ? 500 : 400,
-                margin: 0,
-                overflowWrap: 'break-word',
-                wordBreak: 'break-word',
-              }}
-            >
-              <InlineRefs text={para.trim()} globalSources={overall.sources} />
-            </p>
-          ))}
-        </div>
+
+        {/* Lead paragraph — larger, bolder */}
+        {paragraphs.length > 0 && (
+          <p style={{
+            fontSize: '0.8125rem', lineHeight: 1.65, fontWeight: 500,
+            color: 'var(--ink)', margin: 0,
+            overflowWrap: 'break-word', wordBreak: 'break-word',
+          }}>
+            <InlineRefs text={paragraphs[0].trim()} globalSources={overall.sources} />
+          </p>
+        )}
+
+        {/* Body paragraphs — collapsible */}
+        {paragraphs.length > 1 && (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.625rem',
+              ...(!expanded && isLong ? {
+                maxHeight: 100,
+                overflow: 'hidden',
+                maskImage: 'linear-gradient(to bottom, black 40%, transparent 100%)',
+                WebkitMaskImage: 'linear-gradient(to bottom, black 40%, transparent 100%)',
+              } : {}),
+            }}
+          >
+            {paragraphs.slice(1).map((para, i) => (
+              <p
+                key={i}
+                style={{
+                  fontSize: '0.75rem', lineHeight: 1.65, fontWeight: 400,
+                  color: 'var(--ink-secondary)', margin: 0,
+                  overflowWrap: 'break-word', wordBreak: 'break-word',
+                }}
+              >
+                <InlineRefs text={para.trim()} globalSources={overall.sources} />
+              </p>
+            ))}
+          </div>
+        )}
+
         {isLong && (
           <button
             onClick={() => setExpanded(prev => !prev)}
             style={{
-              fontSize: '0.6875rem',
-              fontWeight: 600,
-              color: 'var(--accent)',
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              cursor: 'pointer',
+              fontSize: '0.6875rem', fontWeight: 600,
+              color: 'var(--accent)', background: 'none',
+              border: 'none', padding: 0, cursor: 'pointer',
             }}
           >
             {expanded ? 'Show less' : 'Show more'}
           </button>
         )}
+
+        {/* Quick Scan bullets */}
         {(expanded || !isLong) && overall.quick_scan && overall.quick_scan.length > 0 && (
-          <div style={{ paddingTop: '0.625rem', borderTop: '1px solid var(--border-subtle)' }}>
+          <div style={{ paddingTop: '0.5rem', borderTop: '1px solid var(--border-subtle)' }}>
             <SectionLabel color="var(--accent)" style={{ marginBottom: '0.375rem' }}>Quick Scan</SectionLabel>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
               {overall.quick_scan.map((entry, i) => (
-                <div key={i} style={{ display: 'flex', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.6 }}>
-                  <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0, marginTop: 8 }} />
+                <div key={i} style={{ display: 'flex', gap: '0.5rem', fontSize: '0.6875rem', color: 'var(--ink-secondary)', lineHeight: 1.6 }}>
+                  <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0, marginTop: 7 }} />
                   <span><InlineRefs text={entry.text} globalSources={overall.sources} /></span>
                 </div>
               ))}
@@ -937,14 +947,17 @@ function DomainCardCompact({ domain, summary, onClick }: {
   const totalItems = matchingSections.reduce((n, s) => n + s.item_count, 0)
   const totalNotable = matchingSections.reduce((n, s) => n + s.items.length, 0)
 
-  /** Build summary text for a set of sections — max 2 sentences for card preview. */
-  const buildSummary = (sections: typeof matchingSections) => {
+  /** Build summary text — takes first `limit` brief_summaries (each ≈ 1 sentence). */
+  const buildSummary = (sections: typeof matchingSections, limit: number) => {
     const briefs = sections.map(s => s.brief_summary).filter(Boolean)
-    const raw = briefs.length > 0
-      ? briefs.join(' ')
-      : sections.map(s => s.summary).join(' ')
-    const sentences = raw.split(/(?<=[。！？.!?])\s*/).filter(s => s.trim())
-    return sentences.slice(0, 2).join(' ')
+    if (briefs.length > 0) return briefs.slice(0, limit).join(' ')
+    // Fallback: character-based truncation when brief_summary missing
+    const raw = sections.map(s => s.summary).join(' ')
+    const maxChars = limit * 200
+    if (raw.length <= maxChars) return raw
+    const cut = raw.slice(0, maxChars)
+    const endMatch = cut.match(/^([\s\S]*[.!?。！？])\s/)
+    return endMatch ? endMatch[1].trim() : cut.trim() + '\u2026'
   }
 
   const hasSubGroups = domain.subGroups && domain.subGroups.length > 0
@@ -953,7 +966,7 @@ function DomainCardCompact({ domain, summary, onClick }: {
     <DashCard>
       <div
         onClick={onClick}
-        style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', cursor: 'pointer', userSelect: 'none' }}
+        style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', cursor: 'pointer', userSelect: 'none' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <SectionLabel color={domain.accent}>{domain.label}</SectionLabel>
@@ -974,24 +987,24 @@ function DomainCardCompact({ domain, summary, onClick }: {
           </div>
         </div>
         {hasSubGroups ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
             {domain.subGroups!.map(group => {
               const groupSections = matchingSections.filter(s => group.sensors.includes(s.sensor_name))
               if (groupSections.length === 0) return null
-              const text = buildSummary(groupSections)
+              const text = buildSummary(groupSections, 1)
               if (!text) return null
               return (
-                <div key={group.label} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                <div key={group.label} style={{ display: 'flex', gap: '0.375rem', alignItems: 'flex-start' }}>
                   <span style={{
                     fontFamily: MONO, fontSize: '0.5625rem', fontWeight: 700,
-                    padding: '1px 5px', borderRadius: 3,
+                    padding: '1px 4px', borderRadius: 3,
                     background: 'var(--surface-inset)', color: 'var(--ink-faint)',
-                    flexShrink: 0, marginTop: 2, letterSpacing: '0.04em',
+                    flexShrink: 0, marginTop: 1, letterSpacing: '0.04em',
                   }}>
                     {group.label}
                   </span>
                   <p style={{
-                    fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.6, margin: 0,
+                    fontSize: '0.6875rem', color: 'var(--ink-secondary)', lineHeight: 1.5, margin: 0,
                     overflowWrap: 'break-word', wordBreak: 'break-word',
                   }}>
                     {text}
@@ -1002,10 +1015,10 @@ function DomainCardCompact({ domain, summary, onClick }: {
           </div>
         ) : (
           <p style={{
-            fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.6, margin: 0,
+            fontSize: '0.6875rem', color: 'var(--ink-secondary)', lineHeight: 1.5, margin: 0,
             overflowWrap: 'break-word', wordBreak: 'break-word',
           }}>
-            {buildSummary(matchingSections)}
+            {buildSummary(matchingSections, 2)}
           </p>
         )}
       </div>
@@ -1293,7 +1306,7 @@ function DetailPanel({ domain, summary, report, onClose }: {
         onClick={e => e.stopPropagation()}
         style={{
           position: 'fixed', top: 0, right: 0, bottom: 0,
-          width: 480, maxWidth: '90vw',
+          width: 560, maxWidth: '90vw',
           background: 'var(--surface)',
           borderLeft: '1px solid var(--border)',
           boxShadow: 'var(--shadow-lg)',

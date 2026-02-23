@@ -782,6 +782,9 @@ input[type="range"]::-moz-range-thumb {
     margin-left: 1.25rem !important;
     margin-right: 1.25rem !important;
   }
+  .command-bar {
+    left: 180px !important;
+  }
 }
 
 /* ─── Dashboard Layout ──────────────────────────────────────────────────── */

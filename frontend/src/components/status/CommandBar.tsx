@@ -59,7 +59,7 @@ const barStyle: React.CSSProperties = {
   position: 'fixed',
   bottom: 0,
   right: 0,
-  left: 220,
+  left: 240,
   zIndex: 20,
   background: 'var(--surface)',
   borderTop: '1px solid var(--border)',

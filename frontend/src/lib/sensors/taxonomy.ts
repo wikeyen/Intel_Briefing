@@ -1,7 +1,7 @@
 // ABOUTME: Centralized sensor taxonomy — single source of truth for all sensor metadata.
 // ABOUTME: Defines categories, sensor definitions, and grouping utilities for language/category views.
 
-export const ALL_CATEGORIES = ['tech', 'research', 'finance', 'products', 'community', 'social', 'insights', 'feeds'] as const
+export const ALL_CATEGORIES = ['tech', 'research', 'finance', 'products', 'community', 'social', 'trend', 'insights', 'feeds'] as const
 export type CategoryKey = (typeof ALL_CATEGORIES)[number]
 
 export interface SensorDef {
@@ -29,8 +29,8 @@ export const SENSORS: SensorDef[] = [
   { key: 'wallstreetcn',    label: 'WallStreetCN',      desc: 'Chinese financial and macro news',               language: 'cn',  category: 'finance' },
   { key: 'v2ex',            label: 'V2EX',              desc: 'Chinese tech community hot posts',               language: 'cn',  category: 'community' },
   { key: 'zhihu',           label: 'Zhihu',             desc: 'Zhihu trending questions and discussions',       language: 'cn',  category: 'community' },
-  { key: 'weibo',           label: 'Weibo',             desc: 'Weibo real-time hot search trending',            language: 'cn',  category: 'social' },
-  { key: 'xiaohongshu',     label: 'Xiaohongshu',       desc: 'Xiaohongshu trending topics',                    language: 'cn',  category: 'social' },
+  { key: 'weibo',           label: 'Weibo',             desc: 'Weibo real-time hot search trending',            language: 'cn',  category: 'trend' },
+  { key: 'xiaohongshu',     label: 'Xiaohongshu',       desc: 'Xiaohongshu trending topics',                    language: 'cn',  category: 'trend' },
 ]
 
 /** Maps each sensor key to its category. */
@@ -51,6 +51,7 @@ export const CATEGORY_META: Record<CategoryKey, { label: string; emoji: string }
   products:  { label: 'Products',  emoji: '\u{1F680}' },
   community: { label: 'Community', emoji: '\u{1F5E3}\u{FE0F}' },
   social:    { label: 'Social',    emoji: '\u{1F4F1}' },
+  trend:     { label: 'Trend',     emoji: '\u{1F4C8}' },
   insights:  { label: 'Insights',  emoji: '\u{1F4A1}' },
   feeds:     { label: 'Feeds',     emoji: '\u{1F4F0}' },
 }
@@ -157,6 +158,7 @@ export const CATEGORY_TO_DISPLAY: Record<CategoryKey, DisplayCategoryKey> = {
   products:  'news',
   community: 'opinions',
   social:    'trend',
+  trend:     'trend',
   insights:  'opinions',
   feeds:     'opinions',
 }

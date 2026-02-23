@@ -391,10 +391,10 @@ describe('SensorProtocolCompliance', () => {
 })
 
 describe('Taxonomy', () => {
-  it('ALL_CATEGORIES has 8 category keys', async () => {
+  it('ALL_CATEGORIES has 9 category keys', async () => {
     const { ALL_CATEGORIES } = await import('./taxonomy')
-    expect(ALL_CATEGORIES).toHaveLength(8)
-    const expected = ['tech', 'research', 'finance', 'products', 'community', 'social', 'insights', 'feeds']
+    expect(ALL_CATEGORIES).toHaveLength(9)
+    const expected = ['tech', 'research', 'finance', 'products', 'community', 'social', 'trend', 'insights', 'feeds']
     expect([...ALL_CATEGORIES]).toEqual(expected)
   })
 

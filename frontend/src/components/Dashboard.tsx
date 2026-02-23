@@ -105,8 +105,8 @@ function StaggerChild({ index, children, className }: { index: number; children:
   )
 }
 
-/** Social platform set for sentiment computation. */
-const SOCIAL = new Set(['x', 'bluesky', 'mastodon', 'weibo', 'xiaohongshu'])
+/** Social platform set for sentiment computation (ROW only). */
+const SOCIAL = new Set(['x', 'bluesky', 'mastodon'])
 
 // ---------------------------------------------------------------------------
 // Widget: Status Ticker Bar
@@ -919,7 +919,11 @@ function NewsTechWidget({ summary }: { summary: BriefingSummary }) {
 function SocialPulseWidget({ summary, report }: { summary: BriefingSummary; report: IntelReport | null }) {
   const overall = summary.overall
   const moodSummary = isStructuredOverall(overall) ? overall.sentiment?.mood_summary ?? null : null
-  return <SensorDomainCard sectionLabel="Social Pulse" accentColor="var(--cat-trend)" sensorNames={['x', 'bluesky', 'mastodon', 'weibo', 'xiaohongshu']} summary={summary} report={report} showSentimentBars moodSummary={moodSummary} />
+  return <SensorDomainCard sectionLabel="Social Pulse" accentColor="var(--cat-trend)" sensorNames={['x', 'bluesky', 'mastodon']} summary={summary} report={report} showSentimentBars moodSummary={moodSummary} />
+}
+
+function ChinaTrendWidget({ summary }: { summary: BriefingSummary }) {
+  return <SensorDomainCard sectionLabel="China Trend" accentColor="var(--cat-trend)" sensorNames={['weibo', 'xiaohongshu']} summary={summary} />
 }
 
 function ResearchRadarWidget({ summary }: { summary: BriefingSummary }) {
@@ -927,7 +931,11 @@ function ResearchRadarWidget({ summary }: { summary: BriefingSummary }) {
 }
 
 function OpinionDigestWidget({ summary }: { summary: BriefingSummary }) {
-  return <SensorDomainCard sectionLabel="Opinion Digest" accentColor="var(--cat-opinion)" sensorNames={['hn_blogs', 'rss_feeds', 'v2ex', 'zhihu']} summary={summary} />
+  return <SensorDomainCard sectionLabel="Opinion Digest" accentColor="var(--cat-opinion)" sensorNames={['hn_blogs', 'rss_feeds']} summary={summary} />
+}
+
+function ChinaCommunityWidget({ summary }: { summary: BriefingSummary }) {
+  return <SensorDomainCard sectionLabel="China Community" accentColor="var(--cat-opinion)" sensorNames={['v2ex', 'zhihu']} summary={summary} />
 }
 
 // ---------------------------------------------------------------------------
@@ -1314,7 +1322,7 @@ export function Dashboard() {
                   </StaggerChild>
                 )}
 
-                {/* 6. Social Pulse */}
+                {/* 6. Social Pulse (ROW) */}
                 {summary && (
                   <StaggerChild index={6}>
                     <SocialPulseWidget summary={summary} report={report} />
@@ -1328,17 +1336,31 @@ export function Dashboard() {
                   </StaggerChild>
                 )}
 
-                {/* 8. Research Radar */}
+                {/* 8. China Trend (Weibo, Xiaohongshu) */}
                 {summary && (
                   <StaggerChild index={8}>
+                    <ChinaTrendWidget summary={summary} />
+                  </StaggerChild>
+                )}
+
+                {/* 9. Research Radar */}
+                {summary && (
+                  <StaggerChild index={9}>
                     <ResearchRadarWidget summary={summary} />
                   </StaggerChild>
                 )}
 
-                {/* 9. Opinion Digest */}
+                {/* 10. Opinion Digest (ROW) */}
                 {summary && (
-                  <StaggerChild index={9}>
+                  <StaggerChild index={10}>
                     <OpinionDigestWidget summary={summary} />
+                  </StaggerChild>
+                )}
+
+                {/* 11. China Community (V2EX, Zhihu) */}
+                {summary && (
+                  <StaggerChild index={11}>
+                    <ChinaCommunityWidget summary={summary} />
                   </StaggerChild>
                 )}
 
@@ -1354,21 +1376,21 @@ export function Dashboard() {
               <div className="dashboard-sidebar flex flex-col" style={{ gap: '1.25rem' }}>
                 {/* Sentiment */}
                 {summary && (
-                  <StaggerChild index={10}>
+                  <StaggerChild index={12}>
                     <SentimentWidget summary={summary} report={report} />
                   </StaggerChild>
                 )}
 
                 {/* Category Distribution */}
                 {report && (
-                  <StaggerChild index={11}>
+                  <StaggerChild index={13}>
                     <CategoryDistributionWidget report={report} />
                   </StaggerChild>
                 )}
 
                 {/* Source Health */}
                 {report && (
-                  <StaggerChild index={12}>
+                  <StaggerChild index={14}>
                     <SourceHealthWidget report={report} />
                   </StaggerChild>
                 )}

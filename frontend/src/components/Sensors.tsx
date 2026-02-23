@@ -534,9 +534,6 @@ export function Sensors() {
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                               <span style={{ fontSize: '0.8125rem', color: 'var(--ink)' }}>Twitter Scraper</span>
-                              <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>
-                                Apify is reserved for trends only
-                              </span>
                             </div>
                           </div>
                           <div>

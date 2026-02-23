@@ -778,7 +778,7 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
               const neuPct = 100 - posPct - negPct
               return (
                 <div key={source} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ fontFamily: MONO, fontSize: '0.5625rem', fontWeight: 500, color: PLATFORM_COLORS[source] ?? 'var(--ink-secondary)', width: 56, flexShrink: 0 }}>
+                  <span style={{ fontFamily: MONO, fontSize: '0.5625rem', fontWeight: 500, color: PLATFORM_COLORS[source] ?? 'var(--ink-secondary)', width: 72, flexShrink: 0 }}>
                     {SENSOR_LABELS[source] ?? source}
                   </span>
                   <div style={{ flex: 1, display: 'flex', overflow: 'hidden', height: 3, borderRadius: 2, background: 'var(--border-subtle)', gap: 1 }}>
@@ -1132,6 +1132,94 @@ function TrendingWidget({ report, summary }: { report: IntelReport; summary?: Br
         </div>
       </div>
     </DashCard>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Detail Section Content — reusable per-sensor block for detail panel
+// ---------------------------------------------------------------------------
+
+function DetailSectionContent({ section, domain, platformSentiment }: {
+  section: { sensor_name: string; label: string; item_count: number; summary: string; items: { title: string; url: string; brief?: string }[] }
+  domain: DomainDef
+  platformSentiment: Record<string, { positive: number; negative: number; neutral: number; total: number }>
+}) {
+  return (
+    <>
+      {/* Source header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+        <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)' }}>
+          {section.label}
+        </span>
+        <span style={{
+          fontFamily: MONO, fontSize: '0.5625rem', fontWeight: 600,
+          background: 'var(--surface-alt)', borderRadius: 4,
+          padding: '1px 5px', color: 'var(--ink-faint)',
+        }}>
+          {section.item_count}
+        </span>
+      </div>
+
+      {/* AI summary */}
+      <p style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.6, margin: 0, overflowWrap: 'break-word', wordBreak: 'break-word' }}>
+        {section.summary}
+      </p>
+
+      {/* Sentiment bar */}
+      {domain.showSentiment && platformSentiment[section.sensor_name] && (() => {
+        const counts = platformSentiment[section.sensor_name]
+        const posPct = Math.round((counts.positive / counts.total) * 100)
+        const negPct = Math.round((counts.negative / counts.total) * 100)
+        const neuPct = 100 - posPct - negPct
+        return (
+          <div>
+            <div style={{ display: 'flex', gap: 6, fontFamily: MONO, fontSize: '0.625rem', color: 'var(--ink-tertiary)', marginBottom: 2 }}>
+              <span style={{ color: 'var(--sent-pos-text)' }}>{posPct}% pos</span>
+              <span>{neuPct}% neu</span>
+              <span style={{ color: 'var(--sent-neg-text)' }}>{negPct}% neg</span>
+            </div>
+            <div style={{ display: 'flex', overflow: 'hidden', height: 4, borderRadius: 2, background: 'var(--border-subtle)', gap: 1 }}>
+              {posPct > 0 && <div style={{ width: `${posPct}%`, background: 'var(--sent-pos)', transition: 'width 400ms ease' }} />}
+              {neuPct > 0 && <div style={{ width: `${neuPct}%`, background: 'var(--sent-neu)', opacity: 0.4, transition: 'width 400ms ease' }} />}
+              {negPct > 0 && <div style={{ width: `${negPct}%`, background: 'var(--sent-neg)', transition: 'width 400ms ease' }} />}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Notable items */}
+      {section.items.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {section.items.map((item, idx) => (
+            <a
+              key={idx}
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex', gap: '0.5rem', textDecoration: 'none',
+                borderRadius: 6, padding: '6px 10px', margin: '0 -10px',
+                transition: 'background 150ms ease',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-inset)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
+            >
+              <span style={{ width: 4, height: 4, borderRadius: '50%', background: domain.accent, flexShrink: 0, marginTop: 6 }} />
+              <div style={{ flex: 1, minWidth: 0, overflowWrap: 'break-word', wordBreak: 'break-word' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink)', lineHeight: 1.5 }}>
+                  {item.title}
+                </div>
+                {item.brief && (
+                  <div style={{ fontSize: '0.6875rem', color: 'var(--ink-tertiary)', lineHeight: 1.5, marginTop: 1 }}>
+                    {item.brief}
+                  </div>
+                )}
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
+    </>
   )
 }
 

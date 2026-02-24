@@ -197,6 +197,19 @@ export function Status() {
     }
   }
 
+  const handleRetryFailed = async () => {
+    if (!report || report.sources_failed.length === 0) return
+    const failed = report.sources_failed
+    // Incremental: only re-fetch failed sensors if data is fresh (within cache TTL).
+    // Otherwise do a full run since cached data is too old to merge with.
+    const isFresh = health?.status === 'ok'
+    if (isFresh) {
+      await handleRun('fetch_summarize', failed)
+    } else {
+      await handleRun('fetch_summarize')
+    }
+  }
+
   const staleInfo = detectStale(null, pipelineStatus)
 
   const handleAbortStale = async () => {
@@ -364,6 +377,7 @@ export function Status() {
         selectedCount={selectedSensors.size}
         totalSensors={allEnabledSensors.length}
         hasFailedSensors={failedSensors.length > 0}
+        failedSensorCount={failedSensors.length}
         onRun={(mode) => {
           const sensors = selectedSensors.size > 0 ? Array.from(selectedSensors) : undefined
           handleRun(mode, sensors)
@@ -371,6 +385,7 @@ export function Status() {
         onStop={handleStop}
         onSkipRetries={handleSkipRetries}
         onGenerateOverall={handleGenerateOverall}
+        onRetryFailed={handleRetryFailed}
         onSelectAll={selectAll}
         onSelectNone={selectNone}
         onSelectFailed={selectFailed}

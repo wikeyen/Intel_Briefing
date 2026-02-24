@@ -27,10 +27,12 @@ export interface ControlBarProps {
   selectedCount: number
   totalSensors: number
   hasFailedSensors: boolean
+  failedSensorCount: number
   onRun: (mode: RunMode) => void
   onStop: () => void
   onSkipRetries: () => void
   onGenerateOverall: () => void
+  onRetryFailed: () => void
   onSelectAll: () => void
   onSelectNone: () => void
   onSelectFailed: () => void
@@ -184,10 +186,12 @@ export function ControlBar({
   selectedCount,
   totalSensors,
   hasFailedSensors,
+  failedSensorCount,
   onRun,
   onStop,
   onSkipRetries,
   onGenerateOverall,
+  onRetryFailed,
   onSelectAll,
   onSelectNone,
   onSelectFailed,
@@ -379,6 +383,23 @@ export function ControlBar({
               {allSelected ? t('status.all_sel') : t('status.n_sel', { count: String(selectedCount) })}
             </span>
           </div>
+
+          {/* Retry failed button — shown when there are failures */}
+          {hasFailedSensors && (
+            <button
+              type="button"
+              disabled={runDisabled}
+              onClick={onRetryFailed}
+              style={{
+                ...runBtnBase,
+                background: 'var(--err)',
+                ...(runDisabled ? { opacity: 0.4, cursor: 'not-allowed' } : {}),
+              }}
+            >
+              <span style={{ fontSize: '0.625rem' }}>{'\u21BB'}</span>
+              {t('status.retry_n_failed', { count: String(failedSensorCount) })}
+            </button>
+          )}
 
           {/* Right: Run button */}
           <button

@@ -184,6 +184,7 @@ const zh: TranslationDict = {
   'status.next': '下次: {time}',
   'status.no_schedule': '无计划',
   'status.failed_retry': '{count} 个失败 — 请重试或跳过',
+  'status.retry_n_failed': '重试 {count} 个失败',
   'status.generate_summary': '生成摘要',
   'status.mode_fetch': '获取',
   'status.mode_fetch_summarize': '获取 + 摘要',

@@ -1,5 +1,5 @@
 // ABOUTME: Pipeline phase stepper — horizontal visual indicator of pipeline workflow phases.
-// ABOUTME: Shows fetch → summary → intel → briefing main line with retry as a git-tree branch below.
+// ABOUTME: Shows fetch → summary → briefing → intel main line with retry as a git-tree branch below.
 'use client'
 
 import type { PipelineStatus } from '@/api/client'
@@ -171,6 +171,26 @@ function derivePhaseProgress(ps: PipelineStatus | null): Record<PipelinePhaseSte
   return p
 }
 
+/** Derive count annotations for fetch and retry nodes. */
+function derivePhaseCounts(ps: PipelineStatus | null): Record<string, { ok: number; total: number } | null> {
+  if (!ps) return { fetch: null, retry: null }
+
+  // Fetch counts: sensors with fetch='ok' vs total non-skipped
+  const fetchActive = ps.sensors.filter(s => s.fetch !== 'skipped')
+  const fetchOk = fetchActive.filter(s => s.fetch === 'ok').length
+  const fetchTotal = fetchActive.length
+  const fetchCount = fetchTotal > 0 ? { ok: fetchOk, total: fetchTotal } : null
+
+  // Retry counts: derive from retry events (ok vs error)
+  const retryEvents = (ps.events ?? []).filter(e => e.phase === 'retry')
+  const retryOk = retryEvents.filter(e => e.level === 'ok').length
+  const retryFail = retryEvents.filter(e => e.level === 'error').length
+  const retryTotal = retryOk + retryFail
+  const retryCount = retryTotal > 0 ? { ok: retryOk, total: retryTotal } : null
+
+  return { fetch: fetchCount, retry: retryCount }
+}
+
 const STEP_COLORS: Record<StepStatus, { dot: string; label: string }> = {
   pending: { dot: 'var(--border)', label: 'var(--ink-faint)' },
   active: { dot: 'var(--accent)', label: 'var(--accent)' },
@@ -191,16 +211,18 @@ const STEPPER_CSS = `
 }
 `
 
-/** Circle node with icon + label used by both the main line and the retry branch. */
-function StepNode({ step, status, isClickable, onLogToggle, t }: {
+/** Circle node with icon + label + optional count annotation. */
+function StepNode({ step, status, isClickable, onLogToggle, t, counts }: {
   step: StepDef
   status: StepStatus
   isClickable: boolean
   onLogToggle?: () => void
   t: (key: string) => string
+  counts?: { ok: number; total: number } | null
 }) {
   const colors = STEP_COLORS[status]
   const icon = STEP_ICONS[status]
+  const showCounts = counts && counts.total > 0 && status !== 'pending'
 
   return (
     <div
@@ -250,17 +272,32 @@ function StepNode({ step, status, isClickable, onLogToggle, t }: {
       }}>
         {t(step.labelKey)}
       </span>
+      {/* Count annotation (e.g. "22/24") */}
+      {showCounts && (
+        <span style={{
+          fontSize: '0.5rem',
+          fontFamily: 'ui-monospace, monospace',
+          fontWeight: 500,
+          color: counts.ok === counts.total ? 'var(--ok)' : 'var(--err)',
+          whiteSpace: 'nowrap',
+          lineHeight: 1,
+          marginTop: '-0.0625rem',
+        }}>
+          {counts.ok}/{counts.total}
+        </span>
+      )}
     </div>
   )
 }
 
 /** Retry branch rendered below the main line between fetch and summary nodes. */
-function RetryBranch({ retryStatus, isClickable, onLogToggle, t, segmentWidthPct }: {
+function RetryBranch({ retryStatus, isClickable, onLogToggle, t, segmentWidthPct, counts }: {
   retryStatus: StepStatus
   isClickable: boolean
   onLogToggle?: () => void
   t: (key: string) => string
   segmentWidthPct: number
+  counts?: { ok: number; total: number } | null
 }) {
   const dropHeight = 18
   const borderColor = 'var(--border)'
@@ -357,6 +394,7 @@ function RetryBranch({ retryStatus, isClickable, onLogToggle, t, segmentWidthPct
           isClickable={isClickable}
           onLogToggle={onLogToggle}
           t={t}
+          counts={counts}
         />
 
         {/* Right horizontal connector (retry -> summary) */}
@@ -416,13 +454,15 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
   const { t } = useTranslation()
   const statuses = deriveStepStatuses(pipelineStatus)
   const progress = derivePhaseProgress(pipelineStatus)
+  const counts = derivePhaseCounts(pipelineStatus)
 
   const visibleSteps = MAIN_STEPS.filter(step => statuses[step.key] !== 'skipped')
   const hasEvents = (pipelineStatus?.events ?? []).length > 0
 
-  // Branch visibility: show when retry is active, done, or error
+  // Branch visibility: show only during active retries or when retries failed.
+  // Successful retries (done) and skipped retries stay hidden to reduce noise.
   const retryStatus = statuses.retry
-  const showBranch = retryStatus === 'active' || retryStatus === 'done' || retryStatus === 'error'
+  const showBranch = retryStatus === 'active' || retryStatus === 'error'
 
   // Branch width spans the first segment of the main line
   const segmentWidthPct = visibleSteps.length > 1 ? 100 / (visibleSteps.length - 1) : 100
@@ -460,9 +500,8 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
             // Active phases always show shimmer (determinate fills + shimmer overlay, indeterminate = shimmer only)
             const showShimmer = isActive
 
-            // When branch is visible, suppress the first connector fill (fetch->summary)
-            // because the flow goes through the branch instead
-            const suppressFill = showBranch && i === 0
+            // Phase-specific counts (only fetch gets annotation on main line)
+            const stepCounts = step.key === 'fetch' ? counts.fetch : null
 
             return (
               <div key={step.key} style={{
@@ -471,13 +510,14 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
                 flex: isLast ? '0 0 auto' : '1 1 0',
                 minWidth: 0,
               }}>
-                {/* Step text label */}
+                {/* Step node with optional count */}
                 <StepNode
                   step={step}
                   status={status}
                   isClickable={isClickable}
                   onLogToggle={onLogToggle}
                   t={t}
+                  counts={stepCounts}
                 />
 
                 {/* Connector line with progress fill */}
@@ -493,8 +533,8 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
                     position: 'relative',
                     overflow: 'hidden',
                   }}>
-                    {/* Determinate fill — suppressed on first connector when branch is shown */}
-                    {!suppressFill && !isIndeterminate && lineFillPct > 0 && (
+                    {/* Determinate fill */}
+                    {!isIndeterminate && lineFillPct > 0 && (
                       <div style={{
                         position: 'absolute',
                         top: 0,
@@ -507,14 +547,13 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
                         transition: 'width 500ms ease',
                       }} />
                     )}
-                    {/* Shimmer overlay for active phases — covers filled portion (determinate) or full bar (indeterminate) */}
-                    {!suppressFill && showShimmer && (
+                    {/* Shimmer overlay for active phases */}
+                    {showShimmer && (
                       <div style={{
                         position: 'absolute',
                         top: 0,
                         left: 0,
                         height: '100%',
-                        // For determinate progress, shimmer covers the filled width; for indeterminate, full bar
                         width: isIndeterminate ? '100%' : `${lineFillPct}%`,
                         overflow: 'hidden',
                         borderRadius: 2,
@@ -544,6 +583,7 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
             onLogToggle={onLogToggle}
             t={t}
             segmentWidthPct={segmentWidthPct}
+            counts={counts.retry}
           />
         )}
       </div>

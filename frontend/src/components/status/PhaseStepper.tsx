@@ -21,10 +21,18 @@ const MAIN_STEPS: StepDef[] = [
 ]
 const BRANCH_STEP: StepDef = { key: 'retry', labelKey: 'log.phase_retry' }
 
-const CONNECTOR_HEIGHT = 3
-const LABEL_HEIGHT = 12  // approximate rendered height of the uppercase label
-const LABEL_CENTER = LABEL_HEIGHT / 2  // vertical midpoint for connector alignment
-const CONNECTOR_OFFSET = LABEL_CENTER - CONNECTOR_HEIGHT / 2  // vertically center connector on label
+const NODE_SIZE = 16
+const NODE_CENTER = NODE_SIZE / 2  // 8
+const CONNECTOR_HEIGHT = 2
+const CONNECTOR_OFFSET = (NODE_SIZE - CONNECTOR_HEIGHT) / 2  // vertically center connector on node
+
+const STEP_ICONS: Record<StepStatus, string> = {
+  pending: '',
+  active: '●',
+  done: '✓',
+  error: '✕',
+  skipped: '–',
+}
 
 const TERMINAL_STATES = ['ok', 'failed', 'skipped', 'cancelled']
 
@@ -176,7 +184,7 @@ const STEPPER_CSS = `
 }
 `
 
-/** Text-only step label used by both the main line and the retry branch. */
+/** Circle node with icon + label used by both the main line and the retry branch. */
 function StepNode({ step, status, isClickable, onLogToggle, t }: {
   step: StepDef
   status: StepStatus
@@ -185,6 +193,7 @@ function StepNode({ step, status, isClickable, onLogToggle, t }: {
   t: (key: string) => string
 }) {
   const colors = STEP_COLORS[status]
+  const icon = STEP_ICONS[status]
 
   return (
     <div
@@ -196,19 +205,41 @@ function StepNode({ step, status, isClickable, onLogToggle, t }: {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
+        gap: '0.1875rem',
         flexShrink: 0,
         position: 'relative',
         cursor: isClickable ? 'pointer' : 'default',
       }}
     >
+      {/* Circle */}
+      <div style={{
+        width: NODE_SIZE,
+        height: NODE_SIZE,
+        borderRadius: '50%',
+        border: `1.5px solid ${colors.dot}`,
+        background: status === 'active' ? colors.dot : 'transparent',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '0.5rem',
+        fontWeight: 700,
+        color: status === 'active' ? 'white' : colors.dot,
+        transition: 'all 300ms ease',
+        ...(status === 'active' ? {
+          boxShadow: `0 0 0 2.5px color-mix(in srgb, ${colors.dot} 20%, transparent)`,
+        } : {}),
+      }}>
+        {icon}
+      </div>
+      {/* Label */}
       <span style={{
-        fontSize: '0.5625rem',
-        fontWeight: status === 'active' ? 700 : 600,
+        fontSize: '0.5rem',
+        fontWeight: 600,
         letterSpacing: '0.04em',
         textTransform: 'uppercase',
         color: colors.label,
         whiteSpace: 'nowrap',
-        transition: 'color 300ms ease, font-weight 300ms ease',
+        transition: 'color 300ms ease',
       }}>
         {t(step.labelKey)}
       </span>
@@ -224,7 +255,7 @@ function RetryBranch({ retryStatus, isClickable, onLogToggle, t, segmentWidthPct
   t: (key: string) => string
   segmentWidthPct: number
 }) {
-  const dropHeight = 16
+  const dropHeight = 18
   const borderColor = 'var(--border)'
 
   // Branch fill colors and percentages based on retry status
@@ -253,7 +284,7 @@ function RetryBranch({ retryStatus, isClickable, onLogToggle, t, segmentWidthPct
           borderLeft: `2px solid ${borderColor}`,
           borderBottom: `2px solid ${borderColor}`,
           borderRadius: '0 0 0 6px',
-          marginLeft: LABEL_CENTER, // Approximate center of the text label
+          marginLeft: NODE_CENTER, // Approximate center of the text label
           boxSizing: 'border-box',
         }} />
         {/* Right vertical rise (shape: border-right + border-bottom) */}
@@ -263,7 +294,7 @@ function RetryBranch({ retryStatus, isClickable, onLogToggle, t, segmentWidthPct
           borderRight: `2px solid ${borderColor}`,
           borderBottom: `2px solid ${borderColor}`,
           borderRadius: '0 0 6px 0',
-          marginRight: LABEL_CENTER, // Approximate center of the text label
+          marginRight: NODE_CENTER, // Approximate center of the text label
           boxSizing: 'border-box',
         }} />
       </div>
@@ -285,7 +316,7 @@ function RetryBranch({ retryStatus, isClickable, onLogToggle, t, segmentWidthPct
           borderRadius: 2,
           position: 'relative',
           overflow: 'hidden',
-          marginLeft: LABEL_CENTER,
+          marginLeft: NODE_CENTER,
         }}>
           {/* Determinate fill */}
           {!branchIndeterminate && branchFillPct > 0 && (
@@ -337,7 +368,7 @@ function RetryBranch({ retryStatus, isClickable, onLogToggle, t, segmentWidthPct
           borderRadius: 2,
           position: 'relative',
           overflow: 'hidden',
-          marginRight: LABEL_CENTER,
+          marginRight: NODE_CENTER,
         }}>
           {/* Determinate fill */}
           {!branchIndeterminate && branchFillPct > 0 && (

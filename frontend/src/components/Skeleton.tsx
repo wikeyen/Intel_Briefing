@@ -384,25 +384,28 @@ export function StatusSkeleton() {
           </div>
         </div>
 
-        {/* Phase stepper skeleton — text labels only, no circles */}
+        {/* Phase stepper skeleton — circle nodes + connectors */}
         <div style={{
           maxWidth: 1024,
           margin: '0 auto',
           width: '100%',
           padding: '0.25rem 3rem 0.5rem',
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'flex-start',
         }}>
           {[0, 1, 2, 3].map((i) => (
             <div key={i} style={{
               display: 'flex',
-              alignItems: 'center',
+              alignItems: 'flex-start',
               flex: i < 3 ? '1 1 0' : '0 0 auto',
             }}>
-              <Skeleton width={[32, 50, 72, 44][i]} height={10} borderRadius={3} />
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.1875rem' }}>
+                <Skeleton width={16} height={16} borderRadius={8} />
+                <Skeleton width={[32, 50, 72, 44][i]} height={8} borderRadius={3} />
+              </div>
               {i < 3 && (
-                <div style={{ flex: '1 1 0', padding: '0 4px' }}>
-                  <Skeleton height={3} borderRadius={2} />
+                <div style={{ flex: '1 1 0', padding: '0 4px', marginTop: 7 }}>
+                  <Skeleton height={2} borderRadius={1} />
                 </div>
               )}
             </div>

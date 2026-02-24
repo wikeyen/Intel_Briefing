@@ -1,6 +1,6 @@
 // ABOUTME: Pipeline progress tracker — manages two-stage pipeline state via observer pattern.
 // ABOUTME: Decouples state transitions from persistence; callers subscribe via onChange callback.
-import type { PipelineStatus, SensorJobProgress, StageState, RunMode } from '../models'
+import type { PipelineStatus, SensorJobProgress, StageState, RunMode, PipelineEvent, PipelineEventLevel, PipelinePhase } from '../models'
 
 type OnChangeCallback = (status: PipelineStatus) => void
 
@@ -23,6 +23,8 @@ export class PipelineProgressTracker {
   private retryAttempt = 0
   private retryMax = 0
   private overallSummary: StageState
+  private readonly events: PipelineEvent[] = []
+  private static readonly MAX_EVENTS = 200
 
   constructor(
     sensorNames: string[],
@@ -68,6 +70,22 @@ export class PipelineProgressTracker {
 
   private notify(): void {
     this.onChange?.(this.snapshot())
+  }
+
+  /** Append a structured event to the pipeline log. Capped at MAX_EVENTS entries. */
+  addEvent(level: PipelineEventLevel, phase: PipelinePhase, message: string, sensor?: string): void {
+    const event: PipelineEvent = {
+      ts: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
+      level,
+      phase,
+      message,
+      ...(sensor ? { sensor } : {}),
+    }
+    this.events.push(event)
+    if (this.events.length > PipelineProgressTracker.MAX_EVENTS) {
+      this.events.splice(0, this.events.length - PipelineProgressTracker.MAX_EVENTS)
+    }
+    this.notify()
   }
 
   setFetchState(
@@ -223,6 +241,7 @@ export class PipelineProgressTracker {
       total_items: this.sensors
         .filter(s => s.fetch === 'ok')
         .reduce((sum, s) => sum + s.item_count, 0),
+      events: [...this.events],
     }
   }
 }

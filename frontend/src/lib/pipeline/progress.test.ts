@@ -237,4 +237,93 @@ describe('PipelineProgressTracker', () => {
     expect(snap2.retry_attempt).toBe(0)
     expect(snap2.retry_max).toBe(0)
   })
+
+  it('snapshot includes empty events array initially', () => {
+    const tracker = new PipelineProgressTracker(sensors, 'fetch', 4, 4)
+    expect(tracker.snapshot().events).toEqual([])
+  })
+
+  it('addEvent appends events and includes them in snapshot', () => {
+    const tracker = new PipelineProgressTracker(sensors, 'fetch_summarize', 4, 4)
+    tracker.addEvent('info', 'system', 'Pipeline started')
+    tracker.addEvent('ok', 'fetch', 'Fetched 10 items', 'hacker_news')
+
+    const snap = tracker.snapshot()
+    expect(snap.events).toHaveLength(2)
+    expect(snap.events[0]).toMatchObject({
+      level: 'info',
+      phase: 'system',
+      message: 'Pipeline started',
+    })
+    expect(snap.events[0].sensor).toBeUndefined()
+    expect(snap.events[1]).toMatchObject({
+      level: 'ok',
+      phase: 'fetch',
+      message: 'Fetched 10 items',
+      sensor: 'hacker_news',
+    })
+  })
+
+  it('events have ISO timestamps ending in Z', () => {
+    const tracker = new PipelineProgressTracker([], 'fetch', 4, 1)
+    tracker.addEvent('info', 'system', 'test')
+
+    const ts = tracker.snapshot().events[0].ts
+    expect(ts).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/)
+  })
+
+  it('caps events at 200', () => {
+    const tracker = new PipelineProgressTracker([], 'fetch', 4, 1)
+    for (let i = 0; i < 210; i++) {
+      tracker.addEvent('info', 'system', `Event ${i}`)
+    }
+
+    const snap = tracker.snapshot()
+    expect(snap.events).toHaveLength(200)
+    expect(snap.events[0].message).toBe('Event 10')
+    expect(snap.events[199].message).toBe('Event 209')
+  })
+
+  it('snapshot returns a copy of events array', () => {
+    const tracker = new PipelineProgressTracker([], 'fetch', 4, 1)
+    tracker.addEvent('info', 'system', 'first')
+
+    const snap1 = tracker.snapshot()
+    tracker.addEvent('ok', 'system', 'second')
+    const snap2 = tracker.snapshot()
+
+    expect(snap1.events).toHaveLength(1)
+    expect(snap2.events).toHaveLength(2)
+  })
+
+  it('addEvent triggers onChange callback', () => {
+    const onChange = vi.fn()
+    const tracker = new PipelineProgressTracker([], 'fetch', 4, 1, onChange)
+    onChange.mockClear()
+
+    tracker.addEvent('info', 'system', 'test')
+    expect(onChange).toHaveBeenCalledTimes(1)
+  })
+
+  it('events survive cancel and complete', () => {
+    const tracker = new PipelineProgressTracker(sensors, 'fetch_summarize', 4, 4)
+    tracker.addEvent('info', 'system', 'Started')
+    tracker.addEvent('ok', 'fetch', 'Done', 'hacker_news')
+    tracker.complete()
+
+    const snap = tracker.snapshot()
+    expect(snap.events).toHaveLength(2)
+    expect(snap.running).toBe(false)
+  })
+
+  it('events accumulate after cancel', () => {
+    const tracker = new PipelineProgressTracker(sensors, 'fetch_summarize', 4, 4)
+    tracker.addEvent('info', 'system', 'Started')
+    tracker.cancel()
+    tracker.addEvent('warn', 'system', 'Cancelled')
+
+    const snap = tracker.snapshot()
+    expect(snap.events).toHaveLength(2)
+    expect(snap.cancelled).toBe(true)
+  })
 })

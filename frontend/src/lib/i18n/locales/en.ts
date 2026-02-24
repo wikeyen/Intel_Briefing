@@ -515,6 +515,16 @@ const en: TranslationDict = {
   // ── Item card (tooltip) ────────────────────────────────────────────────────
   'item.link_unverified': 'Link could not be verified',
 
+  // ── Pipeline activity log ────────────────────────────────────────────────────
+  'log.title': 'Activity Log',
+  'log.scroll_bottom': 'New events',
+  'log.phase_fetch': 'Fetch',
+  'log.phase_retry': 'Retry',
+  'log.phase_summary': 'Summary',
+  'log.phase_briefing': 'Briefing',
+  'log.phase_intelligence': 'Intel',
+  'log.phase_system': 'System',
+
   // ── Sensor validation errors ───────────────────────────────────────────────
   'sources.invalid_x_handle': 'Invalid handle format',
   'sources.invalid_bluesky_handle': 'Use format: name.bsky.social',

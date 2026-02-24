@@ -102,6 +102,7 @@ export function makePipelineStatus(overrides: Partial<PipelineStatus> = {}): Pip
     paused_stage: null,
     retry_attempt: 0,
     retry_max: 0,
+    events: [],
     ...overrides,
   }
 }

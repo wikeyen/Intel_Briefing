@@ -125,6 +125,17 @@ export type SummaryLanguage = 'en' | 'zh'
 export type RunMode = 'fetch' | 'summarize' | 'fetch_summarize'
 export type StageState = 'queued' | 'running' | 'ok' | 'failed' | 'skipped' | 'cancelled'
 
+export type PipelineEventLevel = 'info' | 'ok' | 'warn' | 'error'
+export type PipelinePhase = 'fetch' | 'retry' | 'summary' | 'intelligence' | 'system'
+
+export interface PipelineEvent {
+  ts: string
+  level: PipelineEventLevel
+  phase: PipelinePhase
+  message: string
+  sensor?: string
+}
+
 export interface SensorJobProgress {
   name: string
   fetch: StageState
@@ -160,6 +171,7 @@ export interface PipelineStatus {
   sensors: SensorJobProgress[]
   overall_summary: StageState
   total_items: number
+  events: PipelineEvent[]
 }
 
 export interface SensorSummaryItem {

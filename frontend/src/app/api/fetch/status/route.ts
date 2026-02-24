@@ -23,6 +23,7 @@ export async function GET(): Promise<NextResponse<PipelineStatus & { alive: bool
       paused_stage: null,
       retry_attempt: 0,
       retry_max: 0,
+      events: [],
       alive: false,
     })
   }

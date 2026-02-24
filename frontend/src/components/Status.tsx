@@ -11,6 +11,8 @@ import { SensorGrid } from './status/SensorGrid'
 import { SECTION_SENSORS } from './status/constants'
 import { StaleProcessBanner, detectStale } from './StaleProcessBanner'
 import { StatusSkeleton } from './Skeleton'
+import { PhaseStepper } from './status/PhaseStepper'
+import { ActivityLog } from './status/ActivityLog'
 
 export function Status() {
   const showToast = useToast()
@@ -393,6 +395,13 @@ export function Status() {
         isStopping={stopping}
       />
 
+      {/* Phase stepper — only visible during or after a pipeline run */}
+      {pipelineStatus && (pipelineStatus.running || pipelineStatus.completed_at) && (
+        <div style={{ maxWidth: 1024, margin: '0 auto', width: '100%', padding: '0.25rem 3rem 0' }}>
+          <PhaseStepper pipelineStatus={pipelineStatus} />
+        </div>
+      )}
+
       <SensorGrid
         isRunning={isRunning}
         isPaused={isPaused}
@@ -413,6 +422,13 @@ export function Status() {
         onDismiss={dismissSensor}
         autoRetryExhausted={autoRetryExhausted}
       />
+
+      {/* Activity log — only visible when there are events */}
+      {pipelineStatus && pipelineStatus.events && pipelineStatus.events.length > 0 && (
+        <div style={{ maxWidth: 1024, margin: '0 auto', width: '100%', padding: '0 3rem 1.5rem' }}>
+          <ActivityLog events={pipelineStatus.events} />
+        </div>
+      )}
 
     </section>
   )

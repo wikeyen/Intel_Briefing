@@ -276,6 +276,8 @@ export async function runPipeline(
   // Write initial status
   await writePipelineStatus(tracker.snapshot()).catch(() => {})
 
+  tracker.addEvent('info', 'system', `Pipeline started — mode: ${mode}, ${trackerSensorNames.length} sensors`)
+
   let report: IntelReport | null = null
   let summary: BriefingSummary | null = null
 
@@ -333,6 +335,7 @@ export async function runPipeline(
 
             if (outcome === 'SKIPPED') {
               tracker.setFetchState(name, 'skipped', 0)
+              tracker.addEvent('info', 'fetch', `Skipped by user`, name)
               failedSensors.delete(name)
               skippedSensors.add(name)
               return
@@ -342,9 +345,11 @@ export async function runPipeline(
             resultMap.set(name, result)
             if (sensorResultSucceeded(result)) {
               tracker.setFetchState(name, 'ok', result.items.length)
+              tracker.addEvent('ok', 'fetch', `Fetched ${result.items.length} items`, name)
               failedSensors.delete(name)
             } else {
               tracker.setFetchState(name, 'failed', 0, result.error, result.error_kind ?? 'api')
+              tracker.addEvent('error', 'fetch', result.error ?? 'Unknown error', name)
               failedSensors.add(name)
             }
           }),
@@ -370,6 +375,7 @@ export async function runPipeline(
           const toRetry = retryableSensors()
           if (toRetry.length === 0) break
 
+          tracker.addEvent('info', 'retry', `Auto-retry ${attempt}/${MAX_AUTO_RETRIES} — ${toRetry.length} sensors`)
           tracker.setRetryProgress(attempt, MAX_AUTO_RETRIES)
           for (const name of toRetry) {
             tracker.setFetchState(name, 'queued')
@@ -384,8 +390,12 @@ export async function runPipeline(
       if (signal.aborted) {
         // Pipeline was cancelled mid-fetch. Do NOT write partial results to cache —
         // this would replace a complete report with incomplete data.
+        tracker.addEvent('warn', 'system', 'Pipeline cancelled during fetch')
         return { report: null, summary: null }
       }
+
+      const okCount = [...resultMap.values()].filter(r => sensorResultSucceeded(r)).length
+      tracker.addEvent('info', 'fetch', `Fetch complete — ${okCount}/${registrySensorNames.length} succeeded`)
 
       report = await assembleReport([...resultMap.values()], config, { llmConfig, signal, sensorFilter })
 
@@ -461,21 +471,32 @@ export async function runPipeline(
       summaryBus = createBus()
 
       if (llmConfig) {
+        tracker.addEvent('info', 'summary', 'Summarization started')
+
         // Bridge between tracker and the unified engine's progress callback
         const onProgress: SummaryProgressCallback = (sensorName, _label, state, error, chunks, verify) => {
           summaryBus!.emitState(sensorName, state, _label, error)
           if (sensorName === '__overall__') {
-            if (state === 'running') tracker.setOverallSummary('running')
-            else if (state === 'ok') tracker.setOverallSummary('ok')
-            else if (state === 'failed') tracker.setOverallSummary('failed')
+            if (state === 'running') {
+              tracker.setOverallSummary('running')
+              tracker.addEvent('info', 'summary', 'Generating executive briefing')
+            } else if (state === 'ok') {
+              tracker.setOverallSummary('ok')
+              tracker.addEvent('ok', 'summary', 'Executive briefing complete')
+            } else if (state === 'failed') {
+              tracker.setOverallSummary('failed')
+              tracker.addEvent('error', 'summary', error ?? 'Executive briefing failed')
+            }
           } else {
             if (state === 'running') {
               tracker.setSummaryState(sensorName, 'running')
               if (chunks) tracker.setSummaryChunks(sensorName, chunks.total, chunks.done)
             } else if (state === 'ok' || state === 'cached') {
               tracker.setSummaryState(sensorName, 'ok')
+              tracker.addEvent('ok', 'summary', state === 'cached' ? 'Summary loaded from cache' : 'Summary generated', sensorName)
             } else if (state === 'failed') {
               tracker.setSummaryState(sensorName, 'failed', error ?? undefined)
+              tracker.addEvent('error', 'summary', error ?? 'Summary failed', sensorName)
             }
           }
           if (verify && sensorName !== '__overall__') {
@@ -574,6 +595,7 @@ export async function runPipeline(
 
         // ── Pause-before-overall: if fetch failures exist, wait for user actions ──
         if (hasFetchFailures && !signal.aborted && summary) {
+          tracker.addEvent('warn', 'system', `Paused — ${failedSensors.size} sensor(s) failed, awaiting action`)
           tracker.pause('pre_overall')
 
           // Pause loop: wait for user to resolve each failed sensor or trigger overall.
@@ -597,12 +619,14 @@ export async function runPipeline(
             }
 
             if (action.type === 'skip_sensor') {
+              tracker.addEvent('info', 'system', `Skipped sensor`, action.sensor)
               failedSensors.delete(action.sensor)
               tracker.skipSummaryForSensor(action.sensor)
               // Already skipped in report — nothing more to do
             }
 
             if (action.type === 'retry_sensor') {
+              tracker.addEvent('info', 'retry', `Manual retry requested`, action.sensor)
               const sensorName = action.sensor
               // Reset tracker state for re-fetch
               tracker.resetFetchState(sensorName)
@@ -618,6 +642,7 @@ export async function runPipeline(
 
               if (sensorResultSucceeded(result)) {
                 tracker.setFetchState(sensorName, 'ok', result.items.length)
+                tracker.addEvent('ok', 'retry', `Retry succeeded — ${result.items.length} items`, sensorName)
                 failedSensors.delete(sensorName)
 
                 // Merge retry result into report: remove old items by source, add new
@@ -641,6 +666,7 @@ export async function runPipeline(
                 }
               } else {
                 tracker.setFetchState(sensorName, 'failed', 0, result.error, result.error_kind ?? 'api')
+                tracker.addEvent('error', 'retry', result.error ?? 'Retry failed', sensorName)
                 // Stays in failedSensors — user can retry again or skip
               }
             }
@@ -674,12 +700,15 @@ export async function runPipeline(
     // Use cachedReport for summarize-only mode where `report` (from fetch) stays null.
     const intelligenceReport = report ?? cachedReport
     if (llmConfig && intelligenceReport && !signal.aborted) {
+      tracker.addEvent('info', 'intelligence', 'Intelligence analysis started')
       try {
         const intelligence = await runIntelligenceAnalysis(intelligenceReport, llmConfig, signal, config.summary_language)
         await writeIntelligence(intelligence)
+        tracker.addEvent('ok', 'intelligence', 'Intelligence analysis complete')
       } catch (err) {
         // Intelligence is non-critical — log and continue
         console.error('Intelligence analysis failed:', err)
+        tracker.addEvent('warn', 'intelligence', `Intelligence analysis failed: ${err instanceof Error ? err.message : String(err)}`)
       }
     }
 
@@ -689,7 +718,11 @@ export async function runPipeline(
     g.__pipelineConfig = null
 
     if (!signal.aborted) {
+      const totalItems = tracker.snapshot().total_items
+      tracker.addEvent('ok', 'system', `Pipeline complete — ${totalItems} items collected`)
       tracker.complete()
+    } else {
+      tracker.addEvent('warn', 'system', 'Pipeline cancelled')
     }
     return { report, summary }
   } finally {

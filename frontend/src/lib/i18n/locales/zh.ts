@@ -515,6 +515,16 @@ const zh: TranslationDict = {
   // ── Item card (tooltip) ────────────────────────────────────────────────────
   'item.link_unverified': '链接无法验证',
 
+  // ── 管道活动日志 ────────────────────────────────────────────────────────────
+  'log.title': '活动日志',
+  'log.scroll_bottom': '新事件',
+  'log.phase_fetch': '获取',
+  'log.phase_retry': '重试',
+  'log.phase_summary': '摘要',
+  'log.phase_briefing': '简报',
+  'log.phase_intelligence': '分析',
+  'log.phase_system': '系统',
+
   // ── Sensor validation errors ───────────────────────────────────────────────
   'sources.invalid_x_handle': '无效的用户名格式',
   'sources.invalid_bluesky_handle': '格式: name.bsky.social',

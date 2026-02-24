@@ -109,6 +109,17 @@ export interface SensorJobProgress {
   verify_failures: number
 }
 
+export type PipelineEventLevel = 'info' | 'ok' | 'warn' | 'error'
+export type PipelinePhase = 'fetch' | 'retry' | 'summary' | 'intelligence' | 'system'
+
+export interface PipelineEvent {
+  ts: string
+  level: PipelineEventLevel
+  phase: PipelinePhase
+  message: string
+  sensor?: string
+}
+
 export interface PipelineStatus {
   running: boolean
   cancelled: boolean
@@ -125,6 +136,7 @@ export interface PipelineStatus {
   overall_summary: StageState
   total_items: number
   alive: boolean
+  events: PipelineEvent[]
 }
 
 export interface IntelReport {

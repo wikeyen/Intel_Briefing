@@ -106,6 +106,7 @@ describe('writePipelineStatus', () => {
       paused_stage: null,
       retry_attempt: 0,
       retry_max: 0,
+      events: [],
     }
     await writePipelineStatus(status)
     expect(mockKvSet).toHaveBeenCalledWith(
@@ -133,6 +134,7 @@ describe('readPipelineStatus', () => {
       paused_stage: null,
       retry_attempt: 0,
       retry_max: 0,
+      events: [],
     }
     mockKvGet.mockResolvedValue(status)
     const result = await readPipelineStatus()

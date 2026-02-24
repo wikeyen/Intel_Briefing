@@ -120,18 +120,6 @@ function UiShell({ children }: { children: React.ReactNode }) {
 
       <Sidebar onNavigate={closeSidebar} onCollapse={toggleCollapsed} collapsed={sidebarCollapsed} />
 
-      {/* Desktop expand toggle — visible only when sidebar is collapsed on desktop */}
-      <button
-        className="sidebar-expand-toggle"
-        onClick={toggleCollapsed}
-        aria-label={t('sidebar.expand')}
-      >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="1" y="1" width="14" height="14" rx="2" />
-          <line x1="5.5" y1="1" x2="5.5" y2="15" />
-        </svg>
-      </button>
-
       <main ref={mainRef} className="main-content" style={{
         flex: 1,
         height: '100dvh',

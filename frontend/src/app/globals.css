@@ -441,39 +441,42 @@ input[type="range"]::-moz-range-thumb {
 
 /* ─── Desktop Sidebar Collapse ─────────────────────────────────────────── */
 
-/* Expand toggle — hidden by default, shown when collapsed on desktop */
-.sidebar-expand-toggle {
+/* Edge toggle — round chevron on sidebar right edge */
+.sidebar-edge-toggle {
   display: none;
-  position: fixed;
-  left: 0;
+  position: absolute;
+  right: -14px;
   top: 50%;
   transform: translateY(-50%);
-  z-index: 20;
+  z-index: 60;
   width: 28px;
-  height: 48px;
+  height: 28px;
+  border-radius: 50%;
   background: var(--sb);
   border: 1px solid var(--sb-border);
-  border-left: none;
-  border-radius: 0 8px 8px 0;
   color: var(--sb-faint);
   cursor: pointer;
   align-items: center;
   justify-content: center;
-  transition: color 150ms ease, background 150ms ease;
   padding: 0;
+  transition: color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
-.sidebar-expand-toggle:hover {
+.sidebar-edge-toggle:hover {
   color: var(--sb-ink);
   background: var(--sb-surface, var(--sb));
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
-/* Collapse button inside sidebar — hidden on mobile */
-.sidebar-collapse-btn:hover {
-  color: var(--sb-muted) !important;
-}
-
-/* When collapsed on desktop: hide sidebar, show expand toggle */
+/* Show edge toggle on desktop only */
 @media (min-width: 769px) {
+  .sidebar-nav {
+    position: relative;
+  }
+  .sidebar-edge-toggle {
+    display: flex;
+  }
+  /* When collapsed: hide sidebar content, reposition toggle to left screen edge */
   .sidebar-collapsed .sidebar-nav {
     width: 0 !important;
     overflow: hidden;
@@ -482,17 +485,20 @@ input[type="range"]::-moz-range-thumb {
     opacity: 0;
     pointer-events: none;
   }
-  .sidebar-collapsed .sidebar-expand-toggle {
-    display: flex;
+  .sidebar-collapsed .sidebar-edge-toggle {
+    position: fixed;
+    left: -1px;
+    top: 50%;
+    right: auto;
+    pointer-events: auto;
+    opacity: 1;
+    border-radius: 0 50% 50% 0;
   }
 }
 
 /* Mobile: never show desktop collapse controls */
 @media (max-width: 768px) {
-  .sidebar-collapse-btn {
-    display: none !important;
-  }
-  .sidebar-expand-toggle {
+  .sidebar-edge-toggle {
     display: none !important;
   }
 }
@@ -731,6 +737,9 @@ input[type="range"]::-moz-range-thumb {
     padding-top: 1.5rem !important;
     overflow: visible !important;
     height: auto !important;
+  }
+  .stale-banner-wrap {
+    padding: 0.5rem 0.75rem 0 !important;
   }
   .sensor-grid {
     padding: 0.5rem 0.75rem !important;

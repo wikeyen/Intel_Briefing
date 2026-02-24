@@ -389,30 +389,18 @@ export function Sidebar({ onNavigate, onCollapse, collapsed }: Props) {
         </div>
       </div>
 
-      {/* Collapse toggle — desktop only */}
+      {/* Edge toggle — round chevron on sidebar right edge, desktop only */}
       {onCollapse && (
         <button
-          className="sidebar-collapse-btn"
+          className="sidebar-edge-toggle"
           onClick={onCollapse}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '0.625rem 1.75rem',
-            background: 'none',
-            border: 'none',
-            borderTop: '1px solid var(--sb-border)',
-            color: 'var(--sb-faint)',
-            cursor: 'pointer',
-            width: '100%',
-            transition: 'color 150ms ease',
-          }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="1" y="1" width="14" height="14" rx="2" />
-            <line x1="5.5" y1="1" x2="5.5" y2="15" />
-            <polyline points={collapsed ? '8,6 11,8 8,10' : '11,6 8,8 11,10'} />
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            {collapsed
+              ? <polyline points="4.5,2 8.5,6 4.5,10" />
+              : <polyline points="7.5,2 3.5,6 7.5,10" />
+            }
           </svg>
         </button>
       )}

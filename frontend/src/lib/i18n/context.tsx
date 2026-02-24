@@ -49,7 +49,10 @@ export function I18nProvider({ children, initialLocale }: { children: ReactNode;
       .then(r => r.ok ? r.json() : null)
       .then(config => {
         if (config?.summary_language) {
-          setLocaleState(toLocale(config.summary_language))
+          const l = toLocale(config.summary_language)
+          setLocaleState(l)
+          // Sync cookie for instant SSR on next page load
+          document.cookie = `intel-locale=${l};path=/;max-age=31536000;samesite=lax`
         }
       })
       .catch(() => {})
@@ -57,6 +60,8 @@ export function I18nProvider({ children, initialLocale }: { children: ReactNode;
 
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next)
+    // Persist to cookie for instant SSR on next page load
+    document.cookie = `intel-locale=${next};path=/;max-age=31536000;samesite=lax`
     // Persist to config API — fire and forget
     fetch('/api/config', {
       method: 'PUT',

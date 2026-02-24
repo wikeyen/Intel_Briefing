@@ -180,11 +180,9 @@ function MiniStepper({ pipelineStatus, t }: { pipelineStatus: PipelineStatus | n
 
 interface Props {
   onNavigate?: () => void
-  onCollapse?: () => void
-  collapsed?: boolean
 }
 
-export function Sidebar({ onNavigate, onCollapse, collapsed }: Props) {
+export function Sidebar({ onNavigate }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const { t, locale, setLocale } = useTranslation()
@@ -388,21 +386,6 @@ export function Sidebar({ onNavigate, onCollapse, collapsed }: Props) {
         </div>
       </div>
 
-      {/* Edge toggle — round chevron on sidebar right edge, desktop only */}
-      {onCollapse && (
-        <button
-          className="sidebar-edge-toggle"
-          onClick={onCollapse}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            {collapsed
-              ? <polyline points="4.5,2 8.5,6 4.5,10" />
-              : <polyline points="7.5,2 3.5,6 7.5,10" />
-            }
-          </svg>
-        </button>
-      )}
     </nav>
   )
 }

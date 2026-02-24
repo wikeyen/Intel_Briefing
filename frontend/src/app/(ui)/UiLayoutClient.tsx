@@ -118,7 +118,21 @@ function UiShell({ children }: { children: React.ReactNode }) {
       {/* Backdrop — visible only on mobile when sidebar is open */}
       <div className="sidebar-backdrop" onClick={closeSidebar} />
 
-      <Sidebar onNavigate={closeSidebar} onCollapse={toggleCollapsed} collapsed={sidebarCollapsed} />
+      <Sidebar onNavigate={closeSidebar} />
+
+      {/* Sidebar edge toggle — lives outside sidebar so it's never clipped by opacity/overflow */}
+      <button
+        className="sidebar-edge-toggle"
+        onClick={toggleCollapsed}
+        aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      >
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          {sidebarCollapsed
+            ? <polyline points="4.5,2 8.5,6 4.5,10" />
+            : <polyline points="7.5,2 3.5,6 7.5,10" />
+          }
+        </svg>
+      </button>
 
       <main ref={mainRef} className="main-content" style={{
         flex: 1,

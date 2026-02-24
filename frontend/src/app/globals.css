@@ -441,14 +441,14 @@ input[type="range"]::-moz-range-thumb {
 
 /* ─── Desktop Sidebar Collapse ─────────────────────────────────────────── */
 
-/* Edge toggle — round chevron on sidebar right edge */
+/* Edge toggle — fixed position, always visible on desktop, on top of everything */
 .sidebar-edge-toggle {
   display: none;
-  position: absolute;
-  right: -14px;
+  position: fixed;
+  left: calc(240px - 14px);
   top: 50%;
   transform: translateY(-50%);
-  z-index: 60;
+  z-index: 100;
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -459,7 +459,8 @@ input[type="range"]::-moz-range-thumb {
   align-items: center;
   justify-content: center;
   padding: 0;
-  transition: color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+  transition: left 200ms ease, color 150ms ease, background 150ms ease,
+              box-shadow 150ms ease, border-radius 200ms ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 .sidebar-edge-toggle:hover {
@@ -470,13 +471,10 @@ input[type="range"]::-moz-range-thumb {
 
 /* Show edge toggle on desktop only */
 @media (min-width: 769px) {
-  .sidebar-nav {
-    position: relative;
-  }
   .sidebar-edge-toggle {
     display: flex;
   }
-  /* When collapsed: hide sidebar content, reposition toggle to left screen edge */
+  /* When collapsed: hide sidebar, slide toggle to left edge as half-circle */
   .sidebar-collapsed .sidebar-nav {
     width: 0 !important;
     overflow: hidden;
@@ -486,13 +484,18 @@ input[type="range"]::-moz-range-thumb {
     pointer-events: none;
   }
   .sidebar-collapsed .sidebar-edge-toggle {
-    position: fixed;
-    left: -1px;
-    top: 50%;
-    right: auto;
-    pointer-events: auto;
-    opacity: 1;
+    left: -14px;
     border-radius: 0 50% 50% 0;
+  }
+}
+
+/* Tablet: match narrower sidebar width */
+@media (min-width: 769px) and (max-width: 1023px) {
+  .sidebar-edge-toggle {
+    left: calc(180px - 14px);
+  }
+  .sidebar-collapsed .sidebar-edge-toggle {
+    left: -14px;
   }
 }
 

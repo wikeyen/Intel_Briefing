@@ -1,9 +1,9 @@
 // ABOUTME: Intelligence card components for the Dashboard — PublicFocusCard, TopicPulseCard, VoicesCard.
-// ABOUTME: Each card renders AI-generated intelligence data with distinct visual identity and sentiment coloring.
+// ABOUTME: Each card renders a compact preview with animated tag cloud; full detail shown in sidebar panel.
 'use client'
 
 import { useMemo } from 'react'
-import { TagCloud } from './TagCloud'
+import { AnimatedTagCloud, TagCloud } from './TagCloud'
 import type { TagCloudTag } from './TagCloud'
 
 // ---------------------------------------------------------------------------
@@ -164,305 +164,17 @@ function CardHeader({ label, accentColor }: { label: string; accentColor: string
 }
 
 // ---------------------------------------------------------------------------
-// Types (local interfaces matching the intelligence data shapes)
+// Shared helpers
 // ---------------------------------------------------------------------------
-
-interface IntelTag {
-  text: string
-  weight: number
-  sentiment?: 'positive' | 'negative' | 'neutral' | 'mixed'
-}
-
-interface TrendTopic {
-  name: string
-  summary: string
-  sources: string[]
-  itemCount: number
-  sentiment: 'positive' | 'negative' | 'neutral' | 'mixed'
-  heat: number
-}
-
-interface TrendIntelligence {
-  topics: TrendTopic[]
-  tags: IntelTag[]
-  summary: string
-  generated_at: string
-}
-
-interface TopicSentimentEntry {
-  topic: string
-  sentiment: 'positive' | 'negative' | 'neutral' | 'mixed'
-  summary: string
-  samplePosts: string[]
-  postCount: number
-}
-
-interface TopicIntelligence {
-  topics: TopicSentimentEntry[]
-  tags: IntelTag[]
-  summary: string
-  generated_at: string
-}
-
-interface AccountFocus {
-  account: string
-  handle: string
-  platform: string
-  themes: string[]
-  sentiment: 'positive' | 'negative' | 'neutral' | 'mixed'
-  postCount: number
-}
-
-interface AccountsIntelligence {
-  accounts: AccountFocus[]
-  tags: IntelTag[]
-  summary: string
-  generated_at: string
-}
-
-// ---------------------------------------------------------------------------
-// 1. PublicFocusCard — Trend Intelligence
-// ---------------------------------------------------------------------------
-
-interface PublicFocusCardProps {
-  data: TrendIntelligence | null
-  loading?: boolean
-}
-
-export function PublicFocusCard({ data, loading }: PublicFocusCardProps) {
-  const topTopics = useMemo(() => {
-    if (!data?.topics) return []
-    return [...data.topics].sort((a, b) => b.heat - a.heat).slice(0, 8)
-  }, [data])
-
-  const tagCloudTags: TagCloudTag[] = useMemo(() => {
-    return (data?.tags ?? []).map((t) => ({
-      text: t.text,
-      weight: t.weight,
-      sentiment: t.sentiment,
-    }))
-  }, [data])
-
-  return (
-    <div style={CARD_BASE}>
-      <div style={SECTION_GAP}>
-        <CardHeader label="Public Focus" accentColor="#f39c12" />
-
-        {loading ? (
-          <LoadingPlaceholder />
-        ) : !data ? (
-          <EmptyHint message="No trend data yet" />
-        ) : (
-          <>
-            {/* Summary */}
-            {data.summary && (
-              <p style={SUMMARY_STYLE}>{data.summary}</p>
-            )}
-
-            {/* Tag Cloud */}
-            {tagCloudTags.length > 0 && (
-              <TagCloud tags={tagCloudTags} maxTags={25} />
-            )}
-
-            {/* Top Topics */}
-            {topTopics.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                <span style={{
-                  fontSize: '0.5625rem',
-                  fontWeight: 600,
-                  fontFamily: MONO,
-                  color: 'var(--ink-tertiary)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                  marginBottom: '0.375rem',
-                }}>
-                  Top Topics
-                </span>
-                {topTopics.map((topic) => (
-                  <div
-                    key={topic.name}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.3rem 0',
-                      borderBottom: '1px solid var(--border-soft)',
-                      minHeight: 28,
-                    }}
-                  >
-                    <SentimentDot sentiment={topic.sentiment} size={6} />
-                    <span style={{
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      color: 'var(--ink)',
-                      flexShrink: 0,
-                    }}>
-                      {topic.name}
-                    </span>
-                    <span style={{
-                      fontSize: '0.5625rem',
-                      fontFamily: MONO,
-                      fontWeight: 600,
-                      color: 'var(--ink-tertiary)',
-                      background: 'var(--surface-inset)',
-                      borderRadius: 3,
-                      padding: '0.0625rem 0.3rem',
-                      flexShrink: 0,
-                    }}>
-                      {topic.sources.length} src
-                    </span>
-                    <span style={{
-                      fontSize: '0.6875rem',
-                      color: 'var(--ink-secondary)',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      flex: 1,
-                      minWidth: 0,
-                    }}>
-                      {topic.summary}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// 2. TopicPulseCard — Social Topic Intelligence
-// ---------------------------------------------------------------------------
-
-interface TopicPulseCardProps {
-  data: TopicIntelligence | null
-  loading?: boolean
-}
-
-export function TopicPulseCard({ data, loading }: TopicPulseCardProps) {
-  const tagCloudTags: TagCloudTag[] = useMemo(() => {
-    return (data?.tags ?? []).map((t) => ({
-      text: t.text,
-      weight: t.weight,
-      sentiment: t.sentiment,
-    }))
-  }, [data])
-
-  return (
-    <div style={CARD_BASE}>
-      <div style={SECTION_GAP}>
-        <CardHeader label="Topic Pulse" accentColor="#9b59b6" />
-
-        {loading ? (
-          <LoadingPlaceholder />
-        ) : !data ? (
-          <EmptyHint message="Configure topics in Settings to monitor public sentiment" />
-        ) : (
-          <>
-            {/* Summary */}
-            {data.summary && (
-              <p style={SUMMARY_STYLE}>{data.summary}</p>
-            )}
-
-            {/* Topic sections */}
-            {data.topics.map((entry) => (
-              <div
-                key={entry.topic}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.25rem',
-                  padding: '0.5rem 0',
-                  borderBottom: '1px solid var(--border-soft)',
-                }}
-              >
-                {/* Topic header row */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{
-                    fontSize: '0.8125rem',
-                    fontWeight: 700,
-                    color: 'var(--ink)',
-                  }}>
-                    {entry.topic}
-                  </span>
-                  <SentimentBadge sentiment={entry.sentiment} />
-                  <span style={{
-                    fontSize: '0.5625rem',
-                    fontFamily: MONO,
-                    color: 'var(--ink-tertiary)',
-                    marginLeft: 'auto',
-                    flexShrink: 0,
-                  }}>
-                    {entry.postCount} posts
-                  </span>
-                </div>
-
-                {/* Summary */}
-                <p style={{
-                  fontSize: '0.75rem',
-                  color: 'var(--ink-secondary)',
-                  margin: 0,
-                  lineHeight: 1.5,
-                }}>
-                  {entry.summary}
-                </p>
-
-                {/* Sample posts */}
-                {entry.samplePosts.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginTop: '0.125rem' }}>
-                    {entry.samplePosts.slice(0, 3).map((post, idx) => (
-                      <p
-                        key={idx}
-                        style={{
-                          fontSize: '0.6875rem',
-                          fontStyle: 'italic',
-                          color: 'var(--ink-tertiary)',
-                          margin: 0,
-                          lineHeight: 1.4,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        &ldquo;{post}&rdquo;
-                      </p>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {/* Tag Cloud */}
-            {tagCloudTags.length > 0 && (
-              <TagCloud tags={tagCloudTags} maxTags={20} />
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// 3. VoicesCard — Social Accounts Intelligence
-// ---------------------------------------------------------------------------
-
-interface VoicesCardProps {
-  data: AccountsIntelligence | null
-  loading?: boolean
-}
-
-const PLATFORM_BADGE_COLORS: Record<string, { color: string; bg: string }> = {
-  x:        { color: 'var(--ink-secondary)', bg: 'var(--surface-inset)' },
-  twitter:  { color: 'var(--ink-secondary)', bg: 'var(--surface-inset)' },
-  bluesky:  { color: 'var(--brand-bluesky)',     bg: 'var(--brand-bluesky-bg)' },
-  mastodon: { color: 'var(--brand-mastodon)',     bg: 'var(--brand-mastodon-bg)' },
-}
 
 function PlatformBadge({ platform }: { platform: string }) {
+  const PLATFORM_BADGE_COLORS: Record<string, { color: string; bg: string }> = {
+    x:        { color: 'var(--ink-secondary)', bg: 'var(--surface-inset)' },
+    twitter:  { color: 'var(--ink-secondary)', bg: 'var(--surface-inset)' },
+    bluesky:  { color: 'var(--brand-bluesky)',     bg: 'var(--brand-bluesky-bg)' },
+    mastodon: { color: 'var(--brand-mastodon)',     bg: 'var(--brand-mastodon-bg)' },
+  }
+
   const key = platform.toLowerCase()
   const colors = PLATFORM_BADGE_COLORS[key] ?? { color: 'var(--ink-secondary)', bg: 'var(--surface-inset)' }
   const label = key === 'twitter' ? 'X' : platform.charAt(0).toUpperCase() + platform.slice(1)
@@ -504,7 +216,458 @@ function ThemeMiniTag({ text }: { text: string }) {
   )
 }
 
-export function VoicesCard({ data, loading }: VoicesCardProps) {
+// ---------------------------------------------------------------------------
+// Types (local interfaces matching the intelligence data shapes)
+// ---------------------------------------------------------------------------
+
+interface IntelTag {
+  text: string
+  weight: number
+  sentiment?: 'positive' | 'negative' | 'neutral' | 'mixed'
+}
+
+interface TrendTopic {
+  name: string
+  summary: string
+  sources: string[]
+  itemCount: number
+  sentiment: 'positive' | 'negative' | 'neutral' | 'mixed'
+  heat: number
+}
+
+export interface TrendIntelligence {
+  topics: TrendTopic[]
+  tags: IntelTag[]
+  summary: string
+  generated_at: string
+}
+
+interface TopicSentimentEntry {
+  topic: string
+  sentiment: 'positive' | 'negative' | 'neutral' | 'mixed'
+  summary: string
+  samplePosts: string[]
+  postCount: number
+}
+
+export interface TopicIntelligence {
+  topics: TopicSentimentEntry[]
+  tags: IntelTag[]
+  summary: string
+  generated_at: string
+}
+
+interface AccountFocus {
+  account: string
+  handle: string
+  platform: string
+  themes: string[]
+  sentiment: 'positive' | 'negative' | 'neutral' | 'mixed'
+  postCount: number
+}
+
+export interface AccountsIntelligence {
+  accounts: AccountFocus[]
+  tags: IntelTag[]
+  summary: string
+  generated_at: string
+}
+
+// ---------------------------------------------------------------------------
+// Clamped summary style — shared across compact cards
+// ---------------------------------------------------------------------------
+
+const CLAMPED_SUMMARY: React.CSSProperties = {
+  ...SUMMARY_STYLE,
+  display: '-webkit-box',
+  WebkitLineClamp: 4,
+  WebkitBoxOrient: 'vertical' as const,
+  overflow: 'hidden',
+}
+
+// ---------------------------------------------------------------------------
+// Clickable card wrapper — shared across compact cards
+// ---------------------------------------------------------------------------
+
+function ClickableCard({ onClick, children }: { onClick?: () => void; children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        ...CARD_BASE,
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column' as const,
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'box-shadow 0.15s ease, border-color 0.15s ease',
+      }}
+      onClick={onClick}
+      onMouseEnter={(e) => {
+        if (onClick) {
+          e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)'
+          e.currentTarget.style.borderColor = 'var(--border-hover, var(--border))'
+        }
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.boxShadow = 'var(--shadow-card)'
+        e.currentTarget.style.borderColor = ''
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// 1. PublicFocusCard — Compact Trend Intelligence Preview
+// ---------------------------------------------------------------------------
+
+interface PublicFocusCardProps {
+  data: TrendIntelligence | null
+  loading?: boolean
+  onClick?: () => void
+}
+
+export function PublicFocusCard({ data, loading, onClick }: PublicFocusCardProps) {
+  const tagCloudTags: TagCloudTag[] = useMemo(() => {
+    return (data?.tags ?? []).map((t) => ({
+      text: t.text,
+      weight: t.weight,
+      sentiment: t.sentiment,
+    }))
+  }, [data])
+
+  return (
+    <ClickableCard onClick={onClick}>
+      <div style={{ ...SECTION_GAP, flex: 1 }}>
+        <CardHeader label="Public Focus" accentColor="#f39c12" />
+
+        {loading ? (
+          <LoadingPlaceholder />
+        ) : !data ? (
+          <EmptyHint message="No trend data yet" />
+        ) : (
+          <>
+            {data.summary && (
+              <p style={CLAMPED_SUMMARY}>{data.summary}</p>
+            )}
+
+            {tagCloudTags.length > 0 && (
+              <AnimatedTagCloud tags={tagCloudTags} maxTags={15} style={{ marginTop: 'auto' }} />
+            )}
+          </>
+        )}
+      </div>
+    </ClickableCard>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// 2. TopicPulseCard — Compact Social Topic Intelligence Preview
+// ---------------------------------------------------------------------------
+
+interface TopicPulseCardProps {
+  data: TopicIntelligence | null
+  loading?: boolean
+  onClick?: () => void
+}
+
+export function TopicPulseCard({ data, loading, onClick }: TopicPulseCardProps) {
+  const tagCloudTags: TagCloudTag[] = useMemo(() => {
+    return (data?.tags ?? []).map((t) => ({
+      text: t.text,
+      weight: t.weight,
+      sentiment: t.sentiment,
+    }))
+  }, [data])
+
+  return (
+    <ClickableCard onClick={onClick}>
+      <div style={{ ...SECTION_GAP, flex: 1 }}>
+        <CardHeader label="Topic Pulse" accentColor="#9b59b6" />
+
+        {loading ? (
+          <LoadingPlaceholder />
+        ) : !data ? (
+          <EmptyHint message="Configure topics in Settings to monitor public sentiment" />
+        ) : (
+          <>
+            {data.summary && (
+              <p style={CLAMPED_SUMMARY}>{data.summary}</p>
+            )}
+
+            {/* Topic list — compact: name + sentiment badge per row */}
+            {data.topics.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                {data.topics.map((entry) => (
+                  <div key={entry.topic} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <SentimentDot sentiment={entry.sentiment} size={6} />
+                    <span style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      color: 'var(--ink)',
+                    }}>
+                      {entry.topic}
+                    </span>
+                    <SentimentBadge sentiment={entry.sentiment} />
+                    <span style={{
+                      fontSize: '0.5625rem',
+                      fontFamily: MONO,
+                      color: 'var(--ink-tertiary)',
+                      marginLeft: 'auto',
+                    }}>
+                      {entry.postCount} posts
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {tagCloudTags.length > 0 && (
+              <AnimatedTagCloud tags={tagCloudTags} maxTags={15} style={{ marginTop: 'auto' }} />
+            )}
+          </>
+        )}
+      </div>
+    </ClickableCard>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// 3. VoicesCard — Compact Social Accounts Intelligence Preview
+// ---------------------------------------------------------------------------
+
+interface VoicesCardProps {
+  data: AccountsIntelligence | null
+  loading?: boolean
+  onClick?: () => void
+}
+
+export function VoicesCard({ data, loading, onClick }: VoicesCardProps) {
+  const tagCloudTags: TagCloudTag[] = useMemo(() => {
+    return (data?.tags ?? []).map((t) => ({
+      text: t.text,
+      weight: t.weight,
+      sentiment: t.sentiment,
+    }))
+  }, [data])
+
+  return (
+    <ClickableCard onClick={onClick}>
+      <div style={{ ...SECTION_GAP, flex: 1 }}>
+        <CardHeader label="Voices" accentColor="#3498db" />
+
+        {loading ? (
+          <LoadingPlaceholder />
+        ) : !data ? (
+          <EmptyHint message="Follow accounts in Settings to see what they're focused on" />
+        ) : (
+          <>
+            {data.summary && (
+              <p style={CLAMPED_SUMMARY}>{data.summary}</p>
+            )}
+
+            {tagCloudTags.length > 0 && (
+              <AnimatedTagCloud tags={tagCloudTags} maxTags={15} style={{ marginTop: 'auto' }} />
+            )}
+          </>
+        )}
+      </div>
+    </ClickableCard>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Detail Components — full content for sidebar panels
+// ---------------------------------------------------------------------------
+
+/** Full detail view for Public Focus / Trend Intelligence. */
+export function PublicFocusDetail({ data }: { data: TrendIntelligence }) {
+  const topTopics = useMemo(() => {
+    if (!data?.topics) return []
+    return [...data.topics].sort((a, b) => b.heat - a.heat).slice(0, 8)
+  }, [data])
+
+  const tagCloudTags: TagCloudTag[] = useMemo(() => {
+    return (data?.tags ?? []).map((t) => ({
+      text: t.text,
+      weight: t.weight,
+      sentiment: t.sentiment,
+    }))
+  }, [data])
+
+  return (
+    <div style={SECTION_GAP}>
+      {/* Summary — full, not clamped */}
+      {data.summary && (
+        <p style={SUMMARY_STYLE}>{data.summary}</p>
+      )}
+
+      {/* Tag cloud — larger set for detail view */}
+      {tagCloudTags.length > 0 && (
+        <TagCloud tags={tagCloudTags} maxTags={25} />
+      )}
+
+      {/* Top Topics — full rows with name, source count, summary, sentiment */}
+      {topTopics.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          <span style={{
+            fontSize: '0.5625rem',
+            fontWeight: 600,
+            fontFamily: MONO,
+            color: 'var(--ink-tertiary)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+            marginBottom: '0.375rem',
+          }}>
+            Top Topics
+          </span>
+          {topTopics.map((topic) => (
+            <div
+              key={topic.name}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.3rem 0',
+                borderBottom: '1px solid var(--border-soft)',
+                minHeight: 28,
+              }}
+            >
+              <SentimentDot sentiment={topic.sentiment} size={6} />
+              <span style={{
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                color: 'var(--ink)',
+                flexShrink: 0,
+              }}>
+                {topic.name}
+              </span>
+              <span style={{
+                fontSize: '0.5625rem',
+                fontFamily: MONO,
+                fontWeight: 600,
+                color: 'var(--ink-tertiary)',
+                background: 'var(--surface-inset)',
+                borderRadius: 3,
+                padding: '0.0625rem 0.3rem',
+                flexShrink: 0,
+              }}>
+                {topic.sources.length} src
+              </span>
+              <span style={{
+                fontSize: '0.6875rem',
+                color: 'var(--ink-secondary)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                flex: 1,
+                minWidth: 0,
+              }}>
+                {topic.summary}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Full detail view for Topic Pulse / Social Topic Intelligence. */
+export function TopicPulseDetail({ data }: { data: TopicIntelligence }) {
+  const tagCloudTags: TagCloudTag[] = useMemo(() => {
+    return (data?.tags ?? []).map((t) => ({
+      text: t.text,
+      weight: t.weight,
+      sentiment: t.sentiment,
+    }))
+  }, [data])
+
+  return (
+    <div style={SECTION_GAP}>
+      {/* Summary — full */}
+      {data.summary && (
+        <p style={SUMMARY_STYLE}>{data.summary}</p>
+      )}
+
+      {/* All topics with full content */}
+      {data.topics.map((entry) => (
+        <div
+          key={entry.topic}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.25rem',
+            padding: '0.5rem 0',
+            borderBottom: '1px solid var(--border-soft)',
+          }}
+        >
+          {/* Topic header row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{
+              fontSize: '0.8125rem',
+              fontWeight: 700,
+              color: 'var(--ink)',
+            }}>
+              {entry.topic}
+            </span>
+            <SentimentBadge sentiment={entry.sentiment} />
+            <span style={{
+              fontSize: '0.5625rem',
+              fontFamily: MONO,
+              color: 'var(--ink-tertiary)',
+              marginLeft: 'auto',
+              flexShrink: 0,
+            }}>
+              {entry.postCount} posts
+            </span>
+          </div>
+
+          {/* Summary */}
+          <p style={{
+            fontSize: '0.75rem',
+            color: 'var(--ink-secondary)',
+            margin: 0,
+            lineHeight: 1.5,
+          }}>
+            {entry.summary}
+          </p>
+
+          {/* Sample posts */}
+          {entry.samplePosts.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginTop: '0.125rem' }}>
+              {entry.samplePosts.slice(0, 3).map((post, idx) => (
+                <p
+                  key={idx}
+                  style={{
+                    fontSize: '0.6875rem',
+                    fontStyle: 'italic',
+                    color: 'var(--ink-tertiary)',
+                    margin: 0,
+                    lineHeight: 1.4,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  &ldquo;{post}&rdquo;
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+
+      {/* Tag cloud */}
+      {tagCloudTags.length > 0 && (
+        <TagCloud tags={tagCloudTags} maxTags={20} />
+      )}
+    </div>
+  )
+}
+
+/** Full detail view for Voices / Social Accounts Intelligence. */
+export function VoicesDetail({ data }: { data: AccountsIntelligence }) {
   const sortedAccounts = useMemo(() => {
     if (!data?.accounts) return []
     return [...data.accounts].sort((a, b) => b.postCount - a.postCount)
@@ -519,90 +682,78 @@ export function VoicesCard({ data, loading }: VoicesCardProps) {
   }, [data])
 
   return (
-    <div style={CARD_BASE}>
-      <div style={SECTION_GAP}>
-        <CardHeader label="Voices" accentColor="#3498db" />
+    <div style={SECTION_GAP}>
+      {/* Summary — full */}
+      {data.summary && (
+        <p style={SUMMARY_STYLE}>{data.summary}</p>
+      )}
 
-        {loading ? (
-          <LoadingPlaceholder />
-        ) : !data ? (
-          <EmptyHint message="Follow accounts in Settings to see what they're focused on" />
-        ) : (
-          <>
-            {/* Summary */}
-            {data.summary && (
-              <p style={SUMMARY_STYLE}>{data.summary}</p>
-            )}
+      {/* Tag cloud */}
+      {tagCloudTags.length > 0 && (
+        <TagCloud tags={tagCloudTags} maxTags={20} />
+      )}
 
-            {/* Tag Cloud */}
-            {tagCloudTags.length > 0 && (
-              <TagCloud tags={tagCloudTags} maxTags={20} />
-            )}
-
-            {/* Account rows */}
-            {sortedAccounts.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                <span style={{
-                  fontSize: '0.5625rem',
-                  fontWeight: 600,
-                  fontFamily: MONO,
-                  color: 'var(--ink-tertiary)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                  marginBottom: '0.375rem',
-                }}>
-                  Tracked Accounts
-                </span>
-                {sortedAccounts.map((acct) => (
-                  <div
-                    key={`${acct.platform}-${acct.handle}`}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.3rem 0',
-                      borderBottom: '1px solid var(--border-soft)',
-                      minHeight: 28,
-                    }}
-                  >
-                    <SentimentDot sentiment={acct.sentiment} size={6} />
-                    <span style={{
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      fontFamily: MONO,
-                      color: 'var(--ink)',
-                      flexShrink: 0,
-                    }}>
-                      {acct.handle}
-                    </span>
-                    <PlatformBadge platform={acct.platform} />
-                    <div style={{
-                      display: 'flex',
-                      gap: '0.25rem',
-                      flex: 1,
-                      minWidth: 0,
-                      overflow: 'hidden',
-                      flexWrap: 'wrap',
-                    }}>
-                      {acct.themes.slice(0, 3).map((theme) => (
-                        <ThemeMiniTag key={theme} text={theme} />
-                      ))}
-                    </div>
-                    <span style={{
-                      fontSize: '0.5625rem',
-                      fontFamily: MONO,
-                      color: 'var(--ink-tertiary)',
-                      flexShrink: 0,
-                    }}>
-                      {acct.postCount}
-                    </span>
-                  </div>
+      {/* All accounts with full rows */}
+      {sortedAccounts.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          <span style={{
+            fontSize: '0.5625rem',
+            fontWeight: 600,
+            fontFamily: MONO,
+            color: 'var(--ink-tertiary)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+            marginBottom: '0.375rem',
+          }}>
+            Tracked Accounts
+          </span>
+          {sortedAccounts.map((acct) => (
+            <div
+              key={`${acct.platform}-${acct.handle}`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.3rem 0',
+                borderBottom: '1px solid var(--border-soft)',
+                minHeight: 28,
+              }}
+            >
+              <SentimentDot sentiment={acct.sentiment} size={6} />
+              <span style={{
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                fontFamily: MONO,
+                color: 'var(--ink)',
+                flexShrink: 0,
+              }}>
+                {acct.handle}
+              </span>
+              <PlatformBadge platform={acct.platform} />
+              <div style={{
+                display: 'flex',
+                gap: '0.25rem',
+                flex: 1,
+                minWidth: 0,
+                overflow: 'hidden',
+                flexWrap: 'wrap',
+              }}>
+                {acct.themes.slice(0, 3).map((theme) => (
+                  <ThemeMiniTag key={theme} text={theme} />
                 ))}
               </div>
-            )}
-          </>
-        )}
-      </div>
+              <span style={{
+                fontSize: '0.5625rem',
+                fontFamily: MONO,
+                color: 'var(--ink-tertiary)',
+                flexShrink: 0,
+              }}>
+                {acct.postCount}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -969,6 +969,13 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
+/* Intelligence cards — single column on mobile/tablet */
+@media (max-width: 768px) {
+  .intelligence-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 @media (min-width: 1080px) {
   .dashboard-columns {
     grid-template-columns: 1fr 320px;

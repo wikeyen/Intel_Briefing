@@ -631,9 +631,11 @@ export async function runPipeline(
 
     // ── Intelligence analysis ──
     // Run after summary completes — analyzes trend, topic, and account data via LLM.
-    if (llmConfig && report && !signal.aborted) {
+    // Use cachedReport for summarize-only mode where `report` (from fetch) stays null.
+    const intelligenceReport = report ?? cachedReport
+    if (llmConfig && intelligenceReport && !signal.aborted) {
       try {
-        const intelligence = await runIntelligenceAnalysis(report, llmConfig, signal)
+        const intelligence = await runIntelligenceAnalysis(intelligenceReport, llmConfig, signal)
         await writeIntelligence(intelligence)
       } catch (err) {
         // Intelligence is non-critical — log and continue

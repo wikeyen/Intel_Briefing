@@ -3,6 +3,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { loadConfig, saveConfig, maskConfig } from '@/lib/config'
 
+export const dynamic = 'force-dynamic'
+
 const MASKED = '***'
 const KEY_FIELDS = new Set(['github_token', 'producthunt_token', 'bluesky_app_password', 'mastodon_token', 'summary_api_key', 'twitter_auth_token', 'twitter_ct0'])
 

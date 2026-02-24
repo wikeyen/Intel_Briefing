@@ -675,7 +675,7 @@ export async function runPipeline(
     const intelligenceReport = report ?? cachedReport
     if (llmConfig && intelligenceReport && !signal.aborted) {
       try {
-        const intelligence = await runIntelligenceAnalysis(intelligenceReport, llmConfig, signal)
+        const intelligence = await runIntelligenceAnalysis(intelligenceReport, llmConfig, signal, config.summary_language)
         await writeIntelligence(intelligence)
       } catch (err) {
         // Intelligence is non-critical — log and continue

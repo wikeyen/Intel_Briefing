@@ -1,7 +1,7 @@
 // ABOUTME: LLM-powered intelligence analysis pipeline — runs trend, topic, and account analyses in parallel.
 // ABOUTME: Produces structured IntelligenceReport from fetched IntelItem data via chatCompletion.
 
-import type { IntelItem, IntelReport } from '../models'
+import type { IntelItem, IntelReport, SummaryLanguage } from '../models'
 import type { LlmConfig } from '../summary/llm'
 import { chatCompletion } from '../summary/llm'
 import type { CategoryKey } from '../sensors/taxonomy'
@@ -75,7 +75,15 @@ export interface IntelligenceReport {
 // Prompts
 // ---------------------------------------------------------------------------
 
-const TREND_SYSTEM_PROMPT = `You analyze trending topics from Chinese and international platforms to identify what the public is focused on.
+/** Build a language instruction suffix for the given language. */
+function langInstruction(language?: SummaryLanguage): string {
+  if (language === 'en') return '\n\nIMPORTANT: Write ALL text output (summary, topic names, tags, themes) in English.'
+  if (language === 'zh') return '\n\nIMPORTANT: 所有文本输出（摘要、话题名称、标签、主题）必须使用中文。'
+  return ''
+}
+
+function trendSystemPrompt(language?: SummaryLanguage): string {
+  return `You analyze trending topics from Chinese and international platforms to identify what the public is focused on.
 
 Given a numbered list of trending items with source platforms and heat scores, you must:
 1. Identify the top canonical topics (group related items)
@@ -83,21 +91,26 @@ Given a numbered list of trending items with source platforms and heat scores, y
 3. Extract the top 20 tags (keywords/themes) with importance weights (0.0-1.0) and sentiment
 
 Respond with ONLY a JSON object, no markdown fences:
-{"summary":"Overall paragraph about what people are focused on","topics":[{"name":"...","summary":"...","sentiment":"mixed","sources":["weibo","douyin"],"itemCount":5,"heat":85}],"tags":[{"text":"...","weight":0.9,"sentiment":"neutral"}]}`
+{"summary":"Overall paragraph about what people are focused on","topics":[{"name":"...","summary":"...","sentiment":"mixed","sources":["weibo","douyin"],"itemCount":5,"heat":85}],"tags":[{"text":"...","weight":0.9,"sentiment":"neutral"}]}` + langInstruction(language)
+}
 
-const TOPIC_SYSTEM_PROMPT = `You analyze social media posts about specific topics to understand public opinion.
+function topicSystemPrompt(language?: SummaryLanguage): string {
+  return `You analyze social media posts about specific topics to understand public opinion.
 
 Given posts grouped by topic, assess the public sentiment on each topic.
 
 Respond with ONLY JSON:
-{"summary":"Overall paragraph","topics":[{"topic":"AI","sentiment":"positive","summary":"People are optimistic about...","samplePosts":["post1","post2"],"postCount":15}],"tags":[{"text":"...","weight":0.8,"sentiment":"positive"}]}`
+{"summary":"Overall paragraph","topics":[{"topic":"AI","sentiment":"positive","summary":"People are optimistic about...","samplePosts":["post1","post2"],"postCount":15}],"tags":[{"text":"...","weight":0.8,"sentiment":"positive"}]}` + langInstruction(language)
+}
 
-const ACCOUNTS_SYSTEM_PROMPT = `You analyze posts from social media accounts to identify their focus areas and opinions.
+function accountsSystemPrompt(language?: SummaryLanguage): string {
+  return `You analyze posts from social media accounts to identify their focus areas and opinions.
 
 Given posts grouped by account, identify what each account focuses on and their overall sentiment.
 
 Respond with ONLY JSON:
-{"summary":"Overall paragraph about what these voices are discussing","accounts":[{"account":"@user","handle":"user","platform":"x","themes":["AI","crypto"],"sentiment":"neutral","postCount":5}],"tags":[{"text":"...","weight":0.8,"sentiment":"neutral"}]}`
+{"summary":"Overall paragraph about what these voices are discussing","accounts":[{"account":"@user","handle":"user","platform":"x","themes":["AI","crypto"],"sentiment":"neutral","postCount":5}],"tags":[{"text":"...","weight":0.8,"sentiment":"neutral"}]}` + langInstruction(language)
+}
 
 // ---------------------------------------------------------------------------
 // JSON parsing — robust extraction from LLM output
@@ -190,6 +203,7 @@ export async function analyzeTrendIntelligence(
   items: IntelItem[],
   llmConfig: LlmConfig,
   signal?: AbortSignal,
+  language?: SummaryLanguage,
 ): Promise<TrendIntelligence | null> {
   if (items.length === 0) return null
 
@@ -202,7 +216,7 @@ export async function analyzeTrendIntelligence(
 
     const raw = await chatCompletion(
       [
-        { role: 'system', content: TREND_SYSTEM_PROMPT },
+        { role: 'system', content: trendSystemPrompt(language) },
         { role: 'user', content: numbered },
       ],
       llmConfig,
@@ -257,6 +271,7 @@ export async function analyzeTopicIntelligence(
   items: IntelItem[],
   llmConfig: LlmConfig,
   signal?: AbortSignal,
+  language?: SummaryLanguage,
 ): Promise<TopicIntelligence | null> {
   if (items.length === 0) return null
 
@@ -278,7 +293,7 @@ export async function analyzeTopicIntelligence(
 
     const raw = await chatCompletion(
       [
-        { role: 'system', content: TOPIC_SYSTEM_PROMPT },
+        { role: 'system', content: topicSystemPrompt(language) },
         { role: 'user', content: sections.join('\n\n') },
       ],
       llmConfig,
@@ -332,6 +347,7 @@ export async function analyzeAccountsIntelligence(
   items: IntelItem[],
   llmConfig: LlmConfig,
   signal?: AbortSignal,
+  language?: SummaryLanguage,
 ): Promise<AccountsIntelligence | null> {
   if (items.length === 0) return null
 
@@ -355,7 +371,7 @@ export async function analyzeAccountsIntelligence(
 
     const raw = await chatCompletion(
       [
-        { role: 'system', content: ACCOUNTS_SYSTEM_PROMPT },
+        { role: 'system', content: accountsSystemPrompt(language) },
         { role: 'user', content: sections.join('\n\n') },
       ],
       llmConfig,
@@ -416,6 +432,7 @@ export async function runIntelligenceAnalysis(
   report: IntelReport,
   llmConfig: LlmConfig,
   signal?: AbortSignal,
+  language?: SummaryLanguage,
 ): Promise<IntelligenceReport> {
   // Collect all items across categories
   const allItems: IntelItem[] = []
@@ -441,9 +458,9 @@ export async function runIntelligenceAnalysis(
 
   // Run all three analyses in parallel — each catches its own errors
   const [trend, topics, accounts] = await Promise.all([
-    analyzeTrendIntelligence(trendItems, llmConfig, signal),
-    analyzeTopicIntelligence(topicItems, llmConfig, signal),
-    analyzeAccountsIntelligence(accountItems, llmConfig, signal),
+    analyzeTrendIntelligence(trendItems, llmConfig, signal, language),
+    analyzeTopicIntelligence(topicItems, llmConfig, signal, language),
+    analyzeAccountsIntelligence(accountItems, llmConfig, signal, language),
   ])
 
   return { trend, topics, accounts }

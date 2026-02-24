@@ -35,6 +35,8 @@ export interface SensorCardProps {
   onSkip?: () => void
   onSkipFetching?: () => void
   onDismiss?: () => void
+  /** Seconds until next auto-retry fires. Present only when a timer is counting down. */
+  autoRetryCountdown?: number
 }
 
 export const CARD_CSS = `
@@ -447,9 +449,16 @@ function SecondaryContent({ state, props, t }: { state: CardState; props: Sensor
     case 'selected':
       return lastFetchAgo ? <span style={secondaryStyle}>{lastFetchAgo}</span> : null
 
-    case 'failed':
-      return (onRetry || onDismiss) ? (
-        <div style={{ display: 'flex', gap: '0.375rem', marginTop: '0.125rem' }}>
+    case 'failed': {
+      const countdown = props.autoRetryCountdown
+      const hasCountdown = countdown != null && countdown > 0
+      return (onRetry || onDismiss || hasCountdown) ? (
+        <div style={{ display: 'flex', gap: '0.375rem', marginTop: '0.125rem', alignItems: 'center' }}>
+          {hasCountdown && (
+            <span style={{ fontSize: '0.6875rem', color: 'var(--accent)', opacity: 0.7 }}>
+              ⟳ {t('sensor.autoRetryIn', { seconds: String(countdown) })}
+            </span>
+          )}
           {onRetry && (
             <button
               style={retryButtonStyle}
@@ -468,6 +477,7 @@ function SecondaryContent({ state, props, t }: { state: CardState; props: Sensor
           )}
         </div>
       ) : null
+    }
 
     case 'paused-failed':
       return (
@@ -775,8 +785,15 @@ function RowActions({ state, props, t }: { state: CardState; props: SensorCardPr
   }
 
   if (state === 'failed') {
-    return (onRetry || onDismiss) ? (
-      <div style={{ display: 'flex', gap: '0.375rem' }}>
+    const countdown = props.autoRetryCountdown
+    const hasCountdown = countdown != null && countdown > 0
+    return (onRetry || onDismiss || hasCountdown) ? (
+      <div style={{ display: 'flex', gap: '0.375rem', alignItems: 'center' }}>
+        {hasCountdown && (
+          <span style={{ fontSize: '0.6875rem', color: 'var(--accent)', opacity: 0.7, whiteSpace: 'nowrap' }}>
+            ⟳ {t('sensor.autoRetryIn', { seconds: String(countdown) })}
+          </span>
+        )}
         {onRetry && <button style={retryButtonStyle} onClick={(e) => { e.stopPropagation(); onRetry() }}>{t('sensor.retry')}</button>}
         {onDismiss && <button style={dismissButtonStyle} onClick={(e) => { e.stopPropagation(); onDismiss() }}>{t('sensor.dismiss')}</button>}
       </div>

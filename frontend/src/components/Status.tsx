@@ -172,6 +172,7 @@ export function Status() {
   const AUTO_RETRY_DELAYS = [5_000, 8_000, 13_000]
   const autoRetryRef = useRef<Record<string, { count: number; timer?: ReturnType<typeof setTimeout> }>>({})
   const [autoRetryExhausted, setAutoRetryExhausted] = useState<Set<string>>(new Set())
+  const [autoRetryDeadlines, setAutoRetryDeadlines] = useState<Record<string, number>>({})
 
   const handleSkipSensor = async (sensor: string) => {
     try {
@@ -247,6 +248,7 @@ export function Status() {
       }
       autoRetryRef.current = {}
       setAutoRetryExhausted(new Set())
+      setAutoRetryDeadlines({})
     }
   }, [isRunning])
 
@@ -262,10 +264,12 @@ export function Status() {
       }
       if (entry.timer) continue
       const delay = AUTO_RETRY_DELAYS[entry.count]
+      setAutoRetryDeadlines(prev => ({ ...prev, [sensor]: Date.now() + delay }))
       entry.timer = setTimeout(async () => {
         entry.count++
         entry.timer = undefined
         autoRetryRef.current[sensor] = entry
+        setAutoRetryDeadlines(prev => { const next = { ...prev }; delete next[sensor]; return next })
         try {
           await api.triggerFetch('fetch_summarize', [sensor])
           triggerTimeRef.current = Date.now()
@@ -437,6 +441,7 @@ export function Status() {
         dismissed={dismissed}
         onDismiss={dismissSensor}
         autoRetryExhausted={autoRetryExhausted}
+        autoRetryDeadlines={autoRetryDeadlines}
       />
 
       {/* Slide-out activity log panel */}

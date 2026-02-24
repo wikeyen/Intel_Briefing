@@ -143,31 +143,37 @@ export function PhaseStepper({ pipelineStatus }: PipelinePhaseStepperProps) {
   return (
     <div style={{
       display: 'flex',
-      alignItems: 'center',
-      gap: 0,
+      alignItems: 'flex-start',
       padding: '0.5rem 0',
-      overflow: 'hidden',
+      width: '100%',
     }}>
       {visibleSteps.map((step, i) => {
         const status = statuses[step.key]
         const colors = STEP_COLORS[status]
         const icon = STEP_ICONS[status]
         const isLast = i === visibleSteps.length - 1
+        const nextStatus = isLast ? status : statuses[visibleSteps[i + 1].key]
+        const lineIsDone = status === 'done' && nextStatus !== 'pending'
 
         return (
-          <div key={step.key} style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          <div key={step.key} style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            flex: isLast ? '0 0 auto' : '1 1 0',
+            minWidth: 0,
+          }}>
             {/* Step circle + label */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', flexShrink: 0 }}>
               <div style={{
-                width: 20,
-                height: 20,
+                width: 22,
+                height: 22,
                 borderRadius: '50%',
                 border: `2px solid ${colors.dot}`,
                 background: status === 'active' ? colors.dot : 'transparent',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '0.5625rem',
+                fontSize: '0.625rem',
                 fontWeight: 700,
                 color: status === 'active' ? 'white' : colors.dot,
                 transition: 'all 300ms ease',
@@ -189,16 +195,16 @@ export function PhaseStepper({ pipelineStatus }: PipelinePhaseStepperProps) {
               </span>
             </div>
 
-            {/* Connector line */}
+            {/* Connector line — stretches to fill remaining space */}
             {!isLast && (
               <div style={{
-                width: 32,
+                flex: '1 1 0',
                 height: 2,
-                background: colors.line,
-                opacity: status === 'done' ? 1 : 0.3,
-                margin: '0 0.25rem',
-                marginBottom: '1.125rem',
-                transition: 'opacity 300ms ease',
+                background: lineIsDone ? 'var(--ok)' : 'var(--border)',
+                opacity: lineIsDone ? 1 : 0.4,
+                marginTop: 10,
+                minWidth: 12,
+                transition: 'all 300ms ease',
               }} />
             )}
           </div>

@@ -262,7 +262,11 @@ export async function summarizeReport(
     .map(([sensorName, items]) =>
       semaphore.run(async () => {
         if (signal?.aborted) return null
-        if (items.length === 0) return null
+        if (items.length === 0) {
+          const label = SENSOR_LABELS[sensorName] ?? sensorName
+          await onProgress?.(sensorName, label, 'ok', null)
+          return null
+        }
 
         const label = SENSOR_LABELS[sensorName] ?? sensorName
 

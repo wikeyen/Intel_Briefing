@@ -384,7 +384,7 @@ export function StatusSkeleton() {
           </div>
         </div>
 
-        {/* Phase stepper skeleton */}
+        {/* Phase stepper skeleton — text labels only, no circles */}
         <div style={{
           maxWidth: 1024,
           margin: '0 auto',
@@ -399,7 +399,7 @@ export function StatusSkeleton() {
               alignItems: 'center',
               flex: i < 3 ? '1 1 0' : '0 0 auto',
             }}>
-              <Skeleton width={22} height={22} borderRadius={11} />
+              <Skeleton width={[32, 50, 72, 44][i]} height={10} borderRadius={3} />
               {i < 3 && (
                 <div style={{ flex: '1 1 0', padding: '0 4px' }}>
                   <Skeleton height={3} borderRadius={2} />

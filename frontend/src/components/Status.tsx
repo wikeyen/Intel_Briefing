@@ -406,7 +406,7 @@ export function Status() {
         />
 
         {pipelineStatus && (pipelineStatus.running || pipelineStatus.completed_at) && (
-          <div className="phase-stepper-wrap" style={{ maxWidth: 1024, margin: '0 auto', width: '100%', padding: '0 3rem 0.25rem' }}>
+          <div className="phase-stepper-wrap" style={{ maxWidth: 1024, margin: '0 auto', width: '100%', padding: '0.5rem 3rem 0.25rem' }}>
             <PhaseStepper
               pipelineStatus={pipelineStatus}
               onLogToggle={hasEvents ? () => setLogDrawerOpen(o => !o) : undefined}

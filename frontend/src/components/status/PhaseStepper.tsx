@@ -16,8 +16,8 @@ interface StepDef {
 const MAIN_STEPS: StepDef[] = [
   { key: 'fetch', labelKey: 'log.phase_fetch' },
   { key: 'summary', labelKey: 'log.phase_summary' },
-  { key: 'intelligence', labelKey: 'log.phase_intelligence' },
   { key: 'briefing', labelKey: 'log.phase_briefing' },
+  { key: 'intelligence', labelKey: 'log.phase_intelligence' },
 ]
 const BRANCH_STEP: StepDef = { key: 'retry', labelKey: 'log.phase_retry' }
 

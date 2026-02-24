@@ -218,6 +218,8 @@ const en: TranslationDict = {
   'sensor.error_fetch': 'FETCH',
   'sensor.retry': 'Retry',
   'sensor.autoRetry': 'Auto-retry',
+  'sensor.autoRetryIn': 'Auto-retry in {seconds}s',
+  'sensor.autoRetrying': 'Retrying\u2026',
   'sensor.dismiss': 'Dismiss',
   'sensor.skip': 'Skip',
   'sensor.chunks': '{done}/{total} chunks',

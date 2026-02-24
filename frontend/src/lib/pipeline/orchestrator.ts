@@ -130,7 +130,7 @@ export function skipFetchingSensor(sensorName: string): boolean {
 async function fetchSensor(
   name: string,
   config: ConfigSettings,
-  onProgress?: (detail: string) => void,
+  onProgress?: (detail: string, itemCount?: number) => void,
 ): Promise<SensorResult> {
   const fetchFn = SENSOR_REGISTRY[name]
   if (!fetchFn) {
@@ -323,8 +323,8 @@ export async function runPipeline(
             sensorSkips.set(name, skipResolve!)
 
             const outcome = await Promise.race([
-              fetchSensor(name, config, (detail) => {
-                tracker.setFetchDetail(name, detail)
+              fetchSensor(name, config, (detail, itemCount) => {
+                tracker.setFetchDetail(name, detail, itemCount)
               }),
               skipPromise,
             ])
@@ -634,8 +634,8 @@ export async function runPipeline(
               tracker.setFetchState(sensorName, 'running')
 
               // Re-fetch the single sensor
-              const result = await fetchSensor(sensorName, config, (detail) => {
-                tracker.setFetchDetail(sensorName, detail)
+              const result = await fetchSensor(sensorName, config, (detail, itemCount) => {
+                tracker.setFetchDetail(sensorName, detail, itemCount)
               })
 
               if (signal.aborted) break

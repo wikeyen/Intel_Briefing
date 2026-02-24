@@ -1753,9 +1753,25 @@ function DashboardSkeleton() {
             </div>
           </DashCard>
           <hr className="dash-divider" />
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+            gap: '0.75rem',
+            marginBottom: '1rem',
+          }}>
+            {[0, 1, 2].map(i => (
+              <DashCard key={`intel-${i}`}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div className="skeleton-shimmer" style={{ width: 96, height: 10 }} />
+                  <div className="skeleton-shimmer" style={{ width: '85%', height: 9 }} />
+                  <div className="skeleton-shimmer" style={{ width: '60%', height: 9 }} />
+                </div>
+              </DashCard>
+            ))}
+          </div>
           {/* Domain cards */}
           <div className="dashboard-domains">
-            {[0, 1, 2, 3].map(i => (
+            {[0, 1, 2, 3, 4, 5].map(i => (
               <DashCard key={i}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div className="skeleton-shimmer" style={{ width: 112, height: 10 }} />
@@ -1820,6 +1836,20 @@ function DashboardSkeleton() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div className="skeleton-shimmer" style={{ width: 80, height: 10 }} />
               <div className="skeleton-shimmer" style={{ width: '100%', height: 8, borderRadius: 4 }} />
+            </div>
+          </DashCard>
+          <hr className="dash-divider" />
+          {/* Source Health */}
+          <DashCard>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div className="skeleton-shimmer" style={{ width: 96, height: 10 }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div className="skeleton-shimmer" style={{ width: 48, height: 48, borderRadius: '50%' }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
+                  <div className="skeleton-shimmer" style={{ width: '80%', height: 9 }} />
+                  <div className="skeleton-shimmer" style={{ width: '50%', height: 9 }} />
+                </div>
+              </div>
             </div>
           </DashCard>
         </div>

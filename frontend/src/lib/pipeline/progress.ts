@@ -105,9 +105,10 @@ export class PipelineProgressTracker {
     this.notify()
   }
 
-  setFetchDetail(name: string, detail: string | null): void {
+  setFetchDetail(name: string, detail: string | null, itemCount?: number): void {
     const s = this.find(name)
     s.fetch_detail = detail
+    if (itemCount !== undefined) s.item_count = itemCount
     this.notify()
   }
 

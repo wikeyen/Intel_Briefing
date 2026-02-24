@@ -13,5 +13,7 @@ export default async function UiLayout({ children }: { children: React.ReactNode
       ? (raw as Locale)
       : undefined
 
-  return <UiLayoutClient initialLocale={initialLocale}>{children}</UiLayoutClient>
+  const initialCollapsed = cookieStore.get('intel-sidebar')?.value === '1'
+
+  return <UiLayoutClient initialLocale={initialLocale} initialCollapsed={initialCollapsed}>{children}</UiLayoutClient>
 }

@@ -30,6 +30,8 @@ export interface SensorGridProps {
   onDismiss: (sensor: string) => void
   /** Sensors whose automatic retries are exhausted — show manual Retry button. */
   autoRetryExhausted?: Set<string>
+  /** Deadline timestamps (ms) for pending auto-retry timers — used for countdown display. */
+  autoRetryDeadlines?: Record<string, number>
 }
 
 function countItemsBySensor(report: IntelReport | null): Record<string, number> {
@@ -63,7 +65,7 @@ const toolbarLinkStyle: React.CSSProperties = {
 export function SensorGrid({
   isRunning, isPaused, liveSensors, report, config, pipelineStatus,
   retryAttempt, selected, onToggleSelect, onSelectAll, onSelectNone,
-  onRetry, onSkipSensor, onSkipFetchingSensor, tick, dismissed, onDismiss, autoRetryExhausted,
+  onRetry, onSkipSensor, onSkipFetchingSensor, tick, dismissed, onDismiss, autoRetryExhausted, autoRetryDeadlines,
 }: SensorGridProps) {
   const { t } = useTranslation()
   const sensorCounts = useMemo(() => countItemsBySensor(report), [report])
@@ -192,6 +194,7 @@ export function SensorGrid({
               onSkip={isPaused && onSkipSensor ? () => onSkipSensor(sensor.sensorKey) : undefined}
               onSkipFetching={isRunning && live?.fetch === 'running' && onSkipFetchingSensor ? () => onSkipFetchingSensor(sensor.sensorKey) : undefined}
               onDismiss={sensor.isFailed && !isPaused ? () => onDismiss(sensor.sensorKey) : undefined}
+              autoRetryCountdown={autoRetryDeadlines?.[sensor.sensorKey] ? Math.max(0, Math.ceil((autoRetryDeadlines[sensor.sensorKey] - Date.now()) / 1000)) : undefined}
             />
           )
         })}

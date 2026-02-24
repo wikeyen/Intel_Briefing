@@ -31,27 +31,14 @@ const PAGE_DESC_KEYS: Record<string, string> = {
   '/data': 'page.data.desc',
 }
 
-/** Read sidebar collapsed preference from localStorage. */
-function readCollapsed(): boolean {
-  try {
-    return localStorage.getItem('ib:sidebar:collapsed') === '1'
-  } catch {
-    return false
-  }
-}
-
-function UiShell({ children }: { children: React.ReactNode }) {
+function UiShell({ children, initialCollapsed }: { children: React.ReactNode; initialCollapsed?: boolean }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(initialCollapsed ?? false)
   const pathname = usePathname()
   const { t } = useTranslation()
 
   const mainRef = useRef<HTMLElement>(null)
   const closeSidebar = useCallback(() => setSidebarOpen(false), [])
-
-  // Hydrate collapsed state from localStorage on mount
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { setSidebarCollapsed(readCollapsed()) }, [])
 
   // Close sidebar on route change
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -61,6 +48,7 @@ function UiShell({ children }: { children: React.ReactNode }) {
     setSidebarCollapsed(prev => {
       const next = !prev
       try { localStorage.setItem('ib:sidebar:collapsed', next ? '1' : '0') } catch {}
+      try { document.cookie = `intel-sidebar=${next ? '1' : '0'}; path=/; max-age=31536000; SameSite=Lax` } catch {}
       return next
     })
   }, [])
@@ -146,13 +134,13 @@ function UiShell({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function UiLayoutClient({ children, initialLocale }: { children: React.ReactNode; initialLocale?: Locale }) {
+export function UiLayoutClient({ children, initialLocale, initialCollapsed }: { children: React.ReactNode; initialLocale?: Locale; initialCollapsed?: boolean }) {
   return (
     <Toaster>
       {(showToast) => (
         <ToastContext.Provider value={showToast}>
           <I18nProvider initialLocale={initialLocale}>
-            <UiShell>{children}</UiShell>
+            <UiShell initialCollapsed={initialCollapsed}>{children}</UiShell>
           </I18nProvider>
         </ToastContext.Provider>
       )}

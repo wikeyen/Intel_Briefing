@@ -21,10 +21,12 @@ function buildProps(overrides: Partial<ControlBarProps> = {}): ControlBarProps {
     phase: 'idle',
     progress: { done: 0, total: 0 },
     failedCount: 0,
+    retryingCount: 0,
     isPaused: false,
     selectedCount: 0,
     totalSensors: 13,
     hasFailedSensors: false,
+    failedSensorCount: 0,
     onRun: vi.fn(),
     onStop: vi.fn(),
     onSkipRetries: vi.fn(),
@@ -32,6 +34,7 @@ function buildProps(overrides: Partial<ControlBarProps> = {}): ControlBarProps {
     onSelectNone: vi.fn(),
     onSelectFailed: vi.fn(),
     onGenerateOverall: vi.fn(),
+    onRetryFailed: vi.fn(),
     fetching: false,
     isStopping: false,
     ...overrides,
@@ -87,8 +90,22 @@ describe('ControlBar', () => {
   })
 
   it('renders Failed quick-select when hasFailedSensors', () => {
-    renderWithI18n(<ControlBar {...buildProps({ hasFailedSensors: true })} />)
+    renderWithI18n(<ControlBar {...buildProps({ hasFailedSensors: true, failedSensorCount: 2 })} />)
     expect(screen.getByText('Failed')).toBeInTheDocument()
+  })
+
+  it('shows retry failed button when hasFailedSensors', () => {
+    const onRetryFailed = vi.fn()
+    renderWithI18n(<ControlBar {...buildProps({ hasFailedSensors: true, failedSensorCount: 3, onRetryFailed })} />)
+    const btn = screen.getByRole('button', { name: /retry 3 failed/i })
+    expect(btn).toBeEnabled()
+    fireEvent.click(btn)
+    expect(onRetryFailed).toHaveBeenCalledOnce()
+  })
+
+  it('hides retry failed button when no failures', () => {
+    renderWithI18n(<ControlBar {...buildProps({ hasFailedSensors: false, failedSensorCount: 0 })} />)
+    expect(screen.queryByRole('button', { name: /retry.*failed/i })).not.toBeInTheDocument()
   })
 
   it('does not render Failed quick-select when no failed sensors', () => {

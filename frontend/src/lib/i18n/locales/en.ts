@@ -184,6 +184,7 @@ const en: TranslationDict = {
   'status.next': 'Next: {time}',
   'status.no_schedule': 'No schedule',
   'status.failed_retry': '{count} failed — retry or skip above',
+  'status.retry_n_failed': 'Retry {count} Failed',
   'status.generate_summary': 'Generate Summary',
   'status.mode_fetch': 'Fetch',
   'status.mode_fetch_summarize': 'Fetch + Summarize',

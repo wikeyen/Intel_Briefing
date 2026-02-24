@@ -200,6 +200,11 @@ export async function runPipeline(
   const shouldFetch = mode === 'fetch' || mode === 'fetch_summarize'
   const shouldSummarize = mode === 'summarize' || mode === 'fetch_summarize'
 
+  // Incremental run: sensorFilter limits the fetch phase, but the summary phase
+  // processes ALL sensors (using per-sensor cache for unchanged data).
+  // This ensures retry/resume pipelines complete the full workflow including overall.
+  const isIncrementalRun = shouldFetch && shouldSummarize && !!sensorFilter?.length
+
   // For summarize-only mode, load the cached report up front so we can derive
   // sensor names for the tracker from the report's actual contents.
   let cachedReport: IntelReport | null = null
@@ -216,17 +221,31 @@ export async function runPipeline(
     }
   }
 
-  // Determine sensor names for the tracker: use registry names for fetch modes,
-  // and derive from the cached report for summarize-only mode.
-  // In both cases, only include sensors that are enabled and have data.
+  // Determine sensor names for the tracker:
+  // - summarize-only: derive from cached report
+  // - incremental: track ALL enabled sensors (fetch skips non-filtered, summary covers all)
+  // - normal: track only the sensors being run
   const trackerSensorNames = mode === 'summarize'
     ? extractSensorNames(cachedReport!).filter(name => config.sensors_enabled[name] !== false)
-    : registrySensorNames
+    : isIncrementalRun
+      ? allEnabledSensors
+      : registrySensorNames
 
   // Create progress tracker with persistence callback
   const tracker = new PipelineProgressTracker(trackerSensorNames, mode, defaultConcurrency, localSummaryConcurrency, (status) => {
     writePipelineStatus(status).catch(() => {})
   })
+
+  // For incremental runs, mark non-filtered sensors' fetch as already cached (skipped).
+  // These sensors keep their data from the previous report and don't need re-fetching.
+  if (isIncrementalRun) {
+    const filterSet = new Set(sensorFilter!)
+    for (const name of allEnabledSensors) {
+      if (!filterSet.has(name)) {
+        tracker.setFetchState(name, 'skipped', 0)
+      }
+    }
+  }
 
   // Store singletons for abort support
   g.__pipelineAbortController = abortController
@@ -238,8 +257,11 @@ export async function runPipeline(
   let report: IntelReport | null = null
   let summary: BriefingSummary | null = null
 
-  // Build enabled sensor set for the unified engine
-  const enabledSensors = new Set(registrySensorNames)
+  // Build enabled sensor set for the unified engine.
+  // Incremental runs summarize ALL enabled sensors (cache hits for unchanged).
+  const enabledSensors = isIncrementalRun
+    ? new Set(allEnabledSensors)
+    : new Set(registrySensorNames)
 
   // SummaryProgress for cross-page awareness — Feed page polls intel:summary_status.
   // Initialized lazily when summarize stage begins.
@@ -355,14 +377,32 @@ export async function runPipeline(
         for (const name of skippedSensors) {
           tracker.skipSummaryForSensor(name)
         }
+        // For incremental runs, also skip summaries for sensors that failed in a
+        // previous run and weren't retried in this one (they're in the merged report's
+        // sources_failed but not in this run's failedSensors set).
+        if (isIncrementalRun && report) {
+          const filterSet = new Set(sensorFilter!)
+          for (const name of report.sources_failed) {
+            if (!filterSet.has(name) && !failedSensors.has(name)) {
+              tracker.skipSummaryForSensor(name)
+            }
+          }
+        }
       }
 
-      // Invalidate all cached summaries (all languages) — fresh fetch means fresh analysis
+      // Invalidate cached summaries before re-summarization.
+      // For incremental runs, only invalidate the overall briefing — per-sensor caches
+      // use content hashing so unchanged sensors automatically hit cache.
+      // For full runs, invalidate everything since all data is fresh.
       if (shouldSummarize) {
-        await Promise.all([
-          invalidateAllSensorSummaries(),
-          invalidateAllSummaries(),
-        ]).catch(() => {})
+        if (isIncrementalRun) {
+          await invalidateAllSummaries().catch(() => {})
+        } else {
+          await Promise.all([
+            invalidateAllSensorSummaries(),
+            invalidateAllSummaries(),
+          ]).catch(() => {})
+        }
       }
     }
 
@@ -379,8 +419,12 @@ export async function runPipeline(
       g.__pipelineFailedSensors = failedSensors
       g.__pipelineConfig = config
 
-      // Build SummaryProgress for cross-page awareness (Feed page polls intel:summary_status)
-      const eligibleSensors = trackerSensorNames.filter(n => !failedSensors.has(n))
+      // Build SummaryProgress for cross-page awareness (Feed page polls intel:summary_status).
+      // Exclude sensors that failed in this run AND previously-failed sensors from merged report.
+      const reportFailed = new Set(sourceReport.sources_failed)
+      const eligibleSensors = trackerSensorNames.filter(n =>
+        !failedSensors.has(n) && !reportFailed.has(n),
+      )
       summaryStatus = {
         running: true,
         started_at: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
@@ -450,10 +494,12 @@ export async function runPipeline(
         // Determine whether to skip overall: if there are fetch failures, defer it
         const hasFetchFailures = failedSensors.size > 0
 
-        // Delegate to the unified summarization engine
-        // fetch_summarize uses skipCache:true since we just invalidated caches above
-        // summarize-only uses skipCache:false to reuse cached per-sensor summaries
-        let skipCacheForSummary = shouldFetch
+        // Delegate to the unified summarization engine.
+        // Full fetch_summarize: skipCache=true since we just invalidated all caches.
+        // Incremental: skipCache=false — unchanged sensors hit cache (content-hash match),
+        //   re-fetched sensors have new data so their hash won't match → re-summarized.
+        // Summarize-only: skipCache=false to reuse cached per-sensor summaries.
+        let skipCacheForSummary = shouldFetch && !isIncrementalRun
         g.__pipelineSkipRetries = false
 
         for (let summaryAttempt = 0; summaryAttempt <= MAX_AUTO_RETRIES && !signal.aborted; summaryAttempt++) {

@@ -72,10 +72,10 @@ function deriveState(props: SensorCardProps): CardState {
     // During pause, failed sensors get special interactive state
     if (isPaused && (liveSensor.fetch === 'failed' || liveSensor.summary === 'failed')) return 'paused-failed'
     if (liveSensor.fetch === 'failed' || liveSensor.summary === 'failed') return 'failed-mid-run'
-    if (liveSensor.fetch === 'ok' && (liveSensor.summary === 'ok' || liveSensor.summary === 'skipped')) return 'done'
+    if ((liveSensor.fetch === 'ok' || liveSensor.fetch === 'skipped') && (liveSensor.summary === 'ok' || liveSensor.summary === 'skipped')) return 'done'
     if (liveSensor.summary === 'running') return 'summarizing'
     if (liveSensor.fetch === 'running') return 'fetching'
-    if (liveSensor.fetch === 'ok' && liveSensor.summary === 'queued') return 'summarizing'
+    if ((liveSensor.fetch === 'ok' || liveSensor.fetch === 'skipped') && liveSensor.summary === 'queued') return 'waiting'
     return 'waiting'
   }
 

@@ -528,9 +528,16 @@ function SecondaryContent({ state, props, t }: { state: CardState; props: Sensor
     }
 
     case 'failed-mid-run':
-      return liveSensor?.fetch_detail
-        ? <span style={secondaryStyle}>{liveSensor.fetch_detail}</span>
-        : null
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+          {liveSensor?.fetch_detail && <span style={secondaryStyle}>{liveSensor.fetch_detail}</span>}
+          {!onRetry && (
+            <span style={{ fontSize: '0.6875rem', color: 'var(--accent)', opacity: 0.7 }}>
+              ⟳ {t('sensor.autoRetry')}
+            </span>
+          )}
+        </div>
+      )
 
     default:
       return null
@@ -788,7 +795,11 @@ function RowActions({ state, props, t }: { state: CardState; props: SensorCardPr
   if (state === 'failed-mid-run') {
     return onRetry ? (
       <button style={retryButtonStyle} onClick={(e) => { e.stopPropagation(); onRetry() }}>{t('sensor.retry')}</button>
-    ) : null
+    ) : (
+      <span style={{ fontSize: '0.6875rem', color: 'var(--accent)', opacity: 0.7 }}>
+        ⟳ {t('sensor.autoRetry')}
+      </span>
+    )
   }
 
   return null

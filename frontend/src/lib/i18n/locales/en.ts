@@ -215,6 +215,7 @@ const en: TranslationDict = {
   'sensor.error_summary': 'SUMMARY',
   'sensor.error_fetch': 'FETCH',
   'sensor.retry': 'Retry',
+  'sensor.autoRetry': 'Auto-retry',
   'sensor.dismiss': 'Dismiss',
   'sensor.skip': 'Skip',
   'sensor.chunks': '{done}/{total} chunks',

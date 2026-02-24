@@ -215,6 +215,7 @@ const zh: TranslationDict = {
   'sensor.error_summary': '摘要',
   'sensor.error_fetch': '获取',
   'sensor.retry': '重试',
+  'sensor.autoRetry': '自动重试',
   'sensor.dismiss': '忽略',
   'sensor.skip': '跳过',
   'sensor.chunks': '{done}/{total} 片段',

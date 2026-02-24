@@ -99,7 +99,7 @@ function MiniNode({ step, status, align = 'center', t }: { step: { labelKey: str
         border: `1.5px solid ${colors.dot}`,
         background: isActive ? colors.dot : 'transparent',
         transition: 'all 300ms ease',
-        ...(isActive ? { boxShadow: `0 0 0 2px color-mix(in srgb, ${colors.dot} 20%, transparent)` } : {}),
+        ...(isActive ? { boxShadow: `0 0 0 2px color-mix(in srgb, ${colors.dot} 20%, transparent)`, animation: 'pulseDot 1.6s ease-in-out infinite' } : {}),
       }} />
       <span style={{
         fontSize: '0.4375rem',
@@ -233,13 +233,6 @@ export function Sidebar({ onNavigate, onCollapse, collapsed }: Props) {
   // Show mini stepper when pipeline is actively running
   const showStepper = isJobRunning && !!pipelineStatus
 
-  const statusBg =
-    !health                      ? 'var(--sb-border)' :
-    health.status === 'ok'       ? 'color-mix(in srgb, var(--ok) 12%, transparent)'  :
-    health.status === 'stale'    ? 'color-mix(in srgb, var(--warn) 12%, transparent)' :
-    health.status === 'no_data'  ? 'var(--sb-border)' :
-    'color-mix(in srgb, var(--err) 12%, transparent)'
-
   const statusFg =
     !health                      ? 'var(--sb-muted)' :
     health.status === 'ok'       ? 'color-mix(in srgb, var(--ok) 80%, white)'   :
@@ -247,9 +240,8 @@ export function Sidebar({ onNavigate, onCollapse, collapsed }: Props) {
     health.status === 'no_data'  ? 'var(--sb-muted)' :
     'color-mix(in srgb, var(--err) 80%, white)'
 
-  const statusLabel = health
-    ? `${t('health.' + health.status)}${health.last_fetch ? ' · ' + health.last_fetch.slice(0, 16).replace('T', ' ') : ''}`
-    : t('sidebar.loading')
+  const statusWord = health ? t('health.' + health.status) : t('sidebar.loading')
+  const statusTimestamp = health?.last_fetch ? health.last_fetch.slice(0, 16).replace('T', ' ') : null
 
   return (
     <nav className="sidebar-nav" style={{
@@ -279,21 +271,28 @@ export function Sidebar({ onNavigate, onCollapse, collapsed }: Props) {
           tabIndex={0}
           onClick={() => { router.push('/status'); onNavigate?.() }}
           onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { router.push('/status'); onNavigate?.() } }}
-          style={{ cursor: 'pointer' }}
-        >
-          <span style={{
-            display: 'inline-block',
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.375rem',
+            cursor: 'pointer',
             fontSize: '0.5625rem',
             fontFamily: 'ui-monospace, monospace',
             letterSpacing: '0.02em',
+          }}
+        >
+          <span style={{
             color: statusFg,
-            background: statusBg,
-            padding: '2px 8px',
-            borderRadius: 6,
-            transition: 'color 300ms, background 300ms',
+            fontWeight: 600,
+            transition: 'color 300ms',
           }}>
-            {statusLabel}
+            {statusWord}
           </span>
+          {statusTimestamp && (
+            <span style={{ color: 'var(--sb-muted)' }}>
+              {statusTimestamp}
+            </span>
+          )}
         </div>
         {/* Mini phase stepper — visible only when pipeline is running */}
         {showStepper && <MiniStepper pipelineStatus={pipelineStatus} t={t} />}

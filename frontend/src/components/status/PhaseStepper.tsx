@@ -279,29 +279,25 @@ function RetryBranch({ retryStatus, isClickable, onLogToggle, t, segmentWidthPct
       animation: 'branchGrow 300ms ease forwards',
       overflow: 'hidden',
     }}>
-      {/* Vertical connectors + horizontal branch row */}
+      {/* Vertical drop lines from main line into branch */}
       <div style={{
         display: 'flex',
         alignItems: 'stretch',
       }}>
-        {/* Left vertical drop (shape: border-left + border-bottom) */}
+        {/* Left vertical drop */}
         <div style={{
           width: '50%',
           height: dropHeight,
           borderLeft: `3px solid ${borderColor}`,
-          borderBottom: `3px solid ${borderColor}`,
-          borderRadius: '0 0 0 6px',
-          marginLeft: NODE_CENTER, // Approximate center of the text label
+          marginLeft: NODE_CENTER,
           boxSizing: 'border-box',
         }} />
-        {/* Right vertical rise (shape: border-right + border-bottom) */}
+        {/* Right vertical drop */}
         <div style={{
           width: '50%',
           height: dropHeight,
           borderRight: `3px solid ${borderColor}`,
-          borderBottom: `3px solid ${borderColor}`,
-          borderRadius: '0 0 6px 0',
-          marginRight: NODE_CENTER, // Approximate center of the text label
+          marginRight: NODE_CENTER,
           boxSizing: 'border-box',
         }} />
       </div>
@@ -310,7 +306,6 @@ function RetryBranch({ retryStatus, isClickable, onLogToggle, t, segmentWidthPct
       <div style={{
         display: 'flex',
         alignItems: 'flex-start',
-        padding: '4px 0 0',
       }}>
         {/* Left horizontal connector (fetch -> retry) */}
         <div style={{

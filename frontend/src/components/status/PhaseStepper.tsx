@@ -1,5 +1,5 @@
 // ABOUTME: Pipeline phase stepper — horizontal visual indicator of pipeline workflow phases.
-// ABOUTME: Shows fetch → summary → briefing → intelligence main line with retry as a git-tree branch below.
+// ABOUTME: Shows fetch → summary → intel → briefing main line with retry as a git-tree branch below.
 'use client'
 
 import type { PipelineStatus } from '@/api/client'
@@ -16,8 +16,8 @@ interface StepDef {
 const MAIN_STEPS: StepDef[] = [
   { key: 'fetch', labelKey: 'log.phase_fetch' },
   { key: 'summary', labelKey: 'log.phase_summary' },
-  { key: 'briefing', labelKey: 'log.phase_briefing' },
   { key: 'intelligence', labelKey: 'log.phase_intelligence' },
+  { key: 'briefing', labelKey: 'log.phase_briefing' },
 ]
 const BRANCH_STEP: StepDef = { key: 'retry', labelKey: 'log.phase_retry' }
 

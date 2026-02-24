@@ -677,6 +677,9 @@ input[type="range"]::-moz-range-thumb {
   .sensor-grid {
     padding: 0.5rem 0.75rem !important;
   }
+  .phase-stepper-wrap {
+    padding: 0 0.75rem 0.25rem !important;
+  }
   .control-bar {
     min-height: 56px !important;
   }

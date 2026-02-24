@@ -150,9 +150,11 @@ function MiniStepper({ pipelineStatus, t }: { pipelineStatus: PipelineStatus | n
 
 interface Props {
   onNavigate?: () => void
+  onCollapse?: () => void
+  collapsed?: boolean
 }
 
-export function Sidebar({ onNavigate }: Props) {
+export function Sidebar({ onNavigate, onCollapse, collapsed }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const { t, locale, setLocale } = useTranslation()
@@ -353,6 +355,34 @@ export function Sidebar({ onNavigate }: Props) {
           </select>
         </div>
       </div>
+
+      {/* Collapse toggle — desktop only */}
+      {onCollapse && (
+        <button
+          className="sidebar-collapse-btn"
+          onClick={onCollapse}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '0.625rem 1.75rem',
+            background: 'none',
+            border: 'none',
+            borderTop: '1px solid var(--sb-border)',
+            color: 'var(--sb-faint)',
+            cursor: 'pointer',
+            width: '100%',
+            transition: 'color 150ms ease',
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="1" y="1" width="14" height="14" rx="2" />
+            <line x1="5.5" y1="1" x2="5.5" y2="15" />
+            <polyline points={collapsed ? '8,6 11,8 8,10' : '11,6 8,8 11,10'} />
+          </svg>
+        </button>
+      )}
     </nav>
   )
 }

@@ -129,6 +129,7 @@ const zh: TranslationDict = {
   // ── Sidebar ───────────────────────────────────────────────────────────────
   'sidebar.loading': '加载中…',
   'sidebar.language': '语言',
+  'sidebar.expand': '展开侧边栏',
 
   // ── Sentiment detail labels ───────────────────────────────────────────────
   'sent.pos': '正面',

@@ -129,6 +129,7 @@ const en: TranslationDict = {
   // ── Sidebar ───────────────────────────────────────────────────────────────
   'sidebar.loading': 'loading…',
   'sidebar.language': 'Language',
+  'sidebar.expand': 'Expand sidebar',
 
   // ── Sentiment detail labels ───────────────────────────────────────────────
   'sent.pos': 'pos',

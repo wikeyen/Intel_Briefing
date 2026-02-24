@@ -31,17 +31,39 @@ const PAGE_DESC_KEYS: Record<string, string> = {
   '/data': 'page.data.desc',
 }
 
+/** Read sidebar collapsed preference from localStorage. */
+function readCollapsed(): boolean {
+  try {
+    return localStorage.getItem('ib:sidebar:collapsed') === '1'
+  } catch {
+    return false
+  }
+}
+
 function UiShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const pathname = usePathname()
   const { t } = useTranslation()
 
   const mainRef = useRef<HTMLElement>(null)
   const closeSidebar = useCallback(() => setSidebarOpen(false), [])
 
+  // Hydrate collapsed state from localStorage on mount
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setSidebarCollapsed(readCollapsed()) }, [])
+
   // Close sidebar on route change
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setSidebarOpen(false) }, [pathname])
+
+  const toggleCollapsed = useCallback(() => {
+    setSidebarCollapsed(prev => {
+      const next = !prev
+      try { localStorage.setItem('ib:sidebar:collapsed', next ? '1' : '0') } catch {}
+      return next
+    })
+  }, [])
 
   const titleKey = PAGE_TITLE_KEYS[pathname]
   const descKey = PAGE_DESC_KEYS[pathname]
@@ -50,7 +72,7 @@ function UiShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div
-      className={sidebarOpen ? 'sidebar-open' : ''}
+      className={`${sidebarOpen ? 'sidebar-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}
       style={{ display: 'flex', flex: 1, height: '100dvh', overflow: 'hidden', background: 'var(--canvas)' }}
     >
       {/* Mobile top bar — tap to scroll to top, hamburger to toggle menu */}
@@ -96,7 +118,20 @@ function UiShell({ children }: { children: React.ReactNode }) {
       {/* Backdrop — visible only on mobile when sidebar is open */}
       <div className="sidebar-backdrop" onClick={closeSidebar} />
 
-      <Sidebar onNavigate={closeSidebar} />
+      <Sidebar onNavigate={closeSidebar} onCollapse={toggleCollapsed} collapsed={sidebarCollapsed} />
+
+      {/* Desktop expand toggle — visible only when sidebar is collapsed on desktop */}
+      <button
+        className="sidebar-expand-toggle"
+        onClick={toggleCollapsed}
+        aria-label={t('sidebar.expand')}
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="1" y="1" width="14" height="14" rx="2" />
+          <line x1="5.5" y1="1" x2="5.5" y2="15" />
+        </svg>
+      </button>
+
       <main ref={mainRef} className="main-content" style={{
         flex: 1,
         height: '100dvh',

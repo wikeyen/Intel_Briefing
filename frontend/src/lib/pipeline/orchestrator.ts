@@ -703,8 +703,14 @@ export async function runPipeline(
       tracker.addEvent('info', 'intelligence', 'Intelligence analysis started')
       try {
         const intelligence = await runIntelligenceAnalysis(intelligenceReport, llmConfig, signal, config.summary_language)
-        await writeIntelligence(intelligence)
-        tracker.addEvent('ok', 'intelligence', 'Intelligence analysis complete')
+        const hasData = intelligence.trend !== null || intelligence.topics !== null || intelligence.accounts !== null
+        if (hasData) {
+          await writeIntelligence(intelligence)
+          tracker.addEvent('ok', 'intelligence', 'Intelligence analysis complete')
+        } else {
+          // All three analyses returned null — don't overwrite good cached data
+          tracker.addEvent('warn', 'intelligence', 'Intelligence analysis produced no results (LLM may have failed)')
+        }
       } catch (err) {
         // Intelligence is non-critical — log and continue
         console.error('Intelligence analysis failed:', err)

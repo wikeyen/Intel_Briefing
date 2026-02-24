@@ -12,7 +12,7 @@ import { SECTION_SENSORS } from './status/constants'
 import { StaleProcessBanner, detectStale } from './StaleProcessBanner'
 import { StatusSkeleton } from './Skeleton'
 import { PhaseStepper } from './status/PhaseStepper'
-import { ActivityLog } from './status/ActivityLog'
+import { ActivityLogDrawer } from './status/ActivityLog'
 
 export function Status() {
   const showToast = useToast()
@@ -27,6 +27,7 @@ export function Status() {
   const [tick, setTick]               = useState(0)
   const [selectedSensors, setSelectedSensors] = useState<Set<string>>(new Set())
   const [dismissed, setDismissed]     = useState<Set<string>>(new Set())
+  const [logDrawerOpen, setLogDrawerOpen] = useState(false)
   const lastFetchedAtRef              = useRef<string | null>(null)
   const triggerTimeRef                = useRef(0)
 
@@ -234,6 +235,7 @@ export function Status() {
 
   const isRunning = running || !!(pipelineStatus?.running && pipelineStatus.alive)
   const isPaused = !!(pipelineStatus?.paused && isRunning)
+  const hasEvents = !!(pipelineStatus?.events && pipelineStatus.events.length > 0)
 
   // ---------------------------------------------------------------------------
   // Auto-retry: retry failed sensors 3 times (5s/8s/13s) before showing button
@@ -363,44 +365,55 @@ export function Status() {
         </div>
       )}
 
-      <ControlBar
-        health={health}
-        config={config}
-        sourcesOk={sourcesOk}
-        sourcesTotal={allEnabledSensors.length}
-        totalItems={totalItems}
-        isRunning={isRunning}
-        phase={phase}
-        progress={progress}
-        detail={phaseDetail}
-        failedCount={failedCount}
-        retryingCount={retryingCount}
-        isPaused={isPaused}
-        selectedCount={selectedSensors.size}
-        totalSensors={allEnabledSensors.length}
-        hasFailedSensors={failedSensors.length > 0}
-        failedSensorCount={failedSensors.length}
-        onRun={(mode) => {
-          const sensors = selectedSensors.size > 0 ? Array.from(selectedSensors) : undefined
-          handleRun(mode, sensors)
-        }}
-        onStop={handleStop}
-        onSkipRetries={handleSkipRetries}
-        onGenerateOverall={handleGenerateOverall}
-        onRetryFailed={handleRetryFailed}
-        onSelectAll={selectAll}
-        onSelectNone={selectNone}
-        onSelectFailed={selectFailed}
-        fetching={fetching}
-        isStopping={stopping}
-      />
+      {/* Sticky header: ControlBar + PhaseStepper */}
+      <div style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 10,
+        background: 'var(--canvas)',
+        borderBottom: '1px solid var(--border)',
+      }}>
+        <ControlBar
+          health={health}
+          config={config}
+          sourcesOk={sourcesOk}
+          sourcesTotal={allEnabledSensors.length}
+          totalItems={totalItems}
+          isRunning={isRunning}
+          phase={phase}
+          progress={progress}
+          detail={phaseDetail}
+          failedCount={failedCount}
+          retryingCount={retryingCount}
+          isPaused={isPaused}
+          selectedCount={selectedSensors.size}
+          totalSensors={allEnabledSensors.length}
+          hasFailedSensors={failedSensors.length > 0}
+          failedSensorCount={failedSensors.length}
+          onRun={(mode) => {
+            const sensors = selectedSensors.size > 0 ? Array.from(selectedSensors) : undefined
+            handleRun(mode, sensors)
+          }}
+          onStop={handleStop}
+          onSkipRetries={handleSkipRetries}
+          onGenerateOverall={handleGenerateOverall}
+          onRetryFailed={handleRetryFailed}
+          onSelectAll={selectAll}
+          onSelectNone={selectNone}
+          onSelectFailed={selectFailed}
+          fetching={fetching}
+          isStopping={stopping}
+        />
 
-      {/* Phase stepper — only visible during or after a pipeline run */}
-      {pipelineStatus && (pipelineStatus.running || pipelineStatus.completed_at) && (
-        <div style={{ maxWidth: 1024, margin: '0 auto', width: '100%', padding: '0.25rem 3rem 0' }}>
-          <PhaseStepper pipelineStatus={pipelineStatus} />
-        </div>
-      )}
+        {pipelineStatus && (pipelineStatus.running || pipelineStatus.completed_at) && (
+          <div style={{ maxWidth: 1024, margin: '0 auto', width: '100%', padding: '0 3rem 0.25rem' }}>
+            <PhaseStepper
+              pipelineStatus={pipelineStatus}
+              onLogToggle={hasEvents ? () => setLogDrawerOpen(o => !o) : undefined}
+            />
+          </div>
+        )}
+      </div>
 
       <SensorGrid
         isRunning={isRunning}
@@ -423,11 +436,13 @@ export function Status() {
         autoRetryExhausted={autoRetryExhausted}
       />
 
-      {/* Activity log — only visible when there are events */}
-      {pipelineStatus && pipelineStatus.events && pipelineStatus.events.length > 0 && (
-        <div style={{ maxWidth: 1024, margin: '0 auto', width: '100%', padding: '0 3rem 1.5rem' }}>
-          <ActivityLog events={pipelineStatus.events} />
-        </div>
+      {/* Slide-out activity log panel */}
+      {hasEvents && (
+        <ActivityLogDrawer
+          events={pipelineStatus!.events}
+          open={logDrawerOpen}
+          onClose={() => setLogDrawerOpen(false)}
+        />
       )}
 
     </section>

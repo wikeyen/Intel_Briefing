@@ -332,55 +332,81 @@ const SENSOR_NAME_WIDTHS = [88, 110, 60, 96, 92, 66, 26, 60, 72, 70, 34, 92, 40,
 /** Category badge widths matching real category labels. */
 const CATEGORY_BADGE_WIDTHS = [30, 30, 52, 52, 52, 40, 40, 40, 52, 36, 46, 46, 62, 62, 36, 36]
 
-/** Skeleton layout for the status page — control bar (top) + sensor grid. */
+/** Skeleton layout for the status page — sticky header + sensor grid. */
 export function StatusSkeleton() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* Control bar skeleton */}
-      <div
-        className="control-bar page-padding"
-        style={{
-          position: 'relative',
+      {/* Sticky header skeleton: control bar + phase stepper */}
+      <div style={{ borderBottom: '1px solid var(--border)' }}>
+        <div
+          className="control-bar page-padding"
+          style={{
+            position: 'relative',
+            maxWidth: 1024,
+            margin: '0 auto',
+            width: '100%',
+            minHeight: 68,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+          }}
+        >
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem',
+            padding: '0 3rem',
+          }}>
+            {/* Health dot + label */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Skeleton width={8} height={8} borderRadius={4} />
+              <Skeleton width={55} height={11} />
+            </div>
+            {/* Metrics */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+              <Skeleton width={72} height={11} />
+              <Skeleton width={52} height={11} />
+            </div>
+            {/* Mode dropdown + selection + run button */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto' }}>
+              <Skeleton width={130} height={30} borderRadius={4} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                <Skeleton width={20} height={10} />
+                <Skeleton width={30} height={10} />
+                <Skeleton width={32} height={10} />
+              </div>
+              <Skeleton width={90} height={34} borderRadius={6} />
+            </div>
+          </div>
+          {/* Schedule line */}
+          <div style={{ padding: '0 3rem 0.375rem' }}>
+            <Skeleton width={100} height={9} />
+          </div>
+        </div>
+
+        {/* Phase stepper skeleton */}
+        <div style={{
           maxWidth: 1024,
           margin: '0 auto',
           width: '100%',
-          minHeight: 68,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          borderBottom: '1px solid var(--border)',
-        }}
-      >
-        <div style={{
+          padding: '0.25rem 3rem 0.5rem',
           display: 'flex',
           alignItems: 'center',
-          gap: '1rem',
-          padding: '0 3rem',
         }}>
-          {/* Health dot + label */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Skeleton width={8} height={8} borderRadius={4} />
-            <Skeleton width={55} height={11} />
-          </div>
-          {/* Metrics */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-            <Skeleton width={72} height={11} />
-            <Skeleton width={52} height={11} />
-          </div>
-          {/* Mode dropdown + selection + run button */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto' }}>
-            <Skeleton width={130} height={30} borderRadius={4} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-              <Skeleton width={20} height={10} />
-              <Skeleton width={30} height={10} />
-              <Skeleton width={32} height={10} />
+          {[0, 1, 2].map((i) => (
+            <div key={i} style={{
+              display: 'flex',
+              alignItems: 'center',
+              flex: i < 2 ? '1 1 0' : '0 0 auto',
+            }}>
+              <Skeleton width={22} height={22} borderRadius={11} />
+              {i < 2 && (
+                <div style={{ flex: '1 1 0', padding: '0 4px' }}>
+                  <Skeleton height={3} borderRadius={2} />
+                </div>
+              )}
             </div>
-            <Skeleton width={90} height={34} borderRadius={6} />
-          </div>
-        </div>
-        {/* Schedule line */}
-        <div style={{ padding: '0 3rem 0.375rem' }}>
-          <Skeleton width={100} height={9} />
+          ))}
         </div>
       </div>
 

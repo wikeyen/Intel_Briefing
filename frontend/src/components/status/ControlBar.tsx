@@ -134,24 +134,13 @@ const stopBtnBase: React.CSSProperties = {
 }
 
 const barStyle: React.CSSProperties = {
-  position: 'sticky',
-  top: 0,
-  zIndex: 10,
   maxWidth: 1024,
   width: '100%',
   margin: '0 auto',
-  minHeight: 68,
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'center',
-  background: 'var(--canvas)',
-}
-
-const barDividerStyle: React.CSSProperties = {
-  height: 1,
-  background: 'var(--border)',
-  margin: '0 3rem',
-  flexShrink: 0,
+  padding: '0.5rem 0 0',
 }
 
 const rowStyle: React.CSSProperties = {
@@ -204,8 +193,6 @@ export function ControlBar({
 
   const status = health?.status ?? 'no_data'
   const meta = STATUS_META[status] ?? STATUS_META.no_data
-  const pct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0
-
   const runDisabled = fetching
   const noneSelected = selectedCount === 0
   const allSelected = selectedCount === totalSensors
@@ -260,7 +247,7 @@ export function ControlBar({
     const dotColor = 'var(--accent)'
 
     return (
-      <div className="control-bar page-padding" style={{ ...barStyle, paddingBottom: 6 }}>
+      <div className="control-bar page-padding" style={barStyle}>
         <div className="control-bar-row" style={rowStyle}>
           {/* Left: pulsing dot + phase + detail */}
           <div className="control-bar-left" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
@@ -310,17 +297,6 @@ export function ControlBar({
             hovered={stopHovered}
             onHover={setStopHovered}
           />
-        </div>
-
-        {/* 2px progress bar */}
-        <div style={progressTrackStyle}>
-          <div style={{
-            height: '100%',
-            width: `${pct}%`,
-            background: 'var(--accent)',
-            borderRadius: '0 1px 1px 0',
-            transition: 'width 300ms ease',
-          }} />
         </div>
       </div>
     )
@@ -419,7 +395,7 @@ export function ControlBar({
 
       {/* Schedule footer */}
       <div className="control-bar-schedule" style={{
-        padding: '0 3rem 0.375rem',
+        padding: '0.125rem 3rem 0.25rem',
         display: 'flex',
       }}>
         <span
@@ -433,7 +409,6 @@ export function ControlBar({
           {schedule ? t('status.next', { time: schedule }) : t('status.no_schedule')}
         </span>
       </div>
-      <div className="control-bar-divider" style={barDividerStyle} />
     </div>
   )
 }

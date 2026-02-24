@@ -1,5 +1,5 @@
 // ABOUTME: Pipeline phase stepper — horizontal visual indicator of pipeline workflow phases.
-// ABOUTME: Shows fetch → retry → summarize → briefing → intelligence as connected step circles.
+// ABOUTME: Shows fetch → retry → summarize → briefing → intelligence with progress-aware connector lines.
 'use client'
 
 import type { PipelineStatus } from '@/api/client'
@@ -21,6 +21,8 @@ const STEPS: StepDef[] = [
   { key: 'intelligence', labelKey: 'log.phase_intelligence' },
 ]
 
+const TERMINAL_STATES = ['ok', 'failed', 'skipped', 'cancelled']
+
 function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePhaseStep, StepStatus> {
   const s: Record<PipelinePhaseStep, StepStatus> = {
     fetch: 'pending',
@@ -38,7 +40,7 @@ function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePhaseStep
   const fetchStates = ps.sensors.map(sen => sen.fetch)
   const anyFetching = fetchStates.some(f => f === 'running')
   const anyFetchQueued = fetchStates.some(f => f === 'queued')
-  const allFetchTerminal = fetchStates.every(f => ['ok', 'failed', 'skipped', 'cancelled'].includes(f))
+  const allFetchTerminal = fetchStates.every(f => TERMINAL_STATES.includes(f))
   const anyFetchFailed = fetchStates.some(f => f === 'failed')
 
   if (ps.mode === 'summarize') {
@@ -53,7 +55,6 @@ function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePhaseStep
   if (ps.retry_attempt > 0) {
     s.retry = 'active'
   } else if (s.fetch === 'done' || s.fetch === 'error') {
-    // Retries have either completed or were not needed
     const hadRetryEvents = events.some(e => e.phase === 'retry')
     s.retry = hadRetryEvents ? 'done' : 'skipped'
   } else if (s.fetch === 'skipped') {
@@ -64,7 +65,7 @@ function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePhaseStep
   const summaryStates = ps.sensors.map(sen => sen.summary)
   const anySummaryRunning = summaryStates.some(su => su === 'running')
   const anySummaryQueued = summaryStates.some(su => su === 'queued')
-  const allSummaryTerminal = summaryStates.every(su => ['ok', 'failed', 'skipped', 'cancelled'].includes(su))
+  const allSummaryTerminal = summaryStates.every(su => TERMINAL_STATES.includes(su))
   const anySummaryFailed = summaryStates.some(su => su === 'failed')
 
   if (ps.mode === 'fetch') {
@@ -102,7 +103,6 @@ function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePhaseStep
 
   // Paused state
   if (ps.paused) {
-    // Highlight whatever stage is paused
     if (ps.paused_stage === 'pre_overall') {
       s.briefing = 'active'
     }
@@ -111,12 +111,52 @@ function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePhaseStep
   return s
 }
 
-const STEP_COLORS: Record<StepStatus, { dot: string; label: string; line: string }> = {
-  pending: { dot: 'var(--border)', label: 'var(--ink-faint)', line: 'var(--border)' },
-  active: { dot: 'var(--accent)', label: 'var(--accent)', line: 'var(--accent)' },
-  done: { dot: 'var(--ok)', label: 'var(--ink-muted)', line: 'var(--ok)' },
-  error: { dot: 'var(--err)', label: 'var(--err)', line: 'var(--err)' },
-  skipped: { dot: 'var(--border)', label: 'var(--ink-faint)', line: 'var(--border)' },
+/** Returns 0–1 progress for each phase. -1 means indeterminate (running but no granular %). */
+function derivePhaseProgress(ps: PipelineStatus | null): Record<PipelinePhaseStep, number> {
+  const p: Record<PipelinePhaseStep, number> = { fetch: 0, retry: 0, summary: 0, briefing: 0, intelligence: 0 }
+  if (!ps) return p
+
+  // Fetch: fraction of non-skipped sensors in terminal state
+  const fetchActive = ps.sensors.filter(s => s.fetch !== 'skipped')
+  if (fetchActive.length > 0) {
+    p.fetch = fetchActive.filter(s => TERMINAL_STATES.includes(s.fetch)).length / fetchActive.length
+  }
+
+  // Retry: indeterminate while active
+  if (ps.retry_attempt > 0 && ps.retry_max > 0) {
+    p.retry = -1
+  }
+
+  // Summary: fraction of non-skipped sensors in terminal state
+  const sumActive = ps.sensors.filter(s => s.summary !== 'skipped')
+  if (sumActive.length > 0) {
+    p.summary = sumActive.filter(s => TERMINAL_STATES.includes(s.summary)).length / sumActive.length
+  }
+
+  // Briefing: binary — indeterminate while running
+  if (ps.overall_summary === 'running') {
+    p.briefing = -1
+  } else if (TERMINAL_STATES.includes(ps.overall_summary)) {
+    p.briefing = 1
+  }
+
+  // Intelligence: indeterminate while active (event-based, no granular %)
+  const intelEvents = (ps.events ?? []).filter(e => e.phase === 'intelligence')
+  if (intelEvents.some(e => e.level === 'ok' || e.level === 'warn' || e.level === 'error')) {
+    p.intelligence = 1
+  } else if (intelEvents.some(e => e.level === 'info')) {
+    p.intelligence = -1
+  }
+
+  return p
+}
+
+const STEP_COLORS: Record<StepStatus, { dot: string; label: string }> = {
+  pending: { dot: 'var(--border)', label: 'var(--ink-faint)' },
+  active: { dot: 'var(--accent)', label: 'var(--accent)' },
+  done: { dot: 'var(--ok)', label: 'var(--ink-muted)' },
+  error: { dot: 'var(--err)', label: 'var(--err)' },
+  skipped: { dot: 'var(--border)', label: 'var(--ink-faint)' },
 }
 
 const STEP_ICONS: Record<StepStatus, string> = {
@@ -127,89 +167,158 @@ const STEP_ICONS: Record<StepStatus, string> = {
   skipped: '–',
 }
 
+// CSS for the indeterminate shimmer animation
+const STEPPER_CSS = `
+@keyframes stepperShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+`
+
 interface PipelinePhaseStepperProps {
   pipelineStatus: PipelineStatus | null
+  /** Clicking any non-pending node toggles the activity log drawer. */
+  onLogToggle?: () => void
 }
 
-export function PhaseStepper({ pipelineStatus }: PipelinePhaseStepperProps) {
+export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepperProps) {
   const { t } = useTranslation()
   const statuses = deriveStepStatuses(pipelineStatus)
+  const progress = derivePhaseProgress(pipelineStatus)
 
-  // Filter out skipped steps for cleaner display
   const visibleSteps = STEPS.filter(step => statuses[step.key] !== 'skipped')
+  const hasEvents = (pipelineStatus?.events ?? []).length > 0
 
   if (visibleSteps.length === 0) return null
 
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'flex-start',
-      padding: '0.5rem 0',
-      width: '100%',
-    }}>
-      {visibleSteps.map((step, i) => {
-        const status = statuses[step.key]
-        const colors = STEP_COLORS[status]
-        const icon = STEP_ICONS[status]
-        const isLast = i === visibleSteps.length - 1
-        const nextStatus = isLast ? status : statuses[visibleSteps[i + 1].key]
-        const lineIsDone = status === 'done' && nextStatus !== 'pending'
+    <>
+      <style dangerouslySetInnerHTML={{ __html: STEPPER_CSS }} />
+      <div style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        padding: '0.125rem 0 0.25rem',
+        width: '100%',
+      }}>
+        {visibleSteps.map((step, i) => {
+          const status = statuses[step.key]
+          const colors = STEP_COLORS[status]
+          const icon = STEP_ICONS[status]
+          const isLast = i === visibleSteps.length - 1
+          const phaseProg = progress[step.key]
+          const isClickable = hasEvents && status !== 'pending' && !!onLogToggle
 
-        return (
-          <div key={step.key} style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            flex: isLast ? '0 0 auto' : '1 1 0',
-            minWidth: 0,
-          }}>
-            {/* Step circle + label */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', flexShrink: 0 }}>
-              <div style={{
-                width: 22,
-                height: 22,
-                borderRadius: '50%',
-                border: `2px solid ${colors.dot}`,
-                background: status === 'active' ? colors.dot : 'transparent',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '0.625rem',
-                fontWeight: 700,
-                color: status === 'active' ? 'white' : colors.dot,
-                transition: 'all 300ms ease',
-                ...(status === 'active' ? {
-                  boxShadow: `0 0 0 3px color-mix(in srgb, ${colors.dot} 20%, transparent)`,
-                } : {}),
-              }}>
-                {icon}
+          // Line color logic: done=green filled, active=accent partial fill, else dim track
+          const lineFillColor = status === 'done' ? 'var(--ok)'
+            : status === 'active' ? 'var(--accent)'
+            : status === 'error' ? 'var(--err)'
+            : 'transparent'
+          const lineFillPct = status === 'done' || status === 'error' ? 100
+            : status === 'active' ? (phaseProg === -1 ? 0 : Math.round(phaseProg * 100))
+            : 0
+          const isIndeterminate = status === 'active' && phaseProg === -1
+
+          return (
+            <div key={step.key} style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              flex: isLast ? '0 0 auto' : '1 1 0',
+              minWidth: 0,
+            }}>
+              {/* Step circle + label */}
+              <div
+                role={isClickable ? 'button' : undefined}
+                tabIndex={isClickable ? 0 : undefined}
+                onClick={isClickable ? onLogToggle : undefined}
+                onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') onLogToggle!() } : undefined}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  flexShrink: 0,
+                  position: 'relative',
+                  cursor: isClickable ? 'pointer' : 'default',
+                }}
+              >
+                <div style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: '50%',
+                  border: `2px solid ${colors.dot}`,
+                  background: status === 'active' ? colors.dot : 'transparent',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.625rem',
+                  fontWeight: 700,
+                  color: status === 'active' ? 'white' : colors.dot,
+                  transition: 'all 300ms ease',
+                  ...(status === 'active' ? {
+                    boxShadow: `0 0 0 3px color-mix(in srgb, ${colors.dot} 20%, transparent)`,
+                  } : {}),
+                }}>
+                  {icon}
+                </div>
+                <span style={{
+                  fontSize: '0.5625rem',
+                  fontWeight: 600,
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                  color: colors.label,
+                  whiteSpace: 'nowrap',
+                }}>
+                  {t(step.labelKey)}
+                </span>
               </div>
-              <span style={{
-                fontSize: '0.5625rem',
-                fontWeight: 600,
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase',
-                color: colors.label,
-                whiteSpace: 'nowrap',
-              }}>
-                {t(step.labelKey)}
-              </span>
-            </div>
 
-            {/* Connector line — stretches to fill remaining space */}
-            {!isLast && (
-              <div style={{
-                flex: '1 1 0',
-                height: 2,
-                background: lineIsDone ? 'var(--ok)' : 'var(--border)',
-                opacity: lineIsDone ? 1 : 0.4,
-                marginTop: 10,
-                minWidth: 12,
-                transition: 'all 300ms ease',
-              }} />
-            )}
-          </div>
-        )
-      })}
-    </div>
+              {/* Connector line with progress fill */}
+              {!isLast && (
+                <div style={{
+                  flex: '1 1 0',
+                  height: 3,
+                  background: 'var(--border)',
+                  opacity: 0.4,
+                  marginTop: 9.5,
+                  minWidth: 12,
+                  borderRadius: 2,
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}>
+                  {/* Determinate fill */}
+                  {!isIndeterminate && lineFillPct > 0 && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      height: '100%',
+                      width: `${lineFillPct}%`,
+                      background: lineFillColor,
+                      borderRadius: 2,
+                      opacity: 1 / 0.4, // Counteract parent's opacity
+                      transition: 'width 500ms ease',
+                    }} />
+                  )}
+                  {/* Indeterminate shimmer */}
+                  {isIndeterminate && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      height: '100%',
+                      width: '50%',
+                      background: `linear-gradient(90deg, transparent, var(--accent), transparent)`,
+                      borderRadius: 2,
+                      opacity: 1 / 0.4,
+                      animation: 'stepperShimmer 1.5s ease-in-out infinite',
+                    }} />
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </>
   )
 }

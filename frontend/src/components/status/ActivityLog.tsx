@@ -1,22 +1,23 @@
-// ABOUTME: Pipeline activity log — scrollable timeline of pipeline events with level icons and phase badges.
-// ABOUTME: Auto-scrolls to newest events; collapsible to save vertical space.
+// ABOUTME: Pipeline activity log drawer — slide-out panel from the right showing pipeline events.
+// ABOUTME: Triggered by a button in the sticky header; shows events newest-first with level icons and phase badges.
 'use client'
 
-import { useRef, useEffect, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import type { PipelineEvent } from '@/api/client'
 import { useTranslation } from '@/lib/i18n'
 import { SENSOR_LABELS } from '@/lib/sensors/taxonomy'
 
-interface ActivityLogProps {
+interface ActivityLogDrawerProps {
   events: PipelineEvent[]
-  maxHeight?: number
+  open: boolean
+  onClose: () => void
 }
 
 const LEVEL_STYLES: Record<string, { icon: string; color: string }> = {
-  info: { icon: '›', color: 'var(--ink-muted)' },
-  ok: { icon: '✓', color: 'var(--ok)' },
+  info: { icon: '\u203A', color: 'var(--ink-muted)' },
+  ok: { icon: '\u2713', color: 'var(--ok)' },
   warn: { icon: '!', color: 'var(--warn)' },
-  error: { icon: '✕', color: 'var(--err)' },
+  error: { icon: '\u2715', color: 'var(--err)' },
 }
 
 const PHASE_COLORS: Record<string, string> = {
@@ -27,6 +28,25 @@ const PHASE_COLORS: Record<string, string> = {
   system: 'var(--ink-muted)',
 }
 
+const DRAWER_CSS = `
+@keyframes logDrawerIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes logDrawerOut {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+@keyframes logBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes logBackdropOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+`
+
 function formatTime(iso: string): string {
   try {
     const d = new Date(iso)
@@ -36,93 +56,138 @@ function formatTime(iso: string): string {
   }
 }
 
-export function ActivityLog({ events, maxHeight = 240 }: ActivityLogProps) {
+export function ActivityLogDrawer({ events, open, onClose }: ActivityLogDrawerProps) {
   const { t } = useTranslation()
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const [collapsed, setCollapsed] = useState(false)
-  const [userScrolled, setUserScrolled] = useState(false)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const closingRef = useRef(false)
 
-  // Auto-scroll to bottom when new events arrive (unless user scrolled up)
+  // Close on Escape
   useEffect(() => {
-    if (userScrolled || collapsed) return
-    const el = scrollRef.current
-    if (el) el.scrollTop = el.scrollHeight
-  }, [events.length, collapsed, userScrolled])
+    if (!open) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [open, onClose])
 
-  // Detect when user scrolls away from bottom
-  const handleScroll = () => {
-    const el = scrollRef.current
-    if (!el) return
-    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 24
-    setUserScrolled(!atBottom)
+  // Animate out before unmounting
+  const handleClose = () => {
+    if (closingRef.current) return
+    closingRef.current = true
+    const panel = panelRef.current
+    if (panel) {
+      panel.style.animation = 'logDrawerOut 200ms ease forwards'
+      const backdrop = panel.previousElementSibling as HTMLElement | null
+      if (backdrop) backdrop.style.animation = 'logBackdropOut 200ms ease forwards'
+      setTimeout(() => {
+        closingRef.current = false
+        onClose()
+      }, 200)
+    } else {
+      closingRef.current = false
+      onClose()
+    }
   }
 
-  if (events.length === 0) return null
+  if (!open && !closingRef.current) return null
+
+  // Newest events first
+  const reversed = [...events].reverse()
 
   return (
-    <div style={{
-      border: '1px solid var(--border)',
-      borderRadius: 8,
-      overflow: 'hidden',
-      background: 'var(--canvas)',
-    }}>
-      {/* Header */}
-      <button
-        type="button"
-        onClick={() => setCollapsed(c => !c)}
+    <>
+      <style dangerouslySetInnerHTML={{ __html: DRAWER_CSS }} />
+
+      {/* Backdrop */}
+      <div
+        onClick={handleClose}
         style={{
-          width: '100%',
+          position: 'fixed',
+          inset: 0,
+          zIndex: 40,
+          background: 'rgba(0, 0, 0, 0.2)',
+          backdropFilter: 'blur(2px)',
+          WebkitBackdropFilter: 'blur(2px)',
+          animation: 'logBackdropIn 200ms ease forwards',
+        }}
+      />
+
+      {/* Panel */}
+      <div
+        ref={panelRef}
+        style={{
+          position: 'fixed',
+          top: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 41,
+          width: 480,
+          maxWidth: '92vw',
+          background: 'var(--canvas)',
+          borderLeft: '1px solid var(--border)',
+          boxShadow: 'var(--shadow-lg)',
+          display: 'flex',
+          flexDirection: 'column',
+          animation: 'logDrawerIn 200ms ease forwards',
+        }}
+      >
+        {/* Header */}
+        <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0.5rem 0.75rem',
-          background: 'color-mix(in srgb, var(--ink) 3%, var(--canvas))',
-          border: 'none',
-          borderBottom: collapsed ? 'none' : '1px solid var(--border)',
-          cursor: 'pointer',
-          color: 'var(--ink)',
-        }}
-      >
-        <span style={{
-          fontSize: '0.6875rem',
-          fontWeight: 600,
-          letterSpacing: '0.04em',
-          textTransform: 'uppercase',
-          color: 'var(--ink-muted)',
+          padding: '0.75rem 1rem',
+          borderBottom: '1px solid var(--border)',
+          flexShrink: 0,
         }}>
-          {t('log.title')}
-          <span style={{
-            marginLeft: '0.5rem',
-            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-            fontSize: '0.625rem',
-            color: 'var(--ink-faint)',
-            fontWeight: 400,
-          }}>
-            {events.length}
-          </span>
-        </span>
-        <span style={{
-          fontSize: '0.75rem',
-          color: 'var(--ink-faint)',
-          transform: collapsed ? 'rotate(-90deg)' : 'rotate(0)',
-          transition: 'transform 200ms ease',
-        }}>
-          ▾
-        </span>
-      </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{
+              fontSize: '0.6875rem',
+              fontWeight: 600,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              color: 'var(--ink-muted)',
+            }}>
+              {t('log.title')}
+            </span>
+            <span style={{
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+              fontSize: '0.625rem',
+              color: 'var(--ink-faint)',
+            }}>
+              {events.length}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={handleClose}
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 6,
+              border: '1px solid var(--border)',
+              background: 'var(--canvas)',
+              color: 'var(--ink-muted)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '0.875rem',
+              lineHeight: 1,
+            }}
+          >
+            {'\u2715'}
+          </button>
+        </div>
 
-      {/* Event list */}
-      {!collapsed && (
-        <div
-          ref={scrollRef}
-          onScroll={handleScroll}
-          style={{
-            maxHeight,
-            overflowY: 'auto',
-            overflowX: 'hidden',
-          }}
-        >
-          {events.map((ev, i) => {
+        {/* Event list — scrollable */}
+        <div style={{
+          flex: 1,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+        }}>
+          {reversed.map((ev, i) => {
             const level = LEVEL_STYLES[ev.level] ?? LEVEL_STYLES.info
             const phaseColor = PHASE_COLORS[ev.phase] ?? 'var(--ink-muted)'
             const sensorLabel = ev.sensor ? (SENSOR_LABELS[ev.sensor] ?? ev.sensor) : null
@@ -134,8 +199,8 @@ export function ActivityLog({ events, maxHeight = 240 }: ActivityLogProps) {
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: '0.5rem',
-                  padding: '0.3125rem 0.75rem',
-                  borderBottom: i < events.length - 1 ? '1px solid color-mix(in srgb, var(--border) 50%, transparent)' : 'none',
+                  padding: '0.375rem 1rem',
+                  borderBottom: '1px solid color-mix(in srgb, var(--border) 50%, transparent)',
                   fontSize: '0.75rem',
                   lineHeight: 1.5,
                 }}
@@ -187,60 +252,29 @@ export function ActivityLog({ events, maxHeight = 240 }: ActivityLogProps) {
                   {t(`log.phase_${ev.phase}`)}
                 </span>
 
-                {/* Sensor name (if present) */}
-                {sensorLabel && (
+                {/* Sensor + message stacked to save horizontal space */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {sensorLabel && (
+                    <span style={{
+                      fontSize: '0.6875rem',
+                      fontWeight: 600,
+                      color: 'var(--ink)',
+                      marginRight: '0.375rem',
+                    }}>
+                      {sensorLabel}
+                    </span>
+                  )}
                   <span style={{
-                    fontSize: '0.6875rem',
-                    fontWeight: 600,
-                    color: 'var(--ink)',
-                    flexShrink: 0,
+                    color: ev.level === 'error' ? 'var(--err)' : ev.level === 'warn' ? 'var(--warn)' : 'var(--ink-muted)',
                   }}>
-                    {sensorLabel}
+                    {ev.message}
                   </span>
-                )}
-
-                {/* Message */}
-                <span style={{
-                  color: ev.level === 'error' ? 'var(--err)' : ev.level === 'warn' ? 'var(--warn)' : 'var(--ink-muted)',
-                  flex: 1,
-                  minWidth: 0,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}>
-                  {ev.message}
-                </span>
+                </div>
               </div>
             )
           })}
-
-          {/* Scroll-to-bottom indicator */}
-          {userScrolled && (
-            <button
-              type="button"
-              onClick={() => {
-                setUserScrolled(false)
-                scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
-              }}
-              style={{
-                position: 'sticky',
-                bottom: 0,
-                width: '100%',
-                padding: '0.25rem',
-                background: 'color-mix(in srgb, var(--canvas) 90%, var(--accent))',
-                border: 'none',
-                borderTop: '1px solid var(--border)',
-                fontSize: '0.625rem',
-                color: 'var(--accent)',
-                cursor: 'pointer',
-                textAlign: 'center',
-              }}
-            >
-              ↓ {t('log.scroll_bottom')}
-            </button>
-          )}
         </div>
-      )}
-    </div>
+      </div>
+    </>
   )
 }

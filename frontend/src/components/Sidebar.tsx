@@ -86,11 +86,12 @@ function TransitionLine({ direction }: { direction: 'left' | 'right' }) {
 }
 
 /** Single mini stepper node — dot + label. */
-function MiniNode({ step, status, t }: { step: { labelKey: string }; status: StepStatus; t: (k: string) => string }) {
+function MiniNode({ step, status, align = 'center', t }: { step: { labelKey: string }; status: StepStatus; align?: 'start' | 'center' | 'end'; t: (k: string) => string }) {
   const colors = STEP_COLORS[status]
   const isActive = status === 'active'
+  const alignItems = align === 'start' ? 'flex-start' : align === 'end' ? 'flex-end' : 'center'
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems, gap: 2, flexShrink: 0 }}>
       <div style={{
         width: MINI_NODE,
         height: MINI_NODE,
@@ -150,10 +151,12 @@ function MiniStepper({ pipelineStatus, t }: { pipelineStatus: PipelineStatus | n
 
       {windowSteps.map((step, i) => {
         const status: StepStatus = statuses[step.key]
+        const isFirst = i === 0
         const isLast = i === windowSteps.length - 1
+        const nodeAlign = isFirst && isAtStart ? 'start' : isLast && isAtEnd ? 'end' : 'center'
         return (
           <div key={step.key} style={{ display: 'flex', alignItems: 'center' }}>
-            <MiniNode step={step} status={status} t={t} />
+            <MiniNode step={step} status={status} align={nodeAlign} t={t} />
             {!isLast && (
               <div style={{
                 width: 16,

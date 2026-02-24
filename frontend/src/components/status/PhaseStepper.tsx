@@ -81,15 +81,7 @@ function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePhaseStep
   const allSummaryTerminal = summaryStates.every(su => TERMINAL_STATES.includes(su))
   const anySummaryFailed = summaryStates.some(su => su === 'failed')
 
-  if (ps.mode === 'fetch') {
-    s.summary = 'skipped'
-  } else if (anySummaryRunning || anySummaryQueued) {
-    s.summary = 'active'
-  } else if (allSummaryTerminal && summaryStates.length > 0) {
-    s.summary = anySummaryFailed ? 'error' : 'done'
-  }
-
-  // Briefing (overall summary)
+  // Briefing (overall summary) — derived first so summary can use it as a guardrail
   if (ps.mode === 'fetch') {
     s.briefing = 'skipped'
   } else if (ps.overall_summary === 'running') {
@@ -100,6 +92,21 @@ function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePhaseStep
     s.briefing = 'error'
   } else if (ps.overall_summary === 'skipped' || ps.overall_summary === 'cancelled') {
     s.briefing = 'skipped'
+  }
+
+  // Summary phase — if briefing has already started, summary must be complete
+  const briefingStarted = s.briefing === 'active' || s.briefing === 'done' || s.briefing === 'error'
+  if (ps.mode === 'fetch') {
+    s.summary = 'skipped'
+  } else if (briefingStarted) {
+    // Briefing can only start after per-sensor summaries finish. If any sensor's
+    // summary state is non-terminal (e.g. stale 'queued' from a failed retry), the
+    // pipeline has moved past it — treat summary phase as done/error.
+    s.summary = anySummaryFailed ? 'error' : 'done'
+  } else if (anySummaryRunning || anySummaryQueued) {
+    s.summary = 'active'
+  } else if (allSummaryTerminal && summaryStates.length > 0) {
+    s.summary = anySummaryFailed ? 'error' : 'done'
   }
 
   // Intelligence

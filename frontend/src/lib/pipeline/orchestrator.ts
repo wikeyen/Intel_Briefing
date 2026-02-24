@@ -673,6 +673,14 @@ export async function runPipeline(
           }
 
           g.__pipelinePauseResolve = null
+
+          // Finalize summary state for any sensors still failed after pause loop.
+          // When a sensor was retried and failed again, resetSummaryState set it back
+          // to 'queued' but nothing re-skipped it — do so now before overall briefing.
+          for (const name of failedSensors) {
+            tracker.skipSummaryForSensor(name)
+          }
+
           tracker.unpause()
         }
 

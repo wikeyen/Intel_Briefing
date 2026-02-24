@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
 import { api } from '@/api/client'
 import type { IntelReport, IntelItem, BriefingSummary, PipelineStatus, SummaryProgress, OverallBriefing, BriefingSource, SentimentEntry, IntelligenceReport } from '@/api/client'
-import { PublicFocusCard, TopicPulseCard, VoicesCard } from './IntelligenceCards'
+import { PublicFocusCard, TopicPulseCard, VoicesCard, PublicFocusDetail, TopicPulseDetail, VoicesDetail } from './IntelligenceCards'
 import { SENSOR_LABELS, SENSOR_DISPLAY_MAP, CATEGORY_TO_DISPLAY } from '@/lib/sensors/taxonomy'
 import type { CategoryKey, DisplayCategoryKey } from '@/lib/sensors/taxonomy'
 import { useTranslation } from '@/lib/i18n'
@@ -1613,6 +1613,106 @@ function DetailPanel({ domain, summary, report, onClose }: {
 }
 
 // ---------------------------------------------------------------------------
+// Intelligence Detail Panel — slide-in overlay for intelligence card deep-dive
+// ---------------------------------------------------------------------------
+
+function IntelligenceDetailPanel({ cardType, intelligence, onClose }: {
+  cardType: 'trend' | 'topics' | 'accounts'
+  intelligence: IntelligenceReport
+  onClose: () => void
+}) {
+  const config = {
+    trend:    { label: 'Public Focus',  accent: '#f39c12' },
+    topics:   { label: 'Topic Pulse',   accent: '#9b59b6' },
+    accounts: { label: 'Voices',        accent: '#3498db' },
+  }[cardType]
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  // Prevent body scroll
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [])
+
+  return (
+    <>
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 100,
+          background: 'rgba(0, 0, 0, 0.3)',
+          backdropFilter: 'blur(2px)',
+          WebkitBackdropFilter: 'blur(2px)',
+        }}
+      />
+      {/* Panel */}
+      <motion.div
+        initial={{ x: '100%' }}
+        animate={{ x: 0 }}
+        exit={{ x: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        onClick={e => e.stopPropagation()}
+        style={{
+          position: 'fixed', top: 0, right: 0, bottom: 0,
+          width: 560, maxWidth: '90vw',
+          background: 'var(--surface)',
+          borderLeft: '1px solid var(--border)',
+          boxShadow: 'var(--shadow-lg)',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          overscrollBehavior: 'contain',
+          zIndex: 101,
+          padding: '1.5rem',
+          display: 'flex', flexDirection: 'column', gap: '0.75rem',
+        }}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <SectionLabel color={config.accent}>{config.label}</SectionLabel>
+          <button
+            onClick={onClose}
+            style={{
+              width: 28, height: 28, borderRadius: 6,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'var(--surface-inset)', color: 'var(--ink-tertiary)',
+              fontSize: '1rem', lineHeight: 1,
+              border: 'none', cursor: 'pointer',
+              transition: 'background 150ms, color 150ms',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--border)'; e.currentTarget.style.color = 'var(--ink)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface-inset)'; e.currentTarget.style.color = 'var(--ink-tertiary)' }}
+          >
+            &times;
+          </button>
+        </div>
+
+        {/* Content */}
+        {cardType === 'trend' && intelligence.trend && (
+          <PublicFocusDetail data={intelligence.trend} />
+        )}
+        {cardType === 'topics' && intelligence.topics && (
+          <TopicPulseDetail data={intelligence.topics} />
+        )}
+        {cardType === 'accounts' && intelligence.accounts && (
+          <VoicesDetail data={intelligence.accounts} />
+        )}
+      </motion.div>
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Dashboard Skeleton
 // ---------------------------------------------------------------------------
 
@@ -2034,6 +2134,7 @@ export function Dashboard() {
   const [selectedDomain, setSelectedDomain] = useState<DomainDef | null>(null)
   const [showTrendPanel, setShowTrendPanel] = useState(false)
   const [intelligence, setIntelligence] = useState<IntelligenceReport | null>(null)
+  const [selectedIntelCard, setSelectedIntelCard] = useState<'trend' | 'topics' | 'accounts' | null>(null)
 
   const [showUpdatedBanner, setShowUpdatedBanner] = useState(false)
   const lastPipelineCompletedAt = useRef<string | null>(null)
@@ -2175,19 +2276,30 @@ export function Dashboard() {
                       <ExecSummaryWidget summary={summary} />
                     </StaggerChild>
 
-                    <hr className="dash-divider" />
+                    {/* Intelligence cards — under exec summary */}
+                    {intelligence && (
+                      <div className="intelligence-grid" style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(3, 1fr)',
+                        gap: '0.75rem',
+                        marginTop: '0.75rem',
+                      }}>
+                        <PublicFocusCard
+                          data={intelligence?.trend ?? null}
+                          onClick={() => intelligence?.trend && setSelectedIntelCard('trend')}
+                        />
+                        <TopicPulseCard
+                          data={intelligence?.topics ?? null}
+                          onClick={() => intelligence?.topics && setSelectedIntelCard('topics')}
+                        />
+                        <VoicesCard
+                          data={intelligence?.accounts ?? null}
+                          onClick={() => intelligence?.accounts && setSelectedIntelCard('accounts')}
+                        />
+                      </div>
+                    )}
 
-                    {/* Intelligence Section */}
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-                      gap: '0.75rem',
-                      marginBottom: '1rem',
-                    }}>
-                      <PublicFocusCard data={intelligence?.trend ?? null} />
-                      <TopicPulseCard data={intelligence?.topics ?? null} />
-                      <VoicesCard data={intelligence?.accounts ?? null} />
-                    </div>
+                    <hr className="dash-divider" />
 
                     {/* Domain cards grid */}
                     <div className="dashboard-domains">
@@ -2267,6 +2379,13 @@ export function Dashboard() {
                   report={report}
                   summary={summary}
                   onClose={() => setShowTrendPanel(false)}
+                />
+              )}
+              {selectedIntelCard && intelligence && (
+                <IntelligenceDetailPanel
+                  cardType={selectedIntelCard}
+                  intelligence={intelligence}
+                  onClose={() => setSelectedIntelCard(null)}
                 />
               )}
             </AnimatePresence>

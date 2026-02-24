@@ -309,8 +309,36 @@ const chunkTextStyle: React.CSSProperties = {
 
 type TFn = (key: string, params?: Record<string, string>) => string
 
+const errorBadgeBase: React.CSSProperties = {
+  fontSize: '0.5rem',
+  fontWeight: 700,
+  letterSpacing: '0.04em',
+  textTransform: 'uppercase',
+  padding: '0.0625rem 0.3125rem',
+  borderRadius: 3,
+  flexShrink: 0,
+  lineHeight: 1.5,
+}
+
+function ErrorBadge({ kind, isSummaryError, t }: { kind?: string; isSummaryError?: boolean; t: TFn }) {
+  if (kind === 'config') {
+    return <span style={{ ...errorBadgeBase, color: 'var(--warn)', background: 'color-mix(in srgb, var(--warn) 12%, transparent)' }}>{t('sensor.error_config')}</span>
+  }
+  if (isSummaryError) {
+    return <span style={{ ...errorBadgeBase, color: 'var(--err)', background: 'color-mix(in srgb, var(--err) 10%, transparent)' }}>{t('sensor.error_summary')}</span>
+  }
+  return <span style={{ ...errorBadgeBase, color: 'var(--err)', background: 'color-mix(in srgb, var(--err) 10%, transparent)' }}>{t('sensor.error_api')}</span>
+}
+
+const reasonTextStyle: React.CSSProperties = {
+  fontSize: '0.625rem',
+  color: 'var(--ink-faint)',
+  fontStyle: 'italic',
+  lineHeight: 1.3,
+}
+
 function PrimaryMetric({ state, props, t }: { state: CardState; props: SensorCardProps; t: TFn }) {
-  const { liveSensor, itemCount, fetchError, summaryError } = props
+  const { liveSensor, itemCount, fetchError, summaryError, isConfigError } = props
 
   switch (state) {
     case 'healthy':
@@ -318,13 +346,33 @@ function PrimaryMetric({ state, props, t }: { state: CardState; props: SensorCar
       return <span style={metricStyle}>{itemCount}</span>
 
     case 'disabled':
-      return <span style={{ ...metricStyle, fontSize: '0.75rem', color: 'var(--ink-faint)', fontWeight: 500 }}>{t('sensor.disabled')}</span>
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
+          <span style={{ ...metricStyle, fontSize: '0.75rem', color: 'var(--ink-faint)', fontWeight: 500 }}>{t('sensor.disabled')}</span>
+          <span style={reasonTextStyle}>{t('sensor.disabled_reason')}</span>
+        </div>
+      )
 
     case 'config-error':
-      return <span style={{ ...errorTextStyle, color: 'var(--warn)' }}>{t('sensor.needs_api_key')}</span>
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+            <ErrorBadge kind="config" t={t} />
+            <span style={{ ...errorTextStyle, color: 'var(--warn)' }}>{t('sensor.needs_api_key')}</span>
+          </span>
+          <span style={reasonTextStyle}>{t('sensor.needs_api_key_reason')}</span>
+        </div>
+      )
 
     case 'failed':
-      return <span style={errorTextStyle}>{fetchError || summaryError || t('sensor.failed')}</span>
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+            <ErrorBadge kind={isConfigError ? 'config' : 'api'} isSummaryError={!fetchError && !!summaryError} t={t} />
+            <span style={errorTextStyle}>{fetchError || summaryError || t('sensor.failed')}</span>
+          </span>
+        </div>
+      )
 
     case 'fetching':
       return (
@@ -351,7 +399,12 @@ function PrimaryMetric({ state, props, t }: { state: CardState; props: SensorCar
       return <span style={{ ...metricStyle, color: 'var(--ink-faint)', fontWeight: 400, fontSize: '0.75rem' }}>{t('sensor.queued')}</span>
 
     case 'skipped':
-      return <span style={{ ...metricStyle, color: 'var(--ink-faint)', fontWeight: 400, fontSize: '0.75rem' }}>{t('sensor.skipped')}</span>
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
+          <span style={{ ...metricStyle, color: 'var(--ink-faint)', fontWeight: 400, fontSize: '0.75rem' }}>{t('sensor.skipped')}</span>
+          <span style={reasonTextStyle}>{t('sensor.skipped_reason')}</span>
+        </div>
+      )
 
     case 'done':
       return (
@@ -374,9 +427,14 @@ function PrimaryMetric({ state, props, t }: { state: CardState; props: SensorCar
     case 'failed-mid-run':
     case 'paused-failed':
       return (
-        <span style={errorTextStyle}>
-          {liveSensor?.fetch_error || liveSensor?.summary_error || t('sensor.failed')}
-        </span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+            <ErrorBadge kind={liveSensor?.fetch_error_kind ?? undefined} isSummaryError={!liveSensor?.fetch_error && !!liveSensor?.summary_error} t={t} />
+            <span style={errorTextStyle}>
+              {liveSensor?.fetch_error || liveSensor?.summary_error || t('sensor.failed')}
+            </span>
+          </span>
+        </div>
       )
   }
 }
@@ -600,7 +658,7 @@ function rowContainerStyle(state: CardState, hovered: boolean): React.CSSPropert
 }
 
 function RowMetric({ state, props, t }: { state: CardState; props: SensorCardProps; t: TFn }) {
-  const { liveSensor, itemCount, fetchError, summaryError } = props
+  const { liveSensor, itemCount, fetchError, summaryError, isConfigError } = props
   const mono: React.CSSProperties = { fontFamily: 'ui-monospace, monospace', fontSize: '0.75rem', fontWeight: 600 }
 
   switch (state) {
@@ -608,11 +666,34 @@ function RowMetric({ state, props, t }: { state: CardState; props: SensorCardPro
     case 'selected':
       return <span style={{ ...mono, color: 'var(--ink)' }}>{itemCount}</span>
     case 'disabled':
-      return <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>{t('sensor.disabled')}</span>
+      return (
+        <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.0625rem' }}>
+          <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>{t('sensor.disabled')}</span>
+          <span style={{ fontSize: '0.5625rem', color: 'var(--ink-faint)', fontStyle: 'italic' }}>{t('sensor.disabled_reason')}</span>
+        </span>
+      )
     case 'config-error':
-      return <span style={{ fontSize: '0.6875rem', color: 'var(--warn)' }}>{t('sensor.needs_api_key')}</span>
+      return (
+        <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.0625rem' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <ErrorBadge kind="config" t={t} />
+            <span style={{ fontSize: '0.6875rem', color: 'var(--warn)' }}>{t('sensor.needs_api_key')}</span>
+          </span>
+          <span style={{ fontSize: '0.5625rem', color: 'var(--ink-faint)', fontStyle: 'italic' }}>{t('sensor.needs_api_key_reason')}</span>
+        </span>
+      )
     case 'failed':
-      return <span style={{ fontSize: '0.6875rem', color: 'var(--err)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fetchError || summaryError || t('sensor.failed')}</span>
+      return (
+        <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.0625rem', maxWidth: 300 }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <ErrorBadge kind={isConfigError ? 'config' : 'api'} isSummaryError={!fetchError && !!summaryError} t={t} />
+            <span style={{ fontSize: '0.6875rem', color: 'var(--err)' }}>{t('sensor.failed')}</span>
+          </span>
+          <span style={{ fontSize: '0.5625rem', color: 'var(--err)', opacity: 0.8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%', textAlign: 'right' }}>
+            {fetchError || summaryError}
+          </span>
+        </span>
+      )
     case 'fetching': {
       const retrying = props.isRetrying
       const label = retrying ? t('sensor.retrying') : t('sensor.fetching')
@@ -636,7 +717,12 @@ function RowMetric({ state, props, t }: { state: CardState; props: SensorCardPro
         ? <span style={{ fontSize: '0.6875rem', color: 'var(--warn)', fontWeight: 500 }}>{t('sensor.retrying')}{'\u2026'}</span>
         : <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>{t('sensor.queued')}</span>
     case 'skipped':
-      return <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>{t('sensor.skipped')}</span>
+      return (
+        <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.0625rem' }}>
+          <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>{t('sensor.skipped')}</span>
+          <span style={{ fontSize: '0.5625rem', color: 'var(--ink-faint)', fontStyle: 'italic' }}>{t('sensor.skipped_reason')}</span>
+        </span>
+      )
     case 'done':
       return (
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
@@ -646,7 +732,19 @@ function RowMetric({ state, props, t }: { state: CardState; props: SensorCardPro
       )
     case 'failed-mid-run':
     case 'paused-failed':
-      return <span style={{ fontSize: '0.6875rem', color: 'var(--err)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{liveSensor?.fetch_error || liveSensor?.summary_error || t('sensor.failed')}</span>
+      return (
+        <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.0625rem', maxWidth: 300 }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <ErrorBadge kind={liveSensor?.fetch_error_kind ?? undefined} isSummaryError={!liveSensor?.fetch_error && !!liveSensor?.summary_error} t={t} />
+            <span style={{ fontSize: '0.6875rem', color: 'var(--err)' }}>{t('sensor.failed')}</span>
+          </span>
+          {(liveSensor?.fetch_error || liveSensor?.summary_error) && (
+            <span style={{ fontSize: '0.5625rem', color: 'var(--err)', opacity: 0.8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%', textAlign: 'right' }}>
+              {liveSensor?.fetch_error || liveSensor?.summary_error}
+            </span>
+          )}
+        </span>
+      )
   }
 }
 

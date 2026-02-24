@@ -1,9 +1,8 @@
 // ABOUTME: Reusable tag cloud component that visualizes tags with weighted sizes and sentiment coloring.
-// ABOUTME: Tags are sorted by weight, rendered as inline pills with hover transitions. AnimatedTagCloud uses d3-cloud via @isoterik/react-word-cloud.
+// ABOUTME: AnimatedTagCloud uses custom spiral placement with canvas text measurement and continuous floating drift.
 'use client'
 
 import { useMemo, useRef, useState, useEffect } from 'react'
-import { WordCloud as WordCloudLib } from '@isoterik/react-word-cloud'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -112,29 +111,114 @@ function TagPill({ tag }: { tag: TagCloudTag }) {
 }
 
 // ---------------------------------------------------------------------------
-// Animated tag cloud — d3-cloud word cloud via @isoterik/react-word-cloud
+// Animated tag cloud — custom spiral placement with floating drift animation
 // ---------------------------------------------------------------------------
 
 const CLOUD_HEIGHT = 120
+const CLOUD_FONT = 'system-ui, -apple-system, sans-serif'
 
-/** CSS keyframes for subtle floating drift on word cloud text elements. */
-const CLOUD_FLOAT_CSS = `
-@keyframes cloudFloat {
-  0%, 100% { transform: var(--base-transform) translate(0, 0); }
-  25% { transform: var(--base-transform) translate(var(--dx), var(--dy)); }
-  50% { transform: var(--base-transform) translate(calc(var(--dx) * -0.5), calc(var(--dy) * 0.7)); }
-  75% { transform: var(--base-transform) translate(calc(var(--dx) * 0.3), calc(var(--dy) * -0.8)); }
+/** CSS keyframes for continuous breathing drift — words move closer and farther. */
+const CLOUD_DRIFT_CSS = `
+@keyframes cloudDrift {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(var(--drift-x), var(--drift-y)); }
+  50% { transform: translate(calc(var(--drift-x) * -0.6), calc(var(--drift-y) * 0.8)); }
+  75% { transform: translate(calc(var(--drift-x) * 0.4), calc(var(--drift-y) * -0.7)); }
 }
 `
 
-/** Unique ID counter for per-instance scoping. */
-let cloudIdCounter = 0
+// ---------------------------------------------------------------------------
+// Text measurement via offscreen canvas
+// ---------------------------------------------------------------------------
+
+let measureCtx: CanvasRenderingContext2D | null = null
+
+function measureTextWidth(text: string, fontSize: number): number {
+  if (typeof document === 'undefined') return text.length * fontSize * 0.55
+  if (!measureCtx) {
+    measureCtx = document.createElement('canvas').getContext('2d')
+  }
+  if (!measureCtx) return text.length * fontSize * 0.55
+  measureCtx.font = `${Math.round(fontSize)}px ${CLOUD_FONT}`
+  return measureCtx.measureText(text).width
+}
+
+// ---------------------------------------------------------------------------
+// Spiral placement with collision detection
+// ---------------------------------------------------------------------------
+
+interface PlacedWord {
+  text: string
+  x: number
+  y: number
+  fontSize: number
+  weight: number
+  sentiment?: string
+}
+
+interface BBox {
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
+function boxesOverlap(a: BBox, b: BBox, pad: number): boolean {
+  return !(a.x + a.w + pad < b.x || b.x + b.w + pad < a.x ||
+           a.y + a.h + pad < b.y || b.y + b.h + pad < a.y)
+}
+
+/** Place words along an archimedean spiral from center, rejecting overlaps. */
+function computeCloudLayout(
+  tags: TagCloudTag[],
+  cw: number,
+  ch: number,
+): PlacedWord[] {
+  if (tags.length === 0 || cw <= 0) return []
+
+  const maxFont = Math.max(8, Math.min(22, cw * 0.1))
+  const minFont = Math.max(6, maxFont * 0.35)
+  const cx = cw / 2
+  const cy = ch / 2
+  const boxes: BBox[] = []
+  const result: PlacedWord[] = []
+
+  for (const tag of tags) {
+    const fontSize = minFont + tag.weight * (maxFont - minFont)
+    const tw = measureTextWidth(tag.text, fontSize)
+    const th = fontSize * 1.25
+
+    for (let step = 0; step < 500; step++) {
+      const angle = step * 0.35
+      const radius = step * 0.5
+      const x = cx + radius * Math.cos(angle) - tw / 2
+      const y = cy + radius * Math.sin(angle) - th / 2
+      const box: BBox = { x, y, w: tw, h: th }
+
+      // Allow 2px bleed at edges to use full space
+      if (x >= -2 && y >= -2 && x + tw <= cw + 2 && y + th <= ch + 2) {
+        if (!boxes.some(b => boxesOverlap(box, b, 3))) {
+          boxes.push(box)
+          result.push({ text: tag.text, x, y, fontSize, weight: tag.weight, sentiment: tag.sentiment })
+          break
+        }
+      }
+    }
+  }
+
+  return result
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 export function AnimatedTagCloud({ tags, maxTags = 15, style }: TagCloudProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
   const [mounted, setMounted] = useState(false)
-  const scopeId = useRef(`cloud-${++cloudIdCounter}`)
+  const [visible, setVisible] = useState(false)
+  const fadeTriggered = useRef(false)
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -147,75 +231,73 @@ export function AnimatedTagCloud({ tags, maxTags = 15, style }: TagCloudProps) {
     return () => observer.disconnect()
   }, [])
 
-  // Apply float animation to SVG text elements after render
-  useEffect(() => {
-    if (!mounted || !containerRef.current) return
-    const texts = containerRef.current.querySelectorAll('svg text')
-    texts.forEach((el, i) => {
-      const textEl = el as SVGTextElement
-      // Capture the existing transform as the base
-      const baseTransform = textEl.getAttribute('transform') || ''
-      textEl.style.setProperty('--base-transform', baseTransform ? `${baseTransform} ` : '')
-      // Random drift offsets (small — 1-3px)
-      const dx = (1 + Math.random() * 2) * (i % 2 === 0 ? 1 : -1)
-      const dy = (1 + Math.random() * 2) * (i % 3 === 0 ? -1 : 1)
-      textEl.style.setProperty('--dx', `${dx}px`)
-      textEl.style.setProperty('--dy', `${dy}px`)
-      // Staggered duration and delay for organic feel
-      const duration = 4 + Math.random() * 4 // 4-8s
-      const delay = Math.random() * 3 // 0-3s
-      textEl.style.animation = `cloudFloat ${duration}s ease-in-out ${delay}s infinite`
-      textEl.style.transformOrigin = 'center'
-      // Fade in on entrance
-      textEl.style.opacity = '0'
-      setTimeout(() => {
-        textEl.style.transition = 'opacity 0.5s ease'
-        textEl.style.opacity = '1'
-      }, i * 40)
-    })
-  }, [mounted, width, tags])
-
-  const words = useMemo(() => {
-    return [...tags]
-      .sort((a, b) => b.weight - a.weight)
-      .slice(0, maxTags)
-      .map(tag => ({ text: tag.text, value: Math.round(tag.weight * 100) }))
+  const sorted = useMemo(() => {
+    return [...tags].sort((a, b) => b.weight - a.weight).slice(0, maxTags)
   }, [tags, maxTags])
 
-  const sentimentMap = useMemo(() => {
-    const map = new Map<string, string>()
-    tags.forEach(t => map.set(t.text, t.sentiment ?? 'neutral'))
-    return map
-  }, [tags])
+  const layout = useMemo(() => {
+    if (!width) return []
+    return computeCloudLayout(sorted, width, CLOUD_HEIGHT)
+  }, [sorted, width])
 
-  if (words.length === 0) return null
+  // Trigger staggered fade-in once after first layout
+  useEffect(() => {
+    if (layout.length > 0 && !fadeTriggered.current) {
+      fadeTriggered.current = true
+      requestAnimationFrame(() => setVisible(true))
+    }
+  }, [layout])
+
+  // Deterministic per-word animation params (no Math.random in render)
+  const driftProps = useMemo(() => {
+    return layout.map((_, i) => ({
+      dx: (2 + ((i * 7 + 3) % 4)) * (i % 2 === 0 ? 1 : -1),
+      dy: (2 + ((i * 11 + 5) % 3)) * (i % 3 === 0 ? -1 : 1),
+      duration: 5 + ((i * 13 + 7) % 5),
+      delay: ((i * 3 + 1) % 4) * 0.7,
+    }))
+  }, [layout])
+
+  if (sorted.length === 0) return null
 
   return (
-    <div ref={containerRef} data-cloud={scopeId.current} style={{ width: '100%', height: CLOUD_HEIGHT, ...style }}>
-      <style>{CLOUD_FLOAT_CSS}</style>
-      {mounted && width > 0 && (
-        <WordCloudLib
-          words={words}
-          width={width}
-          height={CLOUD_HEIGHT}
-          fill={(word) => sentimentColor(sentimentMap.get(word.text))}
-          fontSize={(word) => {
-            // Scale font sizes to container width — small cards get smaller text
-            const maxFont = Math.max(8, Math.min(22, width * 0.1))
-            const minFont = Math.max(6, maxFont * 0.35)
-            return minFont + (word.value / 100) * (maxFont - minFont)
-          }}
-          rotate={() => 0}
-          padding={1}
-          font="system-ui, -apple-system, sans-serif"
-          spiral="archimedean"
-          enableTooltip={false}
-          svgProps={{
-            style: { width: '100%', height: '100%', overflow: 'visible' },
-            preserveAspectRatio: 'xMidYMid meet',
-          }}
-        />
-      )}
+    <div
+      ref={containerRef}
+      style={{
+        width: '100%',
+        height: CLOUD_HEIGHT,
+        position: 'relative',
+        overflow: 'hidden',
+        ...style,
+      }}
+    >
+      <style>{CLOUD_DRIFT_CSS}</style>
+      {mounted && width > 0 && layout.map((word, i) => (
+        <span
+          key={word.text}
+          style={{
+            position: 'absolute',
+            left: word.x,
+            top: word.y,
+            fontSize: `${word.fontSize}px`,
+            fontWeight: word.weight > 0.6 ? 600 : 400,
+            fontFamily: CLOUD_FONT,
+            color: sentimentColor(word.sentiment),
+            whiteSpace: 'nowrap',
+            opacity: visible ? 1 : 0,
+            transition: `opacity 0.4s ease ${i * 0.04}s`,
+            animation: visible
+              ? `cloudDrift ${driftProps[i].duration}s ease-in-out ${driftProps[i].delay}s infinite`
+              : 'none',
+            '--drift-x': `${driftProps[i].dx}px`,
+            '--drift-y': `${driftProps[i].dy}px`,
+            cursor: 'default',
+            userSelect: 'none',
+          } as React.CSSProperties}
+        >
+          {word.text}
+        </span>
+      ))}
     </div>
   )
 }

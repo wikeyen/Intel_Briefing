@@ -393,14 +393,14 @@ export function StatusSkeleton() {
           display: 'flex',
           alignItems: 'center',
         }}>
-          {[0, 1, 2].map((i) => (
+          {[0, 1, 2, 3].map((i) => (
             <div key={i} style={{
               display: 'flex',
               alignItems: 'center',
-              flex: i < 2 ? '1 1 0' : '0 0 auto',
+              flex: i < 3 ? '1 1 0' : '0 0 auto',
             }}>
               <Skeleton width={22} height={22} borderRadius={11} />
-              {i < 2 && (
+              {i < 3 && (
                 <div style={{ flex: '1 1 0', padding: '0 4px' }}>
                   <Skeleton height={3} borderRadius={2} />
                 </div>

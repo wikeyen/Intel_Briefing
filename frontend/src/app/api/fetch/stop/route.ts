@@ -7,33 +7,36 @@ import { readSummaryProgress, writeSummaryProgress } from '@/lib/summary/cache'
 
 export async function POST(): Promise<NextResponse> {
   const stopped = cancelPipeline()
+
+  // cancelPipeline() now leaves singletons intact so the pipeline's finally block
+  // can write the terminal status. For stale status from a crashed server, we still
+  // need to clean up the DB directly.
   let cleaned = false
-
-  // Whether actively cancelled or stale, ensure DB reflects running=false.
-  // cancelPipeline() fires an async write via notify() but doesn't await it,
-  // so the next status poll could see stale running=true + alive=false.
-  const status = await readPipelineStatus()
-  if (status && status.running) {
-    status.running = false
-    status.cancelled = true
-    status.completed_at = status.completed_at ?? new Date().toISOString().replace(/\.\d+Z$/, 'Z')
-    await writePipelineStatus(status)
-    cleaned = true
-  }
-
-  // Also clean up summary progress — pipeline may have been mid-summary
-  const summary = await readSummaryProgress()
-  if (summary?.running) {
-    summary.running = false
-    summary.completed_at = new Date().toISOString().replace(/\.\d+Z$/, 'Z')
-    for (const sp of summary.sensors) {
-      if (sp.state === 'pending' || sp.state === 'running') {
-        sp.state = 'failed'
-        sp.error = 'Cancelled'
-      }
+  if (!stopped) {
+    // No in-memory pipeline was running. Check for stale DB state from a crash.
+    const status = await readPipelineStatus()
+    if (status && status.running) {
+      status.running = false
+      status.cancelled = true
+      status.completed_at = status.completed_at ?? new Date().toISOString().replace(/\.\d+Z$/, 'Z')
+      await writePipelineStatus(status)
+      cleaned = true
     }
-    await writeSummaryProgress(summary).catch(() => {})
-    cleaned = true
+
+    // Also clean up stale summary progress
+    const summary = await readSummaryProgress()
+    if (summary?.running) {
+      summary.running = false
+      summary.completed_at = new Date().toISOString().replace(/\.\d+Z$/, 'Z')
+      for (const sp of summary.sensors) {
+        if (sp.state === 'pending' || sp.state === 'running') {
+          sp.state = 'failed'
+          sp.error = 'Cancelled'
+        }
+      }
+      await writeSummaryProgress(summary).catch(() => {})
+      cleaned = true
+    }
   }
 
   if (stopped || cleaned) {

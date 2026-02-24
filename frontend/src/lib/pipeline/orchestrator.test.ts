@@ -523,14 +523,18 @@ describe('cancelPipeline', () => {
     // Cancel it
     const cancelled = cancelPipeline()
     expect(cancelled).toBe(true)
-    expect(isPipelineRunning()).toBe(false)
+    // isPipelineRunning() stays true until the finally block completes cleanup.
+    // This prevents the race where a status poll sees running=true + alive=false.
+    expect(isPipelineRunning()).toBe(true)
 
     // Resolve the slow sensor so the pipeline finishes
     resolveSlowSensor!()
     const result = await pipelinePromise
 
-    // Pipeline should return partial results (the slow sensor resolved after abort,
-    // but the report may or may not contain its results depending on timing)
+    // After the pipeline's finally block, singletons should be cleared
+    expect(isPipelineRunning()).toBe(false)
+
+    // Pipeline should not write partial results on cancel
     expect(result.summary).toBeNull()
 
     // Verify the final status was written with cancelled state

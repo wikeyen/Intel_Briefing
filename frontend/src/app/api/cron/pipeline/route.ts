@@ -2,7 +2,7 @@
 // ABOUTME: Protected by CRON_SECRET; delegates to the pipeline orchestrator.
 import { NextRequest, NextResponse } from 'next/server'
 import { loadConfig } from '@/lib/config'
-import { runPipeline } from '@/lib/pipeline/orchestrator'
+import { runPipeline, isPipelineRunning } from '@/lib/pipeline/orchestrator'
 
 /** Constant-time string comparison to prevent timing attacks. */
 function timingSafeEqual(a: string, b: string): boolean {
@@ -26,6 +26,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (!authHeader || !timingSafeEqual(authHeader, expected)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+  }
+
+  // Reject if a pipeline is already running (manual or previous cron overlap)
+  if (isPipelineRunning()) {
+    return NextResponse.json(
+      { error: 'Pipeline is already running' },
+      { status: 409 },
+    )
   }
 
   const config = await loadConfig()

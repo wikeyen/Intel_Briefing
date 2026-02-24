@@ -17,7 +17,8 @@ import { writeSummary, writeSummaryProgress, invalidateAllSensorSummaries, inval
 import { summarizeReport, summarizeSingleSensor, generateOverallBriefing, type SummaryProgressCallback } from '../summary/summarizer'
 import type { LlmConfig } from '../summary/llm'
 import { SENSOR_REGISTRY } from '../sensors'
-import { SENSOR_LABELS } from '../sensors/taxonomy'
+import { SENSOR_LABELS, SENSOR_CATEGORY_MAP } from '../sensors/taxonomy'
+import type { CategoryKey } from '../sensors/taxonomy'
 import { SensorConfigError } from '../sensors/errors'
 import { assembleReport } from './report-builder'
 import { createBus } from '../summary/events'
@@ -51,13 +52,25 @@ const g = globalThis as unknown as {
   __pipelineSensorSkips?: Map<string, () => void>
 }
 
-/** Cancel the running pipeline, if any. Returns true if a pipeline was cancelled. */
+/**
+ * Cancel the running pipeline, if any. Returns true if a pipeline was cancelled.
+ *
+ * Only aborts the signal and cancels the tracker state. Does NOT clear singletons —
+ * the pipeline's own finally block handles cleanup to guarantee the final status
+ * is written to the DB before isPipelineRunning() starts returning false.
+ */
 export function cancelPipeline(): boolean {
   if (!g.__pipelineAbortController || !g.__pipelineTracker) return false
+  // Resolve the pause promise if the pipeline is paused — unblocks the while loop
+  if (g.__pipelinePauseResolve) {
+    g.__pipelinePauseResolve({ type: 'cancel' })
+    g.__pipelinePauseResolve = null
+  }
   g.__pipelineAbortController.abort()
   g.__pipelineTracker.cancel()
-  g.__pipelineAbortController = null
-  g.__pipelineTracker = null
+  // Singletons are intentionally NOT cleared here. The pipeline's finally block
+  // will write the terminal status and then clear them, preventing the race where
+  // a status poll sees running=true + alive=false.
   return true
 }
 
@@ -179,7 +192,13 @@ export async function runPipeline(
   mode: RunMode,
   sensorFilter?: string[],
 ): Promise<PipelineResult> {
+  // Claim the pipeline singleton IMMEDIATELY (synchronously) before any async work.
+  // This prevents the race where two requests both pass isPipelineRunning() === false.
+  if (g.__pipelineAbortController) {
+    throw new Error('Pipeline is already running')
+  }
   const abortController = new AbortController()
+  g.__pipelineAbortController = abortController
   const { signal } = abortController
 
   const defaultConcurrency = config.default_concurrency ?? 4
@@ -215,8 +234,12 @@ export async function runPipeline(
       const tracker = new PipelineProgressTracker([], mode, defaultConcurrency, localSummaryConcurrency, (status) => {
         writePipelineStatus(status).catch(() => {})
       })
-      writePipelineStatus(tracker.snapshot()).catch(() => {})
+      await writePipelineStatus(tracker.snapshot()).catch(() => {})
       tracker.complete()
+      // Clean up singleton before returning
+      if (g.__pipelineAbortController === abortController) {
+        g.__pipelineAbortController = null
+      }
       return { report: null, summary: null }
     }
   }
@@ -247,12 +270,11 @@ export async function runPipeline(
     }
   }
 
-  // Store singletons for abort support
-  g.__pipelineAbortController = abortController
+  // Store tracker singleton for abort support
   g.__pipelineTracker = tracker
 
   // Write initial status
-  writePipelineStatus(tracker.snapshot()).catch(() => {})
+  await writePipelineStatus(tracker.snapshot()).catch(() => {})
 
   let report: IntelReport | null = null
   let summary: BriefingSummary | null = null
@@ -360,11 +382,9 @@ export async function runPipeline(
       }
 
       if (signal.aborted) {
-        const completed = [...resultMap.values()]
-        if (completed.length > 0) {
-          report = await assembleReport(completed, config, { llmConfig, signal, sensorFilter })
-        }
-        return { report, summary: null }
+        // Pipeline was cancelled mid-fetch. Do NOT write partial results to cache —
+        // this would replace a complete report with incomplete data.
+        return { report: null, summary: null }
       }
 
       report = await assembleReport([...resultMap.values()], config, { llmConfig, signal, sensorFilter })
@@ -524,12 +544,26 @@ export async function runPipeline(
           // No more retries left — proceed with partial results
           if (summaryAttempt >= MAX_AUTO_RETRIES) break
 
-          // Auto-retry: reset failed sensors and re-run
+          // Auto-retry: reset failed sensors in both tracker AND summaryStatus
           tracker.setRetryProgress(summaryAttempt + 1, MAX_AUTO_RETRIES)
           for (const name of summaryFailures) {
             tracker.setSummaryState(name, 'queued')
+            // Also reset in SummaryProgress so the Feed page doesn't show stale 'failed'
+            if (summaryStatus) {
+              for (const sp of summaryStatus.sensors) {
+                if (sp.sensor_name === name) {
+                  sp.state = 'pending'
+                  sp.error = null
+                  break
+                }
+              }
+            }
           }
           if (!hasFetchFailures) tracker.setOverallSummary('queued')
+          // Flush updated summaryStatus to DB
+          if (summaryStatus) {
+            writeSummaryProgress(summaryStatus).catch(() => {})
+          }
 
           // Re-run with skipCache:false — succeeded sensors hit cache, failed retry
           skipCacheForSummary = false
@@ -542,11 +576,17 @@ export async function runPipeline(
         if (hasFetchFailures && !signal.aborted && summary) {
           tracker.pause('pre_overall')
 
-          // Pause loop: wait for user to resolve each failed sensor or trigger overall
+          // Pause loop: wait for user to resolve each failed sensor or trigger overall.
+          // The pause Promise is raced against an abort listener so cancellation
+          // always unblocks the loop — prevents the pipeline from hanging forever.
           let generateNow = false
           while (failedSensors.size > 0 && !signal.aborted && !generateNow) {
             const action = await new Promise<PauseAction>(resolve => {
               g.__pipelinePauseResolve = resolve
+              // Wire abort signal into the pause promise so cancel always unblocks
+              const onAbort = () => resolve({ type: 'cancel' })
+              if (signal.aborted) { onAbort(); return }
+              signal.addEventListener('abort', onAbort, { once: true })
             })
 
             if (action.type === 'cancel') break
@@ -662,9 +702,8 @@ export async function runPipeline(
     }
     summaryBus?.emitDone()
     // Persist final status BEFORE clearing singletons so the DB always reflects
-    // running=false before isPipelineRunning() starts returning false.
-    // This prevents a race where a status poll sees running=true + alive=false.
-    if (g.__pipelineTracker && g.__pipelineAbortController === abortController) {
+    // the terminal state before isPipelineRunning() starts returning false.
+    if (g.__pipelineTracker) {
       await writePipelineStatus(g.__pipelineTracker.snapshot()).catch(() => {})
     }
     // Clear singletons so a new run can start
@@ -678,6 +717,7 @@ export async function runPipeline(
 
 /**
  * Merge a retry result into the existing report: remove old items by source, insert new ones.
+ * Uses the sensor taxonomy to place items in the correct category section.
  * Mutates the report in place.
  */
 function mergeRetryResult(report: IntelReport, result: SensorResult): void {
@@ -689,20 +729,15 @@ function mergeRetryResult(report: IntelReport, result: SensorResult): void {
       }
     }
   }
-  // Insert new items into appropriate sections (the assembleReport already categorized them,
-  // but for simplicity we add to the first non-empty match or the first section)
+  // Insert new items into the correct category section using the taxonomy map
+  const category = SENSOR_CATEGORY_MAP[result.sensor_name] as CategoryKey | undefined
   for (const item of result.items) {
-    // Find the section that already has items from this source, or use first section
-    let placed = false
-    for (const [, section] of Object.entries(report.items)) {
-      if (section.some(existing => existing.source === result.sensor_name)) {
-        section.push(item)
-        placed = true
-        break
-      }
-    }
-    if (!placed) {
-      // Place in the first section as fallback
+    // Use the sensor's taxonomy category, falling back to the first non-empty section
+    const targetSection = category ? report.items[category] : undefined
+    if (targetSection) {
+      targetSection.push(item)
+    } else {
+      // Fallback: place in the first section that exists
       const sections = Object.values(report.items)
       if (sections.length > 0) {
         sections[0].push(item)

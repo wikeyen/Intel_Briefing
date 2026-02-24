@@ -25,3 +25,16 @@ export function hashString(s: string): number {
 export function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
+
+/** Check whether a sensor was fetched within the given resume window (hours). */
+export function isWithinResumeWindow(fetchedAt: string | undefined, windowHours: number): boolean {
+  if (!fetchedAt || windowHours <= 0) return false
+  try {
+    const ts = new Date(fetchedAt.replace('Z', '+00:00'))
+    if (isNaN(ts.getTime())) return false
+    const ageHours = (Date.now() - ts.getTime()) / (1000 * 60 * 60)
+    return ageHours <= windowHours
+  } catch {
+    return false
+  }
+}

@@ -15,11 +15,15 @@ function makeConfig(overrides?: Partial<ConfigSettings>): ConfigSettings {
   return { ...defaultConfig(), social_accounts_x: ['testuser'], ...overrides }
 }
 
-// Mock delay to avoid real waits in tests
+// Mock delay to avoid real waits in tests (preserves other utils exports)
 function mockDelay() {
-  vi.doMock('./utils', () => ({
-    delay: vi.fn().mockResolvedValue(undefined),
-  }))
+  vi.doMock('./utils', async () => {
+    const actual = await vi.importActual<typeof import('./utils')>('./utils')
+    return {
+      ...actual,
+      delay: vi.fn().mockResolvedValue(undefined),
+    }
+  })
 }
 
 // Mock child_process.execFile to prevent OpenClaw cookie detection in tests
@@ -594,6 +598,150 @@ describe('isCreditError', () => {
   it('rejects non-credit errors', () => {
     expect(isCreditError(new Error('Network timeout'))).toBe(false)
     expect(isCreditError(new Error('Internal server error'))).toBe(false)
+  })
+})
+
+// ── Resume window tests ───────────────────────────────────────────────────────
+
+describe('fetchXPosts — resume window', () => {
+  let mockScraper: ReturnType<typeof makeMockScraper>
+  let readReportMock: ReturnType<typeof vi.fn>
+
+  /** Create a mock IntelItem for a given handle. */
+  function mockItem(handle: string, id: string): import('../models').IntelItem {
+    return {
+      id: `x-${id}`,
+      source: 'x',
+      title: `Tweet from ${handle}`,
+      url: `https://x.com/${handle}/status/${id}`,
+      heat: null,
+      account: handle,
+      handle: handle,
+      published_at: new Date(NOW).toISOString(),
+    }
+  }
+
+  /** Create a mock IntelReport with the given sources_fetched_at and x items. */
+  function mockReport(fetchedAtIso: string, xItems: import('../models').IntelItem[]) {
+    return {
+      date: '2026-02-20',
+      fetched_at: fetchedAtIso,
+      stale: false,
+      sources_ok: ['x'],
+      sources_failed: [],
+      // Inject items under the 'x' key that the sensor looks up
+      items: { x: xItems },
+      sources_fetched_at: { x: fetchedAtIso },
+    }
+  }
+
+  beforeEach(async () => {
+    vi.resetModules()
+    vi.spyOn(Date, 'now').mockReturnValue(NOW)
+    // Suppress expected resume-window log messages
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+    mockScraper = makeMockScraper()
+    readReportMock = vi.fn().mockResolvedValue(null)
+
+    vi.doMock('@the-convocation/twitter-scraper', () => ({
+      Scraper: vi.fn().mockImplementation(() => mockScraper),
+    }))
+    vi.doMock('apify-client', () => ({
+      ApifyClient: vi.fn(),
+    }))
+    vi.doMock('../pipeline/cache', () => ({
+      readReport: readReportMock,
+    }))
+    mockExecFileNotFound()
+    mockDelay()
+  })
+
+  function authConfig(overrides?: Partial<ConfigSettings>): ConfigSettings {
+    return makeConfig({
+      twitter_auth_token: 'test-token',
+      twitter_ct0: 'test-ct0',
+      ...overrides,
+    })
+  }
+
+  it('reuses cached items when within resume window', async () => {
+    const cachedItems = [mockItem('alice', '1001'), mockItem('bob', '1002')]
+    // Report was fetched just now — well within the 6h window
+    readReportMock.mockResolvedValue(mockReport(new Date(NOW).toISOString(), cachedItems))
+
+    const mod = await import('./x_posts')
+    const config = authConfig({
+      social_accounts_x: ['@alice', '@bob'],
+      resume_window_hours: 6,
+    })
+
+    const items = await mod.fetchXPosts(config, 10)
+
+    // readReport should have been called to check for cached data
+    expect(readReportMock).toHaveBeenCalled()
+    // Should return cached items without calling the scraper
+    expect(items).toHaveLength(2)
+    expect(items.map(i => i.id)).toContain('x-1001')
+    expect(items.map(i => i.id)).toContain('x-1002')
+    expect(mockScraper.getTweets).not.toHaveBeenCalled()
+  })
+
+  it('fetches fresh when outside resume window', async () => {
+    const staleItems = [mockItem('testuser', '2001')]
+    // Report was fetched 7 hours ago — outside the 6h window
+    const sevenHoursAgo = new Date(NOW - 7 * 60 * 60 * 1000).toISOString()
+    readReportMock.mockResolvedValue(mockReport(sevenHoursAgo, staleItems))
+
+    const mod = await import('./x_posts')
+    const config = authConfig({
+      social_accounts_x: ['testuser'],
+      resume_window_hours: 6,
+    })
+
+    await mod.fetchXPosts(config, 10)
+
+    // Scraper should be called because cache is stale
+    expect(mockScraper.getTweets).toHaveBeenCalled()
+  })
+
+  it('fetches fresh when resume_window_hours is 0 (disabled)', async () => {
+    const mod = await import('./x_posts')
+    const config = authConfig({
+      social_accounts_x: ['testuser'],
+      resume_window_hours: 0,
+    })
+
+    await mod.fetchXPosts(config, 10)
+
+    // readReport should not be called when window is disabled
+    expect(readReportMock).not.toHaveBeenCalled()
+    // Scraper should fetch fresh data
+    expect(mockScraper.getTweets).toHaveBeenCalled()
+  })
+
+  it('fetches only uncached handles in partial resume', async () => {
+    // alice and bob are cached, charlie is not
+    const cachedItems = [mockItem('alice', '3001'), mockItem('bob', '3002')]
+    readReportMock.mockResolvedValue(mockReport(new Date(NOW).toISOString(), cachedItems))
+
+    const mod = await import('./x_posts')
+    const config = authConfig({
+      social_accounts_x: ['@alice', '@bob', '@charlie'],
+      resume_window_hours: 6,
+    })
+
+    const items = await mod.fetchXPosts(config, 20)
+
+    // Scraper should only be called for charlie (not for alice or bob)
+    expect(mockScraper.getTweets).toHaveBeenCalledTimes(1)
+    expect(mockScraper.getTweets).toHaveBeenCalledWith('charlie', expect.any(Number))
+
+    // Result should contain cached items for alice & bob, plus fresh items for charlie
+    const handles = items.map(i => i.handle)
+    expect(handles).toContain('alice')
+    expect(handles).toContain('bob')
+    // Fresh items come from mockTweets which has handle 'testuser'
+    expect(items.length).toBeGreaterThanOrEqual(2)
   })
 })
 

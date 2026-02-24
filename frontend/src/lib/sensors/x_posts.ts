@@ -3,7 +3,8 @@
 import { Scraper, type Tweet } from '@the-convocation/twitter-scraper'
 import { ApifyClient } from 'apify-client'
 import type { ConfigSettings, IntelItem } from '../models'
-import { delay } from './utils'
+import { delay, isWithinResumeWindow } from './utils'
+import { readReport } from '../pipeline/cache'
 
 // ── Scraper singleton (reuse across calls to keep auth session) ──────────────
 let _scraper: Scraper | null = null
@@ -467,11 +468,47 @@ export async function fetchXPosts(
   const handles = (config.social_accounts_x ?? []).filter(h => !disabled.has(h))
   if (handles.length === 0) return []
 
+  // Resume logic — reuse cached items for accounts already fetched within the window
+  const windowHours = config.resume_window_hours ?? 0
+  let cachedItems: IntelItem[] = []
+  let handlesToFetch = handles
+  if (windowHours > 0) {
+    try {
+      const report = await readReport()
+      const fetchedAt = report?.sources_fetched_at?.x
+      if (report && isWithinResumeWindow(fetchedAt, windowHours)) {
+        cachedItems = report.items.x ?? []
+        const cachedHandles = new Set(cachedItems.map(item => (item.handle ?? '').toLowerCase()))
+        handlesToFetch = handles.filter(h => !cachedHandles.has(h.replace(/^@/, '').toLowerCase()))
+        if (cachedHandles.size > 0) {
+          console.log(`[x] Resume: reusing ${cachedHandles.size} cached accounts (window ${windowHours}h)`)
+        }
+        if (handlesToFetch.length === 0) return cachedItems.slice(0, limit)
+      }
+    } catch {
+      // Cache read failed — proceed with full fetch
+    }
+  }
+
   const lookbackHours = config.sensor_lookback_hours?.x ?? 48
   const lookbackMs = lookbackHours * 60 * 60 * 1000
-  const perAccountLimit = Math.max(10, Math.ceil(limit / handles.length) * 2)
+  const perAccountLimit = Math.max(10, Math.ceil(limit / handlesToFetch.length) * 2)
 
   // Always use twitter-scraper for account fetching.
   // Apify is reserved for trends only (via social_trends sensor) to control costs.
-  return await fetchAllViaScraper(config, handles, lookbackMs, perAccountLimit, limit, onProgress)
+  const freshItems = await fetchAllViaScraper(config, handlesToFetch, lookbackMs, perAccountLimit, limit, onProgress)
+
+  // Merge cached + fresh items, dedup by id
+  if (cachedItems.length > 0) {
+    const seenIds = new Set(cachedItems.map(item => item.id))
+    const merged = [...cachedItems]
+    for (const item of freshItems) {
+      if (!seenIds.has(item.id)) {
+        seenIds.add(item.id)
+        merged.push(item)
+      }
+    }
+    return merged.slice(0, limit)
+  }
+  return freshItems
 }

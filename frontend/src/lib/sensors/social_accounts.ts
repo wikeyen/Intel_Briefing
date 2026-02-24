@@ -2,6 +2,7 @@
 // ABOUTME: Aggregates posts from configured watch lists into a unified IntelItem feed.
 import type { ConfigSettings, IntelItem } from '../models'
 import { SensorConfigError } from './errors'
+import { isWithinResumeWindow } from './utils'
 import { createBlueskyAgent, blueskyPostToItem, getBlueskyFollowing } from '../platforms/bluesky'
 import { mastodonGet, mastodonStatusToItem, getMastodonFollowing } from '../platforms/mastodon'
 import { readReport } from '../pipeline/cache'
@@ -173,19 +174,6 @@ function buildSkipSet(cachedItems: IntelItem[]): Set<string> {
     if (key) skip.add(key.toLowerCase())
   }
   return skip
-}
-
-/** Check whether the social_accounts sensor was fetched within the resume window. */
-function isWithinResumeWindow(fetchedAt: string | undefined, windowHours: number): boolean {
-  if (!fetchedAt || windowHours <= 0) return false
-  try {
-    const ts = new Date(fetchedAt.replace('Z', '+00:00'))
-    if (isNaN(ts.getTime())) return false
-    const ageHours = (Date.now() - ts.getTime()) / (1000 * 60 * 60)
-    return ageHours <= windowHours
-  } catch {
-    return false
-  }
 }
 
 export async function fetchSocialAccounts(

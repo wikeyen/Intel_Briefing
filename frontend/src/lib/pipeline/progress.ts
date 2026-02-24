@@ -220,6 +220,16 @@ export class PipelineProgressTracker {
   complete(): void {
     this.running = false
     this.completedAt = new Date().toISOString().replace(/\.\d+Z$/, 'Z')
+    // Finalize any sensors still in non-terminal states.
+    // Unlike cancel(), use 'skipped' — the pipeline completed normally,
+    // these sensors were simply never started or never finished.
+    for (const s of this.sensors) {
+      if (s.fetch === 'queued' || s.fetch === 'running') s.fetch = 'skipped'
+      if (s.summary === 'queued' || s.summary === 'running') s.summary = 'skipped'
+    }
+    if (this.overallSummary === 'queued' || this.overallSummary === 'running') {
+      this.overallSummary = 'skipped'
+    }
     this.notify()
   }
 

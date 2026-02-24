@@ -233,12 +233,19 @@ export function Sidebar({ onNavigate, onCollapse, collapsed }: Props) {
   // Show mini stepper when pipeline is actively running
   const showStepper = isJobRunning && !!pipelineStatus
 
-  const statusColor =
-    !health                      ? 'var(--ink-faint)' :
-    health.status === 'ok'       ? 'var(--ok)'        :
-    health.status === 'stale'    ? 'var(--warn)'      :
-    health.status === 'no_data'  ? 'var(--ink-faint)' :
-    'var(--err)'
+  const statusBg =
+    !health                      ? 'var(--sb-border)' :
+    health.status === 'ok'       ? 'color-mix(in srgb, var(--ok) 12%, transparent)'  :
+    health.status === 'stale'    ? 'color-mix(in srgb, var(--warn) 12%, transparent)' :
+    health.status === 'no_data'  ? 'var(--sb-border)' :
+    'color-mix(in srgb, var(--err) 12%, transparent)'
+
+  const statusFg =
+    !health                      ? 'var(--sb-muted)' :
+    health.status === 'ok'       ? 'color-mix(in srgb, var(--ok) 80%, white)'   :
+    health.status === 'stale'    ? 'color-mix(in srgb, var(--warn) 80%, white)' :
+    health.status === 'no_data'  ? 'var(--sb-muted)' :
+    'color-mix(in srgb, var(--err) 80%, white)'
 
   const statusLabel = health
     ? `${t('health.' + health.status)}${health.last_fetch ? ' · ' + health.last_fetch.slice(0, 16).replace('T', ' ') : ''}`
@@ -272,22 +279,18 @@ export function Sidebar({ onNavigate, onCollapse, collapsed }: Props) {
           tabIndex={0}
           onClick={() => { router.push('/status'); onNavigate?.() }}
           onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { router.push('/status'); onNavigate?.() } }}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
+          style={{ cursor: 'pointer' }}
         >
           <span style={{
-            width: 5,
-            height: 5,
-            borderRadius: '50%',
-            background: isJobRunning ? 'var(--accent)' : statusColor,
-            flexShrink: 0,
-            transition: 'background 400ms',
-            animation: isJobRunning ? 'pulseDot 1.6s ease-in-out infinite' : 'none',
-          }} />
-          <span style={{
+            display: 'inline-block',
             fontSize: '0.5625rem',
-            color: 'var(--sb-muted)',
             fontFamily: 'ui-monospace, monospace',
             letterSpacing: '0.02em',
+            color: statusFg,
+            background: statusBg,
+            padding: '2px 8px',
+            borderRadius: 6,
+            transition: 'color 300ms, background 300ms',
           }}>
             {statusLabel}
           </span>

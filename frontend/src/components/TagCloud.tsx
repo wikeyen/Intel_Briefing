@@ -1,5 +1,5 @@
 // ABOUTME: Reusable tag cloud component that visualizes tags with weighted sizes and sentiment coloring.
-// ABOUTME: AnimatedTagCloud uses custom spiral placement with canvas text measurement and continuous floating drift.
+// ABOUTME: AnimatedTagCloud uses custom spiral placement with canvas text measurement and orbital tornado rotation.
 'use client'
 
 import { useMemo, useRef, useState, useEffect } from 'react'
@@ -111,21 +111,13 @@ function TagPill({ tag }: { tag: TagCloudTag }) {
 }
 
 // ---------------------------------------------------------------------------
-// Animated tag cloud — custom spiral placement with floating drift animation
+// Animated tag cloud — spiral placement with rotating spotlight
 // ---------------------------------------------------------------------------
 
 const CLOUD_HEIGHT = 120
 const CLOUD_FONT = 'system-ui, -apple-system, sans-serif'
-
-/** CSS keyframes for continuous breathing drift — words move closer and farther. */
-const CLOUD_DRIFT_CSS = `
-@keyframes cloudDrift {
-  0%, 100% { transform: translate(0, 0); }
-  25% { transform: translate(var(--drift-x), var(--drift-y)); }
-  50% { transform: translate(calc(var(--drift-x) * -0.6), calc(var(--drift-y) * 0.8)); }
-  75% { transform: translate(calc(var(--drift-x) * 0.4), calc(var(--drift-y) * -0.7)); }
-}
-`
+const FOCUS_CYCLE_MS = 5000
+const SPIN_SPEED = 0.08 // radians/second — ~78s per full revolution
 
 // ---------------------------------------------------------------------------
 // Text measurement via offscreen canvas
@@ -176,8 +168,9 @@ function computeCloudLayout(
 ): PlacedWord[] {
   if (tags.length === 0 || cw <= 0) return []
 
-  const maxFont = Math.max(8, Math.min(22, cw * 0.1))
-  const minFont = Math.max(6, maxFont * 0.35)
+  // Tighter font range to fit all tags
+  const maxFont = Math.max(7, Math.min(16, cw * 0.085))
+  const minFont = Math.max(5, maxFont * 0.35)
   const cx = cw / 2
   const cy = ch / 2
   const boxes: BBox[] = []
@@ -186,18 +179,17 @@ function computeCloudLayout(
   for (const tag of tags) {
     const fontSize = minFont + tag.weight * (maxFont - minFont)
     const tw = measureTextWidth(tag.text, fontSize)
-    const th = fontSize * 1.25
+    const th = fontSize * 1.2
 
-    for (let step = 0; step < 500; step++) {
-      const angle = step * 0.35
-      const radius = step * 0.5
+    for (let step = 0; step < 600; step++) {
+      const angle = step * 0.3
+      const radius = step * 0.45
       const x = cx + radius * Math.cos(angle) - tw / 2
       const y = cy + radius * Math.sin(angle) - th / 2
       const box: BBox = { x, y, w: tw, h: th }
 
-      // Allow 2px bleed at edges to use full space
       if (x >= -2 && y >= -2 && x + tw <= cw + 2 && y + th <= ch + 2) {
-        if (!boxes.some(b => boxesOverlap(box, b, 3))) {
+        if (!boxes.some(b => boxesOverlap(box, b, 2))) {
           boxes.push(box)
           result.push({ text: tag.text, x, y, fontSize, weight: tag.weight, sentiment: tag.sentiment })
           break
@@ -215,9 +207,12 @@ function computeCloudLayout(
 
 export function AnimatedTagCloud({ tags, maxTags = 15, style }: TagCloudProps) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const wordRefs = useRef<(HTMLSpanElement | null)[]>([])
+  const animFrameRef = useRef<number>(0)
   const [width, setWidth] = useState(0)
   const [mounted, setMounted] = useState(false)
   const [visible, setVisible] = useState(false)
+  const [focusIdx, setFocusIdx] = useState(0)
   const fadeTriggered = useRef(false)
 
   useEffect(() => { setMounted(true) }, [])
@@ -248,15 +243,64 @@ export function AnimatedTagCloud({ tags, maxTags = 15, style }: TagCloudProps) {
     }
   }, [layout])
 
-  // Deterministic per-word animation params (no Math.random in render)
-  const driftProps = useMemo(() => {
-    return layout.map((_, i) => ({
-      dx: (2 + ((i * 7 + 3) % 4)) * (i % 2 === 0 ? 1 : -1),
-      dy: (2 + ((i * 11 + 5) % 3)) * (i % 3 === 0 ? -1 : 1),
-      duration: 5 + ((i * 13 + 7) % 5),
-      delay: ((i * 3 + 1) % 4) * 0.7,
-    }))
-  }, [layout])
+  // Cycle spotlight through words every 5s
+  useEffect(() => {
+    if (layout.length <= 1) return
+    const timer = setInterval(() => {
+      setFocusIdx(prev => (prev + 1) % layout.length)
+    }, FOCUS_CYCLE_MS)
+    return () => clearInterval(timer)
+  }, [layout.length])
+
+  // Compute polar coordinates for each word relative to cloud center
+  const polarCoords = useMemo(() => {
+    if (!width) return []
+    const cx = width / 2
+    const cy = CLOUD_HEIGHT / 2
+    return layout.map(word => {
+      const halfW = measureTextWidth(word.text, word.fontSize) / 2
+      const halfH = word.fontSize * 0.6
+      const wx = word.x + halfW
+      const wy = word.y + halfH
+      const dx = wx - cx
+      const dy = wy - cy
+      return {
+        radius: Math.sqrt(dx * dx + dy * dy),
+        angle: Math.atan2(dy, dx),
+        halfWidth: halfW,
+        halfHeight: halfH,
+      }
+    })
+  }, [layout, width])
+
+  // Orbital animation loop — rotate all words around center
+  useEffect(() => {
+    if (!visible || layout.length === 0 || !width) return
+    const cx = width / 2
+    const cy = CLOUD_HEIGHT / 2
+    let startTime: number | null = null
+
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp
+      const elapsed = (timestamp - startTime) / 1000
+      const angleOffset = elapsed * SPIN_SPEED
+
+      polarCoords.forEach((polar, i) => {
+        const el = wordRefs.current[i]
+        if (!el) return
+        const newAngle = polar.angle + angleOffset
+        const x = cx + polar.radius * Math.cos(newAngle) - polar.halfWidth
+        const y = cy + polar.radius * Math.sin(newAngle) - polar.halfHeight
+        el.style.left = `${x}px`
+        el.style.top = `${y}px`
+      })
+
+      animFrameRef.current = requestAnimationFrame(animate)
+    }
+
+    animFrameRef.current = requestAnimationFrame(animate)
+    return () => cancelAnimationFrame(animFrameRef.current)
+  }, [visible, layout, polarCoords, width])
 
   if (sorted.length === 0) return null
 
@@ -271,33 +315,42 @@ export function AnimatedTagCloud({ tags, maxTags = 15, style }: TagCloudProps) {
         ...style,
       }}
     >
-      <style>{CLOUD_DRIFT_CSS}</style>
-      {mounted && width > 0 && layout.map((word, i) => (
-        <span
-          key={word.text}
-          style={{
-            position: 'absolute',
-            left: word.x,
-            top: word.y,
-            fontSize: `${word.fontSize}px`,
-            fontWeight: word.weight > 0.6 ? 600 : 400,
-            fontFamily: CLOUD_FONT,
-            color: sentimentColor(word.sentiment),
-            whiteSpace: 'nowrap',
-            opacity: visible ? 1 : 0,
-            transition: `opacity 0.4s ease ${i * 0.04}s`,
-            animation: visible
-              ? `cloudDrift ${driftProps[i].duration}s ease-in-out ${driftProps[i].delay}s infinite`
-              : 'none',
-            '--drift-x': `${driftProps[i].dx}px`,
-            '--drift-y': `${driftProps[i].dy}px`,
-            cursor: 'default',
-            userSelect: 'none',
-          } as React.CSSProperties}
-        >
-          {word.text}
-        </span>
-      ))}
+      {mounted && width > 0 && layout.map((word, i) => {
+        const focused = i === focusIdx
+        return (
+          // Outer: absolute position (updated by orbital animation loop)
+          <span
+            key={word.text}
+            ref={el => { wordRefs.current[i] = el }}
+            style={{
+              position: 'absolute',
+              left: word.x,
+              top: word.y,
+            }}
+          >
+            {/* Inner: spotlight scale + opacity transitions */}
+            <span
+              style={{
+                display: 'inline-block',
+                fontSize: `${word.fontSize}px`,
+                fontWeight: focused ? 700 : (word.weight > 0.6 ? 600 : 400),
+                fontFamily: CLOUD_FONT,
+                color: sentimentColor(word.sentiment),
+                whiteSpace: 'nowrap',
+                opacity: visible ? (focused ? 1 : 0.35) : 0,
+                transform: focused ? 'scale(1.25)' : 'scale(0.9)',
+                transformOrigin: 'center',
+                filter: focused ? 'brightness(1.15)' : 'none',
+                transition: 'transform 1.5s ease, opacity 1.5s ease, filter 1.5s ease',
+                cursor: 'default',
+                userSelect: 'none',
+              }}
+            >
+              {word.text}
+            </span>
+          </span>
+        )
+      })}
     </div>
   )
 }

@@ -342,7 +342,7 @@ async function fetchAllViaScraper(
   lookbackMs: number,
   perAccountLimit: number,
   limit: number,
-  onProgress?: (detail: string) => void,
+  onProgress?: (detail: string, itemCount?: number) => void,
 ): Promise<IntelItem[]> {
   const auth = await resolveAuth(config)
   if (!auth) {
@@ -353,16 +353,18 @@ async function fetchAllViaScraper(
   const allResults: PromiseSettledResult<IntelItem[]>[] = []
   let okCount = 0
   let failCount = 0
+  let totalItems = 0
 
   for (let i = 0; i < handles.length; i++) {
     if (i > 0) await delay(accountDelay(handles.length))
-    onProgress?.(`Fetching ${handles[i]} (${i + 1}/${handles.length})${okCount + failCount > 0 ? ` — ${okCount} ok, ${failCount} failed` : ''}`)
+    onProgress?.(`Fetching ${handles[i]} (${i + 1}/${handles.length})${okCount + failCount > 0 ? ` — ${okCount} ok, ${failCount} failed` : ''}`, totalItems)
     const result = await Promise.allSettled([
       fetchViaScraper(scraper, handles[i].replace(/^@/, ''), lookbackMs, perAccountLimit),
     ])
     allResults.push(result[0])
     if (result[0].status === 'fulfilled') {
       okCount++
+      totalItems += result[0].value.length
     } else {
       failCount++
       // Auth errors are systemic — re-throw immediately so fallback can kick in
@@ -370,7 +372,7 @@ async function fetchAllViaScraper(
     }
   }
 
-  onProgress?.(`Done: ${okCount} ok, ${failCount} failed (${handles.length} accounts)`)
+  onProgress?.(`Done: ${okCount} ok, ${failCount} failed (${handles.length} accounts)`, totalItems)
 
   const items: IntelItem[] = []
   const seenIds = new Set<string>()
@@ -404,7 +406,7 @@ async function fetchMixed(
   lookbackMs: number,
   perAccountLimit: number,
   limit: number,
-  onProgress?: (detail: string) => void,
+  onProgress?: (detail: string, itemCount?: number) => void,
 ): Promise<IntelItem[]> {
   // Round-robin split: even-index → scraper, odd-index → Apify
   const scraperHandles: string[] = []
@@ -414,12 +416,12 @@ async function fetchMixed(
     else apifyHandles.push(handles[i])
   }
 
-  onProgress?.(`[Mixed] Splitting ${handles.length} accounts: ${scraperHandles.length} Scraper, ${apifyHandles.length} Apify`)
+  onProgress?.(`[Mixed] Splitting ${handles.length} accounts: ${scraperHandles.length} Scraper, ${apifyHandles.length} Apify`, 0)
 
   // Run both groups in parallel
   const [scraperResult, apifyResult] = await Promise.allSettled([
     scraperHandles.length > 0
-      ? fetchAllViaScraper(config, scraperHandles, lookbackMs, perAccountLimit, limit, (d) => onProgress?.(`[Scraper] ${d}`))
+      ? fetchAllViaScraper(config, scraperHandles, lookbackMs, perAccountLimit, limit, (d, n) => onProgress?.(`[Scraper] ${d}`, n))
       : Promise.resolve([]),
     apifyHandles.length > 0
       ? fetchViaApify(config.apify_token!, apifyHandles, lookbackMs, perAccountLimit, (d) => onProgress?.(d))
@@ -433,7 +435,7 @@ async function fetchMixed(
   } else if (isCreditError(apifyResult.reason) || isAuthError(apifyResult.reason)) {
     onProgress?.('[Mixed] Apify failed (credits/auth) — retrying Apify accounts via Scraper')
     try {
-      apifyItems = await fetchAllViaScraper(config, apifyHandles, lookbackMs, perAccountLimit, limit, (d) => onProgress?.(`[Scraper fallback] ${d}`))
+      apifyItems = await fetchAllViaScraper(config, apifyHandles, lookbackMs, perAccountLimit, limit, (d, n) => onProgress?.(`[Scraper fallback] ${d}`, n))
     } catch {
       // If scraper fallback also fails, continue with whatever we have
     }
@@ -459,7 +461,7 @@ async function fetchMixed(
 export async function fetchXPosts(
   config: ConfigSettings,
   limit: number,
-  onProgress?: (detail: string) => void,
+  onProgress?: (detail: string, itemCount?: number) => void,
 ): Promise<IntelItem[]> {
   const disabled = new Set(config.social_accounts_disabled ?? [])
   const handles = (config.social_accounts_x ?? []).filter(h => !disabled.has(h))

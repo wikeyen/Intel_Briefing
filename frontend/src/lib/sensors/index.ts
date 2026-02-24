@@ -28,7 +28,7 @@ import { fetchBaidu } from './baidu'
 
 import { SensorConfigError } from './errors'
 
-export type FetchProgressFn = (detail: string) => void
+export type FetchProgressFn = (detail: string, itemCount?: number) => void
 export type SensorFetchFn = (config: ConfigSettings, limit: number, onProgress?: FetchProgressFn) => Promise<IntelItem[]>
 
 export { SENSOR_TOKEN_FIELD } from './constants'

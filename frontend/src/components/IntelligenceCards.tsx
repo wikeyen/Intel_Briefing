@@ -372,14 +372,6 @@ interface TopicPulseCardProps {
 }
 
 export function TopicPulseCard({ data, loading, onClick }: TopicPulseCardProps) {
-  const tagCloudTags: TagCloudTag[] = useMemo(() => {
-    return (data?.tags ?? []).map((t) => ({
-      text: t.text,
-      weight: t.weight,
-      sentiment: t.sentiment,
-    }))
-  }, [data])
-
   return (
     <ClickableCard onClick={onClick}>
       <div style={{ ...SECTION_GAP, flex: 1 }}>
@@ -420,10 +412,6 @@ export function TopicPulseCard({ data, loading, onClick }: TopicPulseCardProps) 
                   </div>
                 ))}
               </div>
-            )}
-
-            {tagCloudTags.length > 0 && (
-              <AnimatedTagCloud tags={tagCloudTags} maxTags={15} style={{ marginTop: 'auto' }} />
             )}
           </>
         )}
@@ -575,14 +563,6 @@ export function PublicFocusDetail({ data }: { data: TrendIntelligence }) {
 
 /** Full detail view for Topic Pulse / Social Topic Intelligence. */
 export function TopicPulseDetail({ data }: { data: TopicIntelligence }) {
-  const tagCloudTags: TagCloudTag[] = useMemo(() => {
-    return (data?.tags ?? []).map((t) => ({
-      text: t.text,
-      weight: t.weight,
-      sentiment: t.sentiment,
-    }))
-  }, [data])
-
   return (
     <div style={SECTION_GAP}>
       {/* Summary — full */}
@@ -658,10 +638,6 @@ export function TopicPulseDetail({ data }: { data: TopicIntelligence }) {
         </div>
       ))}
 
-      {/* Tag cloud */}
-      {tagCloudTags.length > 0 && (
-        <TagCloud tags={tagCloudTags} maxTags={20} />
-      )}
     </div>
   )
 }

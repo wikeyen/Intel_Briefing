@@ -9,7 +9,7 @@ import { PlayIcon } from '@/components/form-styles'
 import { STATUS_META } from './constants'
 import { timeAgo, nextFetchIn } from './time-helpers'
 
-export type Phase = 'idle' | 'fetching' | 'summarizing' | 'briefing' | 'stopping' | 'paused'
+export type Phase = 'idle' | 'fetching' | 'summarizing' | 'briefing' | 'intelligence' | 'stopping' | 'paused'
 
 export interface ControlBarProps {
   health: HealthResponse | null

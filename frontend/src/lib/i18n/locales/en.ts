@@ -165,6 +165,7 @@ const en: TranslationDict = {
   'status.fetching': 'Fetching',
   'status.summarizing': 'Summarizing',
   'status.briefing': 'Briefing',
+  'status.intelligence': 'Analyzing',
   'status.stopping': 'Stopping',
   'status.paused': 'Paused',
   'status.sensors': 'sensors',

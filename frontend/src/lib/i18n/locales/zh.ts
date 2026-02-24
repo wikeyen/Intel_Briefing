@@ -165,6 +165,7 @@ const zh: TranslationDict = {
   'status.fetching': '获取中',
   'status.summarizing': '摘要中',
   'status.briefing': '生成简报',
+  'status.intelligence': '分析中',
   'status.stopping': '停止中',
   'status.paused': '已暂停',
   'status.sensors': '传感器',

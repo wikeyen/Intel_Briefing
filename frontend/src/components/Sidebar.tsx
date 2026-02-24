@@ -1,13 +1,15 @@
 // ABOUTME: Sidebar navigation component for Intel Briefing.
-// ABOUTME: Uses Next.js Link and usePathname for client-side routing; language selector in footer.
+// ABOUTME: Uses Next.js Link and usePathname for client-side routing; mini phase stepper and language selector.
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, useMemo, type ReactNode } from 'react'
 import { api } from '@/api/client'
 import type { HealthResponse, PipelineStatus, SummaryProgress } from '@/api/client'
 import { usePolling } from '@/lib/hooks/usePolling'
 import { useTranslation, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from '@/lib/i18n'
+import { deriveStepStatuses, MAIN_STEPS, STEP_COLORS } from './status/PhaseStepper'
+import type { StepStatus } from './status/PhaseStepper'
 
 /** Nav item config keys for i18n. */
 const CONFIG_NAV: { href: string; labelKey: string }[] = [
@@ -62,6 +64,90 @@ function SideDivider() {
 }
 
 
+const MINI_NODE = 6
+const MINI_CONNECTOR_H = 2
+
+/** Compact pipeline phase stepper — shows 2 active nodes with trailing dots if more remain. */
+function MiniStepper({ pipelineStatus, t }: { pipelineStatus: PipelineStatus | null; t: (k: string) => string }) {
+  const statuses = deriveStepStatuses(pipelineStatus)
+  const visible = MAIN_STEPS.filter(s => statuses[s.key] !== 'skipped')
+  if (visible.length === 0) return null
+
+  // Find the focus: first active step, or last done step, or 0
+  let focus = visible.findIndex(s => statuses[s.key] === 'active')
+  if (focus < 0) {
+    const lastDone = visible.map((s, i) => statuses[s.key] === 'done' ? i : -1).filter(i => i >= 0).pop()
+    focus = lastDone != null ? lastDone : 0
+  }
+
+  const window = visible.slice(focus, focus + 2)
+  const hasMore = focus + 2 < visible.length
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginTop: '0.5rem' }}>
+      {window.map((step, i) => {
+        const status: StepStatus = statuses[step.key]
+        const colors = STEP_COLORS[status]
+        const isActive = status === 'active'
+        const isLast = i === window.length - 1
+
+        return (
+          <div key={step.key} style={{ display: 'flex', alignItems: 'center' }}>
+            {/* Node */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <div style={{
+                width: MINI_NODE,
+                height: MINI_NODE,
+                borderRadius: '50%',
+                border: `1.5px solid ${colors.dot}`,
+                background: isActive ? colors.dot : 'transparent',
+                flexShrink: 0,
+                transition: 'all 300ms ease',
+                ...(isActive ? { boxShadow: `0 0 0 2px color-mix(in srgb, ${colors.dot} 20%, transparent)` } : {}),
+              }} />
+              <span style={{
+                fontSize: '0.4375rem',
+                fontWeight: 600,
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
+                color: colors.label,
+                whiteSpace: 'nowrap',
+              }}>
+                {t(step.labelKey)}
+              </span>
+            </div>
+            {/* Connector */}
+            {!isLast && (
+              <div style={{
+                width: 16,
+                height: MINI_CONNECTOR_H,
+                background: 'var(--sb-border)',
+                borderRadius: 1,
+                margin: `0 3px`,
+                marginBottom: 12, // offset for the label below the node
+                flexShrink: 0,
+              }} />
+            )}
+          </div>
+        )
+      })}
+      {/* Trailing dots */}
+      {hasMore && (
+        <div style={{ display: 'flex', gap: 3, marginLeft: 6, marginBottom: 12 }}>
+          {[0, 1, 2].map(i => (
+            <div key={i} style={{
+              width: 2,
+              height: 2,
+              borderRadius: '50%',
+              background: 'var(--sb-faint)',
+            }} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface Props {
   onNavigate?: () => void
 }
@@ -112,26 +198,8 @@ export function Sidebar({ onNavigate }: Props) {
     && lastViewedFetch !== null
     && health.last_fetch !== lastViewedFetch
 
-  // Pipeline progress percentage for the mini bar
-  const pipelinePct = (() => {
-    if (!isJobRunning) return null
-    if (pipelineStatus?.running) {
-      const total = pipelineStatus.sensors.length
-      if (total === 0) return 0
-      const done = pipelineStatus.sensors.filter(s =>
-        s.fetch === 'ok' || s.fetch === 'failed' || s.fetch === 'skipped',
-      ).length
-      return Math.round((done / total) * 100)
-    }
-    if (summaryProgress?.running) {
-      const sensors = summaryProgress.sensors.filter(s => s.sensor_name !== '__overall__')
-      const total = sensors.length
-      if (total === 0) return 0
-      const done = sensors.filter(s => s.state === 'ok' || s.state === 'failed').length
-      return Math.round((done / total) * 100)
-    }
-    return null
-  })()
+  // Show mini stepper when pipeline is actively running
+  const showStepper = isJobRunning && !!pipelineStatus
 
   const statusColor =
     !health                      ? 'var(--ink-faint)' :
@@ -192,24 +260,8 @@ export function Sidebar({ onNavigate }: Props) {
             {statusLabel}
           </span>
         </div>
-        {/* Mini progress bar — visible only when pipeline or summary is running */}
-        {pipelinePct != null && (
-          <div style={{
-            height: 2,
-            background: 'var(--sb-border)',
-            borderRadius: 1,
-            overflow: 'hidden',
-            marginTop: '0.5rem',
-          }}>
-            <div style={{
-              height: '100%',
-              width: `${pipelinePct}%`,
-              background: 'var(--accent)',
-              borderRadius: 1,
-              transition: 'width 400ms ease',
-            }} />
-          </div>
-        )}
+        {/* Mini phase stepper — visible only when pipeline is running */}
+        {showStepper && <MiniStepper pipelineStatus={pipelineStatus} t={t} />}
       </div>
 
       <div className="sidebar-brand-divider" style={{ height: 1, background: 'var(--sb-border)', margin: '0 1.75rem' }} />

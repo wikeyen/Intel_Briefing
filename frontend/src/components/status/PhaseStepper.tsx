@@ -6,14 +6,14 @@ import type { PipelineStatus } from '@/api/client'
 import { useTranslation } from '@/lib/i18n'
 
 export type PipelinePhaseStep = 'fetch' | 'retry' | 'summary' | 'briefing' | 'intelligence'
-type StepStatus = 'pending' | 'active' | 'done' | 'error' | 'skipped'
+export type StepStatus = 'pending' | 'active' | 'done' | 'error' | 'skipped'
 
 interface StepDef {
   key: PipelinePhaseStep
   labelKey: string
 }
 
-const MAIN_STEPS: StepDef[] = [
+export const MAIN_STEPS: StepDef[] = [
   { key: 'fetch', labelKey: 'log.phase_fetch' },
   { key: 'summary', labelKey: 'log.phase_summary' },
   { key: 'briefing', labelKey: 'log.phase_briefing' },
@@ -36,7 +36,7 @@ const STEP_ICONS: Record<StepStatus, string> = {
 
 const TERMINAL_STATES = ['ok', 'failed', 'skipped', 'cancelled']
 
-function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePhaseStep, StepStatus> {
+export function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePhaseStep, StepStatus> {
   const s: Record<PipelinePhaseStep, StepStatus> = {
     fetch: 'pending',
     retry: 'pending',
@@ -191,7 +191,7 @@ function derivePhaseCounts(ps: PipelineStatus | null): Record<string, { ok: numb
   return { fetch: fetchCount, retry: retryCount }
 }
 
-const STEP_COLORS: Record<StepStatus, { dot: string; label: string }> = {
+export const STEP_COLORS: Record<StepStatus, { dot: string; label: string }> = {
   pending: { dot: 'var(--border)', label: 'var(--ink-faint)' },
   active: { dot: 'var(--accent)', label: 'var(--accent)' },
   done: { dot: 'var(--ok)', label: 'var(--ink-muted)' },

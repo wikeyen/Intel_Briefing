@@ -66,8 +66,55 @@ function SideDivider() {
 
 const MINI_NODE = 6
 const MINI_CONNECTOR_H = 2
+const LABEL_GAP = 12 // vertical space occupied by the label below each node
 
-/** Compact pipeline phase stepper — shows 2 active nodes with trailing dots if more remain. */
+/** Fading transition line indicating more stages exist in that direction. */
+function TransitionLine({ direction }: { direction: 'left' | 'right' }) {
+  const gradient = direction === 'right'
+    ? 'linear-gradient(to right, var(--sb-border), transparent)'
+    : 'linear-gradient(to left, var(--sb-border), transparent)'
+  return (
+    <div style={{
+      flex: '1 1 0',
+      height: MINI_CONNECTOR_H,
+      background: gradient,
+      borderRadius: 1,
+      minWidth: 12,
+      marginBottom: LABEL_GAP,
+    }} />
+  )
+}
+
+/** Single mini stepper node — dot + label. */
+function MiniNode({ step, status, t }: { step: { labelKey: string }; status: StepStatus; t: (k: string) => string }) {
+  const colors = STEP_COLORS[status]
+  const isActive = status === 'active'
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+      <div style={{
+        width: MINI_NODE,
+        height: MINI_NODE,
+        borderRadius: '50%',
+        border: `1.5px solid ${colors.dot}`,
+        background: isActive ? colors.dot : 'transparent',
+        transition: 'all 300ms ease',
+        ...(isActive ? { boxShadow: `0 0 0 2px color-mix(in srgb, ${colors.dot} 20%, transparent)` } : {}),
+      }} />
+      <span style={{
+        fontSize: '0.4375rem',
+        fontWeight: 600,
+        letterSpacing: '0.04em',
+        textTransform: 'uppercase',
+        color: colors.label,
+        whiteSpace: 'nowrap',
+      }}>
+        {t(step.labelKey)}
+      </span>
+    </div>
+  )
+}
+
+/** Compact pipeline phase stepper — shows 2 active nodes with contextual alignment. */
 function MiniStepper({ pipelineStatus, t }: { pipelineStatus: PipelineStatus | null; t: (k: string) => string }) {
   const statuses = deriveStepStatuses(pipelineStatus)
   const visible = MAIN_STEPS.filter(s => statuses[s.key] !== 'skipped')
@@ -80,70 +127,50 @@ function MiniStepper({ pipelineStatus, t }: { pipelineStatus: PipelineStatus | n
     focus = lastDone != null ? lastDone : 0
   }
 
-  const window = visible.slice(focus, focus + 2)
-  const hasMore = focus + 2 < visible.length
+  const windowSteps = visible.slice(focus, focus + 2)
+  const isAtStart = focus === 0
+  const isAtEnd = focus + windowSteps.length >= visible.length
+
+  // Alignment: left when at start, right when at end, stretch when in middle
+  const justify = isAtStart && !isAtEnd ? 'flex-start'
+    : !isAtStart && isAtEnd ? 'flex-end'
+    : !isAtStart && !isAtEnd ? 'stretch'
+    : 'flex-start' // both start+end (2 or fewer visible steps)
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginTop: '0.5rem' }}>
-      {window.map((step, i) => {
-        const status: StepStatus = statuses[step.key]
-        const colors = STEP_COLORS[status]
-        const isActive = status === 'active'
-        const isLast = i === window.length - 1
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: justify,
+      gap: 0,
+      marginTop: '0.5rem',
+    }}>
+      {/* Leading transition line — stages exist before the window */}
+      {!isAtStart && <TransitionLine direction="left" />}
 
+      {windowSteps.map((step, i) => {
+        const status: StepStatus = statuses[step.key]
+        const isLast = i === windowSteps.length - 1
         return (
           <div key={step.key} style={{ display: 'flex', alignItems: 'center' }}>
-            {/* Node */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-              <div style={{
-                width: MINI_NODE,
-                height: MINI_NODE,
-                borderRadius: '50%',
-                border: `1.5px solid ${colors.dot}`,
-                background: isActive ? colors.dot : 'transparent',
-                flexShrink: 0,
-                transition: 'all 300ms ease',
-                ...(isActive ? { boxShadow: `0 0 0 2px color-mix(in srgb, ${colors.dot} 20%, transparent)` } : {}),
-              }} />
-              <span style={{
-                fontSize: '0.4375rem',
-                fontWeight: 600,
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase',
-                color: colors.label,
-                whiteSpace: 'nowrap',
-              }}>
-                {t(step.labelKey)}
-              </span>
-            </div>
-            {/* Connector */}
+            <MiniNode step={step} status={status} t={t} />
             {!isLast && (
               <div style={{
                 width: 16,
                 height: MINI_CONNECTOR_H,
                 background: 'var(--sb-border)',
                 borderRadius: 1,
-                margin: `0 3px`,
-                marginBottom: 12, // offset for the label below the node
+                margin: '0 3px',
+                marginBottom: LABEL_GAP,
                 flexShrink: 0,
               }} />
             )}
           </div>
         )
       })}
-      {/* Trailing dots */}
-      {hasMore && (
-        <div style={{ display: 'flex', gap: 3, marginLeft: 6, marginBottom: 12 }}>
-          {[0, 1, 2].map(i => (
-            <div key={i} style={{
-              width: 2,
-              height: 2,
-              borderRadius: '50%',
-              background: 'var(--sb-faint)',
-            }} />
-          ))}
-        </div>
-      )}
+
+      {/* Trailing transition line — stages exist after the window */}
+      {!isAtEnd && <TransitionLine direction="right" />}
     </div>
   )
 }

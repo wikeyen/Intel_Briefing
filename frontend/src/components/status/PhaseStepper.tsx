@@ -23,7 +23,7 @@ const BRANCH_STEP: StepDef = { key: 'retry', labelKey: 'log.phase_retry' }
 
 const NODE_SIZE = 16
 const NODE_CENTER = NODE_SIZE / 2  // 8
-const CONNECTOR_HEIGHT = 2
+const CONNECTOR_HEIGHT = 4
 const CONNECTOR_OFFSET = (NODE_SIZE - CONNECTOR_HEIGHT) / 2  // vertically center connector on node
 
 const STEP_ICONS: Record<StepStatus, string> = {
@@ -281,8 +281,8 @@ function RetryBranch({ retryStatus, isClickable, onLogToggle, t, segmentWidthPct
         <div style={{
           width: '50%',
           height: dropHeight,
-          borderLeft: `2px solid ${borderColor}`,
-          borderBottom: `2px solid ${borderColor}`,
+          borderLeft: `3px solid ${borderColor}`,
+          borderBottom: `3px solid ${borderColor}`,
           borderRadius: '0 0 0 6px',
           marginLeft: NODE_CENTER, // Approximate center of the text label
           boxSizing: 'border-box',
@@ -291,8 +291,8 @@ function RetryBranch({ retryStatus, isClickable, onLogToggle, t, segmentWidthPct
         <div style={{
           width: '50%',
           height: dropHeight,
-          borderRight: `2px solid ${borderColor}`,
-          borderBottom: `2px solid ${borderColor}`,
+          borderRight: `3px solid ${borderColor}`,
+          borderBottom: `3px solid ${borderColor}`,
           borderRadius: '0 0 6px 0',
           marginRight: NODE_CENTER, // Approximate center of the text label
           boxSizing: 'border-box',
@@ -339,11 +339,11 @@ function RetryBranch({ retryStatus, isClickable, onLogToggle, t, segmentWidthPct
               top: 0,
               left: 0,
               height: '100%',
-              width: '50%',
-              background: `linear-gradient(90deg, transparent, var(--accent), transparent)`,
+              width: '33%',
+              background: `linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%)`,
               borderRadius: 2,
               opacity: 1 / 0.4,
-              animation: 'stepperShimmer 1.5s ease-in-out infinite',
+              animation: 'stepperShimmer 1.2s ease-in-out infinite',
             }} />
           )}
         </div>
@@ -384,7 +384,20 @@ function RetryBranch({ retryStatus, isClickable, onLogToggle, t, segmentWidthPct
               transition: 'width 500ms ease',
             }} />
           )}
-          {/* Indeterminate shimmer — right leg stays dim when active */}
+          {/* Indeterminate shimmer — right leg */}
+          {branchIndeterminate && (
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              height: '100%',
+              width: '33%',
+              background: `linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%)`,
+              borderRadius: 2,
+              opacity: 1 / 0.4,
+              animation: 'stepperShimmer 1.2s ease-in-out infinite',
+            }} />
+          )}
         </div>
       </div>
     </div>
@@ -505,12 +518,12 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
                         borderRadius: 2,
                       }}>
                         <div style={{
-                          width: '50%',
+                          width: '33%',
                           height: '100%',
-                          background: `linear-gradient(90deg, transparent, var(--accent), transparent)`,
+                          background: `linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%)`,
                           borderRadius: 2,
                           opacity: 1 / 0.4,
-                          animation: 'stepperShimmer 1.5s ease-in-out infinite',
+                          animation: 'stepperShimmer 1.2s ease-in-out infinite',
                         }} />
                       </div>
                     )}

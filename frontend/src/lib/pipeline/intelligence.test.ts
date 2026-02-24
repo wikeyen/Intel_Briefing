@@ -1,8 +1,10 @@
-// ABOUTME: Tests for intelligence analysis pipeline — JSON parsing robustness.
-// ABOUTME: Covers think-tag stripping, code-fence stripping, and broken JSON repair.
+// ABOUTME: Tests for intelligence analysis pipeline — JSON parsing and item filtering.
+// ABOUTME: Covers think-tag stripping, code-fence stripping, broken JSON repair, and account filter logic.
 
 import { describe, it, expect } from 'vitest'
-import { robustJsonParse } from './intelligence'
+import { robustJsonParse, runIntelligenceAnalysis } from './intelligence'
+import { createReport } from '../models'
+import type { IntelItem } from '../models'
 
 describe('robustJsonParse', () => {
   it('parses clean JSON', () => {
@@ -65,5 +67,33 @@ Let me structure {my response} carefully.
     const raw = '<THINK>reasoning {with braces}</THINK>{"summary":"case","topics":[]}'
     const result = robustJsonParse(raw)
     expect(result).toEqual({ summary: 'case', topics: [] })
+  })
+})
+
+describe('runIntelligenceAnalysis', () => {
+  it('excludes rss_news items from accounts (voices) analysis', async () => {
+    const rssNewsItems: IntelItem[] = [
+      { id: 'rss-1', source: 'rss_news', title: 'Breaking news', url: 'https://example.com/1', account: 'Reuters RSS' },
+      { id: 'rss-2', source: 'rss_news', title: 'Market update', url: 'https://example.com/2', account: 'AP News RSS' },
+    ]
+    const rssFeedItems: IntelItem[] = [
+      { id: 'rss-3', source: 'rss_feeds', title: 'Blog post', url: 'https://example.com/3', account: 'Tech Blog' },
+    ]
+
+    const report = createReport({
+      date: '2026-02-24',
+      fetched_at: new Date().toISOString(),
+      items: { feeds: [...rssNewsItems, ...rssFeedItems] } as Record<string, IntelItem[]>,
+    })
+
+    // No LLM needed — all three analyses should return null
+    // because no items match trend (wrong category), topic (no topic field),
+    // or accounts (no social-category items).
+    const dummyLlm = { base_url: '', api_key: null, model: '' }
+    const result = await runIntelligenceAnalysis(report, dummyLlm)
+
+    expect(result.accounts).toBeNull()
+    expect(result.trend).toBeNull()
+    expect(result.topics).toBeNull()
   })
 })

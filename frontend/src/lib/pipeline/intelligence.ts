@@ -451,9 +451,11 @@ export async function runIntelligenceAnalysis(
     item => item.topic != null && item.topic.length > 0,
   )
 
-  // Account items: any item with a non-empty account field
+  // Account items: social sensor items with a non-empty account field.
+  // Excludes RSS feeds/news — their `account` is just the feed title, not a social voice.
   const accountItems = allItems.filter(
-    item => item.account != null && item.account.length > 0,
+    item => item.account != null && item.account.length > 0
+      && SENSOR_CATEGORY_MAP[item.source] === 'social',
   )
 
   // Run all three analyses in parallel — each catches its own errors

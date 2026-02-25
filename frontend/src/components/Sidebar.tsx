@@ -74,7 +74,6 @@ function NavLink({ href, active, onClick, collapsed, title, children }: {
 }
 
 function SideLabel({ children, collapsed }: { children: ReactNode; collapsed?: boolean }) {
-  if (collapsed) return null
   return (
     <div className="sidebar-label" style={{
       padding: '0 1.75rem 0.375rem',
@@ -83,6 +82,7 @@ function SideLabel({ children, collapsed }: { children: ReactNode; collapsed?: b
       letterSpacing: '0.12em',
       textTransform: 'uppercase',
       color: 'var(--sb-faint)',
+      visibility: collapsed ? 'hidden' : undefined,
     }}>
       {children}
     </div>
@@ -297,7 +297,10 @@ export function Sidebar({ onNavigate, collapsed, peeking, pinned, onPinToggle }:
       borderRight: '1px solid var(--sb-border)',
     }}>
       {/* Brand — status row links to /status */}
-      <div className="sidebar-brand" style={{ padding: collapsed ? '1rem 0.75rem 0.75rem' : '2rem 1.75rem 1.5rem' }}>
+      <div className="sidebar-brand" style={{
+        padding: collapsed ? '1rem 0.75rem 0.75rem' : '2rem 1.75rem 1.5rem',
+        ...(collapsed ? { minHeight: 102, display: 'flex', alignItems: 'center', justifyContent: 'center' } : {}),
+      }}>
         {collapsed ? (
           /* Collapsed brand: status-colored Activity icon — matches nav icon pattern */
           <div

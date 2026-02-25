@@ -3,7 +3,7 @@
 'use client'
 
 import { memo } from 'react'
-import type { SensorJobProgress } from '@/api/client'
+import type { SensorJobProgress, StageState } from '@/api/client'
 import { useTranslation } from '@/lib/i18n'
 
 export interface SensorCardProps {
@@ -700,94 +700,161 @@ function rowContainerStyle(state: CardState, hovered: boolean): React.CSSPropert
   return { ...base, ...(hovered && { background: 'var(--surface-alt, rgba(0,0,0,0.02))' }) }
 }
 
-function RowMetric({ state, props, t }: { state: CardState; props: SensorCardProps; t: TFn }) {
-  const { liveSensor, itemCount, fetchError, summaryError, isConfigError } = props
-  const mono: React.CSSProperties = { fontFamily: 'ui-monospace, monospace', fontSize: '0.75rem', fontWeight: 600 }
+function StageIcon({ stage, cached }: { stage?: StageState; cached?: boolean }) {
+  if (!stage || stage === 'queued') return null
+
+  const iconStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '0.0625rem',
+  }
+
+  if (stage === 'ok') {
+    return (
+      <span style={iconStyle}>
+        <span style={{ fontSize: '0.6875rem', color: 'var(--ok)', fontWeight: 700, lineHeight: 1 }}>{'\u2713'}</span>
+        {cached && <span style={{ fontSize: '0.4375rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--ink-faint)', lineHeight: 1 }}>cached</span>}
+      </span>
+    )
+  }
+  if (stage === 'failed') {
+    return <span style={{ fontSize: '0.6875rem', color: 'var(--err)', fontWeight: 700, lineHeight: 1 }}>{'\u2715'}</span>
+  }
+  if (stage === 'running') {
+    return <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)', animation: 'pulseDot 1.6s ease-in-out infinite', flexShrink: 0 }} />
+  }
+  // skipped / cancelled
+  return <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)', opacity: 0.5, lineHeight: 1 }}>{'\u2014'}</span>
+}
+
+function RowNote({ state, props, t }: { state: CardState; props: SensorCardProps; t: TFn }) {
+  const { liveSensor, fetchError, summaryError, isConfigError } = props
+  const noteStyle: React.CSSProperties = {
+    fontSize: '0.6875rem',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.375rem',
+  }
 
   switch (state) {
     case 'healthy':
     case 'selected':
-      return <span style={{ ...mono, color: 'var(--ink)' }}>{itemCount}</span>
+    case 'cached':
+    case 'done':
+    case 'fetched':
+      return null
+
     case 'disabled':
       return (
-        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-          <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>{t('sensor.disabled')}</span>
-          <span style={{ fontSize: '0.5625rem', color: 'var(--ink-faint)', fontStyle: 'italic', opacity: 0.7 }}>{t('sensor.disabled_reason')}</span>
+        <span style={{ ...noteStyle, color: 'var(--ink-faint)' }}>
+          {t('sensor.disabled')}
+          <span style={{ fontSize: '0.5625rem', fontStyle: 'italic', opacity: 0.7 }}>{t('sensor.disabled_reason')}</span>
         </span>
       )
+
     case 'config-error':
       return (
-        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+        <span style={noteStyle}>
           <ErrorBadge kind="config" t={t} />
-          <span style={{ fontSize: '0.6875rem', color: 'var(--warn)' }}>{t('sensor.needs_api_key')}</span>
+          <span style={{ color: 'var(--warn)' }}>{t('sensor.needs_api_key')}</span>
           <span style={{ fontSize: '0.5625rem', color: 'var(--ink-faint)', fontStyle: 'italic', opacity: 0.7 }}>{t('sensor.needs_api_key_reason')}</span>
         </span>
       )
+
     case 'failed':
       return (
-        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', maxWidth: 360 }}>
+        <span style={noteStyle}>
           <ErrorBadge kind={isConfigError ? 'config' : 'api'} isSummaryError={!fetchError && !!summaryError} t={t} />
-          <span style={{ fontSize: '0.6875rem', color: 'var(--err)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ color: 'var(--err)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {fetchError || summaryError || t('sensor.failed')}
           </span>
         </span>
       )
-    case 'fetching': {
-      const retrying = props.isRetrying
-      const label = retrying ? t('sensor.retrying') : t('sensor.fetching')
-      const color = retrying ? 'var(--warn)' : 'var(--accent)'
-      return (
-        <span style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.6875rem', color, fontWeight: 500 }}>{label}</span>
-          {liveSensor && liveSensor.item_count > 0 && <span style={{ ...mono, fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>{liveSensor.item_count}</span>}
-          {liveSensor?.fetch_detail && (
-            <span style={{ fontSize: '0.625rem', color: 'var(--ink-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 120 }}>
-              {liveSensor.fetch_detail}
-            </span>
-          )}
-        </span>
-      )
-    }
-    case 'summarizing':
-      return <span style={{ fontSize: '0.6875rem', color: 'var(--accent)', fontWeight: 500 }}>{t('sensor.summarizing')}</span>
-    case 'waiting':
-      return props.isRetrying
-        ? <span style={{ fontSize: '0.6875rem', color: 'var(--warn)', fontWeight: 500 }}>{t('sensor.retrying')}{'\u2026'}</span>
-        : <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>{t('sensor.queued')}</span>
-    case 'fetched':
-      return <span style={{ ...mono, color: liveSensor && liveSensor.item_count > 0 ? 'var(--ink)' : 'var(--ink-faint)' }}>{liveSensor && liveSensor.item_count > 0 ? liveSensor.item_count : '0'}</span>
-    case 'skipped':
-      return (
-        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-          <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>{t('sensor.skipped')}</span>
-          <span style={{ fontSize: '0.5625rem', color: 'var(--ink-faint)', fontStyle: 'italic', opacity: 0.7 }}>{t('sensor.skipped_reason')}</span>
-        </span>
-      )
-    case 'cached':
-      return (
-        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-          <span style={{ ...mono, color: 'var(--ink)' }}>{liveSensor?.item_count ?? itemCount}</span>
-          <span style={{ fontSize: '0.5625rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--ink-faint)' }}>{t('sensor.cached')}</span>
-        </span>
-      )
-    case 'done':
-      return (
-        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-          <span style={{ ...mono, color: 'var(--ink)' }}>{liveSensor?.item_count ?? itemCount}</span>
-          <span style={{ fontSize: '0.5625rem', fontWeight: 600, color: 'var(--ok)', background: 'var(--ok-bg)', padding: '0.0625rem 0.3125rem', borderRadius: 3 }}>{t('sensor.done')}</span>
-        </span>
-      )
+
     case 'failed-mid-run':
     case 'paused-failed':
       return (
-        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', maxWidth: 360 }}>
+        <span style={noteStyle}>
           <ErrorBadge kind={liveSensor?.fetch_error_kind ?? undefined} isSummaryError={!liveSensor?.fetch_error && !!liveSensor?.summary_error} t={t} />
-          <span style={{ fontSize: '0.6875rem', color: 'var(--err)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ color: 'var(--err)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {liveSensor?.fetch_error || liveSensor?.summary_error || t('sensor.failed')}
           </span>
         </span>
       )
+
+    case 'fetching': {
+      const retrying = props.isRetrying
+      const label = retrying ? t('sensor.retrying') : t('sensor.fetching')
+      const color = retrying ? 'var(--warn)' : 'var(--accent)'
+      const detail = liveSensor?.fetch_detail
+      return (
+        <span style={{ ...noteStyle, color }}>
+          <span style={{ fontWeight: 500 }}>{label}</span>
+          {detail && <span style={{ color: 'var(--ink-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{detail}</span>}
+        </span>
+      )
+    }
+
+    case 'summarizing': {
+      const total = liveSensor?.summary_chunks_total ?? 0
+      const done = liveSensor?.summary_chunks_done ?? 0
+      return (
+        <span style={{ ...noteStyle, color: 'var(--accent)' }}>
+          <span style={{ fontWeight: 500 }}>{t('sensor.summarizing')}</span>
+          {total > 0 && <span style={{ color: 'var(--ink-faint)' }}>{t('sensor.chunks', { done: String(done), total: String(total) })}</span>}
+        </span>
+      )
+    }
+
+    case 'waiting':
+      return props.isRetrying
+        ? <span style={{ ...noteStyle, color: 'var(--warn)', fontWeight: 500 }}>{t('sensor.retrying')}{'\u2026'}</span>
+        : <span style={{ ...noteStyle, color: 'var(--ink-faint)' }}>{t('sensor.queued')}</span>
+
+    case 'skipped':
+      return (
+        <span style={{ ...noteStyle, color: 'var(--ink-faint)' }}>
+          {t('sensor.skipped')}
+          <span style={{ fontSize: '0.5625rem', fontStyle: 'italic', opacity: 0.7 }}>{t('sensor.skipped_reason')}</span>
+        </span>
+      )
   }
+}
+
+function RowMetric({ state, props }: { state: CardState; props: SensorCardProps; t: TFn }) {
+  const { liveSensor, itemCount } = props
+  const mono: React.CSSProperties = { fontFamily: 'ui-monospace, monospace', fontSize: '0.75rem', fontWeight: 600 }
+
+  // States that never show a count
+  if (state === 'disabled' || state === 'config-error' || state === 'skipped' || state === 'waiting') return null
+
+  // During active fetch/summarize: show live count only when > 0
+  if (state === 'fetching' || state === 'summarizing') {
+    if (!liveSensor || liveSensor.item_count === 0) return null
+    return <span style={{ ...mono, color: 'var(--ink-faint)' }}>{liveSensor.item_count}</span>
+  }
+
+  // Done/cached/fetched: show live count (or fallback to report count)
+  if (state === 'done' || state === 'cached' || state === 'fetched') {
+    const count = liveSensor?.item_count ?? itemCount
+    return <span style={{ ...mono, color: count > 0 ? 'var(--ink)' : 'var(--ink-faint)' }}>{count}</span>
+  }
+
+  // Failed mid-run / paused-failed: show live count if available
+  if (state === 'failed-mid-run' || state === 'paused-failed') {
+    const count = liveSensor?.item_count ?? 0
+    if (count === 0) return null
+    return <span style={{ ...mono, color: 'var(--ink-faint)' }}>{count}</span>
+  }
+
+  // Healthy / selected / failed (idle): show report count
+  const count = itemCount
+  if (count === 0 && state === 'failed') return null
+  return <span style={{ ...mono, color: count > 0 ? 'var(--ink)' : 'var(--ink-faint)' }}>{count}</span>
 }
 
 function RowActions({ state, props, t }: { state: CardState; props: SensorCardProps; t: TFn }) {
@@ -871,11 +938,20 @@ export const SensorRow = memo(function SensorRow(props: SensorCardProps) {
       )}
       <span style={{ ...nameStyle, fontSize: '0.8125rem', minWidth: 120, maxWidth: 140, ...(state === 'selected' ? { color: 'var(--accent)' } : {}) }}>{label}</span>
       <span style={categoryBadgeStyle}>{category}</span>
-      <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <span style={{ minWidth: 48, textAlign: 'right', display: 'flex', justifyContent: 'flex-end' }}>
+      <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <span className="sensor-col-fetch" style={{ width: 44, display: 'flex', justifyContent: 'center' }}>
+          {props.isRunning && <StageIcon stage={props.liveSensor?.fetch} cached={props.liveSensor?.fetch_cached} />}
+        </span>
+        <span className="sensor-col-summary" style={{ width: 56, display: 'flex', justifyContent: 'center' }}>
+          {props.isRunning && <StageIcon stage={props.liveSensor?.summary} />}
+        </span>
+        <span style={{ width: 36, textAlign: 'right', display: 'flex', justifyContent: 'flex-end' }}>
           <RowMetric state={state} props={props} t={t} />
         </span>
-        <span style={{ width: 72, textAlign: 'right', display: 'flex', justifyContent: 'flex-end' }}>
+        <span className="sensor-col-note" style={{ flex: '1 1 120px', minWidth: 80, overflow: 'hidden' }}>
+          <RowNote state={state} props={props} t={t} />
+        </span>
+        <span style={{ width: 72, textAlign: 'right', display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
           <RowActions state={state} props={props} t={t} />
         </span>
       </span>

@@ -747,6 +747,11 @@ input[type="range"]::-moz-range-thumb {
   .sensor-grid {
     padding: 0.5rem 0.75rem !important;
   }
+  .sensor-col-fetch,
+  .sensor-col-summary,
+  .sensor-col-note {
+    display: none !important;
+  }
   .phase-stepper-wrap {
     padding: 0 0.75rem 0.25rem !important;
   }

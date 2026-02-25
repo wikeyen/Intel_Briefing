@@ -158,8 +158,11 @@ export function SensorGrid({
               )}
             </div>
           )}
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.75rem' }}>
-            <span style={{ ...headerLabelStyle, width: 48, textAlign: 'right' }}>{t('status.col_count')}</span>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <span className="sensor-col-fetch" style={{ ...headerLabelStyle, width: 44, textAlign: 'center' }}>{t('status.col_fetch')}</span>
+            <span className="sensor-col-summary" style={{ ...headerLabelStyle, width: 56, textAlign: 'center' }}>{t('status.col_summary')}</span>
+            <span style={{ ...headerLabelStyle, width: 36, textAlign: 'right' }}>{t('status.col_count')}</span>
+            <span className="sensor-col-note" style={{ ...headerLabelStyle, flex: '1 1 120px', minWidth: 80 }}>{t('status.col_note')}</span>
             <span style={{ ...headerLabelStyle, width: 72, textAlign: 'right' }}>{t('status.col_last_fetch')}</span>
           </div>
         </div>

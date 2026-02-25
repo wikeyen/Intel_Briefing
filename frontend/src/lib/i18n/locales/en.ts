@@ -202,7 +202,10 @@ const en: TranslationDict = {
   'status.select_all': 'Select all',
   'status.select_none': 'None',
   'status.n_selected': '{count} selected',
+  'status.col_fetch': 'Fetch',
+  'status.col_summary': 'Summary',
   'status.col_count': '#',
+  'status.col_note': 'Note',
   'status.col_last_fetch': 'Last Fetch',
 
   // ── Status page — SensorCard ──────────────────────────────────────────────

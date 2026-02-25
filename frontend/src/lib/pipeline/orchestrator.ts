@@ -268,6 +268,7 @@ export async function runPipeline(
     for (const name of allEnabledSensors) {
       if (!filterSet.has(name)) {
         tracker.setFetchState(name, 'skipped', 0)
+        tracker.addEvent('info', 'fetch', 'Skipped — data from previous run', name)
       }
     }
   }
@@ -299,6 +300,7 @@ export async function runPipeline(
       }
     } catch (err) {
       console.warn('[pipeline] Failed to read fresh pipeline items:', err)
+      tracker.addEvent('warn', 'system', 'Incremental resume failed — fetching all sensors')
     }
   }
 
@@ -372,7 +374,11 @@ export async function runPipeline(
             resultMap.set(name, result)
             if (sensorResultSucceeded(result)) {
               tracker.setFetchState(name, 'ok', result.items.length)
-              tracker.addEvent('ok', 'fetch', `Fetched ${result.items.length} items`, name)
+              if (result.items.length === 0) {
+                tracker.addEvent('warn', 'fetch', 'Fetched 0 items', name)
+              } else {
+                tracker.addEvent('ok', 'fetch', `Fetched ${result.items.length} items`, name)
+              }
               failedSensors.delete(name)
               // Write to temp DB for crash-safe incremental recovery
               const runId = tracker.snapshot().run_id!
@@ -408,7 +414,7 @@ export async function runPipeline(
           const toRetry = retryableSensors()
           if (toRetry.length === 0) break
 
-          tracker.addEvent('info', 'retry', `Auto-retry ${attempt}/${MAX_AUTO_RETRIES} — ${toRetry.length} sensors`)
+          tracker.addEvent('info', 'retry', `Auto-retry ${attempt}/${MAX_AUTO_RETRIES} — ${toRetry.join(', ')}`)
           tracker.setRetryProgress(attempt, MAX_AUTO_RETRIES)
           for (const name of toRetry) {
             tracker.setFetchState(name, 'queued')
@@ -439,8 +445,9 @@ export async function runPipeline(
         }
       }
 
-      const okCount = [...resultMap.values()].filter(r => sensorResultSucceeded(r)).length
-      tracker.addEvent('info', 'fetch', `Fetch complete — ${okCount}/${registrySensorNames.length} succeeded`)
+      const freshOk = [...resultMap.values()].filter(r => sensorResultSucceeded(r) && !cachedSensorItems.has(r.sensor_name)).length
+      const failedCount = [...resultMap.values()].filter(r => !sensorResultSucceeded(r)).length
+      tracker.addEvent('info', 'fetch', `Fetch complete — ${freshOk} fetched, ${cachedSensorItems.size} cached, ${failedCount} failed`)
 
       report = await assembleReport([...resultMap.values()], config, { llmConfig, signal, sensorFilter })
 

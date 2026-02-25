@@ -133,38 +133,39 @@ export function SensorGrid({
         overflow: 'hidden',
       }}>
         {/* Toolbar + column labels */}
-        <div style={{
-          display: 'flex',
+        <div className="sensor-header" style={{
+          display: 'grid',
+          gridTemplateColumns: '6px minmax(100px, 160px) auto 44px 56px 36px 1fr auto',
           alignItems: 'center',
-          gap: '0.75rem',
+          gap: '0 0.5rem',
           padding: '0.5rem 1rem',
           borderBottom: '1px solid var(--border-soft)',
         }}>
-          {showToolbar && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <button type="button" onClick={onSelectAll} style={toolbarLinkStyle}>{t('status.select_all')}</button>
-              <span style={{ color: 'var(--border)', fontSize: '0.75rem' }}>/</span>
-              <button type="button" onClick={onSelectNone} style={toolbarLinkStyle}>{t('status.select_none')}</button>
-              {selectedCount > 0 && (
-                <span style={{
-                  fontFamily: 'ui-monospace, monospace',
-                  fontSize: '0.6875rem',
-                  color: 'var(--accent)',
-                  fontWeight: 600,
-                  marginLeft: '0.25rem',
-                }}>
-                  {t('status.n_selected', { count: String(selectedCount) })}
-                </span>
-              )}
-            </div>
-          )}
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <span className="sensor-col-fetch" style={{ ...headerLabelStyle, width: 44, textAlign: 'center' }}>{t('status.col_fetch')}</span>
-            <span className="sensor-col-summary" style={{ ...headerLabelStyle, width: 56, textAlign: 'center' }}>{t('status.col_summary')}</span>
-            <span style={{ ...headerLabelStyle, width: 36, textAlign: 'right' }}>{t('status.col_count')}</span>
-            <span className="sensor-col-note" style={{ ...headerLabelStyle, flex: '1 1 120px', minWidth: 80 }}>{t('status.col_note')}</span>
-            <span style={{ ...headerLabelStyle, width: 72, textAlign: 'right' }}>{t('status.col_last_fetch')}</span>
+          <div className="sensor-toolbar" style={{ gridColumn: '1 / 4', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {showToolbar && (
+              <>
+                <button type="button" onClick={onSelectAll} style={toolbarLinkStyle}>{t('status.select_all')}</button>
+                <span style={{ color: 'var(--border)', fontSize: '0.75rem' }}>/</span>
+                <button type="button" onClick={onSelectNone} style={toolbarLinkStyle}>{t('status.select_none')}</button>
+                {selectedCount > 0 && (
+                  <span style={{
+                    fontFamily: 'ui-monospace, monospace',
+                    fontSize: '0.6875rem',
+                    color: 'var(--accent)',
+                    fontWeight: 600,
+                    marginLeft: '0.25rem',
+                  }}>
+                    {t('status.n_selected', { count: String(selectedCount) })}
+                  </span>
+                )}
+              </>
+            )}
           </div>
+          <span className="sensor-col-fetch" style={{ ...headerLabelStyle, textAlign: 'center' }}>{t('status.col_fetch')}</span>
+          <span className="sensor-col-summary" style={{ ...headerLabelStyle, textAlign: 'center' }}>{t('status.col_summary')}</span>
+          <span style={{ ...headerLabelStyle, textAlign: 'right' }}>{t('status.col_count')}</span>
+          <span className="sensor-col-note" style={headerLabelStyle}>{t('status.col_note')}</span>
+          <span style={{ ...headerLabelStyle, textAlign: 'right' }}>{t('status.col_last_fetch')}</span>
         </div>
         {visibleSensors.map(sensor => {
           const live = liveSensors[sensor.sensorKey]

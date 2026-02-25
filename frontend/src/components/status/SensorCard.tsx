@@ -651,13 +651,13 @@ export const SensorCard = memo(function SensorCard(props: SensorCardProps) {
 /* ── Compact row variant for list layout ── */
 
 function rowContainerStyle(state: CardState, hovered: boolean): React.CSSProperties {
-  // Use explicit padding properties (never shorthand) to avoid React warnings
-  // when paddingLeft changes between states. A transparent left border keeps
-  // layout stable so dots don't shift when toggling selection.
+  // CSS Grid layout for even column distribution. A transparent left border
+  // keeps layout stable so dots don't shift when toggling selection.
   const base: React.CSSProperties = {
-    display: 'flex',
+    display: 'grid',
+    gridTemplateColumns: '6px minmax(100px, 160px) auto 44px 56px 36px 1fr auto',
     alignItems: 'center',
-    gap: '0.75rem',
+    gap: '0 0.5rem',
     paddingTop: '0.625rem',
     paddingRight: '1rem',
     paddingBottom: '0.625rem',
@@ -932,28 +932,26 @@ export const SensorRow = memo(function SensorRow(props: SensorCardProps) {
       onMouseLeave={(e) => { if (isClickable) Object.assign(e.currentTarget.style, { background: rowContainerStyle(state, false).background }) }}
     >
       {state === 'selected' ? (
-        <span style={{ width: DOT_SIZE, height: DOT_SIZE, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.5rem', color: 'var(--accent)', fontWeight: 700 }}>{'\u2713'}</span>
+        <span style={{ width: DOT_SIZE, height: DOT_SIZE, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.5rem', color: 'var(--accent)', fontWeight: 700 }}>{'\u2713'}</span>
       ) : (
         <Dot state={state} />
       )}
-      <span style={{ ...nameStyle, fontSize: '0.8125rem', minWidth: 120, maxWidth: 140, ...(state === 'selected' ? { color: 'var(--accent)' } : {}) }}>{label}</span>
-      <span style={categoryBadgeStyle}>{category}</span>
-      <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <span className="sensor-col-fetch" style={{ width: 44, display: 'flex', justifyContent: 'center' }}>
-          {props.isRunning && <StageIcon stage={props.liveSensor?.fetch} cached={props.liveSensor?.fetch_cached} />}
-        </span>
-        <span className="sensor-col-summary" style={{ width: 56, display: 'flex', justifyContent: 'center' }}>
-          {props.isRunning && <StageIcon stage={props.liveSensor?.summary} />}
-        </span>
-        <span style={{ width: 36, textAlign: 'right', display: 'flex', justifyContent: 'flex-end' }}>
-          <RowMetric state={state} props={props} t={t} />
-        </span>
-        <span className="sensor-col-note" style={{ flex: '1 1 120px', minWidth: 80, overflow: 'hidden' }}>
-          <RowNote state={state} props={props} t={t} />
-        </span>
-        <span style={{ width: 72, textAlign: 'right', display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
-          <RowActions state={state} props={props} t={t} />
-        </span>
+      <span style={{ ...nameStyle, fontSize: '0.8125rem', overflow: 'hidden', textOverflow: 'ellipsis', ...(state === 'selected' ? { color: 'var(--accent)' } : {}) }}>{label}</span>
+      <span className="sensor-category" style={categoryBadgeStyle}>{category}</span>
+      <span className="sensor-col-fetch" style={{ display: 'flex', justifyContent: 'center' }}>
+        {props.isRunning && <StageIcon stage={props.liveSensor?.fetch} cached={props.liveSensor?.fetch_cached} />}
+      </span>
+      <span className="sensor-col-summary" style={{ display: 'flex', justifyContent: 'center' }}>
+        {props.isRunning && <StageIcon stage={props.liveSensor?.summary} />}
+      </span>
+      <span style={{ textAlign: 'right', display: 'flex', justifyContent: 'flex-end' }}>
+        <RowMetric state={state} props={props} t={t} />
+      </span>
+      <span className="sensor-col-note" style={{ overflow: 'hidden', minWidth: 0 }}>
+        <RowNote state={state} props={props} t={t} />
+      </span>
+      <span style={{ textAlign: 'right', display: 'flex', justifyContent: 'flex-end' }}>
+        <RowActions state={state} props={props} t={t} />
       </span>
     </div>
   )

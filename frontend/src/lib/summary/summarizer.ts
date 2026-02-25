@@ -410,10 +410,10 @@ export async function generateOverallBriefing(
     let rawOverall: string
     if (onTokenOverall) {
       rawOverall = await chatCompletionStream(overallMessages, llmConfig, {
-        onToken: onTokenOverall, signal, timeoutMs: 300_000,
+        onToken: onTokenOverall, signal, timeoutMs: 600_000,
       }).fullText
     } else {
-      rawOverall = await chatCompletion(overallMessages, llmConfig, signal, 300_000)
+      rawOverall = await chatCompletion(overallMessages, llmConfig, signal, 600_000)
     }
     const overall = parseOverallJson(rawOverall)
     overall.sources = globalSources

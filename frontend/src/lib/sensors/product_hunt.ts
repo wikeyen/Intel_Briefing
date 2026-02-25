@@ -35,7 +35,7 @@ export async function fetchProductHunt(config: ConfigSettings, limit: number): P
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ query: buildQuery(limit) }),
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(30000),
     })
     if (!resp.ok) throw new Error(`HTTP ${resp.status} from Product Hunt`)
     const data = await resp.json() as Record<string, unknown>

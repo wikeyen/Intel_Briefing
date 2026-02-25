@@ -17,7 +17,7 @@ export async function fetchKrTrending(_config: ConfigSettings, limit: number): P
       param: { siteId: 1, platformId: 2 },
       timestamp: Date.now(),
     }),
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(30000),
   })
   if (!resp.ok) throw new Error(`HTTP ${resp.status} from 36Kr Trending`)
 

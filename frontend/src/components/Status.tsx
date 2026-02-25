@@ -296,7 +296,11 @@ export function Status() {
     if (isPaused) return 'paused'
     // Check phases in reverse pipeline order so the latest active phase wins
     const intelEvents = (pipelineStatus.events ?? []).filter(e => e.phase === 'intelligence')
-    if (intelEvents.some(e => e.level === 'info') && !intelEvents.some(e => e.level === 'ok' || e.level === 'error' || e.level === 'warn')) return 'intelligence'
+    const intelHasOk = intelEvents.some(e => e.level === 'ok')
+    const intelHasFailure = intelEvents.some(e => e.level === 'warn' || e.level === 'error')
+    // Stay on intelligence if it's running (info only) OR if it failed without succeeding
+    if (intelEvents.some(e => e.level === 'info') && !intelHasOk && !intelHasFailure) return 'intelligence'
+    if (intelHasFailure && !intelHasOk) return 'intelligence'
     if (pipelineStatus.overall_summary === 'running') return 'briefing'
     const anySummary = pipelineStatus.sensors.some(s => s.summary === 'running')
     if (anySummary) return 'summarizing'

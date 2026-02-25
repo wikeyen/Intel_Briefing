@@ -12,7 +12,7 @@ export async function fetchWeibo(_config: ConfigSettings, limit: number): Promis
         'Referer': 'https://weibo.com/',
         'Accept': 'application/json',
       },
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(30000),
     })
     if (!resp.ok) throw new Error(`HTTP ${resp.status} from Weibo`)
 

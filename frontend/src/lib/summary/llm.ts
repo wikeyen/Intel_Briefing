@@ -24,7 +24,7 @@ export interface StreamResult {
   fullText: Promise<string>
 }
 
-const DEFAULT_TIMEOUT_MS = 120_000
+const DEFAULT_TIMEOUT_MS = 180_000
 
 /** Build shared fetch options for both streaming and non-streaming requests. */
 function buildFetchOptions(

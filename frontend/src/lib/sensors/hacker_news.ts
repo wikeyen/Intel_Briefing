@@ -16,7 +16,7 @@ async function fetchComments(kids: number[]): Promise<string> {
   const settled = await Promise.allSettled(
     commentIds.map(async (id) => {
       const resp = await fetch(`${HN_BASE}/item/${id}.json`, {
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(20000),
       })
       if (!resp.ok) return null
       return (await resp.json()) as HnComment
@@ -38,7 +38,7 @@ async function fetchComments(kids: number[]): Promise<string> {
 async function fetchStory(storyId: number): Promise<IntelItem | null> {
   try {
     const itemResp = await fetch(`${HN_BASE}/item/${storyId}.json`, {
-      signal: AbortSignal.timeout(10000),
+      signal: AbortSignal.timeout(20000),
     })
     if (!itemResp.ok) return null
     const item = (await itemResp.json()) as Record<string, unknown>
@@ -69,7 +69,7 @@ async function fetchStory(storyId: number): Promise<IntelItem | null> {
 export async function fetchHackerNews(_config: ConfigSettings, limit: number): Promise<IntelItem[]> {
   try {
     const resp = await fetch(`${HN_BASE}/topstories.json`, {
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(30000),
     })
     if (!resp.ok) throw new Error(`HTTP ${resp.status} from Hacker News`)
     const storyIds = (await resp.json()) as number[]

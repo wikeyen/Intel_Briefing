@@ -63,7 +63,7 @@ async function scrapeCategoryPage(category: string): Promise<CWSExtension[]> {
       Accept: 'text/html,application/xhtml+xml',
       'Accept-Language': 'en-US,en;q=0.9',
     },
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(30000),
   })
   if (!resp.ok) return []
   const html = await resp.text()

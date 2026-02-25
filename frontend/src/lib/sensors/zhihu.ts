@@ -7,7 +7,7 @@ const ZHIHU_URL = 'https://api.zhihu.com/topstory/hot-list'
 export async function fetchZhihu(_config: ConfigSettings, limit: number): Promise<IntelItem[]> {
   try {
     const resp = await fetch(ZHIHU_URL, {
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(30000),
     })
     if (!resp.ok) throw new Error(`HTTP ${resp.status} from Zhihu`)
 

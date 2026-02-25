@@ -12,8 +12,8 @@ const DB_KEY = 'intel:config'
 export const GITHUB_API_URL = 'https://api.github.com/graphql'
 
 // Timeout constants (milliseconds)
-export const DEFAULT_TIMEOUT = 15_000
-export const RSS_FETCH_TIMEOUT = 10_000
+export const DEFAULT_TIMEOUT = 30_000
+export const RSS_FETCH_TIMEOUT = 20_000
 
 // Content limit constants
 export const CONTENT_TRUNCATE_LIMIT = 3000

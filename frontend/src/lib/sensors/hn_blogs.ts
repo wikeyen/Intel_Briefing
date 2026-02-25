@@ -22,7 +22,7 @@ interface BlogEntry { title: string; rss: string }
 
 async function fetchOpml(): Promise<BlogEntry[]> {
   try {
-    const resp = await fetch(OPML_URL, { signal: AbortSignal.timeout(15000), redirect: 'follow' })
+    const resp = await fetch(OPML_URL, { signal: AbortSignal.timeout(30000), redirect: 'follow' })
     if (!resp.ok) return []
     const content = await resp.text()
 
@@ -45,7 +45,7 @@ async function fetchOpml(): Promise<BlogEntry[]> {
 
 async function fetchRss(sourceTitle: string, rssUrl: string): Promise<IntelItem[]> {
   try {
-    const resp = await fetch(rssUrl, { signal: AbortSignal.timeout(10000), redirect: 'follow' })
+    const resp = await fetch(rssUrl, { signal: AbortSignal.timeout(20000), redirect: 'follow' })
     if (!resp.ok) return []
     const xml = await resp.text()
 

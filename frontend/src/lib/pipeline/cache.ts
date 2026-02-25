@@ -6,7 +6,7 @@ import type { IntelItem, IntelReport, PipelineStatus } from '../models'
 const REPORT_KEY = 'intel:latest'
 const STATUS_KEY = 'intel:pipeline_status'
 const REPORT_TTL_SECONDS = 48 * 60 * 60 // 48 hours
-const STATUS_TTL_SECONDS = 60 * 60 // 1 hour
+const STATUS_TTL_SECONDS = 24 * 60 * 60 // 24 hours
 
 /** Write an IntelReport to the database with a 48-hour TTL. */
 export async function writeReport(report: IntelReport): Promise<void> {

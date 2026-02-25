@@ -9,7 +9,7 @@ const WSCN_URL =
 export async function fetchWallStreetCN(_config: ConfigSettings, limit: number): Promise<IntelItem[]> {
   try {
     const resp = await fetch(WSCN_URL, {
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(30000),
       redirect: 'follow',
     })
     if (!resp.ok) throw new Error(`HTTP ${resp.status} from WallStreetCN`)

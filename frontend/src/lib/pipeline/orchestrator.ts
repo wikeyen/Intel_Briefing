@@ -711,6 +711,18 @@ export async function runPipeline(
       tracker.addEvent('info', 'intelligence', 'Intelligence analysis started')
       try {
         const intelligence = await runIntelligenceAnalysis(intelligenceReport, llmConfig, signal, config.summary_language)
+
+        // Log specific warnings for each analysis component that returned no results
+        if (intelligence.trend === null) {
+          tracker.addEvent('warn', 'intelligence', 'Trend analysis returned no results')
+        }
+        if (intelligence.topics === null) {
+          tracker.addEvent('warn', 'intelligence', 'Topic analysis returned no results')
+        }
+        if (intelligence.accounts === null) {
+          tracker.addEvent('warn', 'intelligence', 'Account analysis returned no results')
+        }
+
         const hasData = intelligence.trend !== null || intelligence.topics !== null || intelligence.accounts !== null
         if (hasData) {
           await writeIntelligence(intelligence)

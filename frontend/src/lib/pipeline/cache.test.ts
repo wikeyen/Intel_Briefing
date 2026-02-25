@@ -90,7 +90,7 @@ describe('isStale', () => {
 })
 
 describe('writePipelineStatus', () => {
-  it('writes status to db with 1h TTL', async () => {
+  it('writes status to db with 24h TTL', async () => {
     const status: PipelineStatus = {
       running: true,
       cancelled: false,
@@ -112,7 +112,7 @@ describe('writePipelineStatus', () => {
     expect(mockKvSet).toHaveBeenCalledWith(
       'intel:pipeline_status',
       status,
-      60 * 60,
+      24 * 60 * 60,
     )
   })
 })

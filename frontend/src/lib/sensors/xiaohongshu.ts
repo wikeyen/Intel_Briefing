@@ -17,7 +17,7 @@ export async function fetchXiaohongshu(_config: ConfigSettings, limit: number): 
   try {
     const resp = await fetch(XHS_URL, {
       headers: XHS_HEADERS,
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(30000),
     })
     if (!resp.ok) throw new Error(`HTTP ${resp.status} from Xiaohongshu`)
 

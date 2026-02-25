@@ -6,7 +6,7 @@ import { normalizeRssFeeds } from '../models'
 import { SensorConfigError } from './errors'
 import { stripHtml, md5Short } from './utils'
 
-const FEED_FETCH_TIMEOUT = 10_000
+const FEED_FETCH_TIMEOUT = 20_000
 const SCRAPE_CONCURRENCY = 5
 
 interface RawItem {

@@ -13,7 +13,7 @@ const HEADERS = {
 export async function fetch36kr(_config: ConfigSettings, limit: number): Promise<IntelItem[]> {
   const resp = await fetch(KR_URL, {
     headers: HEADERS,
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(30000),
     redirect: 'follow',
   })
   if (!resp.ok) throw new Error(`HTTP ${resp.status} from 36Kr`)

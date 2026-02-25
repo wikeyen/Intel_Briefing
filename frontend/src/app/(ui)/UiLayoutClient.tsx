@@ -33,7 +33,7 @@ const PAGE_DESC_KEYS: Record<string, string> = {
 
 function UiShell({ children, initialPinned }: { children: React.ReactNode; initialPinned?: boolean }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [sidebarPinned, setSidebarPinned] = useState(initialPinned ?? true)
+  const [sidebarPinned, setSidebarPinned] = useState(initialPinned ?? false)
   const [sidebarPeeking, setSidebarPeeking] = useState(false)
   const peekTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pathname = usePathname()

@@ -38,8 +38,8 @@ function sentimentColor(sentiment?: string): string {
 
 /** Map weight (0-1) to a font size between min and max rem. Wider range for clearer hierarchy. */
 function weightToSize(weight: number): string {
-  const MIN = 0.55
-  const MAX = 1.5
+  const MIN = 0.5
+  const MAX = 1.15
   const clamped = Math.max(0, Math.min(1, weight))
   return `${MIN + clamped * (MAX - MIN)}rem`
 }
@@ -65,8 +65,8 @@ export function TagCloud({ tags, maxTags = 30, style }: TagCloudProps) {
       style={{
         display: 'flex',
         flexWrap: 'wrap',
-        gap: '0.3rem 0.4rem',
-        lineHeight: 1.4,
+        gap: '0.2rem 0.35rem',
+        lineHeight: 1.3,
         ...style,
       }}
     >
@@ -100,7 +100,7 @@ function TagPill({ tag }: { tag: TagCloudTag }) {
         opacity,
         background: restBg,
         borderRadius: hasPill ? 9999 : 4,
-        padding: hasPill ? '0.1rem 0.55rem' : '0.05rem 0.15rem',
+        padding: hasPill ? '0.05rem 0.4rem' : '0.025rem 0.1rem',
         cursor: 'pointer',
         transition: 'filter 150ms ease, background 150ms ease, opacity 150ms ease',
         whiteSpace: 'nowrap',

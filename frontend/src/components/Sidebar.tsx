@@ -335,12 +335,12 @@ export function Sidebar({ onNavigate, collapsed, peeking, pinned, onPinToggle }:
               ...(isJobRunning ? { animation: 'pulseDot 1.6s ease-in-out infinite' } : {}),
             }}
           >
-            <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
-              <rect x="7" y="20" width="4" height="5" rx="1" fill="currentColor" />
-              <rect x="13" y="15" width="4" height="10" rx="1" fill="currentColor" />
-              <rect x="19" y="10" width="4" height="15" rx="1" fill="currentColor" />
-              <rect x="25" y="7" width="4" height="18" rx="1" fill="currentColor" opacity="0.5" />
-            </svg>
+            <span style={{
+              fontSize: '0.8125rem',
+              fontWeight: 700,
+              letterSpacing: '0.08em',
+              fontFamily: 'ui-monospace, monospace',
+            }}>IB</span>
           </div>
         ) : (
           /* Expanded brand: full title, status, stepper, pin button */

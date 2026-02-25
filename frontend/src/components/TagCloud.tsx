@@ -11,6 +11,7 @@ import { useMemo } from 'react'
 export interface TagCloudTag {
   text: string
   weight: number  // 0-1
+  translated?: string  // translation tooltip text
   sentiment?: 'positive' | 'negative' | 'neutral' | 'mixed'
 }
 
@@ -103,6 +104,7 @@ function TagPill({ tag }: { tag: TagCloudTag }) {
 
   return (
     <span
+      title={tag.translated && tag.translated !== tag.text ? tag.translated : undefined}
       style={{
         display: 'inline-block',
         fontSize,

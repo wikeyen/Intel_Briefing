@@ -253,6 +253,7 @@ export interface OllamaModelInfo {
 export interface IntelTag {
   text: string
   weight: number
+  translated?: string  // English translation when text is non-English
   sentiment?: 'positive' | 'negative' | 'neutral' | 'mixed'
 }
 

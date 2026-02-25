@@ -156,6 +156,9 @@ describe('fetchXPosts (twitter-scraper)', () => {
     vi.doMock('apify-client', () => ({
       ApifyClient: vi.fn(),
     }))
+    vi.doMock('../pipeline/cache', () => ({
+      readReport: vi.fn().mockResolvedValue(null),
+    }))
     mockExecFileNotFound()
     mockDelay()
     const mod = await import('./x_posts')
@@ -329,6 +332,9 @@ describe('fetchXPosts (OpenClaw cookies)', () => {
     vi.doMock('apify-client', () => ({
       ApifyClient: vi.fn(),
     }))
+    vi.doMock('../pipeline/cache', () => ({
+      readReport: vi.fn().mockResolvedValue(null),
+    }))
     mockDelay()
     // Mock execFile to return valid cookies
     vi.doMock('child_process', () => ({
@@ -495,6 +501,9 @@ describe('fetchXPosts (provider fallback)', () => {
     vi.doMock('apify-client', () => ({
       ApifyClient: vi.fn(),
     }))
+    vi.doMock('../pipeline/cache', () => ({
+      readReport: vi.fn().mockResolvedValue(null),
+    }))
     mockExecFileNotFound()
     mockDelay()
 
@@ -527,6 +536,9 @@ describe('fetchXPosts (provider fallback)', () => {
         }),
       })),
     }))
+    vi.doMock('../pipeline/cache', () => ({
+      readReport: vi.fn().mockResolvedValue(null),
+    }))
     mockExecFileNotFound()
     mockDelay()
 
@@ -554,6 +566,9 @@ describe('fetchXPosts (provider fallback)', () => {
     }))
     vi.doMock('apify-client', () => ({
       ApifyClient: vi.fn(),
+    }))
+    vi.doMock('../pipeline/cache', () => ({
+      readReport: vi.fn().mockResolvedValue(null),
     }))
     mockExecFileNotFound()
     mockDelay()
@@ -629,8 +644,8 @@ describe('fetchXPosts — resume window', () => {
       stale: false,
       sources_ok: ['x'],
       sources_failed: [],
-      // Inject items under the 'x' key that the sensor looks up
-      items: { x: xItems },
+      // Items are stored under category key 'social', filtered by source at lookup time
+      items: { social: xItems },
       sources_fetched_at: { x: fetchedAtIso },
     }
   }

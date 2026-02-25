@@ -203,7 +203,7 @@ export async function fetchSocialAccounts(
       const report = await readReport()
       const fetchedAt = report?.sources_fetched_at?.social_accounts
       if (report && isWithinResumeWindow(fetchedAt, windowHours)) {
-        cachedItems = report.items.social_accounts ?? []
+        cachedItems = (report.items.social ?? []).filter(item => item.source === 'bluesky' || item.source === 'mastodon')
         skipAccounts = buildSkipSet(cachedItems)
         if (skipAccounts.size > 0) {
           console.log(`[social_accounts] Resume: reusing ${skipAccounts.size} cached accounts (window ${windowHours}h)`)

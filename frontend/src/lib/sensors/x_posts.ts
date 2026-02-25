@@ -477,7 +477,7 @@ export async function fetchXPosts(
       const report = await readReport()
       const fetchedAt = report?.sources_fetched_at?.x
       if (report && isWithinResumeWindow(fetchedAt, windowHours)) {
-        cachedItems = report.items.x ?? []
+        cachedItems = (report.items.social ?? []).filter(item => item.source === 'x')
         const cachedHandles = new Set(cachedItems.map(item => (item.handle ?? '').toLowerCase()))
         handlesToFetch = handles.filter(h => !cachedHandles.has(h.replace(/^@/, '').toLowerCase()))
         if (cachedHandles.size > 0) {

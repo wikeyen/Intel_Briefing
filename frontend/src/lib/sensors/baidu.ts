@@ -16,14 +16,15 @@ export async function fetchBaidu(_config: ConfigSettings, limit: number): Promis
   if (!resp.ok) throw new Error(`HTTP ${resp.status} from Baidu Hot Search`)
 
   const body = await resp.json() as Record<string, unknown>
-  if (!body.success) return []
+  if (!body.success) throw new Error('Baidu API returned success: false (possible geo-restriction or rate limit)')
 
   const data = body.data as Record<string, unknown> | undefined
   const cards = (data?.cards as Array<Record<string, unknown>>) ?? []
-  if (cards.length === 0) return []
+  if (cards.length === 0) throw new Error('Baidu API returned no cards — response structure may have changed')
 
   // Baidu nests the actual content list under cards[0].content
   const contentArr = (cards[0].content as Array<Record<string, unknown>>) ?? []
+  if (contentArr.length === 0) throw new Error('Baidu API returned empty content — no trending items available')
 
   const items: IntelItem[] = []
   for (const entry of contentArr.slice(0, limit)) {

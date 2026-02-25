@@ -617,22 +617,19 @@ describe('BaiduSensor', () => {
     await expect(fetchBaidu(config, 5)).rejects.toThrow('HTTP 500')
   })
 
-  it('returns empty array when success is false', async () => {
+  it('throws when success is false', async () => {
     mockFetchJson({ success: false, data: {} })
-    const items = await fetchBaidu(config, 5)
-    expect(items).toHaveLength(0)
+    await expect(fetchBaidu(config, 5)).rejects.toThrow('success: false')
   })
 
-  it('returns empty array when cards is empty', async () => {
+  it('throws when cards is empty', async () => {
     mockFetchJson({ success: true, data: { cards: [] } })
-    const items = await fetchBaidu(config, 5)
-    expect(items).toHaveLength(0)
+    await expect(fetchBaidu(config, 5)).rejects.toThrow('no cards')
   })
 
-  it('returns empty array when content is missing from first card', async () => {
+  it('throws when content is missing from first card', async () => {
     mockFetchJson({ success: true, data: { cards: [{}] } })
-    const items = await fetchBaidu(config, 5)
-    expect(items).toHaveLength(0)
+    await expect(fetchBaidu(config, 5)).rejects.toThrow('empty content')
   })
 
   it('respects the limit parameter', async () => {

@@ -141,6 +141,16 @@ async function setAccountCache(handle: string, items: IntelItem[]): Promise<void
   )
 }
 
+/** Human-readable time-since string from an ISO timestamp. */
+function timeSince(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(ms / 60_000)
+  if (mins < 60) return `${mins}m`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ${mins % 60}m`
+  return `${Math.floor(hrs / 24)}d`
+}
+
 // ── Strategy: twitter-scraper (authenticated) ────────────────────────────────
 
 async function fetchViaScraper(
@@ -497,12 +507,14 @@ export async function fetchXPosts(
   const cachedItems: IntelItem[] = []
   const handlesToFetch: string[] = []
 
+  onProgress?.(`Checking cache for ${handles.length} accounts…`, 0)
   for (const handle of handles) {
     try {
       const cached = await getAccountCache(handle)
       if (cached) {
         cachedItems.push(...cached.items)
-        console.log(`[x] Cache hit: ${handle} (fetched ${cached.fetched_at})`)
+        const ago = timeSince(cached.fetched_at)
+        onProgress?.(`${handle} — cached (${ago} ago)`, cachedItems.length)
         continue
       }
     } catch {
@@ -511,11 +523,15 @@ export async function fetchXPosts(
     handlesToFetch.push(handle)
   }
 
-  if (handlesToFetch.length < handles.length) {
-    onProgress?.(`${handles.length - handlesToFetch.length} accounts cached, fetching ${handlesToFetch.length}`, cachedItems.length)
+  const cachedCount = handles.length - handlesToFetch.length
+  if (handlesToFetch.length === 0) {
+    onProgress?.(`All ${handles.length} accounts served from cache (${cachedItems.length} items)`, cachedItems.length)
+    return cachedItems.slice(0, limit)
   }
 
-  if (handlesToFetch.length === 0) return cachedItems.slice(0, limit)
+  if (cachedCount > 0) {
+    onProgress?.(`${cachedCount}/${handles.length} cached — fetching ${handlesToFetch.length} remaining`, cachedItems.length)
+  }
 
   const lookbackHours = config.sensor_lookback_hours?.x ?? 48
   const lookbackMs = lookbackHours * 60 * 60 * 1000

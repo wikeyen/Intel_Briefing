@@ -36,13 +36,16 @@ function sentimentColor(sentiment?: string): string {
   return SENTIMENT_COLORS[sentiment ?? 'neutral'] ?? SENTIMENT_COLORS.neutral
 }
 
-/** Map weight (0-1) to a font size between min and max rem. */
+/** Map weight (0-1) to a font size between min and max rem. Wider range for clearer hierarchy. */
 function weightToSize(weight: number): string {
-  const MIN = 0.65
-  const MAX = 1.3
+  const MIN = 0.55
+  const MAX = 1.5
   const clamped = Math.max(0, Math.min(1, weight))
   return `${MIN + clamped * (MAX - MIN)}rem`
 }
+
+/** Threshold above which tags get a pill background. Below this, plain text only. */
+const PILL_THRESHOLD = 0.5
 
 // ---------------------------------------------------------------------------
 // Component
@@ -81,28 +84,36 @@ export function TagCloud({ tags, maxTags = 30, style }: TagCloudProps) {
 function TagPill({ tag }: { tag: TagCloudTag }) {
   const color = sentimentColor(tag.sentiment)
   const fontSize = weightToSize(tag.weight)
+  const hasPill = tag.weight >= PILL_THRESHOLD
+  const opacity = tag.weight < 0.3 ? 0.6 : tag.weight < PILL_THRESHOLD ? 0.8 : 1
+
+  const restBg = hasPill ? `color-mix(in srgb, ${color} 8%, transparent)` : 'transparent'
+  const hoverBg = hasPill ? `color-mix(in srgb, ${color} 15%, transparent)` : `color-mix(in srgb, ${color} 8%, transparent)`
 
   return (
     <span
       style={{
         display: 'inline-block',
         fontSize,
-        fontWeight: tag.weight > 0.6 ? 600 : 400,
+        fontWeight: tag.weight >= 0.7 ? 600 : tag.weight >= 0.4 ? 500 : 400,
         color,
-        background: `color-mix(in srgb, ${color} 8%, transparent)`,
-        borderRadius: 9999,
-        padding: '0.1rem 0.5rem',
+        opacity,
+        background: restBg,
+        borderRadius: hasPill ? 9999 : 4,
+        padding: hasPill ? '0.1rem 0.55rem' : '0.05rem 0.15rem',
         cursor: 'pointer',
-        transition: 'filter 150ms ease, background 150ms ease',
+        transition: 'filter 150ms ease, background 150ms ease, opacity 150ms ease',
         whiteSpace: 'nowrap',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.filter = 'brightness(1.2)'
-        e.currentTarget.style.background = `color-mix(in srgb, ${color} 15%, transparent)`
+        e.currentTarget.style.filter = 'brightness(1.15)'
+        e.currentTarget.style.background = hoverBg
+        e.currentTarget.style.opacity = '1'
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.filter = 'brightness(1)'
-        e.currentTarget.style.background = `color-mix(in srgb, ${color} 8%, transparent)`
+        e.currentTarget.style.background = restBg
+        e.currentTarget.style.opacity = String(opacity)
       }}
     >
       {tag.text}

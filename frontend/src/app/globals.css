@@ -439,69 +439,67 @@ input[type="range"]::-moz-range-thumb {
   padding-bottom: 2.5rem;
 }
 
-/* ─── Desktop Sidebar Collapse ─────────────────────────────────────────── */
+/* ─── Desktop Sidebar Collapse / Peek ──────────────────────────────────── */
 
-/* Edge toggle — fixed position, always visible on desktop, on top of everything */
-/* Shape: vertical hill / wave — smooth bezier bump, flat left edge flush with sidebar */
-.sidebar-edge-toggle {
-  display: none;
-  position: fixed;
-  left: 240px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 100;
-  width: 20px;
-  height: 56px;
-  background: var(--sb);
-  border: none;
-  color: var(--sb-faint);
-  cursor: pointer;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  transition: left 200ms ease, color 150ms ease, background 150ms ease,
-              filter 150ms ease;
-  clip-path: path('M 0 0 C 0 10, 20 18, 20 28 C 20 38, 0 46, 0 56 Z');
-  filter: drop-shadow(1px 0 2px rgba(0, 0, 0, 0.15));
-}
-.sidebar-edge-toggle:hover {
-  color: var(--sb-ink);
-  background: var(--sb-surface, var(--sb));
-  filter: drop-shadow(2px 0 4px rgba(0, 0, 0, 0.25));
-}
-
-/* Show edge toggle on desktop only */
+/* Desktop sidebar widths */
 @media (min-width: 769px) {
-  .sidebar-edge-toggle {
+  .sidebar-nav {
+    width: 240px;
+    transition: width 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .main-content {
+    margin-left: 0;
+    transition: margin-left 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Collapsed: icon-only strip */
+  .sidebar-unpinned .sidebar-nav {
+    width: 56px;
+    overflow: hidden;
+  }
+
+  /* Peeking: overlay on hover — no push, just overlay */
+  .sidebar-unpinned .sidebar-nav.sidebar-peeking {
+    width: 240px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 200;
+    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.25);
+  }
+
+  /* Content area slides when sidebar collapses */
+  .sidebar-unpinned .main-content {
+    margin-left: 56px;
+  }
+}
+
+/* Tablet: narrower sidebar */
+@media (min-width: 769px) and (max-width: 1023px) {
+  .sidebar-nav {
+    width: 180px;
+  }
+  .sidebar-unpinned .sidebar-nav.sidebar-peeking {
+    width: 180px;
+  }
+}
+
+/* Pin button — desktop only */
+.sidebar-pin-btn {
+  display: none;
+}
+@media (min-width: 769px) {
+  .sidebar-pin-btn {
     display: flex;
   }
-  /* When collapsed: hide sidebar, slide toggle to left edge */
-  .sidebar-collapsed .sidebar-nav {
-    width: 0 !important;
-    overflow: hidden;
-    border-right: none !important;
-    padding: 0 !important;
-    opacity: 0;
-    pointer-events: none;
-  }
-  .sidebar-collapsed .sidebar-edge-toggle {
-    left: 0;
-  }
 }
 
-/* Tablet: match narrower sidebar width */
-@media (min-width: 769px) and (max-width: 1023px) {
-  .sidebar-edge-toggle {
-    left: 180px;
-  }
-  .sidebar-collapsed .sidebar-edge-toggle {
-    left: 0;
-  }
-}
+/* Collapsed nav item tooltip — CSS title attribute handled natively */
 
 /* Mobile: never show desktop collapse controls */
 @media (max-width: 768px) {
-  .sidebar-edge-toggle {
+  .sidebar-pin-btn {
     display: none !important;
   }
 }

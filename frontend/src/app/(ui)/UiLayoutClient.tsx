@@ -1,5 +1,5 @@
 // ABOUTME: Client-side UI shell — sidebar, toast, i18n provider with locale from cookie.
-// ABOUTME: Receives initialLocale from server layout to prevent language flash on refresh.
+// ABOUTME: Manages sidebar pin/collapse/peek states; receives initialLocale from server layout to prevent language flash.
 'use client'
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
@@ -31,9 +31,11 @@ const PAGE_DESC_KEYS: Record<string, string> = {
   '/data': 'page.data.desc',
 }
 
-function UiShell({ children, initialCollapsed }: { children: React.ReactNode; initialCollapsed?: boolean }) {
+function UiShell({ children, initialPinned }: { children: React.ReactNode; initialPinned?: boolean }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(initialCollapsed ?? false)
+  const [sidebarPinned, setSidebarPinned] = useState(initialPinned ?? true)
+  const [sidebarPeeking, setSidebarPeeking] = useState(false)
+  const peekTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pathname = usePathname()
   const { t } = useTranslation()
 
@@ -44,23 +46,55 @@ function UiShell({ children, initialCollapsed }: { children: React.ReactNode; in
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setSidebarOpen(false) }, [pathname])
 
-  const toggleCollapsed = useCallback(() => {
-    setSidebarCollapsed(prev => {
+  // Clear peek timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (peekTimeoutRef.current) clearTimeout(peekTimeoutRef.current)
+    }
+  }, [])
+
+  const togglePinned = useCallback(() => {
+    setSidebarPinned(prev => {
       const next = !prev
-      try { localStorage.setItem('ib:sidebar:collapsed', next ? '1' : '0') } catch {}
-      try { document.cookie = `intel-sidebar=${next ? '1' : '0'}; path=/; max-age=31536000; SameSite=Lax` } catch {}
+      // Persist: cookie stores '1' for collapsed (unpinned), '0' for pinned
+      try { localStorage.setItem('ib:sidebar:pinned', next ? '1' : '0') } catch {}
+      try { document.cookie = `intel-sidebar=${next ? '0' : '1'}; path=/; max-age=31536000; SameSite=Lax` } catch {}
       return next
     })
+    // When pinning open, clear peek state
+    setSidebarPeeking(false)
   }, [])
+
+  // Hover handlers for peek behavior (collapsed sidebar only)
+  const handleSidebarMouseEnter = useCallback(() => {
+    if (sidebarPinned) return
+    if (peekTimeoutRef.current) {
+      clearTimeout(peekTimeoutRef.current)
+      peekTimeoutRef.current = null
+    }
+    setSidebarPeeking(true)
+  }, [sidebarPinned])
+
+  const handleSidebarMouseLeave = useCallback(() => {
+    if (sidebarPinned) return
+    peekTimeoutRef.current = setTimeout(() => {
+      setSidebarPeeking(false)
+      peekTimeoutRef.current = null
+    }, 200)
+  }, [sidebarPinned])
 
   const titleKey = PAGE_TITLE_KEYS[pathname]
   const descKey = PAGE_DESC_KEYS[pathname]
   const pageTitle = titleKey ? t(titleKey) : t('app.title')
   const pageDesc = descKey ? t(descKey) : ''
 
+  // Determine if sidebar should render in collapsed mode
+  // Collapsed visually when unpinned and NOT peeking; never collapsed on mobile (sidebarOpen)
+  const sidebarCollapsedVisual = !sidebarPinned && !sidebarPeeking && !sidebarOpen
+
   return (
     <div
-      className={`${sidebarOpen ? 'sidebar-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}
+      className={`${sidebarOpen ? 'sidebar-open' : ''} ${!sidebarPinned ? 'sidebar-unpinned' : ''}`}
       style={{ display: 'flex', flex: 1, height: '100dvh', overflow: 'hidden', background: 'var(--canvas)' }}
     >
       {/* Mobile top bar — tap to scroll to top, hamburger to toggle menu */}
@@ -106,21 +140,18 @@ function UiShell({ children, initialCollapsed }: { children: React.ReactNode; in
       {/* Backdrop — visible only on mobile when sidebar is open */}
       <div className="sidebar-backdrop" onClick={closeSidebar} />
 
-      <Sidebar onNavigate={closeSidebar} />
-
-      {/* Sidebar edge toggle — lives outside sidebar so it's never clipped by opacity/overflow */}
-      <button
-        className="sidebar-edge-toggle"
-        onClick={toggleCollapsed}
-        aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      <div
+        onMouseEnter={handleSidebarMouseEnter}
+        onMouseLeave={handleSidebarMouseLeave}
       >
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          {sidebarCollapsed
-            ? <polyline points="4.5,2 8.5,6 4.5,10" />
-            : <polyline points="7.5,2 3.5,6 7.5,10" />
-          }
-        </svg>
-      </button>
+        <Sidebar
+          onNavigate={closeSidebar}
+          collapsed={sidebarCollapsedVisual}
+          peeking={sidebarPeeking}
+          pinned={sidebarPinned}
+          onPinToggle={togglePinned}
+        />
+      </div>
 
       <main ref={mainRef} className="main-content" style={{
         flex: 1,
@@ -140,7 +171,7 @@ export function UiLayoutClient({ children, initialLocale, initialCollapsed }: { 
       {(showToast) => (
         <ToastContext.Provider value={showToast}>
           <I18nProvider initialLocale={initialLocale}>
-            <UiShell initialCollapsed={initialCollapsed}>{children}</UiShell>
+            <UiShell initialPinned={initialCollapsed === undefined ? undefined : !initialCollapsed}>{children}</UiShell>
           </I18nProvider>
         </ToastContext.Provider>
       )}

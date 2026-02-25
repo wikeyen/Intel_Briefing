@@ -1,15 +1,35 @@
 // ABOUTME: Sidebar navigation component for Intel Briefing.
-// ABOUTME: Uses Next.js Link and usePathname for client-side routing; mini phase stepper and language selector.
+// ABOUTME: Uses Next.js Link and usePathname for client-side routing; mini phase stepper, icons, and collapse/pin support.
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect, useMemo, type ReactNode } from 'react'
+import {
+  LayoutDashboard,
+  Activity,
+  Rss,
+  Database,
+  Workflow,
+  Sparkles,
+  KeyRound,
+  Globe,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from 'lucide-react'
 import { api } from '@/api/client'
 import type { HealthResponse, PipelineStatus, SummaryProgress } from '@/api/client'
 import { usePolling } from '@/lib/hooks/usePolling'
 import { useTranslation, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from '@/lib/i18n'
 import { deriveStepStatuses, MAIN_STEPS, STEP_COLORS } from './status/PhaseStepper'
 import type { StepStatus } from './status/PhaseStepper'
+
+/** Icon mapping for config nav items by href. */
+const CONFIG_ICON_MAP: Record<string, React.ComponentType<{ size?: number; strokeWidth?: number }>> = {
+  '/sources': Database,
+  '/pipeline': Workflow,
+  '/ai': Sparkles,
+  '/connections': KeyRound,
+}
 
 /** Nav item config keys for i18n. */
 const CONFIG_NAV: { href: string; labelKey: string }[] = [
@@ -19,19 +39,28 @@ const CONFIG_NAV: { href: string; labelKey: string }[] = [
   { href: '/connections', labelKey: 'nav.credentials' },
 ]
 
-function NavLink({ href, active, onClick, children }: { href: string; active: boolean; onClick?: () => void; children: ReactNode }) {
+function NavLink({ href, active, onClick, collapsed, title, children }: {
+  href: string
+  active: boolean
+  onClick?: () => void
+  collapsed?: boolean
+  title?: string
+  children: ReactNode
+}) {
   return (
     <Link
       href={href}
       onClick={onClick}
+      title={collapsed ? title : undefined}
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: '0.75rem',
-        padding: '0.5rem 1.75rem',
+        padding: collapsed ? '0.5rem 0' : '0.5rem 1.75rem',
+        justifyContent: collapsed ? 'center' : 'flex-start',
         minHeight: 44,
         width: '100%',
-        borderLeft: active ? '2px solid var(--sb-accent)' : '2px solid transparent',
+        borderLeft: collapsed ? '2px solid transparent' : active ? '2px solid var(--sb-accent)' : '2px solid transparent',
         color: active ? 'var(--sb-ink)' : 'var(--sb-muted)',
         fontSize: '0.875rem',
         fontWeight: active ? 500 : 400,
@@ -44,7 +73,8 @@ function NavLink({ href, active, onClick, children }: { href: string; active: bo
   )
 }
 
-function SideLabel({ children }: { children: ReactNode }) {
+function SideLabel({ children, collapsed }: { children: ReactNode; collapsed?: boolean }) {
+  if (collapsed) return null
   return (
     <div className="sidebar-label" style={{
       padding: '0 1.75rem 0.375rem',
@@ -59,8 +89,17 @@ function SideLabel({ children }: { children: ReactNode }) {
   )
 }
 
-function SideDivider() {
-  return <div className="sidebar-divider" style={{ height: 1, background: 'var(--sb-border)', margin: '0.625rem 1.75rem 0.875rem' }} />
+function SideDivider({ collapsed }: { collapsed?: boolean }) {
+  return (
+    <div
+      className="sidebar-divider"
+      style={{
+        height: 1,
+        background: 'var(--sb-border)',
+        margin: collapsed ? '0.625rem 0.75rem 0.875rem' : '0.625rem 1.75rem 0.875rem',
+      }}
+    />
+  )
 }
 
 
@@ -180,9 +219,13 @@ function MiniStepper({ pipelineStatus, t }: { pipelineStatus: PipelineStatus | n
 
 interface Props {
   onNavigate?: () => void
+  collapsed?: boolean
+  peeking?: boolean
+  pinned?: boolean
+  onPinToggle?: () => void
 }
 
-export function Sidebar({ onNavigate }: Props) {
+export function Sidebar({ onNavigate, collapsed, peeking, pinned, onPinToggle }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const { t, locale, setLocale } = useTranslation()
@@ -241,9 +284,10 @@ export function Sidebar({ onNavigate }: Props) {
   const statusWord = health ? t('health.' + health.status) : t('sidebar.loading')
   const statusTimestamp = health?.last_fetch ? health.last_fetch.slice(0, 16).replace('T', ' ') : null
 
+  const PinIcon = pinned ? PanelLeftClose : PanelLeftOpen
+
   return (
-    <nav className="sidebar-nav" style={{
-      width: 240,
+    <nav className={`sidebar-nav${peeking ? ' sidebar-peeking' : ''}`} style={{
       background: 'var(--sb)',
       display: 'flex',
       flexDirection: 'column',
@@ -253,57 +297,108 @@ export function Sidebar({ onNavigate }: Props) {
       borderRight: '1px solid var(--sb-border)',
     }}>
       {/* Brand — status row links to /status */}
-      <div className="sidebar-brand" style={{ padding: '2rem 1.75rem 1.5rem' }}>
-        <div style={{
-          fontSize: '0.625rem',
-          fontWeight: 700,
-          letterSpacing: '0.16em',
-          textTransform: 'uppercase',
-          color: 'var(--sb-ink)',
-          marginBottom: '0.5rem',
-        }}>
-          {t('app.title')}
-        </div>
-        <div
-          role="link"
-          tabIndex={0}
-          onClick={() => { router.push('/status'); onNavigate?.() }}
-          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { router.push('/status'); onNavigate?.() } }}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.375rem',
-            cursor: 'pointer',
-            fontSize: '0.5625rem',
-            fontFamily: 'ui-monospace, monospace',
-            letterSpacing: '0.02em',
-          }}
-        >
-          <span style={{
-            color: statusFg,
-            fontWeight: 600,
-            transition: 'color 300ms',
-          }}>
-            {statusWord}
-          </span>
-          {statusTimestamp && (
-            <span style={{ color: 'var(--sb-muted)' }}>
-              {statusTimestamp}
+      <div className="sidebar-brand" style={{ padding: collapsed ? '1.25rem 0.75rem 1rem' : '2rem 1.75rem 1.5rem' }}>
+        {collapsed ? (
+          /* Collapsed brand: "IB" text mark + health dot */
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
+            <span style={{
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              letterSpacing: '0.08em',
+              color: 'var(--sb-ink)',
+            }}>
+              IB
             </span>
-          )}
-        </div>
-        {/* Mini phase stepper — visible only when pipeline is running */}
-        {showStepper && <MiniStepper pipelineStatus={pipelineStatus} t={t} />}
+            <span style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: statusFg,
+              flexShrink: 0,
+              transition: 'background 300ms',
+            }} />
+          </div>
+        ) : (
+          /* Expanded brand: full title, status, stepper, pin button */
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{
+                fontSize: '0.625rem',
+                fontWeight: 700,
+                letterSpacing: '0.16em',
+                textTransform: 'uppercase',
+                color: 'var(--sb-ink)',
+                marginBottom: '0.5rem',
+              }}>
+                {t('app.title')}
+              </div>
+              {onPinToggle && (
+                <button
+                  className="sidebar-pin-btn"
+                  onClick={onPinToggle}
+                  aria-label={pinned ? 'Collapse sidebar' : 'Pin sidebar open'}
+                  style={{
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 28,
+                    height: 28,
+                    borderRadius: 6,
+                    color: 'var(--sb-faint)',
+                    cursor: 'pointer',
+                    transition: 'color 150ms',
+                    marginBottom: '0.25rem',
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--sb-ink)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--sb-faint)' }}
+                >
+                  <PinIcon size={16} strokeWidth={1.5} />
+                </button>
+              )}
+            </div>
+            <div
+              role="link"
+              tabIndex={0}
+              onClick={() => { router.push('/status'); onNavigate?.() }}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { router.push('/status'); onNavigate?.() } }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.375rem',
+                cursor: 'pointer',
+                fontSize: '0.5625rem',
+                fontFamily: 'ui-monospace, monospace',
+                letterSpacing: '0.02em',
+              }}
+            >
+              <span style={{
+                color: statusFg,
+                fontWeight: 600,
+                transition: 'color 300ms',
+              }}>
+                {statusWord}
+              </span>
+              {statusTimestamp && (
+                <span style={{ color: 'var(--sb-muted)' }}>
+                  {statusTimestamp}
+                </span>
+              )}
+            </div>
+            {/* Mini phase stepper — visible only when pipeline is running */}
+            {showStepper && <MiniStepper pipelineStatus={pipelineStatus} t={t} />}
+          </>
+        )}
       </div>
 
-      <div className="sidebar-brand-divider" style={{ height: 1, background: 'var(--sb-border)', margin: '0 1.75rem' }} />
+      <div className="sidebar-brand-divider" style={{ height: 1, background: 'var(--sb-border)', margin: collapsed ? '0 0.75rem' : '0 1.75rem' }} />
 
       {/* Nav */}
       <div style={{ flex: 1, padding: '1rem 0' }}>
-        <SideLabel>{t('nav.overview')}</SideLabel>
-        <NavLink href="/dashboard" active={pathname === '/dashboard'} onClick={onNavigate}>
-          {t('nav.dashboard')}
-          {hasNewBriefing && (
+        <SideLabel collapsed={collapsed}>{t('nav.overview')}</SideLabel>
+        <NavLink href="/dashboard" active={pathname === '/dashboard'} onClick={onNavigate} collapsed={collapsed} title={t('nav.dashboard')}>
+          <LayoutDashboard size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+          {!collapsed && t('nav.dashboard')}
+          {!collapsed && hasNewBriefing && (
             <span style={{
               width: 6,
               height: 6,
@@ -315,9 +410,10 @@ export function Sidebar({ onNavigate }: Props) {
             }} />
           )}
         </NavLink>
-        <NavLink href="/status" active={pathname === '/status'} onClick={onNavigate}>
-          {t('nav.status')}
-          {showBadge && (
+        <NavLink href="/status" active={pathname === '/status'} onClick={onNavigate} collapsed={collapsed} title={t('nav.status')}>
+          <Activity size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+          {!collapsed && t('nav.status')}
+          {!collapsed && showBadge && (
             <span style={{
               fontSize: '0.5rem',
               fontWeight: 700,
@@ -330,60 +426,70 @@ export function Sidebar({ onNavigate }: Props) {
             </span>
           )}
         </NavLink>
-        <NavLink href="/data" active={pathname === '/data'} onClick={onNavigate}>
-          {t('nav.feed')}
+        <NavLink href="/data" active={pathname === '/data'} onClick={onNavigate} collapsed={collapsed} title={t('nav.feed')}>
+          <Rss size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+          {!collapsed && t('nav.feed')}
         </NavLink>
 
-        <SideDivider />
+        <SideDivider collapsed={collapsed} />
 
-        <SideLabel>{t('nav.config')}</SideLabel>
-        {CONFIG_NAV.map(({ href, labelKey }) => (
-          <NavLink key={href} href={href} active={pathname === href} onClick={onNavigate}>
-            {t(labelKey)}
-          </NavLink>
-        ))}
+        <SideLabel collapsed={collapsed}>{t('nav.config')}</SideLabel>
+        {CONFIG_NAV.map(({ href, labelKey }) => {
+          const Icon = CONFIG_ICON_MAP[href]
+          return (
+            <NavLink key={href} href={href} active={pathname === href} onClick={onNavigate} collapsed={collapsed} title={t(labelKey)}>
+              {Icon && <Icon size={18} strokeWidth={1.5} />}
+              {!collapsed && t(labelKey)}
+            </NavLink>
+          )
+        })}
 
       </div>
 
       {/* Language selector — sidebar footer */}
       <div style={{
-        padding: '0.75rem 1.75rem',
+        padding: collapsed ? '0.75rem 0' : '0.75rem 1.75rem',
         borderTop: '1px solid var(--sb-border)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: collapsed ? 'center' : 'space-between',
       }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          <span style={{
-            fontSize: '0.5625rem',
-            fontWeight: 700,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            color: 'var(--sb-faint)',
-          }}>
-            {t('sidebar.language')}
-          </span>
-          <select
-            value={locale}
-            onChange={e => setLocale(e.target.value as Locale)}
-            style={{
-              fontSize: '0.6875rem',
-              fontWeight: 500,
-              color: 'var(--sb-ink)',
-              background: 'var(--sb)',
-              border: '1px solid var(--sb-border)',
-              borderRadius: 4,
-              padding: '2px 4px',
-              cursor: 'pointer',
-              outline: 'none',
-            }}
-          >
-            {SUPPORTED_LOCALES.map(loc => (
-              <option key={loc} value={loc}>{LOCALE_LABELS[loc]}</option>
-            ))}
-          </select>
-        </div>
+        {collapsed ? (
+          /* Collapsed: globe icon only */
+          <Globe size={18} strokeWidth={1.5} style={{ color: 'var(--sb-faint)' }} />
+        ) : (
+          /* Expanded: label + dropdown */
+          <>
+            <span style={{
+              fontSize: '0.5625rem',
+              fontWeight: 700,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: 'var(--sb-faint)',
+            }}>
+              {t('sidebar.language')}
+            </span>
+            <select
+              value={locale}
+              onChange={e => setLocale(e.target.value as Locale)}
+              style={{
+                fontSize: '0.6875rem',
+                fontWeight: 500,
+                color: 'var(--sb-ink)',
+                background: 'var(--sb)',
+                border: '1px solid var(--sb-border)',
+                borderRadius: 4,
+                padding: '2px 4px',
+                cursor: 'pointer',
+                outline: 'none',
+              }}
+            >
+              {SUPPORTED_LOCALES.map(loc => (
+                <option key={loc} value={loc}>{LOCALE_LABELS[loc]}</option>
+              ))}
+            </select>
+          </>
+        )}
       </div>
 
     </nav>

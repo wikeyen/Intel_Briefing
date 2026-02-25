@@ -297,26 +297,26 @@ export function Sidebar({ onNavigate, collapsed, peeking, pinned, onPinToggle }:
       borderRight: '1px solid var(--sb-border)',
     }}>
       {/* Brand — status row links to /status */}
-      <div className="sidebar-brand" style={{ padding: collapsed ? '1.25rem 0.75rem 1rem' : '2rem 1.75rem 1.5rem' }}>
+      <div className="sidebar-brand" style={{ padding: collapsed ? '1rem 0.75rem 0.75rem' : '2rem 1.75rem 1.5rem' }}>
         {collapsed ? (
-          /* Collapsed brand: "IB" text mark + health dot */
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
-            <span style={{
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              letterSpacing: '0.08em',
-              color: 'var(--sb-ink)',
-            }}>
-              IB
-            </span>
-            <span style={{
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              background: statusFg,
-              flexShrink: 0,
-              transition: 'background 300ms',
-            }} />
+          /* Collapsed brand: status-colored Activity icon — matches nav icon pattern */
+          <div
+            role="link"
+            tabIndex={0}
+            onClick={() => { router.push('/status'); onNavigate?.() }}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { router.push('/status'); onNavigate?.() } }}
+            title={statusWord}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: statusFg,
+              transition: 'color 300ms',
+              ...(isJobRunning ? { animation: 'pulseDot 1.6s ease-in-out infinite' } : {}),
+            }}
+          >
+            <Activity size={20} strokeWidth={1.5} />
           </div>
         ) : (
           /* Expanded brand: full title, status, stepper, pin button */

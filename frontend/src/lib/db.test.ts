@@ -1,7 +1,17 @@
-// ABOUTME: Unit tests for the SQLite-backed key-value adapter in db.ts.
-// ABOUTME: Covers initDb, kvSet, kvGet, and TTL expiry behaviour using an in-memory database.
+// ABOUTME: Unit tests for the SQLite-backed database layer in db.ts.
+// ABOUTME: Covers kv store, TTL expiry, and pipeline_items CRUD using an in-memory database.
 import { describe, it, expect, beforeEach } from 'vitest'
-import { initDb, kvSet, kvGet, getDb } from './db'
+import {
+  initDb,
+  kvSet,
+  kvGet,
+  getDb,
+  writePipelineItem,
+  readFreshPipelineItems,
+  readRunItems,
+  clearRunItems,
+  clearAllPipelineItems,
+} from './db'
 
 beforeEach(async () => {
   // Reset to a fresh in-memory database before each test
@@ -57,5 +67,103 @@ describe('kvGet', () => {
     await kvSet('test:forever', { data: 'persistent' })
     const result = await kvGet<{ data: string }>('test:forever')
     expect(result).toEqual({ data: 'persistent' })
+  })
+})
+
+// ── Pipeline items ────────────────────────────────────────────────────
+
+describe('pipeline_items', () => {
+  describe('writePipelineItem + readFreshPipelineItems', () => {
+    it('returns items within the freshness window', async () => {
+      const now = new Date().toISOString()
+      await writePipelineItem('sensor_a', 'run-1', [{ id: 1 }], now)
+      await writePipelineItem('sensor_b', 'run-1', [{ id: 2 }], now)
+
+      const result = await readFreshPipelineItems(1) // 1-hour window
+      expect(result.size).toBe(2)
+      expect(result.get('sensor_a')!.items).toEqual([{ id: 1 }])
+      expect(result.get('sensor_b')!.items).toEqual([{ id: 2 }])
+    })
+
+    it('excludes items outside the freshness window', async () => {
+      const stale = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString() // 3 hours ago
+      const fresh = new Date().toISOString()
+      await writePipelineItem('sensor_stale', 'run-old', [{ id: 1 }], stale)
+      await writePipelineItem('sensor_fresh', 'run-new', [{ id: 2 }], fresh)
+
+      const result = await readFreshPipelineItems(1) // 1-hour window
+      expect(result.size).toBe(1)
+      expect(result.has('sensor_fresh')).toBe(true)
+      expect(result.has('sensor_stale')).toBe(false)
+    })
+
+    it('keeps the most recent row when multiple run_ids exist for same sensor', async () => {
+      const older = new Date(Date.now() - 30 * 60 * 1000).toISOString() // 30 min ago
+      const newer = new Date().toISOString()
+      await writePipelineItem('sensor_a', 'run-1', [{ v: 'old' }], older)
+      await writePipelineItem('sensor_a', 'run-2', [{ v: 'new' }], newer)
+
+      const result = await readFreshPipelineItems(1)
+      expect(result.size).toBe(1)
+      expect(result.get('sensor_a')!.items).toEqual([{ v: 'new' }])
+      expect(result.get('sensor_a')!.fetchedAt).toBe(newer)
+    })
+
+    it('upserts same sensor + run_id combination', async () => {
+      const now = new Date().toISOString()
+      await writePipelineItem('sensor_a', 'run-1', [{ v: 1 }], now)
+      await writePipelineItem('sensor_a', 'run-1', [{ v: 2 }], now)
+
+      const result = await readFreshPipelineItems(1)
+      expect(result.get('sensor_a')!.items).toEqual([{ v: 2 }])
+    })
+  })
+
+  describe('readRunItems', () => {
+    it('returns all items for a specific run', async () => {
+      const now = new Date().toISOString()
+      await writePipelineItem('sensor_a', 'run-1', [{ id: 1 }], now)
+      await writePipelineItem('sensor_b', 'run-1', [{ id: 2 }], now)
+      await writePipelineItem('sensor_c', 'run-2', [{ id: 3 }], now)
+
+      const items = await readRunItems('run-1')
+      expect(items).toHaveLength(2)
+      const names = items.map(i => i.sensorName).sort()
+      expect(names).toEqual(['sensor_a', 'sensor_b'])
+    })
+
+    it('returns empty array for unknown run_id', async () => {
+      const items = await readRunItems('nonexistent')
+      expect(items).toEqual([])
+    })
+  })
+
+  describe('clearRunItems', () => {
+    it('removes only the specified run items', async () => {
+      const now = new Date().toISOString()
+      await writePipelineItem('sensor_a', 'run-1', [{ id: 1 }], now)
+      await writePipelineItem('sensor_b', 'run-2', [{ id: 2 }], now)
+
+      await clearRunItems('run-1')
+
+      const run1 = await readRunItems('run-1')
+      const run2 = await readRunItems('run-2')
+      expect(run1).toHaveLength(0)
+      expect(run2).toHaveLength(1)
+    })
+  })
+
+  describe('clearAllPipelineItems', () => {
+    it('removes all pipeline items across all runs', async () => {
+      const now = new Date().toISOString()
+      await writePipelineItem('sensor_a', 'run-1', [{ id: 1 }], now)
+      await writePipelineItem('sensor_b', 'run-2', [{ id: 2 }], now)
+      await writePipelineItem('sensor_c', 'run-3', [{ id: 3 }], now)
+
+      await clearAllPipelineItems()
+
+      const result = await readFreshPipelineItems(24) // wide window
+      expect(result.size).toBe(0)
+    })
   })
 })

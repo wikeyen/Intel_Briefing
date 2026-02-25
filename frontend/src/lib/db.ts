@@ -1,5 +1,5 @@
-// ABOUTME: SQLite-backed key-value adapter using @libsql/client.
-// ABOUTME: Provides kvSet/kvGet with optional TTL, plus trend snapshot helpers for velocity tracking.
+// ABOUTME: SQLite-backed database layer using @libsql/client.
+// ABOUTME: Provides kv store with TTL, trend snapshots, and pipeline_items table for crash-safe incremental fetching.
 import { createClient, type Client } from '@libsql/client'
 
 // Store client on globalThis so it survives Next.js module re-evaluation
@@ -27,6 +27,15 @@ export async function initDb(url?: string): Promise<void> {
       key        TEXT PRIMARY KEY,
       value      TEXT NOT NULL,
       expires_at INTEGER
+    )
+  `)
+  await globalForDb.__dbClient.execute(`
+    CREATE TABLE IF NOT EXISTS pipeline_items (
+      sensor_name  TEXT NOT NULL,
+      run_id       TEXT NOT NULL,
+      items_json   TEXT NOT NULL,
+      fetched_at   TEXT NOT NULL,
+      PRIMARY KEY (sensor_name, run_id)
     )
   `)
 }
@@ -123,4 +132,84 @@ export async function readTrendSnapshots(
   })
 
   return rows.rows.map(row => JSON.parse(row.value as string) as TrendSnapshot)
+}
+
+// ── Pipeline items (crash-safe incremental fetch storage) ─────────────
+
+/**
+ * Write a sensor's fetched items to the pipeline_items temp table.
+ * Uses UPSERT so re-fetching a sensor in the same run overwrites.
+ */
+export async function writePipelineItem(
+  sensorName: string,
+  runId: string,
+  items: unknown[],
+  fetchedAt: string,
+): Promise<void> {
+  const db = await getDb()
+  await db.execute({
+    sql: `INSERT OR REPLACE INTO pipeline_items (sensor_name, run_id, items_json, fetched_at) VALUES (?, ?, ?, ?)`,
+    args: [sensorName, runId, JSON.stringify(items), fetchedAt],
+  })
+}
+
+/**
+ * Read all sensors that have fresh data within the resume window.
+ * Returns a map of sensor_name -> { items, fetchedAt }.
+ */
+export async function readFreshPipelineItems(
+  windowHours: number,
+): Promise<Map<string, { items: unknown[]; fetchedAt: string }>> {
+  const db = await getDb()
+  const cutoff = new Date(Date.now() - windowHours * 60 * 60 * 1000).toISOString()
+  const result = await db.execute({
+    sql: `SELECT sensor_name, items_json, fetched_at FROM pipeline_items WHERE fetched_at > ? ORDER BY fetched_at DESC`,
+    args: [cutoff],
+  })
+  // If multiple rows per sensor (different run_ids), keep the most recent one
+  const map = new Map<string, { items: unknown[]; fetchedAt: string }>()
+  for (const row of result.rows) {
+    const name = row.sensor_name as string
+    if (!map.has(name)) {
+      map.set(name, {
+        items: JSON.parse(row.items_json as string),
+        fetchedAt: row.fetched_at as string,
+      })
+    }
+  }
+  return map
+}
+
+/**
+ * Read all pipeline_items for a specific run, as an array.
+ */
+export async function readRunItems(
+  runId: string,
+): Promise<Array<{ sensorName: string; items: unknown[]; fetchedAt: string }>> {
+  const db = await getDb()
+  const result = await db.execute({
+    sql: `SELECT sensor_name, items_json, fetched_at FROM pipeline_items WHERE run_id = ?`,
+    args: [runId],
+  })
+  return result.rows.map(row => ({
+    sensorName: row.sensor_name as string,
+    items: JSON.parse(row.items_json as string),
+    fetchedAt: row.fetched_at as string,
+  }))
+}
+
+/**
+ * Clear all pipeline_items for a specific run (after promoting to permanent cache).
+ */
+export async function clearRunItems(runId: string): Promise<void> {
+  const db = await getDb()
+  await db.execute({ sql: `DELETE FROM pipeline_items WHERE run_id = ?`, args: [runId] })
+}
+
+/**
+ * Clear ALL pipeline_items (used when aborting from stale banner).
+ */
+export async function clearAllPipelineItems(): Promise<void> {
+  const db = await getDb()
+  await db.execute(`DELETE FROM pipeline_items`)
 }

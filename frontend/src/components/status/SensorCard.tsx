@@ -410,7 +410,7 @@ function PrimaryMetric({ state, props, t }: { state: CardState; props: SensorCar
     case 'fetched':
       return (
         <span style={{ ...metricStyle, fontSize: '0.875rem' }}>
-          {liveSensor && liveSensor.item_count > 0 ? liveSensor.item_count : '\u2014'}
+          {liveSensor && liveSensor.item_count > 0 ? liveSensor.item_count : <span style={{ color: 'var(--ink-faint)' }}>0</span>}
         </span>
       )
 
@@ -565,7 +565,7 @@ function SecondaryContent({ state, props, t }: { state: CardState; props: Sensor
           {liveSensor?.fetch_detail && <span style={secondaryStyle}>{liveSensor.fetch_detail}</span>}
           {!onRetry && (
             <span style={{ fontSize: '0.6875rem', color: 'var(--accent)', opacity: 0.7 }}>
-              ⟳ {t('sensor.autoRetry')}
+              <span className="auto-retry-spin">⟳</span> {t('sensor.autoRetry')}{liveSensor?.fetch_detail ? ` · ${liveSensor.fetch_detail}` : ''}
             </span>
           )}
         </div>
@@ -756,7 +756,7 @@ function RowMetric({ state, props, t }: { state: CardState; props: SensorCardPro
         ? <span style={{ fontSize: '0.6875rem', color: 'var(--warn)', fontWeight: 500 }}>{t('sensor.retrying')}{'\u2026'}</span>
         : <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>{t('sensor.queued')}</span>
     case 'fetched':
-      return <span style={{ ...mono, color: 'var(--ink)' }}>{liveSensor && liveSensor.item_count > 0 ? liveSensor.item_count : '\u2014'}</span>
+      return <span style={{ ...mono, color: liveSensor && liveSensor.item_count > 0 ? 'var(--ink)' : 'var(--ink-faint)' }}>{liveSensor && liveSensor.item_count > 0 ? liveSensor.item_count : '0'}</span>
     case 'skipped':
       return (
         <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.0625rem' }}>
@@ -845,7 +845,7 @@ function RowActions({ state, props, t }: { state: CardState; props: SensorCardPr
       <button style={retryButtonStyle} onClick={(e) => { e.stopPropagation(); onRetry() }}>{t('sensor.retry')}</button>
     ) : (
       <span style={{ fontSize: '0.6875rem', color: 'var(--accent)', opacity: 0.7 }}>
-        ⟳ {t('sensor.autoRetry')}
+        <span className="auto-retry-spin">⟳</span> {t('sensor.autoRetry')}
       </span>
     )
   }

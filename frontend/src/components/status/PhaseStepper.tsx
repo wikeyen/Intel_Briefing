@@ -384,15 +384,15 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
   const progress = derivePhaseProgress(pipelineStatus)
   const counts = derivePhaseCounts(pipelineStatus)
 
-  const visibleSteps = MAIN_STEPS.filter(step => statuses[step.key] !== 'skipped')
+  // Always show all main steps so the stepper demonstrates the full pipeline flow.
+  // Skipped steps render with a muted dash instead of being hidden.
+  const visibleSteps = MAIN_STEPS
   const hasEvents = (pipelineStatus?.events ?? []).length > 0
 
   // Branch visibility: show during active retries, when retries failed, or when
   // retries succeeded — so users see all phase results after pipeline completion.
   const retryStatus = statuses.retry
   const showBranch = retryStatus === 'active' || retryStatus === 'error' || retryStatus === 'done'
-
-  if (visibleSteps.length === 0) return null
 
   return (
     <>

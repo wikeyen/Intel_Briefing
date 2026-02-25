@@ -442,31 +442,32 @@ input[type="range"]::-moz-range-thumb {
 /* ─── Desktop Sidebar Collapse ─────────────────────────────────────────── */
 
 /* Edge toggle — fixed position, always visible on desktop, on top of everything */
+/* Shape: vertical hill / wave — smooth bezier bump, flat left edge flush with sidebar */
 .sidebar-edge-toggle {
   display: none;
   position: fixed;
-  left: calc(240px - 14px);
+  left: 240px;
   top: 50%;
   transform: translateY(-50%);
   z-index: 100;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  width: 20px;
+  height: 56px;
   background: var(--sb);
-  border: 1px solid var(--sb-border);
+  border: none;
   color: var(--sb-faint);
   cursor: pointer;
   align-items: center;
   justify-content: center;
   padding: 0;
   transition: left 200ms ease, color 150ms ease, background 150ms ease,
-              box-shadow 150ms ease, border-radius 200ms ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+              filter 150ms ease;
+  clip-path: path('M 0 0 C 0 10, 20 18, 20 28 C 20 38, 0 46, 0 56 Z');
+  filter: drop-shadow(1px 0 2px rgba(0, 0, 0, 0.15));
 }
 .sidebar-edge-toggle:hover {
   color: var(--sb-ink);
   background: var(--sb-surface, var(--sb));
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  filter: drop-shadow(2px 0 4px rgba(0, 0, 0, 0.25));
 }
 
 /* Show edge toggle on desktop only */
@@ -474,7 +475,7 @@ input[type="range"]::-moz-range-thumb {
   .sidebar-edge-toggle {
     display: flex;
   }
-  /* When collapsed: hide sidebar, slide toggle to left edge as half-circle */
+  /* When collapsed: hide sidebar, slide toggle to left edge */
   .sidebar-collapsed .sidebar-nav {
     width: 0 !important;
     overflow: hidden;
@@ -484,18 +485,17 @@ input[type="range"]::-moz-range-thumb {
     pointer-events: none;
   }
   .sidebar-collapsed .sidebar-edge-toggle {
-    left: -14px;
-    border-radius: 0 50% 50% 0;
+    left: 0;
   }
 }
 
 /* Tablet: match narrower sidebar width */
 @media (min-width: 769px) and (max-width: 1023px) {
   .sidebar-edge-toggle {
-    left: calc(180px - 14px);
+    left: 180px;
   }
   .sidebar-collapsed .sidebar-edge-toggle {
-    left: -14px;
+    left: 0;
   }
 }
 

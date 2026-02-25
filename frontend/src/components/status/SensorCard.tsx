@@ -382,7 +382,7 @@ function PrimaryMetric({ state, props, t }: { state: CardState; props: SensorCar
           <span style={{ ...metricStyle, color: 'var(--accent)', fontWeight: 500, fontSize: '0.75rem' }}>
             {t('sensor.fetching')}
           </span>
-          {liveSensor && (
+          {liveSensor && liveSensor.item_count > 0 && (
             <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>
               {'\u00b7'} {liveSensor.item_count}
             </span>
@@ -718,7 +718,7 @@ function RowMetric({ state, props, t }: { state: CardState; props: SensorCardPro
       return (
         <span style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.6875rem', color, fontWeight: 500 }}>{label}</span>
-          {liveSensor && <span style={{ ...mono, fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>{liveSensor.item_count}</span>}
+          {liveSensor && liveSensor.item_count > 0 && <span style={{ ...mono, fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>{liveSensor.item_count}</span>}
           {liveSensor?.fetch_detail && (
             <span style={{ fontSize: '0.625rem', color: 'var(--ink-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 120 }}>
               {liveSensor.fetch_detail}

@@ -457,10 +457,10 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
   const visibleSteps = MAIN_STEPS.filter(step => statuses[step.key] !== 'skipped')
   const hasEvents = (pipelineStatus?.events ?? []).length > 0
 
-  // Branch visibility: show only during active retries or when retries failed.
-  // Successful retries (done) and skipped retries stay hidden to reduce noise.
+  // Branch visibility: show during active retries, when retries failed, or when
+  // retries succeeded — so users see all phase results after pipeline completion.
   const retryStatus = statuses.retry
-  const showBranch = retryStatus === 'active' || retryStatus === 'error'
+  const showBranch = retryStatus === 'active' || retryStatus === 'error' || retryStatus === 'done'
 
   // Branch width spans the first segment of the main line
   const segmentWidthPct = visibleSteps.length > 1 ? 100 / (visibleSteps.length - 1) : 100

@@ -246,17 +246,14 @@ function StepNode({ step, status, isClickable, onLogToggle, t, counts }: {
         height: NODE_SIZE,
         borderRadius: '50%',
         border: `1.5px solid ${colors.dot}`,
-        background: status === 'active' ? colors.dot : 'transparent',
+        background: (status === 'done' || status === 'error') ? colors.dot : 'transparent',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         fontSize: '0.5rem',
         fontWeight: 700,
-        color: status === 'active' ? 'white' : colors.dot,
+        color: (status === 'done' || status === 'error') ? 'white' : colors.dot,
         transition: 'all 300ms ease',
-        ...(status === 'active' ? {
-          boxShadow: `0 0 0 2.5px color-mix(in srgb, ${colors.dot} 20%, transparent)`,
-        } : {}),
       }}>
         {icon}
       </div>
@@ -497,8 +494,10 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
               : isActive ? (isIndeterminate ? 0 : Math.round(phaseProg * 100))
               : 0
 
-            // Active phases always show shimmer (determinate fills + shimmer overlay, indeterminate = shimmer only)
-            const showShimmer = isActive
+            // Shimmer the connector BEFORE the active step (progress flowing into it), not after
+            const nextStep = !isLast ? visibleSteps[i + 1] : null
+            const nextIsActive = nextStep ? statuses[nextStep.key] === 'active' : false
+            const showShimmer = nextIsActive
 
             // Phase-specific counts (only fetch gets annotation on main line)
             const stepCounts = step.key === 'fetch' ? counts.fetch : null

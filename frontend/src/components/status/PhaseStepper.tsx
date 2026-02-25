@@ -212,13 +212,14 @@ const STEPPER_CSS = `
 `
 
 /** Circle node with icon + label + optional count annotation. */
-function StepNode({ step, status, isClickable, onLogToggle, t, counts }: {
+function StepNode({ step, status, isClickable, onLogToggle, t, counts, align = 'center' }: {
   step: StepDef
   status: StepStatus
   isClickable: boolean
   onLogToggle?: () => void
   t: (key: string) => string
   counts?: { ok: number; total: number } | null
+  align?: 'flex-start' | 'center' | 'flex-end'
 }) {
   const colors = STEP_COLORS[status]
   const icon = STEP_ICONS[status]
@@ -233,7 +234,7 @@ function StepNode({ step, status, isClickable, onLogToggle, t, counts }: {
       style={{
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
+        alignItems: align,
         gap: '0.1875rem',
         flexShrink: 0,
         position: 'relative',
@@ -531,6 +532,7 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
                   onLogToggle={onLogToggle}
                   t={t}
                   counts={stepCounts}
+                  align={i === 0 ? 'flex-start' : isLast ? 'flex-end' : 'center'}
                 />
 
                 {/* Connector line with progress fill */}

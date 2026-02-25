@@ -390,7 +390,7 @@ export function PublicFocusCard({ data, loading, onClick }: PublicFocusCardProps
             )}
 
             {tagCloudTags.length > 0 && (
-              <TagCloud tags={tagCloudTags} maxTags={15} style={{ marginTop: 'auto', justifyContent: 'center' }} />
+              <TagCloud tags={tagCloudTags} maxTags={15} style={{ marginTop: '0.25rem', justifyContent: 'center' }} />
             )}
           </>
         )}
@@ -493,7 +493,7 @@ export function VoicesCard({ data, loading, onClick }: VoicesCardProps) {
             )}
 
             {tagCloudTags.length > 0 && (
-              <TagCloud tags={tagCloudTags} maxTags={15} style={{ marginTop: 'auto', justifyContent: 'center' }} />
+              <TagCloud tags={tagCloudTags} maxTags={15} style={{ marginTop: '0.25rem', justifyContent: 'center' }} />
             )}
           </>
         )}

@@ -15,7 +15,7 @@ export async function fetchToutiao(_config: ConfigSettings, limit: number): Prom
   if (!resp.ok) throw new Error(`HTTP ${resp.status} from Toutiao`)
 
   const body = await resp.json() as Record<string, unknown>
-  if ((body as { status?: string }).status !== 'success') return []
+  if ((body as { status?: string }).status !== 'success') throw new Error('Toutiao API error: status is not success')
 
   const dataArr = (body.data as Array<Record<string, unknown>>) ?? []
 

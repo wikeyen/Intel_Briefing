@@ -15,7 +15,7 @@ export async function fetchJuejin(_config: ConfigSettings, limit: number): Promi
   if (!resp.ok) throw new Error(`HTTP ${resp.status} from Juejin`)
 
   const body = await resp.json() as Record<string, unknown>
-  if ((body as { err_msg?: string }).err_msg !== 'success') return []
+  if ((body as { err_msg?: string }).err_msg !== 'success') throw new Error('Juejin API error: err_msg is not success')
 
   const dataArr = (body.data as Array<Record<string, unknown>>) ?? []
 

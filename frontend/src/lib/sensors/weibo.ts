@@ -17,7 +17,7 @@ export async function fetchWeibo(_config: ConfigSettings, limit: number): Promis
     if (!resp.ok) throw new Error(`HTTP ${resp.status} from Weibo`)
 
     const body = await resp.json() as Record<string, unknown>
-    if ((body as { ok?: number }).ok !== 1) return []
+    if ((body as { ok?: number }).ok !== 1) throw new Error('Weibo API error: ok is not 1')
 
     const realtime = ((body.data as Record<string, unknown>)?.realtime as Array<Record<string, unknown>>) ?? []
     const items: IntelItem[] = []

@@ -22,7 +22,7 @@ export async function fetchKrTrending(_config: ConfigSettings, limit: number): P
   if (!resp.ok) throw new Error(`HTTP ${resp.status} from 36Kr Trending`)
 
   const body = await resp.json() as Record<string, unknown>
-  if ((body as { code?: number }).code !== 0) return []
+  if ((body as { code?: number }).code !== 0) throw new Error('36Kr Trending API error: non-zero code')
 
   const data = body.data as Record<string, unknown> | undefined
   const hotRankList = (data?.hotRankList as Array<Record<string, unknown>>) ?? []

@@ -15,7 +15,7 @@ export async function fetchNetease(_config: ConfigSettings, limit: number): Prom
   if (!resp.ok) throw new Error(`HTTP ${resp.status} from Netease`)
 
   const body = await resp.json() as Record<string, unknown>
-  if ((body as { msg?: string }).msg !== 'success') return []
+  if ((body as { msg?: string }).msg !== 'success') throw new Error('Netease API error: msg is not success')
 
   const data = body.data as Record<string, unknown> | undefined
   const list = (data?.list as Array<Record<string, unknown>>) ?? []

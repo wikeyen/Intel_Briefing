@@ -15,7 +15,7 @@ export async function fetchDouyin(_config: ConfigSettings, limit: number): Promi
   if (!resp.ok) throw new Error(`HTTP ${resp.status} from Douyin`)
 
   const body = await resp.json() as Record<string, unknown>
-  if ((body as { status_code?: number }).status_code !== 0) return []
+  if ((body as { status_code?: number }).status_code !== 0) throw new Error('Douyin API error: non-zero status_code')
 
   const data = body.data as Record<string, unknown> | undefined
   const wordList = (data?.word_list as Array<Record<string, unknown>>) ?? []

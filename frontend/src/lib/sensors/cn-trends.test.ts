@@ -142,10 +142,9 @@ describe('BaiduTiebaSensor', () => {
     await expect(fetchBaiduTieba(config, 5)).rejects.toThrow('HTTP 500')
   })
 
-  it('returns empty array when errmsg is not success', async () => {
+  it('throws when errmsg is not success', async () => {
     mockFetchJson({ errmsg: 'error', data: {} })
-    const items = await fetchBaiduTieba(config, 5)
-    expect(items).toHaveLength(0)
+    await expect(fetchBaiduTieba(config, 5)).rejects.toThrow('Baidu Tieba API error')
   })
 
   it('returns empty array when topic_list is missing', async () => {
@@ -213,10 +212,9 @@ describe('DouyinSensor', () => {
     await expect(fetchDouyin(config, 5)).rejects.toThrow('HTTP 503')
   })
 
-  it('returns empty array when status_code is not 0', async () => {
+  it('throws when status_code is not 0', async () => {
     mockFetchJson({ status_code: -1, data: {} })
-    const items = await fetchDouyin(config, 5)
-    expect(items).toHaveLength(0)
+    await expect(fetchDouyin(config, 5)).rejects.toThrow('Douyin API error')
   })
 
   it('returns empty array when word_list is missing', async () => {
@@ -295,10 +293,9 @@ describe('ToutiaoSensor', () => {
     await expect(fetchToutiao(config, 5)).rejects.toThrow('HTTP 502')
   })
 
-  it('returns empty array when status is not success', async () => {
+  it('throws when status is not success', async () => {
     mockFetchJson({ status: 'fail', data: [] })
-    const items = await fetchToutiao(config, 5)
-    expect(items).toHaveLength(0)
+    await expect(fetchToutiao(config, 5)).rejects.toThrow('Toutiao API error')
   })
 
   it('returns empty array when data is missing', async () => {
@@ -371,10 +368,9 @@ describe('NeteaseSensor', () => {
     await expect(fetchNetease(config, 5)).rejects.toThrow('HTTP 500')
   })
 
-  it('returns empty array when msg is not success', async () => {
+  it('throws when msg is not success', async () => {
     mockFetchJson({ msg: 'error', data: {} })
-    const items = await fetchNetease(config, 5)
-    expect(items).toHaveLength(0)
+    await expect(fetchNetease(config, 5)).rejects.toThrow('Netease API error')
   })
 
   it('returns empty array when list is missing', async () => {
@@ -453,10 +449,9 @@ describe('KrTrendingSensor', () => {
     await expect(fetchKrTrending(config, 5)).rejects.toThrow('HTTP 500')
   })
 
-  it('returns empty array when code is not 0', async () => {
+  it('throws when code is not 0', async () => {
     mockFetchJson({ code: -1, data: {} })
-    const items = await fetchKrTrending(config, 5)
-    expect(items).toHaveLength(0)
+    await expect(fetchKrTrending(config, 5)).rejects.toThrow('36Kr Trending API error')
   })
 
   it('returns empty array when hotRankList is missing', async () => {
@@ -536,10 +531,9 @@ describe('JuejinSensor', () => {
     await expect(fetchJuejin(config, 5)).rejects.toThrow('HTTP 500')
   })
 
-  it('returns empty array when err_msg is not success', async () => {
+  it('throws when err_msg is not success', async () => {
     mockFetchJson({ err_msg: 'fail', data: [] })
-    const items = await fetchJuejin(config, 5)
-    expect(items).toHaveLength(0)
+    await expect(fetchJuejin(config, 5)).rejects.toThrow('Juejin API error')
   })
 
   it('returns empty array when data is missing', async () => {

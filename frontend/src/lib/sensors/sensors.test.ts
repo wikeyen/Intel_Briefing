@@ -287,13 +287,12 @@ describe('WeiboSensor', () => {
     await expect(fetchWeibo(makeConfig(), 5)).rejects.toThrow('HTTP 500')
   })
 
-  it('returns empty array when ok !== 1', async () => {
+  it('throws when ok !== 1', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, json: () => Promise.resolve({ ok: 0, data: {} }),
     })
     const { fetchWeibo } = await import('./weibo')
-    const items = await fetchWeibo(makeConfig(), 5)
-    expect(items).toHaveLength(0)
+    await expect(fetchWeibo(makeConfig(), 5)).rejects.toThrow('Weibo API error')
   })
 })
 

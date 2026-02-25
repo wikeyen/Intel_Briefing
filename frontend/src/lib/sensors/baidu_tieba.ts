@@ -15,7 +15,7 @@ export async function fetchBaiduTieba(_config: ConfigSettings, limit: number): P
   if (!resp.ok) throw new Error(`HTTP ${resp.status} from Baidu Tieba`)
 
   const body = await resp.json() as Record<string, unknown>
-  if ((body as { errmsg?: string }).errmsg !== 'success') return []
+  if ((body as { errmsg?: string }).errmsg !== 'success') throw new Error('Baidu Tieba API error: errmsg is not success')
 
   const data = body.data as Record<string, unknown> | undefined
   const bangTopic = data?.bang_topic as Record<string, unknown> | undefined

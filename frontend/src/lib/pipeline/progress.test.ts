@@ -11,11 +11,13 @@ describe('PipelineProgressTracker', () => {
     const snap = tracker.snapshot()
     expect(snap.running).toBe(true)
     expect(snap.mode).toBe('fetch_summarize')
+    expect(snap.run_id).toBeTruthy()
     expect(snap.default_concurrency).toBe(4)
     expect(snap.local_summary_concurrency).toBe(4)
     expect(snap.sensors).toHaveLength(3)
     for (const s of snap.sensors) {
       expect(s.fetch).toBe('queued')
+      expect(s.fetch_cached).toBe(false)
       expect(s.summary).toBe('queued')
     }
     expect(snap.overall_summary).toBe('queued')
@@ -102,6 +104,35 @@ describe('PipelineProgressTracker', () => {
     // Other sensors remain queued
     expect(snap.sensors[0].summary).toBe('queued')
     expect(snap.sensors[2].summary).toBe('queued')
+  })
+
+  it('setCachedSensor marks fetch as ok with fetch_cached flag', () => {
+    const tracker = new PipelineProgressTracker(sensors, 'fetch_summarize', 4, 4)
+    tracker.setCachedSensor('arxiv', 15)
+    const snap = tracker.snapshot()
+    const sensor = snap.sensors.find(s => s.name === 'arxiv')!
+    expect(sensor.fetch).toBe('ok')
+    expect(sensor.fetch_cached).toBe(true)
+    expect(sensor.item_count).toBe(15)
+  })
+
+  it('resetFetchState clears fetch_cached flag', () => {
+    const tracker = new PipelineProgressTracker(sensors, 'fetch_summarize', 4, 4)
+    tracker.setCachedSensor('arxiv', 15)
+    tracker.resetFetchState('arxiv')
+    const snap = tracker.snapshot()
+    const sensor = snap.sensors.find(s => s.name === 'arxiv')!
+    expect(sensor.fetch).toBe('queued')
+    expect(sensor.fetch_cached).toBe(false)
+    expect(sensor.item_count).toBe(0)
+  })
+
+  it('snapshot includes unique run_id', () => {
+    const tracker1 = new PipelineProgressTracker(sensors, 'fetch', 4, 4)
+    const tracker2 = new PipelineProgressTracker(sensors, 'fetch', 4, 4)
+    expect(tracker1.snapshot().run_id).toBeTruthy()
+    expect(tracker2.snapshot().run_id).toBeTruthy()
+    expect(tracker1.snapshot().run_id).not.toBe(tracker2.snapshot().run_id)
   })
 
   it('snapshot reflects separate concurrency values', () => {

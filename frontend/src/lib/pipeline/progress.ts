@@ -11,6 +11,7 @@ type OnChangeCallback = (status: PipelineStatus) => void
 export class PipelineProgressTracker {
   private readonly sensors: SensorJobProgress[]
   private readonly mode: RunMode
+  private readonly runId: string
   private readonly defaultConcurrency: number
   private readonly localSummaryConcurrency: number
   private readonly onChange?: OnChangeCallback
@@ -34,6 +35,7 @@ export class PipelineProgressTracker {
     onChange?: OnChangeCallback,
   ) {
     this.mode = mode
+    this.runId = Date.now().toString(36) + Math.random().toString(36).slice(2)
     this.defaultConcurrency = defaultConcurrency
     this.localSummaryConcurrency = localSummaryConcurrency
     this.onChange = onChange
@@ -49,6 +51,7 @@ export class PipelineProgressTracker {
       fetch_error_kind: null,
       fetch_detail: null,
       fetch_started_at: null,
+      fetch_cached: false,
       summary: skipSummary ? 'skipped' : 'queued',
       summary_error: null,
       item_count: 0,
@@ -109,6 +112,15 @@ export class PipelineProgressTracker {
     const s = this.find(name)
     s.fetch_detail = detail
     if (itemCount !== undefined) s.item_count = itemCount
+    this.notify()
+  }
+
+  /** Mark a sensor as loaded from cache (incremental run). Sets fetch to 'ok' with fetch_cached flag. */
+  setCachedSensor(name: string, itemCount: number): void {
+    const s = this.find(name)
+    s.fetch = 'ok'
+    s.fetch_cached = true
+    s.item_count = itemCount
     this.notify()
   }
 
@@ -186,6 +198,7 @@ export class PipelineProgressTracker {
     s.fetch_error_kind = null
     s.fetch_detail = null
     s.fetch_started_at = null
+    s.fetch_cached = false
     s.item_count = 0
     this.notify()
   }
@@ -243,6 +256,7 @@ export class PipelineProgressTracker {
       retry_attempt: this.retryAttempt,
       retry_max: this.retryMax,
       mode: this.mode,
+      run_id: this.runId,
       default_concurrency: this.defaultConcurrency,
       local_summary_concurrency: this.localSummaryConcurrency,
       started_at: this.startedAt,

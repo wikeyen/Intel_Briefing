@@ -2,6 +2,7 @@
 // ABOUTME: Delegates summarization to the unified engine; handles fetch stage and progress tracking.
 import type {
   ConfigSettings,
+  IntelItem,
   IntelReport,
   SensorResult,
   RunMode,
@@ -24,6 +25,7 @@ import { assembleReport } from './report-builder'
 import { createBus } from '../summary/events'
 import { runIntelligenceAnalysis } from './intelligence'
 import { writeIntelligence } from './intelligence-cache'
+import { writePipelineItem, readFreshPipelineItems, clearRunItems } from '../db'
 
 export interface PipelineResult {
   report: IntelReport | null
@@ -278,6 +280,31 @@ export async function runPipeline(
 
   tracker.addEvent('info', 'system', `Pipeline started — mode: ${mode}, ${trackerSensorNames.length} sensors`)
 
+  // --- Incremental: check pipeline_items for fresh sensors ---
+  const resumeWindowHours = config.resume_window_hours ?? 0
+  let cachedSensorItems = new Map<string, unknown[]>()
+
+  if (shouldFetch && resumeWindowHours > 0) {
+    try {
+      const freshItems = await readFreshPipelineItems(resumeWindowHours)
+      for (const [sensorName, data] of freshItems) {
+        if (registrySensorNames.includes(sensorName)) {
+          cachedSensorItems.set(sensorName, data.items)
+          tracker.setCachedSensor(sensorName, data.items.length)
+          tracker.addEvent('info', 'fetch', `Cached (${data.items.length} items, within ${resumeWindowHours}h window)`, sensorName)
+        }
+      }
+      if (cachedSensorItems.size > 0) {
+        tracker.addEvent('info', 'system', `Incremental: ${cachedSensorItems.size} sensors cached, ${registrySensorNames.length - cachedSensorItems.size} to fetch`)
+      }
+    } catch (err) {
+      console.warn('[pipeline] Failed to read fresh pipeline items:', err)
+    }
+  }
+
+  // Filter out cached sensors from the fetch list
+  const sensorsToFetch = registrySensorNames.filter(name => !cachedSensorItems.has(name))
+
   let report: IntelReport | null = null
   let summary: BriefingSummary | null = null
 
@@ -347,6 +374,12 @@ export async function runPipeline(
               tracker.setFetchState(name, 'ok', result.items.length)
               tracker.addEvent('ok', 'fetch', `Fetched ${result.items.length} items`, name)
               failedSensors.delete(name)
+              // Write to temp DB for crash-safe incremental recovery
+              const runId = tracker.snapshot().run_id!
+              const nowIso = new Date().toISOString().replace(/\.\d+Z$/, 'Z')
+              writePipelineItem(name, runId, result.items, nowIso).catch(err =>
+                console.warn(`[pipeline] Failed to write pipeline_item for ${name}:`, err),
+              )
             } else {
               tracker.setFetchState(name, 'failed', 0, result.error, result.error_kind ?? 'api')
               tracker.addEvent('error', 'fetch', result.error ?? 'Unknown error', name)
@@ -357,8 +390,8 @@ export async function runPipeline(
         await Promise.all(promises)
       }
 
-      // Initial fetch of all sensors
-      await fetchBatch(registrySensorNames)
+      // Initial fetch — skip sensors already cached from a previous run
+      await fetchBatch(sensorsToFetch)
 
       // Auto-retry failed sensors up to MAX_AUTO_RETRIES times.
       // Config errors are not retryable — they need user action (e.g. missing API key).
@@ -392,6 +425,18 @@ export async function runPipeline(
         // this would replace a complete report with incomplete data.
         tracker.addEvent('warn', 'system', 'Pipeline cancelled during fetch')
         return { report: null, summary: null }
+      }
+
+      // Add cached sensor items as successful results for report assembly
+      for (const [sensorName, items] of cachedSensorItems) {
+        if (!resultMap.has(sensorName)) {
+          resultMap.set(sensorName, {
+            sensor_name: sensorName,
+            items: items as IntelItem[],
+            error: null,
+            error_kind: null,
+          })
+        }
       }
 
       const okCount = [...resultMap.values()].filter(r => sensorResultSucceeded(r)).length
@@ -684,15 +729,45 @@ export async function runPipeline(
           tracker.unpause()
         }
 
-        // ── Generate overall briefing ──
-        // When hasFetchFailures was true, summarizeReport ran with skipOverall so we generate it now.
-        // When no failures, summarizeReport already produced the overall — skip this block.
-        if (hasFetchFailures && summary && !signal.aborted) {
-          tracker.setOverallSummary('running')
-          const overall = await generateOverallBriefing(sourceReport, summary.sections, baseSummarizeOpts)
-          summary = { ...summary, overall }
-        }
+        // ── Generate overall briefing + intelligence analysis in parallel ──
+        // Overall briefing: only needed when hasFetchFailures (deferred from summarizeReport).
+        // Intelligence: uses raw report, independent of summary — safe to run in parallel.
+        const overallPromise = (hasFetchFailures && summary && !signal.aborted)
+          ? (async () => {
+              tracker.setOverallSummary('running')
+              const overall = await generateOverallBriefing(sourceReport, summary!.sections, baseSummarizeOpts)
+              summary = { ...summary!, overall }
+            })()
+          : Promise.resolve()
 
+        const intelligenceReport = report ?? cachedReport
+        const intelligencePromise = (llmConfig && intelligenceReport && !signal.aborted)
+          ? (async () => {
+              tracker.addEvent('info', 'intelligence', 'Intelligence analysis started')
+              try {
+                const intelligence = await runIntelligenceAnalysis(intelligenceReport, llmConfig, signal, config.summary_language)
+
+                if (intelligence.trend === null) tracker.addEvent('warn', 'intelligence', 'Trend analysis returned no results')
+                if (intelligence.topics === null) tracker.addEvent('warn', 'intelligence', 'Topic analysis returned no results')
+                if (intelligence.accounts === null) tracker.addEvent('warn', 'intelligence', 'Account analysis returned no results')
+
+                const hasData = intelligence.trend !== null || intelligence.topics !== null || intelligence.accounts !== null
+                if (hasData) {
+                  await writeIntelligence(intelligence)
+                  tracker.addEvent('ok', 'intelligence', 'Intelligence analysis complete')
+                } else {
+                  tracker.addEvent('warn', 'intelligence', 'Intelligence analysis produced no results (LLM may have failed)')
+                }
+              } catch (err) {
+                console.error('Intelligence analysis failed:', err)
+                tracker.addEvent('warn', 'intelligence', `Intelligence analysis failed: ${err instanceof Error ? err.message : String(err)}`)
+              }
+            })()
+          : Promise.resolve()
+
+        await Promise.all([overallPromise, intelligencePromise])
+
+        // Write summary after overall briefing is done
         if (summary && !signal.aborted) {
           try {
             await writeSummary(summary, config.summary_language)
@@ -700,41 +775,30 @@ export async function runPipeline(
             console.error('Failed to write summary cache:', err)
           }
         }
-      }
-    }
+      } else {
+        // No summary stage — still run intelligence if configured
+        const intelligenceReport = report ?? cachedReport
+        if (llmConfig && intelligenceReport && !signal.aborted) {
+          tracker.addEvent('info', 'intelligence', 'Intelligence analysis started')
+          try {
+            const intelligence = await runIntelligenceAnalysis(intelligenceReport, llmConfig, signal, config.summary_language)
 
-    // ── Intelligence analysis ──
-    // Run after summary completes — analyzes trend, topic, and account data via LLM.
-    // Use cachedReport for summarize-only mode where `report` (from fetch) stays null.
-    const intelligenceReport = report ?? cachedReport
-    if (llmConfig && intelligenceReport && !signal.aborted) {
-      tracker.addEvent('info', 'intelligence', 'Intelligence analysis started')
-      try {
-        const intelligence = await runIntelligenceAnalysis(intelligenceReport, llmConfig, signal, config.summary_language)
+            if (intelligence.trend === null) tracker.addEvent('warn', 'intelligence', 'Trend analysis returned no results')
+            if (intelligence.topics === null) tracker.addEvent('warn', 'intelligence', 'Topic analysis returned no results')
+            if (intelligence.accounts === null) tracker.addEvent('warn', 'intelligence', 'Account analysis returned no results')
 
-        // Log specific warnings for each analysis component that returned no results
-        if (intelligence.trend === null) {
-          tracker.addEvent('warn', 'intelligence', 'Trend analysis returned no results')
+            const hasData = intelligence.trend !== null || intelligence.topics !== null || intelligence.accounts !== null
+            if (hasData) {
+              await writeIntelligence(intelligence)
+              tracker.addEvent('ok', 'intelligence', 'Intelligence analysis complete')
+            } else {
+              tracker.addEvent('warn', 'intelligence', 'Intelligence analysis produced no results (LLM may have failed)')
+            }
+          } catch (err) {
+            console.error('Intelligence analysis failed:', err)
+            tracker.addEvent('warn', 'intelligence', `Intelligence analysis failed: ${err instanceof Error ? err.message : String(err)}`)
+          }
         }
-        if (intelligence.topics === null) {
-          tracker.addEvent('warn', 'intelligence', 'Topic analysis returned no results')
-        }
-        if (intelligence.accounts === null) {
-          tracker.addEvent('warn', 'intelligence', 'Account analysis returned no results')
-        }
-
-        const hasData = intelligence.trend !== null || intelligence.topics !== null || intelligence.accounts !== null
-        if (hasData) {
-          await writeIntelligence(intelligence)
-          tracker.addEvent('ok', 'intelligence', 'Intelligence analysis complete')
-        } else {
-          // All three analyses returned null — don't overwrite good cached data
-          tracker.addEvent('warn', 'intelligence', 'Intelligence analysis produced no results (LLM may have failed)')
-        }
-      } catch (err) {
-        // Intelligence is non-critical — log and continue
-        console.error('Intelligence analysis failed:', err)
-        tracker.addEvent('warn', 'intelligence', `Intelligence analysis failed: ${err instanceof Error ? err.message : String(err)}`)
       }
     }
 
@@ -747,6 +811,10 @@ export async function runPipeline(
       const totalItems = tracker.snapshot().total_items
       tracker.addEvent('ok', 'system', `Pipeline complete — ${totalItems} items collected`)
       tracker.complete()
+      // Clear temp pipeline_items now that results are promoted to permanent cache
+      clearRunItems(tracker.snapshot().run_id!).catch(err =>
+        console.warn('[pipeline] Failed to clear run items:', err),
+      )
     } else {
       tracker.addEvent('warn', 'system', 'Pipeline cancelled')
     }

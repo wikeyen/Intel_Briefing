@@ -49,6 +49,15 @@ vi.mock('../utils/jina-reader', () => ({
   fetchContent: vi.fn().mockResolvedValue(null),
 }))
 
+const mockReadFreshPipelineItems = vi.fn().mockResolvedValue(new Map())
+const mockWritePipelineItem = vi.fn().mockResolvedValue(undefined)
+const mockClearRunItems = vi.fn().mockResolvedValue(undefined)
+vi.mock('../db', () => ({
+  writePipelineItem: (...args: unknown[]) => mockWritePipelineItem(...args),
+  readFreshPipelineItems: (...args: unknown[]) => mockReadFreshPipelineItems(...args),
+  clearRunItems: (...args: unknown[]) => mockClearRunItems(...args),
+}))
+
 // Mock sensor registry with a Proxy to allow dynamic sensor functions
 const mockSensorFns: Record<string, ReturnType<typeof vi.fn>> = {}
 vi.mock('../sensors', () => ({

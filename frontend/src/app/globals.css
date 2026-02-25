@@ -887,6 +887,11 @@ input[type="range"]::-moz-range-thumb {
     padding-left: 1.25rem !important;
     padding-right: 1.25rem !important;
   }
+  /* Reset to collapsed padding so icons stay centered in the 56px strip */
+  .sidebar-unpinned .sidebar-nav:not(.sidebar-peeking) a {
+    padding-left: 1rem !important;
+    padding-right: 0 !important;
+  }
   .sidebar-label {
     padding-left: 1.25rem !important;
     padding-right: 1.25rem !important;

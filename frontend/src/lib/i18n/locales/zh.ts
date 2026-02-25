@@ -171,7 +171,7 @@ const zh: TranslationDict = {
   'status.paused': '已暂停',
   'status.sensors': '传感器',
   'status.retrying': '重试中',
-  'status.pool': '并发 {count}',
+  'status.pool': '{count} 并发',
   'status.failed': '失败',
   'status.run_all': '运行全部',
   'status.run_n': '运行 {count} 个',

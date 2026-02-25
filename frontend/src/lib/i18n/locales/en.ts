@@ -171,7 +171,7 @@ const en: TranslationDict = {
   'status.paused': 'Paused',
   'status.sensors': 'sensors',
   'status.retrying': 'retrying',
-  'status.pool': 'pool {count}',
+  'status.pool': '{count} workers',
   'status.failed': 'failed',
   'status.run_all': 'Run All',
   'status.run_n': 'Run {count}',

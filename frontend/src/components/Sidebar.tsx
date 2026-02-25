@@ -56,8 +56,8 @@ function NavLink({ href, active, onClick, collapsed, title, children }: {
         display: 'flex',
         alignItems: 'center',
         gap: '0.75rem',
-        padding: '0.5rem 1.75rem 0.5rem 1rem',
-        justifyContent: 'flex-start',
+        padding: collapsed ? '0.5rem 0' : '0.5rem 1.75rem 0.5rem 1rem',
+        justifyContent: collapsed ? 'center' : 'flex-start',
         minHeight: 44,
         width: '100%',
         borderLeft: collapsed ? '2px solid transparent' : active ? '2px solid var(--sb-accent)' : '2px solid transparent',
@@ -438,7 +438,7 @@ export function Sidebar({ onNavigate, collapsed, peeking, pinned, onPinToggle }:
           const Icon = CONFIG_ICON_MAP[href]
           return (
             <NavLink key={href} href={href} active={pathname === href} onClick={onNavigate} collapsed={collapsed} title={t(labelKey)}>
-              {Icon && <Icon size={22} strokeWidth={2} />}
+              {Icon && <Icon size={22} strokeWidth={1.5} style={{ flexShrink: 0 }} />}
               {!collapsed && t(labelKey)}
             </NavLink>
           )

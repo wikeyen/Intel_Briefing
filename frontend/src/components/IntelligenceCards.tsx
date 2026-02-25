@@ -1,9 +1,9 @@
 // ABOUTME: Intelligence card components for the Dashboard — PublicFocusCard, TopicPulseCard, VoicesCard.
-// ABOUTME: Each card renders a compact preview with animated tag cloud; full detail shown in sidebar panel.
+// ABOUTME: Each card renders a compact preview with static tag cloud; full detail shown in sidebar panel.
 'use client'
 
 import { useMemo } from 'react'
-import { AnimatedTagCloud } from './TagCloud'
+import { TagCloud } from './TagCloud'
 import type { TagCloudTag } from './TagCloud'
 
 // ---------------------------------------------------------------------------
@@ -486,7 +486,7 @@ export function PublicFocusCard({ data, loading, onClick }: PublicFocusCardProps
             )}
 
             {tagCloudTags.length > 0 && (
-              <AnimatedTagCloud tags={tagCloudTags} maxTags={15} style={{ marginTop: 'auto' }} />
+              <TagCloud tags={tagCloudTags} maxTags={15} style={{ marginTop: 'auto' }} />
             )}
           </>
         )}
@@ -589,7 +589,7 @@ export function VoicesCard({ data, loading, onClick }: VoicesCardProps) {
             )}
 
             {tagCloudTags.length > 0 && (
-              <AnimatedTagCloud tags={tagCloudTags} maxTags={15} style={{ marginTop: 'auto' }} />
+              <TagCloud tags={tagCloudTags} maxTags={15} style={{ marginTop: 'auto' }} />
             )}
           </>
         )}

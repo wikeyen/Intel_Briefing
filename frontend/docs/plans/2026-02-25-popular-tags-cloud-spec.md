@@ -553,9 +553,9 @@ Not applicable under normal operation — the intelligence pipeline caps at 20 t
 
 | Current component | Location | Disposition |
 |-------------------|----------|-------------|
-| `TagCloud` | `src/components/TagCloud.tsx` | Refactor into `PopularTagsCloud` with `animated={false}` |
-| `AnimatedTagCloud` | Same file | Refactor into `PopularTagsCloud` with `animated={true}` |
-| `GroupedTagCloud` | Same file | Keep as separate component (different purpose: sentiment grouping) |
+| `TagCloud` | `src/components/TagCloud.tsx` | Sole implementation — static flex-wrap pill layout |
+| `AnimatedTagCloud` | Same file | Removed — spiral/spotlight animation variant deleted |
+| `GroupedTagCloud` | `src/components/IntelligenceCards.tsx` | Keep as separate component (different purpose: sentiment grouping) |
 
 ### CSS custom property dependencies
 

@@ -53,9 +53,20 @@ const PILL_THRESHOLD = 0.5
 
 export function TagCloud({ tags, maxTags = 30, style }: TagCloudProps) {
   const sorted = useMemo(() => {
-    return [...tags]
+    const sliced = [...tags]
       .sort((a, b) => b.weight - a.weight)
       .slice(0, maxTags)
+    // Normalize weights to span 0-1 so visual hierarchy is always clear,
+    // even when raw weights are bunched together (e.g. 0.69-0.95).
+    if (sliced.length < 2) return sliced
+    const max = sliced[0].weight
+    const min = sliced[sliced.length - 1].weight
+    const range = max - min
+    if (range < 0.01) return sliced // all identical weights — skip
+    return sliced.map(tag => ({
+      ...tag,
+      weight: (tag.weight - min) / range,
+    }))
   }, [tags, maxTags])
 
   if (sorted.length === 0) return null

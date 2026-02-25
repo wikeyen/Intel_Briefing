@@ -258,12 +258,19 @@ export function ControlBar({
     const cachedCount = sensors.filter(s => s.fetch_cached).length
     const sensorsToFetch = sensors.filter(s => !s.fetch_cached && s.fetch !== 'skipped').length
     const sensorsFetchDone = sensors.filter(s => !s.fetch_cached && s.fetch !== 'skipped' && (s.fetch === 'ok' || s.fetch === 'failed')).length
+    const allCached = cachedCount === sensors.length && sensors.length > 0
     const sensorsToSummarize = sensors.filter(s => s.summary !== 'skipped').length
     const sensorsSummaryDone = sensors.filter(s => s.summary !== 'skipped' && (s.summary === 'ok' || s.summary === 'failed')).length
 
     let phaseDetail = ''
     if (phase === 'fetching') {
-      phaseDetail = t('status.fetching_count', { done: String(sensorsFetchDone), total: String(sensorsToFetch) })
+      if (allCached) {
+        phaseDetail = t('status.all_cached')
+      } else if (cachedCount > 0) {
+        phaseDetail = t('status.fetching_partial', { done: String(sensorsFetchDone), toFetch: String(sensorsToFetch), cached: String(cachedCount) })
+      } else {
+        phaseDetail = t('status.fetching_count', { done: String(sensorsFetchDone), total: String(sensorsToFetch) })
+      }
     } else if (phase === 'summarizing') {
       phaseDetail = t('status.summarizing_count', { done: String(sensorsSummaryDone), total: String(sensorsToSummarize) })
     } else if (phase !== 'idle') {
@@ -301,7 +308,7 @@ export function ControlBar({
             {cachedCount > 0 && (
               <>
                 <span style={{ color: 'var(--ink-faint)' }}>·</span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--ink-faint)' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--ok)', fontWeight: 500 }}>
                   {t('status.cached_count', { count: String(cachedCount) })}
                 </span>
               </>

@@ -176,6 +176,8 @@ const zh: TranslationDict = {
   'status.summarizing_count': '已总结 {done}/{total} 个数据源',
   'status.retrying_count': '正在重试 {count} 个失败数据源 (第{attempt}/{max}次)',
   'status.cached_count': '{count} 个数据源已缓存',
+  'status.all_cached': '所有数据源来自缓存 — 无新数据',
+  'status.fetching_partial': '获取中 {done}/{toFetch} · {cached} 个已缓存',
   'status.run_all': '运行全部',
   'status.run_n': '运行 {count} 个',
   'status.stop': '停止',

@@ -176,6 +176,8 @@ const en: TranslationDict = {
   'status.summarizing_count': 'Summarized {done} of {total} sources',
   'status.retrying_count': 'Retrying {count} failed sources (attempt {attempt}/{max})',
   'status.cached_count': '{count} sources cached',
+  'status.all_cached': 'All sources from cache — no new data',
+  'status.fetching_partial': 'Fetching {done} of {toFetch} · {cached} cached',
   'status.run_all': 'Run All',
   'status.run_n': 'Run {count}',
   'status.stop': 'Stop',

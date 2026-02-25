@@ -60,7 +60,8 @@ export function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePh
   const allFetchCached = ps.sensors.length > 0 && fetchSensors.length === 0
 
   if (ps.mode === 'summarize') {
-    s.fetch = 'skipped'
+    // Data exists (either cached or from a previous run) — fetch is complete
+    s.fetch = 'done'
   } else if (allFetchCached) {
     s.fetch = 'done'
   } else if (anyFetching || anyFetchQueued) {

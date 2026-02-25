@@ -187,12 +187,12 @@ describe('SensorCard', () => {
     expect(screen.queryByText(/Queued/)).not.toBeInTheDocument()
   })
 
-  it('shows em-dash for post-fetch sensor with zero items waiting for summary', () => {
+  it('shows zero in faint style for post-fetch sensor with zero items waiting for summary', () => {
     renderWithI18n(<SensorCard {...buildProps({
       isRunning: true,
       liveSensor: makeSensorJob('hacker_news', { fetch: 'ok', summary: 'queued', item_count: 0 }),
     })} />)
-    expect(screen.getByText('\u2014')).toBeInTheDocument()
+    expect(screen.getByText('0')).toBeInTheDocument()
     expect(screen.queryByText(/Queued/)).not.toBeInTheDocument()
   })
 

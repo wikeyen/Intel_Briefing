@@ -105,6 +105,10 @@ export function Status() {
           if (sinceTrigger > 5_000) {
             setRunning(false)
           }
+          // User-initiated stop: reset stepper to clean slate (all-pending grey circles)
+          if (stopping && s.cancelled) {
+            setPipelineStatus(null)
+          }
           setStopping(false)
         }
       }).catch(() => {})

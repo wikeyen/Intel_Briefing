@@ -57,9 +57,12 @@ export function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePh
   const anyFetchQueued = fetchStates.some(f => f === 'queued')
   const allFetchTerminal = fetchStates.every(f => TERMINAL_STATES.includes(f))
   const anyFetchFailed = fetchStates.some(f => f === 'failed')
+  const allFetchCached = ps.sensors.length > 0 && fetchSensors.length === 0
 
   if (ps.mode === 'summarize') {
     s.fetch = 'skipped'
+  } else if (allFetchCached) {
+    s.fetch = 'done'
   } else if (anyFetching || anyFetchQueued) {
     s.fetch = 'active'
   } else if (allFetchTerminal && fetchStates.length > 0) {
@@ -82,6 +85,7 @@ export function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePh
   const anySummaryQueued = summaryStates.some(su => su === 'queued')
   const allSummaryTerminal = summaryStates.every(su => TERMINAL_STATES.includes(su))
   const anySummaryFailed = summaryStates.some(su => su === 'failed')
+  const allSummaryCancelled = summaryStates.length > 0 && summaryStates.every(su => su === 'cancelled' || su === 'skipped')
 
   // Briefing (overall summary) — derived first so summary can use it as a guardrail
   if (ps.mode === 'fetch') {
@@ -107,6 +111,8 @@ export function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePh
     s.summary = anySummaryFailed ? 'error' : 'done'
   } else if (anySummaryRunning || anySummaryQueued) {
     s.summary = 'active'
+  } else if (allSummaryCancelled) {
+    s.summary = 'skipped'
   } else if (allSummaryTerminal && summaryStates.length > 0) {
     s.summary = anySummaryFailed ? 'error' : 'done'
   }

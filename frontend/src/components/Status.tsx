@@ -387,6 +387,7 @@ export function Status() {
         <ControlBar
           health={health}
           config={config}
+          pipelineStatus={pipelineStatus}
           sourcesOk={sourcesOk}
           sourcesTotal={allEnabledSensors.length}
           totalItems={totalItems}

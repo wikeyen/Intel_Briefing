@@ -5,6 +5,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { I18nProvider } from '@/lib/i18n/context'
 import { ControlBar } from './ControlBar'
 import type { ControlBarProps } from './ControlBar'
+import { makeSensorJob, makePipelineStatus } from './test-helpers'
 
 function renderWithI18n(ui: React.ReactElement) {
   return render(<I18nProvider initialLocale="en">{ui}</I18nProvider>)
@@ -14,6 +15,7 @@ function buildProps(overrides: Partial<ControlBarProps> = {}): ControlBarProps {
   return {
     health: { status: 'ok', last_fetch: new Date().toISOString() },
     config: null,
+    pipelineStatus: null,
     sourcesOk: 10,
     sourcesTotal: 13,
     totalItems: 114,
@@ -196,20 +198,30 @@ describe('ControlBar', () => {
     expect(btn).toBeDisabled()
   })
 
-  it('shows phase label when running', () => {
+  it('shows count-based phase label when fetching', () => {
+    const sensors = Array.from({ length: 13 }, (_, i) =>
+      makeSensorJob(`sensor_${i}`, i < 3 ? { fetch: 'ok' } : { fetch: 'queued' }),
+    )
     renderWithI18n(<ControlBar {...buildProps({
       isRunning: true,
       phase: 'fetching',
       progress: { done: 3, total: 13 },
+      pipelineStatus: makePipelineStatus({ running: true, alive: true, sensors }),
     })} />)
-    expect(screen.getByText('Fetching')).toBeInTheDocument()
+    expect(screen.getByText('Fetching 10 of 13 sources')).toBeInTheDocument()
   })
 
   it('shows progress count when running', () => {
+    const sensors = Array.from({ length: 13 }, (_, i) =>
+      makeSensorJob(`sensor_${i}`, i < 7
+        ? { fetch: 'ok', summary: 'ok' }
+        : { fetch: 'ok', summary: 'running' }),
+    )
     renderWithI18n(<ControlBar {...buildProps({
       isRunning: true,
       phase: 'summarizing',
       progress: { done: 7, total: 13 },
+      pipelineStatus: makePipelineStatus({ running: true, alive: true, sensors }),
     })} />)
     expect(screen.getByText('7/13')).toBeInTheDocument()
     expect(screen.getByText('sensors')).toBeInTheDocument()

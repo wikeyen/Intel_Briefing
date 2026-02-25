@@ -50,6 +50,8 @@ function makeSensor(overrides: Partial<PipelineStatus['sensors'][number]> = {}):
     fetch_error: null,
     fetch_error_kind: null,
     fetch_detail: null,
+    fetch_started_at: null,
+    fetch_cached: false,
     summary: 'queued',
     summary_error: null,
     item_count: 0,
@@ -187,10 +189,10 @@ describe('StaleProcessBanner', () => {
       },
     })
     expect(screen.getByText('Summary interrupted')).toBeInTheDocument()
-    expect(screen.getByText(/60% complete/)).toBeInTheDocument()
+    expect(screen.getByText(/3 of 5 sources already fetched/)).toBeInTheDocument()
     expect(screen.getByText('Abort')).toBeInTheDocument()
-    expect(screen.getByText('Resume')).toBeInTheDocument()
-    expect(screen.getByText('Restart')).toBeInTheDocument()
+    expect(screen.getByText('Continue (2 remaining)')).toBeInTheDocument()
+    expect(screen.getByText('Discard and start fresh')).toBeInTheDocument()
   })
 
   it('renders interrupted label for pipeline with failures', () => {
@@ -205,7 +207,7 @@ describe('StaleProcessBanner', () => {
       },
     })
     expect(screen.getByText('Pipeline interrupted')).toBeInTheDocument()
-    expect(screen.getByText(/25% complete/)).toBeInTheDocument()
+    expect(screen.getByText(/1 of 4 sources already fetched/)).toBeInTheDocument()
     expect(screen.getByText(/1 failed/)).toBeInTheDocument()
   })
 
@@ -216,17 +218,17 @@ describe('StaleProcessBanner', () => {
     expect(onAbort).toHaveBeenCalledOnce()
   })
 
-  it('calls onResume when Resume is clicked', () => {
+  it('calls onResume when Continue is clicked', () => {
     const onResume = vi.fn()
     renderBanner({ onResume })
-    fireEvent.click(screen.getByText('Resume'))
+    fireEvent.click(screen.getByText('Continue (3 remaining)'))
     expect(onResume).toHaveBeenCalledOnce()
   })
 
-  it('calls onRestart when Restart is clicked', () => {
+  it('calls onRestart when Discard is clicked', () => {
     const onRestart = vi.fn()
     renderBanner({ onRestart })
-    fireEvent.click(screen.getByText('Restart'))
+    fireEvent.click(screen.getByText('Discard and start fresh'))
     expect(onRestart).toHaveBeenCalledOnce()
   })
 })

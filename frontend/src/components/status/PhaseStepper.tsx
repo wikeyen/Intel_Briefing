@@ -49,8 +49,9 @@ export function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePh
 
   const events = ps.events ?? []
 
-  // Fetch phase
-  const fetchStates = ps.sensors.map(sen => sen.fetch)
+  // Fetch phase — exclude cached sensors (they didn't need fetching)
+  const fetchSensors = ps.sensors.filter(sen => !sen.fetch_cached)
+  const fetchStates = fetchSensors.map(sen => sen.fetch)
   const anyFetching = fetchStates.some(f => f === 'running')
   const anyFetchQueued = fetchStates.some(f => f === 'queued')
   const allFetchTerminal = fetchStates.every(f => TERMINAL_STATES.includes(f))
@@ -136,8 +137,8 @@ function derivePhaseProgress(ps: PipelineStatus | null): Record<PipelinePhaseSte
   const p: Record<PipelinePhaseStep, number> = { fetch: 0, retry: 0, summary: 0, briefing: 0, intelligence: 0 }
   if (!ps) return p
 
-  // Fetch: fraction of non-skipped sensors in terminal state
-  const fetchActive = ps.sensors.filter(s => s.fetch !== 'skipped')
+  // Fetch: fraction of non-skipped, non-cached sensors in terminal state
+  const fetchActive = ps.sensors.filter(s => s.fetch !== 'skipped' && !s.fetch_cached)
   if (fetchActive.length > 0) {
     p.fetch = fetchActive.filter(s => TERMINAL_STATES.includes(s.fetch)).length / fetchActive.length
   }
@@ -175,8 +176,8 @@ function derivePhaseProgress(ps: PipelineStatus | null): Record<PipelinePhaseSte
 function derivePhaseCounts(ps: PipelineStatus | null): Record<string, { ok: number; total: number } | null> {
   if (!ps) return { fetch: null, retry: null }
 
-  // Fetch counts: sensors with fetch='ok' vs total non-skipped
-  const fetchActive = ps.sensors.filter(s => s.fetch !== 'skipped')
+  // Fetch counts: exclude cached sensors — they didn't need fetching
+  const fetchActive = ps.sensors.filter(s => s.fetch !== 'skipped' && !s.fetch_cached)
   const fetchOk = fetchActive.filter(s => s.fetch === 'ok').length
   const fetchTotal = fetchActive.length
   const fetchCount = fetchTotal > 0 ? { ok: fetchOk, total: fetchTotal } : null

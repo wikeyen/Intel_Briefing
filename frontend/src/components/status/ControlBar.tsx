@@ -3,7 +3,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { HealthResponse, ConfigSettings, RunMode } from '@/api/client'
+import type { HealthResponse, ConfigSettings, RunMode, PipelineStatus } from '@/api/client'
 import { useTranslation } from '@/lib/i18n'
 import { PlayIcon } from '@/components/form-styles'
 import { STATUS_META } from './constants'
@@ -14,6 +14,7 @@ export type Phase = 'idle' | 'fetching' | 'summarizing' | 'briefing' | 'intellig
 export interface ControlBarProps {
   health: HealthResponse | null
   config: ConfigSettings | null
+  pipelineStatus: PipelineStatus | null
   sourcesOk: number
   sourcesTotal: number
   totalItems: number
@@ -165,6 +166,7 @@ const progressTrackStyle: React.CSSProperties = {
 export function ControlBar({
   health,
   config,
+  pipelineStatus,
   sourcesOk,
   sourcesTotal,
   totalItems,
@@ -249,13 +251,29 @@ export function ControlBar({
 
   // --- Running state ---
   if (isRunning) {
-    const phaseLabel = phase === 'idle' ? '' : t('status.' + phase)
     const dotColor = 'var(--accent)'
+
+    // Compute count-based phase description from sensor data
+    const sensors = pipelineStatus?.sensors ?? []
+    const cachedCount = sensors.filter(s => s.fetch_cached).length
+    const sensorsToFetch = sensors.filter(s => !s.fetch_cached && s.fetch !== 'skipped').length
+    const sensorsFetchDone = sensors.filter(s => !s.fetch_cached && s.fetch !== 'skipped' && (s.fetch === 'ok' || s.fetch === 'failed')).length
+    const sensorsToSummarize = sensors.filter(s => s.summary !== 'skipped').length
+    const sensorsSummaryDone = sensors.filter(s => s.summary !== 'skipped' && (s.summary === 'ok' || s.summary === 'failed')).length
+
+    let phaseDetail = ''
+    if (phase === 'fetching') {
+      phaseDetail = t('status.fetching_count', { remaining: String(sensorsToFetch - sensorsFetchDone), total: String(sensorsToFetch) })
+    } else if (phase === 'summarizing') {
+      phaseDetail = t('status.summarizing_count', { remaining: String(sensorsToSummarize - sensorsSummaryDone), total: String(sensorsToSummarize) })
+    } else if (phase !== 'idle') {
+      phaseDetail = t('status.' + phase)
+    }
 
     return (
       <div className="control-bar page-padding" style={barStyle}>
         <div className="control-bar-row" style={rowStyle}>
-          {/* Left: pulsing dot + phase + detail */}
+          {/* Left: pulsing dot + phase detail */}
           <div className="control-bar-left" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
             <span
               style={{
@@ -267,13 +285,7 @@ export function ControlBar({
                 animation: 'pulseDot 1.6s ease-in-out infinite',
               }}
             />
-            <span style={{ ...labelStyle, color: dotColor }}>{phaseLabel}</span>
-            {phase === 'fetching' && poolSize > 0 && (
-              <>
-                <span style={{ color: 'var(--ink-faint)' }}>·</span>
-                <span style={{ ...MONO, fontSize: '0.75rem', color: 'var(--ink-muted)' }}>{t('status.pool', { count: String(poolSize) })}</span>
-              </>
-            )}
+            <span style={{ ...labelStyle, color: dotColor }}>{phaseDetail}</span>
             {detail && (
               <>
                 <span style={{ color: 'var(--ink-faint)' }}>·</span>
@@ -286,12 +298,19 @@ export function ControlBar({
           <div className="control-bar-center" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0 auto' }}>
             <span style={{ ...MONO, fontSize: '0.8125rem', fontWeight: 600 }}>{progress.done}/{progress.total}</span>
             <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>{t('status.sensors')}</span>
+            {cachedCount > 0 && (
+              <>
+                <span style={{ color: 'var(--ink-faint)' }}>·</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--ink-faint)' }}>
+                  {t('status.cached_count', { count: String(cachedCount) })}
+                </span>
+              </>
+            )}
             {retryingCount > 0 && (
               <>
                 <span style={{ color: 'var(--ink-faint)' }}>·</span>
-                <span style={{ ...MONO, fontSize: '0.8125rem', fontWeight: 600, color: 'var(--warn)' }}>{retryingCount}</span>
                 <span style={{ fontSize: '0.75rem', color: 'var(--warn)' }}>
-                  {t('status.retrying')}{retryAttempt > 0 ? ` (${retryAttempt}/${retryMax})` : ''}
+                  {t('status.retrying_count', { count: String(retryingCount), attempt: String(retryAttempt), max: String(retryMax) })}
                 </span>
               </>
             )}

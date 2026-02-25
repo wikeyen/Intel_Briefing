@@ -129,6 +129,7 @@ export function StaleProcessBanner({ stale, onAbort, onResume, onRestart }: {
   const pct = stale.totalSensors > 0
     ? Math.round((stale.completedSensors / stale.totalSensors) * 100)
     : 0
+  const remaining = stale.totalSensors - stale.completedSensors
   const resumeHint = stale.fetchComplete
     ? t('stale.resume_summary')
     : t('stale.resume_full')
@@ -185,7 +186,7 @@ export function StaleProcessBanner({ stale, onAbort, onResume, onRestart }: {
             margin: 0,
             lineHeight: 1.5,
           }}>
-            {t('stale.progress', { pct: String(pct), done: String(stale.completedSensors), total: String(stale.totalSensors) })}
+            {t('stale.sources_fetched', { done: String(stale.completedSensors), total: String(stale.totalSensors) })}
             {stale.failedSensors.length > 0 && (
               <> · {t('stale.n_failed', { count: String(stale.failedSensors.length) })}</>
             )}
@@ -214,7 +215,7 @@ export function StaleProcessBanner({ stale, onAbort, onResume, onRestart }: {
             onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--ink-faint)' }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
           >
-            {t('stale.resume')}
+            {t('stale.continue', { remaining: String(remaining) })}
           </button>
           <button
             onClick={onRestart}
@@ -223,7 +224,7 @@ export function StaleProcessBanner({ stale, onAbort, onResume, onRestart }: {
             onMouseEnter={e => { e.currentTarget.style.background = 'var(--ink-muted)' }}
             onMouseLeave={e => { e.currentTarget.style.background = 'var(--ink)' }}
           >
-            {t('stale.restart')}
+            {t('stale.discard')}
           </button>
         </div>
       </div>

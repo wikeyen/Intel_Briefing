@@ -114,6 +114,8 @@ export function makeSensorJob(name: string, overrides: Partial<SensorJobProgress
     fetch_error: null,
     fetch_error_kind: null,
     fetch_detail: null,
+    fetch_started_at: null,
+    fetch_cached: false,
     summary: 'queued',
     summary_error: null,
     item_count: 0,

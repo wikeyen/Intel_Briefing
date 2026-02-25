@@ -23,6 +23,9 @@ export interface ControlBarProps {
   detail?: string
   failedCount: number
   retryingCount: number
+  retryAttempt: number
+  retryMax: number
+  poolSize: number
   isPaused: boolean
   selectedCount: number
   totalSensors: number
@@ -171,6 +174,9 @@ export function ControlBar({
   detail,
   failedCount,
   retryingCount,
+  retryAttempt,
+  retryMax,
+  poolSize,
   isPaused,
   selectedCount,
   totalSensors,
@@ -262,6 +268,12 @@ export function ControlBar({
               }}
             />
             <span style={{ ...labelStyle, color: dotColor }}>{phaseLabel}</span>
+            {phase === 'fetching' && poolSize > 0 && (
+              <>
+                <span style={{ color: 'var(--ink-faint)' }}>·</span>
+                <span style={{ ...MONO, fontSize: '0.75rem', color: 'var(--ink-muted)' }}>{t('status.pool', { count: String(poolSize) })}</span>
+              </>
+            )}
             {detail && (
               <>
                 <span style={{ color: 'var(--ink-faint)' }}>·</span>
@@ -278,7 +290,9 @@ export function ControlBar({
               <>
                 <span style={{ color: 'var(--ink-faint)' }}>·</span>
                 <span style={{ ...MONO, fontSize: '0.8125rem', fontWeight: 600, color: 'var(--warn)' }}>{retryingCount}</span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--warn)' }}>{t('status.retrying')}</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--warn)' }}>
+                  {t('status.retrying')}{retryAttempt > 0 ? ` (${retryAttempt}/${retryMax})` : ''}
+                </span>
               </>
             )}
             {failedCount > 0 && (

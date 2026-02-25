@@ -396,6 +396,9 @@ export function Status() {
           detail={phaseDetail}
           failedCount={failedCount}
           retryingCount={retryingCount}
+          retryAttempt={pipelineStatus?.retry_attempt ?? 0}
+          retryMax={pipelineStatus?.retry_max ?? 0}
+          poolSize={pipelineStatus?.default_concurrency ?? 0}
           isPaused={isPaused}
           selectedCount={selectedSensors.size}
           totalSensors={allEnabledSensors.length}

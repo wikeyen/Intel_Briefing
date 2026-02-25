@@ -169,12 +169,31 @@ describe('SensorCard', () => {
     expect(screen.getByText('20')).toBeInTheDocument()
   })
 
-  it('shows "Waiting..." for queued sensor during run', () => {
+  it('shows normal idle state for pre-fetch queued sensor during run', () => {
     renderWithI18n(<SensorCard {...buildProps({
       isRunning: true,
-      // No liveSensor means waiting
+      // No liveSensor means pre-fetch — should show normal item count (healthy state)
     })} />)
-    expect(screen.getByText(/Queued/)).toBeInTheDocument()
+    expect(screen.getByText('15')).toBeInTheDocument()
+    expect(screen.queryByText(/Queued/)).not.toBeInTheDocument()
+  })
+
+  it('shows item count for post-fetch sensor waiting for summary', () => {
+    renderWithI18n(<SensorCard {...buildProps({
+      isRunning: true,
+      liveSensor: makeSensorJob('hacker_news', { fetch: 'ok', summary: 'queued', item_count: 42 }),
+    })} />)
+    expect(screen.getByText('42')).toBeInTheDocument()
+    expect(screen.queryByText(/Queued/)).not.toBeInTheDocument()
+  })
+
+  it('shows em-dash for post-fetch sensor with zero items waiting for summary', () => {
+    renderWithI18n(<SensorCard {...buildProps({
+      isRunning: true,
+      liveSensor: makeSensorJob('hacker_news', { fetch: 'ok', summary: 'queued', item_count: 0 }),
+    })} />)
+    expect(screen.getByText('\u2014')).toBeInTheDocument()
+    expect(screen.queryByText(/Queued/)).not.toBeInTheDocument()
   })
 
   it('shows error for sensor that failed mid-run', () => {

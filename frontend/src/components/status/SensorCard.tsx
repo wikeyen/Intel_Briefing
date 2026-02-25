@@ -59,6 +59,7 @@ type CardState =
   | 'fetching'
   | 'summarizing'
   | 'waiting'
+  | 'fetched'
   | 'skipped'
   | 'done'
   | 'failed-mid-run'
@@ -70,15 +71,15 @@ function deriveState(props: SensorCardProps): CardState {
   if (isDisabled) return 'disabled'
 
   if (isRunning) {
-    if (!liveSensor) return props.isSkipped ? 'skipped' : 'waiting'
+    if (!liveSensor) return props.isSkipped ? 'skipped' : 'healthy'
     // During pause, failed sensors get special interactive state
     if (isPaused && (liveSensor.fetch === 'failed' || liveSensor.summary === 'failed')) return 'paused-failed'
     if (liveSensor.fetch === 'failed' || liveSensor.summary === 'failed') return 'failed-mid-run'
     if ((liveSensor.fetch === 'ok' || liveSensor.fetch === 'skipped') && (liveSensor.summary === 'ok' || liveSensor.summary === 'skipped')) return 'done'
     if (liveSensor.summary === 'running') return 'summarizing'
     if (liveSensor.fetch === 'running') return 'fetching'
-    if ((liveSensor.fetch === 'ok' || liveSensor.fetch === 'skipped') && liveSensor.summary === 'queued') return 'waiting'
-    return 'waiting'
+    if ((liveSensor.fetch === 'ok' || liveSensor.fetch === 'skipped') && liveSensor.summary === 'queued') return 'fetched'
+    return 'healthy'
   }
 
   if (isConfigError) return 'config-error'
@@ -115,6 +116,8 @@ function Dot({ state }: { state: CardState }) {
       return <span style={{ ...base, background: 'var(--accent)' }} />
     case 'waiting':
       return <span style={{ ...base, background: 'transparent', border: '1.5px solid var(--ink-faint)' }} />
+    case 'fetched':
+      return <span style={{ ...base, background: 'var(--ok)' }} />
     case 'skipped':
       return <span style={{ ...base, background: 'var(--ink-faint)', opacity: 0.5 }} />
     case 'done':
@@ -160,7 +163,7 @@ function cardContainerStyle(state: CardState, hovered: boolean): React.CSSProper
     }
   }
 
-  if (state === 'fetching' || state === 'summarizing' || state === 'waiting' || state === 'done' || state === 'failed-mid-run') {
+  if (state === 'fetching' || state === 'summarizing' || state === 'waiting' || state === 'fetched' || state === 'done' || state === 'failed-mid-run') {
     return {
       ...base,
       cursor: 'default',
@@ -399,6 +402,13 @@ function PrimaryMetric({ state, props, t }: { state: CardState; props: SensorCar
 
     case 'waiting':
       return <span style={{ ...metricStyle, color: 'var(--ink-faint)', fontWeight: 400, fontSize: '0.75rem' }}>{t('sensor.queued')}</span>
+
+    case 'fetched':
+      return (
+        <span style={{ ...metricStyle, fontSize: '0.875rem' }}>
+          {liveSensor && liveSensor.item_count > 0 ? liveSensor.item_count : '\u2014'}
+        </span>
+      )
 
     case 'skipped':
       return (
@@ -650,7 +660,7 @@ function rowContainerStyle(state: CardState, hovered: boolean): React.CSSPropert
     return { ...base, borderLeft: '3px solid var(--err)', cursor: state === 'paused-failed' ? 'default' : base.cursor }
   }
 
-  if (state === 'fetching' || state === 'summarizing' || state === 'waiting' || state === 'skipped' || state === 'done') {
+  if (state === 'fetching' || state === 'summarizing' || state === 'waiting' || state === 'fetched' || state === 'skipped' || state === 'done') {
     return { ...base, cursor: 'default', ...(state === 'skipped' ? { opacity: 0.5 } : {}) }
   }
 
@@ -733,6 +743,8 @@ function RowMetric({ state, props, t }: { state: CardState; props: SensorCardPro
       return props.isRetrying
         ? <span style={{ fontSize: '0.6875rem', color: 'var(--warn)', fontWeight: 500 }}>{t('sensor.retrying')}{'\u2026'}</span>
         : <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>{t('sensor.queued')}</span>
+    case 'fetched':
+      return <span style={{ ...mono, color: 'var(--ink)' }}>{liveSensor && liveSensor.item_count > 0 ? liveSensor.item_count : '\u2014'}</span>
     case 'skipped':
       return (
         <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.0625rem' }}>

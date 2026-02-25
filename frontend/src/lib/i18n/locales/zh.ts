@@ -543,6 +543,14 @@ const zh: TranslationDict = {
   'sources.invalid_x_handle': '无效的用户名格式',
   'sources.invalid_bluesky_handle': '格式: name.bsky.social',
   'sources.invalid_mastodon_handle': '格式: @user@instance',
+
+  // ── Intelligence cards ──────────────────────────────────────────────────────
+  'intel.public_focus': '公众关注',
+  'intel.topic_pulse': '话题脉搏',
+  'intel.voices': '声音',
+  'intel.no_trend_data': '暂无趋势数据',
+  'intel.no_topic_data': '在设置中配置话题以监控公众情绪',
+  'intel.no_voices_data': '在设置中关注账号以查看他们的关注点',
 }
 
 export default zh

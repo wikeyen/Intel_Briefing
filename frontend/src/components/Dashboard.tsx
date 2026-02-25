@@ -1621,10 +1621,11 @@ function IntelligenceDetailPanel({ cardType, intelligence, onClose }: {
   intelligence: IntelligenceReport
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const config = {
-    trend:    { label: 'Public Focus',  accent: '#f39c12' },
-    topics:   { label: 'Topic Pulse',   accent: '#9b59b6' },
-    accounts: { label: 'Voices',        accent: '#3498db' },
+    trend:    { label: t('intel.public_focus'),  accent: '#f39c12' },
+    topics:   { label: t('intel.topic_pulse'),   accent: '#9b59b6' },
+    accounts: { label: t('intel.voices'),        accent: '#3498db' },
   }[cardType]
 
   // Close on Escape

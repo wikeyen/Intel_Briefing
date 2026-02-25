@@ -543,6 +543,14 @@ const en: TranslationDict = {
   'sources.invalid_x_handle': 'Invalid handle format',
   'sources.invalid_bluesky_handle': 'Use format: name.bsky.social',
   'sources.invalid_mastodon_handle': 'Use format: @user@instance',
+
+  // ── Intelligence cards ──────────────────────────────────────────────────────
+  'intel.public_focus': 'Public Focus',
+  'intel.topic_pulse': 'Topic Pulse',
+  'intel.voices': 'Voices',
+  'intel.no_trend_data': 'No trend data yet',
+  'intel.no_topic_data': 'Configure topics in Settings to monitor public sentiment',
+  'intel.no_voices_data': 'Follow accounts in Settings to see what they\'re focused on',
 }
 
 export default en

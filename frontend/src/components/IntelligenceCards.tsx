@@ -3,6 +3,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { useTranslation } from '@/lib/i18n'
 import { TagCloud } from './TagCloud'
 import type { TagCloudTag } from './TagCloud'
 
@@ -367,6 +368,7 @@ interface PublicFocusCardProps {
 }
 
 export function PublicFocusCard({ data, loading, onClick }: PublicFocusCardProps) {
+  const { t } = useTranslation()
   const tagCloudTags: TagCloudTag[] = useMemo(() => {
     return (data?.tags ?? []).map((t) => ({
       text: t.text,
@@ -379,12 +381,12 @@ export function PublicFocusCard({ data, loading, onClick }: PublicFocusCardProps
   return (
     <ClickableCard onClick={onClick}>
       <div style={{ ...SECTION_GAP, flex: 1 }}>
-        <CardHeader label="Public Focus" accentColor="#f39c12" />
+        <CardHeader label={t('intel.public_focus')} accentColor="#f39c12" />
 
         {loading ? (
           <LoadingPlaceholder />
         ) : !data ? (
-          <EmptyHint message="No trend data yet" />
+          <EmptyHint message={t('intel.no_trend_data')} />
         ) : (
           <>
             {data.summary && (
@@ -412,15 +414,16 @@ interface TopicPulseCardProps {
 }
 
 export function TopicPulseCard({ data, loading, onClick }: TopicPulseCardProps) {
+  const { t } = useTranslation()
   return (
     <ClickableCard onClick={onClick}>
       <div style={{ ...SECTION_GAP, flex: 1 }}>
-        <CardHeader label="Topic Pulse" accentColor="#9b59b6" />
+        <CardHeader label={t('intel.topic_pulse')} accentColor="#9b59b6" />
 
         {loading ? (
           <LoadingPlaceholder />
         ) : !data ? (
-          <EmptyHint message="Configure topics in Settings to monitor public sentiment" />
+          <EmptyHint message={t('intel.no_topic_data')} />
         ) : (
           <>
             {data.summary && (
@@ -471,6 +474,7 @@ interface VoicesCardProps {
 }
 
 export function VoicesCard({ data, loading, onClick }: VoicesCardProps) {
+  const { t } = useTranslation()
   const tagCloudTags: TagCloudTag[] = useMemo(() => {
     return (data?.tags ?? []).map((t) => ({
       text: t.text,
@@ -483,12 +487,12 @@ export function VoicesCard({ data, loading, onClick }: VoicesCardProps) {
   return (
     <ClickableCard onClick={onClick}>
       <div style={{ ...SECTION_GAP, flex: 1 }}>
-        <CardHeader label="Voices" accentColor="#3498db" />
+        <CardHeader label={t('intel.voices')} accentColor="#3498db" />
 
         {loading ? (
           <LoadingPlaceholder />
         ) : !data ? (
-          <EmptyHint message="Follow accounts in Settings to see what they're focused on" />
+          <EmptyHint message={t('intel.no_voices_data')} />
         ) : (
           <>
             {data.summary && (

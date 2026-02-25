@@ -13,8 +13,8 @@ import {
   Sparkles,
   KeyRound,
   Globe,
-  PanelLeftClose,
-  PanelLeftOpen,
+  Pin,
+  PinOff,
 } from 'lucide-react'
 import { api } from '@/api/client'
 import type { HealthResponse, PipelineStatus, SummaryProgress } from '@/api/client'
@@ -284,7 +284,7 @@ export function Sidebar({ onNavigate, collapsed, peeking, pinned, onPinToggle }:
   const statusWord = health ? t('health.' + health.status) : t('sidebar.loading')
   const statusTimestamp = health?.last_fetch ? health.last_fetch.slice(0, 16).replace('T', ' ') : null
 
-  const PinIcon = pinned ? PanelLeftClose : PanelLeftOpen
+  const PinIcon = pinned ? PinOff : Pin
 
   return (
     <nav className={`sidebar-nav${peeking ? ' sidebar-peeking' : ''}`} style={{

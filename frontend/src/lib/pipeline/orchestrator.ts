@@ -14,7 +14,7 @@ import { sensorResultSucceeded, sensorLimit } from '../models'
 import { Semaphore } from './semaphore'
 import { PipelineProgressTracker } from './progress'
 import { readReport, writeReport, writePipelineStatus } from './cache'
-import { writeSummary, writeSummaryProgress, invalidateAllSensorSummaries, invalidateAllSummaries } from '../summary/cache'
+import { readSummary, writeSummary, writeSummaryProgress, invalidateAllSensorSummaries, invalidateAllSummaries } from '../summary/cache'
 import { summarizeReport, summarizeSingleSensor, generateOverallBriefing, type SummaryProgressCallback } from '../summary/summarizer'
 import type { LlmConfig } from '../summary/llm'
 import { SENSOR_REGISTRY } from '../sensors'
@@ -24,7 +24,7 @@ import { SensorConfigError } from '../sensors/errors'
 import { assembleReport } from './report-builder'
 import { createBus } from '../summary/events'
 import { runIntelligenceAnalysis } from './intelligence'
-import { writeIntelligence } from './intelligence-cache'
+import { readIntelligence, writeIntelligence } from './intelligence-cache'
 import { writePipelineItem, readFreshPipelineItems, clearRunItems } from '../db'
 
 export interface PipelineResult {
@@ -306,6 +306,34 @@ export async function runPipeline(
 
   // Filter out cached sensors from the fetch list
   const sensorsToFetch = registrySensorNames.filter(name => !cachedSensorItems.has(name))
+
+  // Early exit: all sensors cached + existing summary and intelligence — reuse everything
+  if (sensorsToFetch.length === 0 && shouldSummarize && cachedSensorItems.size > 0) {
+    const existingSummary = await readSummary(config.summary_language)
+    const existingIntelligence = await readIntelligence()
+
+    if (existingSummary && existingIntelligence) {
+      tracker.addEvent('info', 'system', 'All sensors cached, existing analysis reused')
+
+      const cachedResults: SensorResult[] = [...cachedSensorItems].map(([sensorName, items]) => ({
+        sensor_name: sensorName,
+        items: items as IntelItem[],
+        error: null,
+        error_kind: null,
+      }))
+      const report = await assembleReport(cachedResults, config, { llmConfig, signal, sensorFilter })
+
+      tracker.addEvent('ok', 'system', `Pipeline complete — ${report ? Object.values(report.items).reduce((sum, arr) => sum + arr.length, 0) : 0} items collected (all cached)`)
+      tracker.complete()
+      await writePipelineStatus(tracker.snapshot()).catch(() => {})
+      if (g.__pipelineAbortController === abortController) {
+        g.__pipelineAbortController = null
+        g.__pipelineTracker = null
+        g.__pipelineSensorSkips = undefined
+      }
+      return { report, summary: existingSummary }
+    }
+  }
 
   let report: IntelReport | null = null
   let summary: BriefingSummary | null = null

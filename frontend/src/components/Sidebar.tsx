@@ -56,7 +56,7 @@ function NavLink({ href, active, onClick, collapsed, title, children }: {
         display: 'flex',
         alignItems: 'center',
         gap: '0.75rem',
-        padding: '0.5rem 1.75rem 0.5rem 1.125rem',
+        padding: '0.5rem 1.75rem 0.5rem 1rem',
         justifyContent: 'flex-start',
         minHeight: 44,
         width: '100%',
@@ -396,7 +396,7 @@ export function Sidebar({ onNavigate, collapsed, peeking, pinned, onPinToggle }:
       <div style={{ flex: 1, padding: '1rem 0' }}>
         <SideLabel collapsed={collapsed}>{t('nav.overview')}</SideLabel>
         <NavLink href="/dashboard" active={pathname === '/dashboard'} onClick={onNavigate} collapsed={collapsed} title={t('nav.dashboard')}>
-          <LayoutDashboard size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+          <LayoutDashboard size={22} strokeWidth={1.5} style={{ flexShrink: 0 }} />
           {!collapsed && t('nav.dashboard')}
           {!collapsed && hasNewBriefing && (
             <span style={{
@@ -411,7 +411,7 @@ export function Sidebar({ onNavigate, collapsed, peeking, pinned, onPinToggle }:
           )}
         </NavLink>
         <NavLink href="/status" active={pathname === '/status'} onClick={onNavigate} collapsed={collapsed} title={t('nav.status')}>
-          <Activity size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+          <Activity size={22} strokeWidth={1.5} style={{ flexShrink: 0 }} />
           {!collapsed && t('nav.status')}
           {!collapsed && showBadge && (
             <span style={{
@@ -427,7 +427,7 @@ export function Sidebar({ onNavigate, collapsed, peeking, pinned, onPinToggle }:
           )}
         </NavLink>
         <NavLink href="/data" active={pathname === '/data'} onClick={onNavigate} collapsed={collapsed} title={t('nav.feed')}>
-          <Rss size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+          <Rss size={22} strokeWidth={1.5} style={{ flexShrink: 0 }} />
           {!collapsed && t('nav.feed')}
         </NavLink>
 
@@ -438,7 +438,7 @@ export function Sidebar({ onNavigate, collapsed, peeking, pinned, onPinToggle }:
           const Icon = CONFIG_ICON_MAP[href]
           return (
             <NavLink key={href} href={href} active={pathname === href} onClick={onNavigate} collapsed={collapsed} title={t(labelKey)}>
-              {Icon && <Icon size={18} strokeWidth={1.5} />}
+              {Icon && <Icon size={22} strokeWidth={1.5} />}
               {!collapsed && t(labelKey)}
             </NavLink>
           )
@@ -456,7 +456,7 @@ export function Sidebar({ onNavigate, collapsed, peeking, pinned, onPinToggle }:
       }}>
         {collapsed ? (
           /* Collapsed: globe icon only */
-          <Globe size={18} strokeWidth={1.5} style={{ color: 'var(--sb-faint)' }} />
+          <Globe size={22} strokeWidth={1.5} style={{ color: 'var(--sb-faint)' }} />
         ) : (
           /* Expanded: label + dropdown */
           <>

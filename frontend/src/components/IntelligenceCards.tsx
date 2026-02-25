@@ -262,7 +262,7 @@ function ThemeMiniTag({ text }: { text: string }) {
 interface IntelTag {
   text: string
   weight: number
-  translated?: string
+  original?: string
   sentiment?: 'positive' | 'negative' | 'neutral' | 'mixed'
 }
 
@@ -373,7 +373,7 @@ export function PublicFocusCard({ data, loading, onClick }: PublicFocusCardProps
     return (data?.tags ?? []).map((t) => ({
       text: t.text,
       weight: t.weight,
-      translated: t.translated,
+      original: t.original,
       sentiment: t.sentiment,
     }))
   }, [data])
@@ -479,7 +479,7 @@ export function VoicesCard({ data, loading, onClick }: VoicesCardProps) {
     return (data?.tags ?? []).map((t) => ({
       text: t.text,
       weight: t.weight,
-      translated: t.translated,
+      original: t.original,
       sentiment: t.sentiment,
     }))
   }, [data])
@@ -524,7 +524,7 @@ export function PublicFocusDetail({ data }: { data: TrendIntelligence }) {
     return (data?.tags ?? []).map((t) => ({
       text: t.text,
       weight: t.weight,
-      translated: t.translated,
+      original: t.original,
       sentiment: t.sentiment,
     }))
   }, [data])
@@ -702,7 +702,7 @@ export function VoicesDetail({ data }: { data: AccountsIntelligence }) {
     return (data?.tags ?? []).map((t) => ({
       text: t.text,
       weight: t.weight,
-      translated: t.translated,
+      original: t.original,
       sentiment: t.sentiment,
     }))
   }, [data])

@@ -15,7 +15,7 @@ import { jsonrepair } from 'jsonrepair'
 export interface IntelTag {
   text: string
   weight: number  // 0-1 normalized
-  translated?: string  // English translation when text is non-English
+  original?: string  // source-language text when tag was translated to match language setting
   sentiment?: 'positive' | 'negative' | 'neutral' | 'mixed'
 }
 
@@ -78,8 +78,8 @@ export interface IntelligenceReport {
 
 /** Build a language instruction suffix for the given language. */
 function langInstruction(language?: SummaryLanguage): string {
-  if (language === 'en') return '\n\nIMPORTANT: Write summaries and topic names in English. Tags must remain in their original language — add a "translated" field with the English translation for non-English tags.'
-  if (language === 'zh') return '\n\nIMPORTANT: 摘要和话题名称使用中文。标签必须保留原始语言——对非中文标签添加 "translated" 字段提供中文翻译。'
+  if (language === 'en') return '\n\nIMPORTANT: Write ALL text output (summary, topic names, tags, themes) in English. For each tag that was translated from a non-English source, include an "original" field with the tag text in its original source language.'
+  if (language === 'zh') return '\n\nIMPORTANT: 所有文本输出（摘要、话题名称、标签、主题）必须使用中文。对于从非中文来源翻译的标签，添加 "original" 字段保留原始语言文本。'
   return ''
 }
 
@@ -89,28 +89,28 @@ function trendSystemPrompt(language?: SummaryLanguage): string {
 Given a numbered list of trending items with source platforms and heat scores, you must:
 1. Identify the top canonical topics (group related items)
 2. For each topic: name, one-sentence summary, sentiment (positive/negative/neutral/mixed), which sources cover it, heat score (1-100)
-3. Extract the top 20 tags (keywords/themes) with importance weights (0.0-1.0) and sentiment. Keep each tag in its ORIGINAL language from the source content. If the tag is not in English, add a "translated" field with the English translation.
+3. Extract the top 20 tags (keywords/themes) with importance weights (0.0-1.0) and sentiment. If a tag was translated from a different source language, include an "original" field with the source-language text.
 
 Respond with ONLY a JSON object, no markdown fences:
-{"summary":"Overall paragraph about what people are focused on","topics":[{"name":"...","summary":"...","sentiment":"mixed","sources":["weibo","douyin"],"itemCount":5,"heat":85}],"tags":[{"text":"人工智能","translated":"Artificial Intelligence","weight":0.9,"sentiment":"neutral"}]}` + langInstruction(language)
+{"summary":"Overall paragraph about what people are focused on","topics":[{"name":"...","summary":"...","sentiment":"mixed","sources":["weibo","douyin"],"itemCount":5,"heat":85}],"tags":[{"text":"Artificial Intelligence","original":"人工智能","weight":0.9,"sentiment":"neutral"}]}` + langInstruction(language)
 }
 
 function topicSystemPrompt(language?: SummaryLanguage): string {
   return `You analyze social media posts about specific topics to understand public opinion.
 
-Given posts grouped by topic, assess the public sentiment on each topic. Keep each tag in its ORIGINAL language from the source content. If the tag is not in English, add a "translated" field with the English translation.
+Given posts grouped by topic, assess the public sentiment on each topic. If a tag was translated from a different source language, include an "original" field with the source-language text.
 
 Respond with ONLY JSON:
-{"summary":"Overall paragraph","topics":[{"topic":"AI","sentiment":"positive","summary":"People are optimistic about...","samplePosts":["post1","post2"],"postCount":15}],"tags":[{"text":"人工智能","translated":"Artificial Intelligence","weight":0.8,"sentiment":"positive"}]}` + langInstruction(language)
+{"summary":"Overall paragraph","topics":[{"topic":"AI","sentiment":"positive","summary":"People are optimistic about...","samplePosts":["post1","post2"],"postCount":15}],"tags":[{"text":"Artificial Intelligence","original":"人工智能","weight":0.8,"sentiment":"positive"}]}` + langInstruction(language)
 }
 
 function accountsSystemPrompt(language?: SummaryLanguage): string {
   return `You analyze posts from social media accounts to identify their focus areas and opinions.
 
-Given posts grouped by account, identify what each account focuses on and their overall sentiment. Keep each tag in its ORIGINAL language from the source content. If the tag is not in English, add a "translated" field with the English translation.
+Given posts grouped by account, identify what each account focuses on and their overall sentiment. If a tag was translated from a different source language, include an "original" field with the source-language text.
 
 Respond with ONLY JSON:
-{"summary":"Overall paragraph about what these voices are discussing","accounts":[{"account":"@user","handle":"user","platform":"x","themes":["AI","crypto"],"sentiment":"neutral","postCount":5}],"tags":[{"text":"人工智能","translated":"Artificial Intelligence","weight":0.8,"sentiment":"neutral"}]}` + langInstruction(language)
+{"summary":"Overall paragraph about what these voices are discussing","accounts":[{"account":"@user","handle":"user","platform":"x","themes":["AI","crypto"],"sentiment":"neutral","postCount":5}],"tags":[{"text":"Artificial Intelligence","original":"人工智能","weight":0.8,"sentiment":"neutral"}]}` + langInstruction(language)
 }
 
 // ---------------------------------------------------------------------------
@@ -188,8 +188,8 @@ function parseTags(raw: unknown): IntelTag[] {
         weight: clampWeight(tag.weight),
         sentiment: normalizeSentiment(tag.sentiment),
       }
-      if (typeof tag.translated === 'string' && tag.translated.length > 0) {
-        result.translated = tag.translated
+      if (typeof tag.original === 'string' && tag.original.length > 0) {
+        result.original = tag.original
       }
       return result
     })

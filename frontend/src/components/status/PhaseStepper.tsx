@@ -567,7 +567,7 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
                         top: 0,
                         left: 0,
                         height: '100%',
-                        width: isIndeterminate ? '100%' : `${lineFillPct}%`,
+                        width: '100%',
                         overflow: 'hidden',
                         borderRadius: 2,
                       }}>

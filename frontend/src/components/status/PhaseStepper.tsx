@@ -484,19 +484,33 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
             const isClickable = hasEvents && status !== 'pending' && !!onLogToggle
             const isActive = status === 'active'
 
-            // Line color logic: done=green filled, active=accent partial fill, else dim track
-            const lineFillColor = status === 'done' ? 'var(--ok)'
-              : status === 'active' ? 'var(--accent)'
-              : status === 'error' ? 'var(--err)'
-              : 'transparent'
-            const isIndeterminate = isActive && phaseProg === -1
-            const lineFillPct = status === 'done' || status === 'error' ? 100
-              : isActive ? (isIndeterminate ? 0 : Math.round(phaseProg * 100))
-              : 0
-
-            // Shimmer the connector BEFORE the active step (progress flowing into it), not after
+            // Connector line represents progress toward the NEXT step.
+            // When the next step is active, show its progress as a partial fill + shimmer.
+            // Otherwise show the current step's completion state.
             const nextStep = !isLast ? visibleSteps[i + 1] : null
-            const nextIsActive = nextStep ? statuses[nextStep.key] === 'active' : false
+            const nextStatus = nextStep ? statuses[nextStep.key] : undefined
+            const nextIsActive = nextStatus === 'active'
+            const nextProg = nextStep ? progress[nextStep.key] : 0
+            const nextIsIndeterminate = nextIsActive && nextProg === -1
+
+            let lineFillColor: string
+            let lineFillPct: number
+            let isIndeterminate: boolean
+
+            if (nextIsActive) {
+              // Show next step's progress on this connector (progress bar effect)
+              lineFillColor = 'var(--accent)'
+              isIndeterminate = nextIsIndeterminate
+              lineFillPct = isIndeterminate ? 0 : Math.round(nextProg * 100)
+            } else {
+              // Show current step's completion state
+              lineFillColor = status === 'done' ? 'var(--ok)'
+                : status === 'error' ? 'var(--err)'
+                : 'transparent'
+              isIndeterminate = false
+              lineFillPct = (status === 'done' || status === 'error') ? 100 : 0
+            }
+
             const showShimmer = nextIsActive
 
             // Phase-specific counts (only fetch gets annotation on main line)

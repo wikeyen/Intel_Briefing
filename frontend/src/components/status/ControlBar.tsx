@@ -263,9 +263,9 @@ export function ControlBar({
 
     let phaseDetail = ''
     if (phase === 'fetching') {
-      phaseDetail = t('status.fetching_count', { remaining: String(sensorsToFetch - sensorsFetchDone), total: String(sensorsToFetch) })
+      phaseDetail = t('status.fetching_count', { done: String(sensorsFetchDone), total: String(sensorsToFetch) })
     } else if (phase === 'summarizing') {
-      phaseDetail = t('status.summarizing_count', { remaining: String(sensorsToSummarize - sensorsSummaryDone), total: String(sensorsToSummarize) })
+      phaseDetail = t('status.summarizing_count', { done: String(sensorsSummaryDone), total: String(sensorsToSummarize) })
     } else if (phase !== 'idle') {
       phaseDetail = t('status.' + phase)
     }

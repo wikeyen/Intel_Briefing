@@ -208,7 +208,7 @@ describe('ControlBar', () => {
       progress: { done: 3, total: 13 },
       pipelineStatus: makePipelineStatus({ running: true, alive: true, sensors }),
     })} />)
-    expect(screen.getByText('Fetching 10 of 13 sources')).toBeInTheDocument()
+    expect(screen.getByText('Fetched 3 of 13 sources')).toBeInTheDocument()
   })
 
   it('shows progress count when running', () => {

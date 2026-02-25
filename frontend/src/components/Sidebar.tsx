@@ -23,6 +23,9 @@ import { useTranslation, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from '@
 import { deriveStepStatuses, MAIN_STEPS, STEP_COLORS } from './status/PhaseStepper'
 import type { StepStatus } from './status/PhaseStepper'
 
+/** Shared easing matching the sidebar width transition in globals.css. */
+const SB_EASE = '250ms cubic-bezier(0.4, 0, 0.2, 1)'
+
 /** Icon mapping for config nav items by href. */
 const CONFIG_ICON_MAP: Record<string, React.ComponentType<{ size?: number; strokeWidth?: number }>> = {
   '/sources': Database,
@@ -56,16 +59,18 @@ function NavLink({ href, active, onClick, collapsed, title, children }: {
         display: 'flex',
         alignItems: 'center',
         gap: '0.75rem',
-        padding: collapsed ? '0.5rem 0' : '0.5rem 1.75rem 0.5rem 1rem',
-        justifyContent: collapsed ? 'center' : 'flex-start',
+        padding: collapsed ? '0.5rem 0 0.5rem 1rem' : '0.5rem 1.75rem 0.5rem 1rem',
+        justifyContent: 'flex-start',
         minHeight: 44,
         width: '100%',
-        borderLeft: collapsed ? '2px solid transparent' : active ? '2px solid var(--sb-accent)' : '2px solid transparent',
+        overflow: 'hidden',
+        whiteSpace: 'nowrap',
+        borderLeft: active ? '2px solid var(--sb-accent)' : '2px solid transparent',
         color: active ? 'var(--sb-ink)' : 'var(--sb-muted)',
         fontSize: '0.875rem',
         fontWeight: active ? 500 : 400,
         textDecoration: 'none',
-        transition: 'color 120ms, border-color 120ms',
+        transition: `padding ${SB_EASE}, color 120ms, border-color 120ms`,
       }}
     >
       {children}
@@ -82,7 +87,10 @@ function SideLabel({ children, collapsed }: { children: ReactNode; collapsed?: b
       letterSpacing: '0.12em',
       textTransform: 'uppercase',
       color: 'var(--sb-faint)',
-      visibility: collapsed ? 'hidden' : undefined,
+      opacity: collapsed ? 0 : 1,
+      transition: `opacity ${SB_EASE}`,
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
     }}>
       {children}
     </div>
@@ -97,6 +105,7 @@ function SideDivider({ collapsed }: { collapsed?: boolean }) {
         height: 1,
         background: 'var(--sb-border)',
         margin: collapsed ? '0.625rem 0.75rem 0.875rem' : '0.625rem 1.75rem 0.875rem',
+        transition: `margin ${SB_EASE}`,
       }}
     />
   )
@@ -285,6 +294,7 @@ export function Sidebar({ onNavigate, collapsed, peeking, pinned, onPinToggle }:
   const statusTimestamp = health?.last_fetch ? health.last_fetch.slice(0, 16).replace('T', ' ') : null
 
   const PinIcon = pinned ? PinOff : Pin
+  const txtStyle: React.CSSProperties = { opacity: collapsed ? 0 : 1, transition: `opacity ${SB_EASE}` }
 
   return (
     <nav className={`sidebar-nav${peeking ? ' sidebar-peeking' : ''}`} style={{
@@ -299,7 +309,13 @@ export function Sidebar({ onNavigate, collapsed, peeking, pinned, onPinToggle }:
       {/* Brand — status row links to /status */}
       <div className="sidebar-brand" style={{
         padding: collapsed ? '1rem 0.75rem 0.75rem' : '2rem 1.75rem 1.5rem',
-        ...(collapsed ? { minHeight: 102, display: 'flex', alignItems: 'center', justifyContent: 'center' } : {}),
+        minHeight: 102,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: collapsed ? 'center' : 'stretch',
+        justifyContent: collapsed ? 'center' : 'flex-start',
+        transition: `padding ${SB_EASE}`,
+        overflow: 'hidden',
       }}>
         {collapsed ? (
           /* Collapsed brand: status-colored Activity icon — matches nav icon pattern */
@@ -393,14 +409,14 @@ export function Sidebar({ onNavigate, collapsed, peeking, pinned, onPinToggle }:
         )}
       </div>
 
-      <div className="sidebar-brand-divider" style={{ height: 1, background: 'var(--sb-border)', margin: collapsed ? '0 0.75rem' : '0 1.75rem' }} />
+      <div className="sidebar-brand-divider" style={{ height: 1, background: 'var(--sb-border)', margin: collapsed ? '0 0.75rem' : '0 1.75rem', transition: `margin ${SB_EASE}` }} />
 
       {/* Nav */}
       <div style={{ flex: 1, padding: '1rem 0' }}>
         <SideLabel collapsed={collapsed}>{t('nav.overview')}</SideLabel>
         <NavLink href="/dashboard" active={pathname === '/dashboard'} onClick={onNavigate} collapsed={collapsed} title={t('nav.dashboard')}>
           <LayoutDashboard size={22} strokeWidth={1.5} style={{ flexShrink: 0 }} />
-          {!collapsed && t('nav.dashboard')}
+          <span style={txtStyle}>{t('nav.dashboard')}</span>
           {!collapsed && hasNewBriefing && (
             <span style={{
               width: 6,
@@ -415,7 +431,7 @@ export function Sidebar({ onNavigate, collapsed, peeking, pinned, onPinToggle }:
         </NavLink>
         <NavLink href="/status" active={pathname === '/status'} onClick={onNavigate} collapsed={collapsed} title={t('nav.status')}>
           <Activity size={22} strokeWidth={1.5} style={{ flexShrink: 0 }} />
-          {!collapsed && t('nav.status')}
+          <span style={txtStyle}>{t('nav.status')}</span>
           {!collapsed && showBadge && (
             <span style={{
               fontSize: '0.5rem',
@@ -431,7 +447,7 @@ export function Sidebar({ onNavigate, collapsed, peeking, pinned, onPinToggle }:
         </NavLink>
         <NavLink href="/data" active={pathname === '/data'} onClick={onNavigate} collapsed={collapsed} title={t('nav.feed')}>
           <Rss size={22} strokeWidth={1.5} style={{ flexShrink: 0 }} />
-          {!collapsed && t('nav.feed')}
+          <span style={txtStyle}>{t('nav.feed')}</span>
         </NavLink>
 
         <SideDivider collapsed={collapsed} />
@@ -442,7 +458,7 @@ export function Sidebar({ onNavigate, collapsed, peeking, pinned, onPinToggle }:
           return (
             <NavLink key={href} href={href} active={pathname === href} onClick={onNavigate} collapsed={collapsed} title={t(labelKey)}>
               {Icon && <Icon size={22} strokeWidth={1.5} style={{ flexShrink: 0 }} />}
-              {!collapsed && t(labelKey)}
+              <span style={txtStyle}>{t(labelKey)}</span>
             </NavLink>
           )
         })}
@@ -451,48 +467,37 @@ export function Sidebar({ onNavigate, collapsed, peeking, pinned, onPinToggle }:
 
       {/* Language selector — sidebar footer */}
       <div style={{
-        padding: collapsed ? '0.75rem 0' : '0.75rem 1.75rem',
+        padding: collapsed ? '0.75rem 0 0.75rem 1rem' : '0.75rem 1.75rem',
         borderTop: '1px solid var(--sb-border)',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: collapsed ? 'center' : 'space-between',
+        justifyContent: 'flex-start',
+        gap: '0.5rem',
+        overflow: 'hidden',
+        whiteSpace: 'nowrap',
+        transition: `padding ${SB_EASE}`,
       }}>
-        {collapsed ? (
-          /* Collapsed: globe icon only */
-          <Globe size={22} strokeWidth={1.5} style={{ color: 'var(--sb-faint)' }} />
-        ) : (
-          /* Expanded: label + dropdown */
-          <>
-            <span style={{
-              fontSize: '0.5625rem',
-              fontWeight: 700,
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-              color: 'var(--sb-faint)',
-            }}>
-              {t('sidebar.language')}
-            </span>
-            <select
-              value={locale}
-              onChange={e => setLocale(e.target.value as Locale)}
-              style={{
-                fontSize: '0.6875rem',
-                fontWeight: 500,
-                color: 'var(--sb-ink)',
-                background: 'var(--sb)',
-                border: '1px solid var(--sb-border)',
-                borderRadius: 4,
-                padding: '2px 4px',
-                cursor: 'pointer',
-                outline: 'none',
-              }}
-            >
-              {SUPPORTED_LOCALES.map(loc => (
-                <option key={loc} value={loc}>{LOCALE_LABELS[loc]}</option>
-              ))}
-            </select>
-          </>
-        )}
+        <Globe size={22} strokeWidth={1.5} style={{ color: 'var(--sb-faint)', flexShrink: 0 }} />
+        <select
+          value={locale}
+          onChange={e => setLocale(e.target.value as Locale)}
+          style={{
+            fontSize: '0.6875rem',
+            fontWeight: 500,
+            color: 'var(--sb-ink)',
+            background: 'var(--sb)',
+            border: '1px solid var(--sb-border)',
+            borderRadius: 4,
+            padding: '2px 4px',
+            cursor: 'pointer',
+            outline: 'none',
+            flexShrink: 0,
+          }}
+        >
+          {SUPPORTED_LOCALES.map(loc => (
+            <option key={loc} value={loc}>{LOCALE_LABELS[loc]}</option>
+          ))}
+        </select>
       </div>
 
     </nav>

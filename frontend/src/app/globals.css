@@ -582,6 +582,22 @@ input[type="range"]::-moz-range-thumb {
     display: none !important;
   }
 
+  /* Center nav items in mobile dropdown */
+  .sidebar-nav a {
+    justify-content: center !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  .sidebar-label {
+    text-align: center !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  .sidebar-divider {
+    margin-left: 2rem !important;
+    margin-right: 2rem !important;
+  }
+
   /* Backdrop — frosted glass effect, below top bar */
   .sidebar-backdrop {
     display: block;
@@ -853,8 +869,11 @@ input[type="range"]::-moz-range-thumb {
 /* ── Tablet: narrower sidebar to smooth the desktop → mobile transition ── */
 @media (min-width: 769px) and (max-width: 1023px) {
   .sidebar-nav {
-    width: 180px !important;
+    width: 180px;
     transition: width 200ms ease;
+  }
+  .sidebar-unpinned .sidebar-nav:not(.sidebar-peeking) {
+    width: 56px;
   }
   .sidebar-brand {
     padding-left: 1.25rem !important;

@@ -438,7 +438,7 @@ export function Sidebar({ onNavigate, collapsed, peeking, pinned, onPinToggle }:
           const Icon = CONFIG_ICON_MAP[href]
           return (
             <NavLink key={href} href={href} active={pathname === href} onClick={onNavigate} collapsed={collapsed} title={t(labelKey)}>
-              {Icon && <Icon size={22} strokeWidth={1.5} />}
+              {Icon && <Icon size={22} strokeWidth={2} />}
               {!collapsed && t(labelKey)}
             </NavLink>
           )

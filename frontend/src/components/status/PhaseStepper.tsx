@@ -25,6 +25,7 @@ const NODE_SIZE = 16
 const NODE_CENTER = NODE_SIZE / 2  // 8
 const CONNECTOR_HEIGHT = 4
 const CONNECTOR_OFFSET = (NODE_SIZE - CONNECTOR_HEIGHT) / 2  // vertically center connector on node
+const BRANCH_DROP_HEIGHT = 28
 
 const STEP_ICONS: Record<StepStatus, string> = {
   pending: '',
@@ -200,7 +201,7 @@ export const STEP_COLORS: Record<StepStatus, { dot: string; label: string }> = {
   skipped: { dot: 'var(--border)', label: 'var(--ink-faint)' },
 }
 
-// CSS for the shimmer and branch grow animations
+// CSS for the shimmer, branch grow, and branch pulse animations
 const STEPPER_CSS = `
 @keyframes stepperShimmer {
   0% { transform: translateX(-100%); }
@@ -209,6 +210,10 @@ const STEPPER_CSS = `
 @keyframes branchGrow {
   from { max-height: 0; opacity: 0; }
   to { max-height: 100px; opacity: 1; }
+}
+@keyframes branchPulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
 }
 `
 
@@ -289,155 +294,79 @@ function StepNode({ step, status, isClickable, onLogToggle, t, counts, align = '
   )
 }
 
-/** Retry branch rendered below the main line between fetch and summary nodes. */
-function RetryBranch({ retryStatus, isClickable, onLogToggle, t, segmentWidthPct, counts }: {
+/** Retry branch rendered as a git-tree U-shape below the connector between fetch and summary. */
+function RetryBranch({ retryStatus, isClickable, onLogToggle, t, counts }: {
   retryStatus: StepStatus
   isClickable: boolean
   onLogToggle?: () => void
   t: (key: string) => string
-  segmentWidthPct: number
   counts?: { ok: number; total: number } | null
 }) {
-  const dropHeight = 18
-  const borderColor = 'var(--border)'
+  const dropHeight = BRANCH_DROP_HEIGHT
+  const borderWidth = 2
 
-  // Branch fill colors and percentages based on retry status
-  const branchFillColor = retryStatus === 'done' ? 'var(--ok)'
-    : retryStatus === 'active' ? 'var(--accent)'
+  // Line color reflects retry status
+  const lineColor = retryStatus === 'active' ? 'var(--accent)'
+    : retryStatus === 'done' ? 'var(--ok)'
     : retryStatus === 'error' ? 'var(--err)'
-    : 'transparent'
-  const branchFillPct = retryStatus === 'done' || retryStatus === 'error' ? 100 : 0
-  const branchIndeterminate = retryStatus === 'active'
+    : 'var(--border)'
+
+  const isActive = retryStatus === 'active'
 
   return (
     <div style={{
-      width: `${segmentWidthPct}%`,
-      animation: 'branchGrow 300ms ease forwards',
+      animation: isActive
+        ? 'branchGrow 300ms ease forwards, branchPulse 2s ease-in-out infinite'
+        : 'branchGrow 300ms ease forwards',
       overflow: 'hidden',
     }}>
-      {/* Vertical drop lines from main line into branch */}
+      {/* U-shape: left elbow | retry node | right elbow */}
       <div style={{
         display: 'flex',
         alignItems: 'stretch',
       }}>
-        {/* Left vertical drop */}
-        <div style={{
-          width: '50%',
-          height: dropHeight,
-          borderLeft: `3px solid ${borderColor}`,
-          marginLeft: NODE_CENTER,
-          boxSizing: 'border-box',
-        }} />
-        {/* Right vertical drop */}
-        <div style={{
-          width: '50%',
-          height: dropHeight,
-          borderRight: `3px solid ${borderColor}`,
-          marginRight: NODE_CENTER,
-          boxSizing: 'border-box',
-        }} />
-      </div>
-
-      {/* Horizontal branch line with retry node in the center */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'flex-start',
-      }}>
-        {/* Left horizontal connector (fetch -> retry) */}
+        {/* Left elbow — vertical drop + bottom-left corner */}
         <div style={{
           flex: '1 1 0',
-          height: CONNECTOR_HEIGHT,
-          background: 'var(--border)',
-          opacity: 0.4,
-          marginTop: CONNECTOR_OFFSET,
           minWidth: 8,
-          borderRadius: 2,
-          position: 'relative',
-          overflow: 'hidden',
-          marginLeft: NODE_CENTER,
+          borderLeft: `${borderWidth}px solid ${lineColor}`,
+          borderBottom: `${borderWidth}px solid ${lineColor}`,
+          borderRadius: '0 0 0 8px',
+          height: dropHeight,
+          boxSizing: 'border-box',
+        }} />
+
+        {/* Center — retry node sits at the bottom of the U */}
+        <div style={{
+          flexShrink: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          paddingTop: dropHeight - NODE_SIZE,
+          borderBottom: `${borderWidth}px solid ${lineColor}`,
+          boxSizing: 'border-box',
         }}>
-          {/* Determinate fill */}
-          {!branchIndeterminate && branchFillPct > 0 && (
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              height: '100%',
-              width: `${branchFillPct}%`,
-              background: branchFillColor,
-              borderRadius: 2,
-              opacity: 1 / 0.4,
-              transition: 'width 500ms ease',
-            }} />
-          )}
-          {/* Indeterminate shimmer */}
-          {branchIndeterminate && (
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              height: '100%',
-              width: '33%',
-              background: `linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%)`,
-              borderRadius: 2,
-              opacity: 1 / 0.4,
-              animation: 'stepperShimmer 1.2s ease-in-out infinite',
-            }} />
-          )}
+          <StepNode
+            step={BRANCH_STEP}
+            status={retryStatus}
+            isClickable={isClickable}
+            onLogToggle={onLogToggle}
+            t={t}
+            counts={counts}
+          />
         </div>
 
-        {/* Retry node */}
-        <StepNode
-          step={BRANCH_STEP}
-          status={retryStatus}
-          isClickable={isClickable}
-          onLogToggle={onLogToggle}
-          t={t}
-          counts={counts}
-        />
-
-        {/* Right horizontal connector (retry -> summary) */}
+        {/* Right elbow — bottom-right corner + vertical drop */}
         <div style={{
           flex: '1 1 0',
-          height: CONNECTOR_HEIGHT,
-          background: 'var(--border)',
-          opacity: 0.4,
-          marginTop: CONNECTOR_OFFSET,
           minWidth: 8,
-          borderRadius: 2,
-          position: 'relative',
-          overflow: 'hidden',
-          marginRight: NODE_CENTER,
-        }}>
-          {/* Determinate fill */}
-          {!branchIndeterminate && branchFillPct > 0 && (
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              height: '100%',
-              width: `${branchFillPct}%`,
-              background: branchFillColor,
-              borderRadius: 2,
-              opacity: 1 / 0.4,
-              transition: 'width 500ms ease',
-            }} />
-          )}
-          {/* Indeterminate shimmer — right leg */}
-          {branchIndeterminate && (
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              height: '100%',
-              width: '33%',
-              background: `linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%)`,
-              borderRadius: 2,
-              opacity: 1 / 0.4,
-              animation: 'stepperShimmer 1.2s ease-in-out infinite',
-            }} />
-          )}
-        </div>
+          borderRight: `${borderWidth}px solid ${lineColor}`,
+          borderBottom: `${borderWidth}px solid ${lineColor}`,
+          borderRadius: '0 0 8px 0',
+          height: dropHeight,
+          boxSizing: 'border-box',
+        }} />
       </div>
     </div>
   )
@@ -463,15 +392,12 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
   const retryStatus = statuses.retry
   const showBranch = retryStatus === 'active' || retryStatus === 'error' || retryStatus === 'done'
 
-  // Branch width spans the first segment of the main line
-  const segmentWidthPct = visibleSteps.length > 1 ? 100 / (visibleSteps.length - 1) : 100
-
   if (visibleSteps.length === 0) return null
 
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: STEPPER_CSS }} />
-      <div style={{ width: '100%' }}>
+      <div style={{ width: '100%', paddingBottom: showBranch ? BRANCH_DROP_HEIGHT : 0 }}>
         {/* Main line */}
         <div style={{
           display: 'flex',
@@ -536,52 +462,71 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
                   align={i === 0 ? 'flex-start' : isLast ? 'flex-end' : 'center'}
                 />
 
-                {/* Connector line with progress fill */}
+                {/* Connector wrapper — relative so the branch can be absolutely positioned */}
                 {!isLast && (
-                  <div style={{
-                    flex: '1 1 0',
-                    height: CONNECTOR_HEIGHT,
-                    background: 'var(--border)',
-                    opacity: 0.4,
-                    marginTop: CONNECTOR_OFFSET,
-                    minWidth: 12,
-                    borderRadius: 2,
-                    position: 'relative',
-                    overflow: 'hidden',
-                  }}>
-                    {/* Determinate fill */}
-                    {!isIndeterminate && lineFillPct > 0 && (
-                      <div style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        height: '100%',
-                        width: `${lineFillPct}%`,
-                        background: lineFillColor,
-                        borderRadius: 2,
-                        opacity: 1 / 0.4, // Counteract parent's opacity
-                        transition: 'width 500ms ease',
-                      }} />
-                    )}
-                    {/* Shimmer overlay for active phases */}
-                    {showShimmer && (
-                      <div style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        height: '100%',
-                        width: '100%',
-                        overflow: 'hidden',
-                        borderRadius: 2,
-                      }}>
+                  <div style={{ flex: '1 1 0', position: 'relative', minWidth: 12 }}>
+                    {/* Connector line with progress fill */}
+                    <div style={{
+                      height: CONNECTOR_HEIGHT,
+                      background: 'var(--border)',
+                      opacity: 0.4,
+                      marginTop: CONNECTOR_OFFSET,
+                      borderRadius: 2,
+                      position: 'relative',
+                      overflow: 'hidden',
+                    }}>
+                      {/* Determinate fill */}
+                      {!isIndeterminate && lineFillPct > 0 && (
                         <div style={{
-                          width: '33%',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
                           height: '100%',
-                          background: `linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%)`,
+                          width: `${lineFillPct}%`,
+                          background: lineFillColor,
                           borderRadius: 2,
-                          opacity: 1 / 0.4,
-                          animation: 'stepperShimmer 1.2s ease-in-out infinite',
+                          opacity: 1 / 0.4, // Counteract parent's opacity
+                          transition: 'width 500ms ease',
                         }} />
+                      )}
+                      {/* Shimmer overlay for active phases */}
+                      {showShimmer && (
+                        <div style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          height: '100%',
+                          width: '100%',
+                          overflow: 'hidden',
+                          borderRadius: 2,
+                        }}>
+                          <div style={{
+                            width: '33%',
+                            height: '100%',
+                            background: `linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%)`,
+                            borderRadius: 2,
+                            opacity: 1 / 0.4,
+                            animation: 'stepperShimmer 1.2s ease-in-out infinite',
+                          }} />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Branch — absolutely positioned from connector bottom */}
+                    {i === 0 && showBranch && (
+                      <div style={{
+                        position: 'absolute',
+                        top: CONNECTOR_OFFSET + CONNECTOR_HEIGHT,
+                        left: 0,
+                        right: 0,
+                      }}>
+                        <RetryBranch
+                          retryStatus={retryStatus}
+                          isClickable={hasEvents && retryStatus !== 'pending' && !!onLogToggle}
+                          onLogToggle={onLogToggle}
+                          t={t}
+                          counts={counts.retry}
+                        />
                       </div>
                     )}
                   </div>
@@ -591,17 +536,6 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
           })}
         </div>
 
-        {/* Retry branch — rendered below the main line */}
-        {showBranch && (
-          <RetryBranch
-            retryStatus={retryStatus}
-            isClickable={hasEvents && retryStatus !== 'pending' && !!onLogToggle}
-            onLogToggle={onLogToggle}
-            t={t}
-            segmentWidthPct={segmentWidthPct}
-            counts={counts.retry}
-          />
-        )}
       </div>
     </>
   )

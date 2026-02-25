@@ -103,102 +103,6 @@ function SentimentBadge({ sentiment }: { sentiment?: string }) {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Grouped tag cloud — tags grouped by sentiment for detail panels
-// ---------------------------------------------------------------------------
-
-function GroupedTagPill({ tag }: { tag: TagCloudTag }) {
-  const color = SENTIMENT_DOT_COLORS[tag.sentiment ?? 'neutral'] ?? SENTIMENT_DOT_COLORS.neutral
-  const MIN = 0.65, MAX = 1.15
-  const clamped = Math.max(0, Math.min(1, tag.weight))
-  const fontSize = `${MIN + clamped * (MAX - MIN)}rem`
-
-  return (
-    <span
-      style={{
-        display: 'inline-block',
-        fontSize,
-        fontWeight: tag.weight > 0.6 ? 600 : 400,
-        color,
-        background: `color-mix(in srgb, ${color} 8%, transparent)`,
-        borderRadius: 9999,
-        padding: '0.1rem 0.45rem',
-        whiteSpace: 'nowrap',
-        transition: 'filter 150ms ease, background 150ms ease',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.filter = 'brightness(1.2)'
-        e.currentTarget.style.background = `color-mix(in srgb, ${color} 15%, transparent)`
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.filter = 'brightness(1)'
-        e.currentTarget.style.background = `color-mix(in srgb, ${color} 8%, transparent)`
-      }}
-    >
-      {tag.text}
-    </span>
-  )
-}
-
-function GroupedTagCloud({ tags, maxTags = 25 }: { tags: TagCloudTag[]; maxTags?: number }) {
-  const groups = useMemo(() => {
-    const sorted = [...tags].sort((a, b) => b.weight - a.weight).slice(0, maxTags)
-    const map: Record<string, TagCloudTag[]> = {}
-    for (const tag of sorted) {
-      const key = tag.sentiment ?? 'neutral'
-      if (!map[key]) map[key] = []
-      map[key].push(tag)
-    }
-    // Order: positive, negative, mixed, neutral
-    const ORDER = ['positive', 'negative', 'mixed', 'neutral']
-    return ORDER.filter(k => map[k]?.length).map(k => ({ sentiment: k, tags: map[k] }))
-  }, [tags, maxTags])
-
-  if (groups.length === 0) return null
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-      {groups.map(group => (
-        <div key={group.sentiment}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.375rem',
-            marginBottom: '0.25rem',
-          }}>
-            <span style={{
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              background: SENTIMENT_DOT_COLORS[group.sentiment],
-              flexShrink: 0,
-            }} />
-            <span style={{
-              fontSize: '0.5625rem',
-              fontWeight: 600,
-              fontFamily: MONO,
-              color: SENTIMENT_DOT_COLORS[group.sentiment],
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-            }}>
-              {group.sentiment}
-            </span>
-          </div>
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '0.2rem 0.3rem',
-          }}>
-            {group.tags.map(tag => (
-              <GroupedTagPill key={tag.text} tag={tag} />
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 function SentimentLegend() {
   const items = [
     { label: 'Positive', color: SENTIMENT_DOT_COLORS.positive },
@@ -624,12 +528,12 @@ export function PublicFocusDetail({ data }: { data: TrendIntelligence }) {
         <p style={SUMMARY_STYLE}>{data.summary}</p>
       )}
 
-      {/* Tag cloud — grouped by sentiment for detail view */}
+      {/* Tag cloud — flat, sorted by weight, colored by sentiment */}
       {tagCloudTags.length > 0 && (
-        <>
+        <div style={{ margin: '0.25rem 0 0.5rem' }}>
           <SentimentLegend />
-          <GroupedTagCloud tags={tagCloudTags} maxTags={25} />
-        </>
+          <TagCloud tags={tagCloudTags} maxTags={25} style={{ marginTop: '0.375rem' }} />
+        </div>
       )}
 
       {/* Top Topics — full rows with name, source count, summary, sentiment */}
@@ -801,12 +705,12 @@ export function VoicesDetail({ data }: { data: AccountsIntelligence }) {
         <p style={SUMMARY_STYLE}>{data.summary}</p>
       )}
 
-      {/* Tag cloud — grouped by sentiment for detail view */}
+      {/* Tag cloud — flat, sorted by weight, colored by sentiment */}
       {tagCloudTags.length > 0 && (
-        <>
+        <div style={{ margin: '0.25rem 0 0.5rem' }}>
           <SentimentLegend />
-          <GroupedTagCloud tags={tagCloudTags} maxTags={20} />
-        </>
+          <TagCloud tags={tagCloudTags} maxTags={20} style={{ marginTop: '0.375rem' }} />
+        </div>
       )}
 
       {/* All accounts with full rows */}

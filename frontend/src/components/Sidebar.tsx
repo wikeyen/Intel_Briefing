@@ -309,7 +309,7 @@ export function Sidebar({ onNavigate, collapsed, peeking, pinned, onPinToggle }:
       {/* Brand — status row links to /status */}
       <div className="sidebar-brand" style={{
         padding: collapsed ? '1rem 0.75rem 0.75rem' : '2rem 1.75rem 1.5rem',
-        minHeight: 102,
+        height: 102,
         display: 'flex',
         flexDirection: 'column',
         alignItems: collapsed ? 'center' : 'stretch',

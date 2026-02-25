@@ -37,6 +37,29 @@ function mockExecFileNotFound() {
   }))
 }
 
+// Mock db module for per-account KV cache
+function mockDb() {
+  const store = new Map<string, { value: unknown; expires: number }>()
+  vi.doMock('../db', () => ({
+    kvGet: vi.fn(async (key: string) => {
+      const entry = store.get(key)
+      if (!entry) return null
+      if (entry.expires && Date.now() > entry.expires) {
+        store.delete(key)
+        return null
+      }
+      return entry.value
+    }),
+    kvSet: vi.fn(async (key: string, value: unknown, ttlSeconds?: number) => {
+      store.set(key, {
+        value,
+        expires: ttlSeconds ? Date.now() + ttlSeconds * 1000 : Infinity,
+      })
+    }),
+  }))
+  return store
+}
+
 // ── Mock tweet data ──────────────────────────────────────────────────────────
 
 const mockTweets = [
@@ -158,6 +181,7 @@ describe('fetchXPosts (twitter-scraper)', () => {
     }))
     mockExecFileNotFound()
     mockDelay()
+    mockDb()
     const mod = await import('./x_posts')
     fetchXPosts = mod.fetchXPosts
   })
@@ -255,6 +279,7 @@ describe('fetchXPosts (twitter-scraper)', () => {
     }))
     mockExecFileNotFound()
     mockDelay()
+    mockDb()
     const mod = await import('./x_posts')
 
     const items = await mod.fetchXPosts(authConfig(), 10)
@@ -304,6 +329,7 @@ describe('fetchXPosts (twitter-scraper)', () => {
     }))
     mockExecFileNotFound()
     mockDelay()
+    mockDb()
     const mod = await import('./x_posts')
 
     const items = await mod.fetchXPosts(authConfig(), 10)
@@ -330,6 +356,7 @@ describe('fetchXPosts (OpenClaw cookies)', () => {
       ApifyClient: vi.fn(),
     }))
     mockDelay()
+    mockDb()
     // Mock execFile to return valid cookies
     vi.doMock('child_process', () => ({
       __esModule: true,
@@ -497,6 +524,7 @@ describe('fetchXPosts (provider fallback)', () => {
     }))
     mockExecFileNotFound()
     mockDelay()
+    mockDb()
 
     const mod = await import('./x_posts')
     const config = makeConfig({
@@ -529,6 +557,7 @@ describe('fetchXPosts (provider fallback)', () => {
     }))
     mockExecFileNotFound()
     mockDelay()
+    mockDb()
 
     const mod = await import('./x_posts')
     const config = makeConfig({
@@ -557,6 +586,7 @@ describe('fetchXPosts (provider fallback)', () => {
     }))
     mockExecFileNotFound()
     mockDelay()
+    mockDb()
 
     const mod = await import('./x_posts')
     const config = makeConfig({
@@ -598,6 +628,96 @@ describe('isCreditError', () => {
   it('rejects non-credit errors', () => {
     expect(isCreditError(new Error('Network timeout'))).toBe(false)
     expect(isCreditError(new Error('Internal server error'))).toBe(false)
+  })
+})
+
+// ── Per-account cache tests ──────────────────────────────────────────────────
+
+describe('fetchXPosts (per-account cache)', () => {
+  let mockScraper: ReturnType<typeof makeMockScraper>
+
+  function authConfig(overrides?: Partial<ConfigSettings>): ConfigSettings {
+    return makeConfig({
+      twitter_auth_token: 'test-token',
+      twitter_ct0: 'test-ct0',
+      ...overrides,
+    })
+  }
+
+  beforeEach(() => {
+    vi.resetModules()
+    vi.spyOn(Date, 'now').mockReturnValue(NOW)
+    mockScraper = makeMockScraper()
+    vi.doMock('@the-convocation/twitter-scraper', () => ({
+      Scraper: vi.fn().mockImplementation(() => mockScraper),
+    }))
+    vi.doMock('apify-client', () => ({
+      ApifyClient: vi.fn(),
+    }))
+    mockExecFileNotFound()
+    mockDelay()
+  })
+
+  it('returns cached items when account has fresh cache', async () => {
+    const store = mockDb()
+    // Pre-populate cache for testuser
+    store.set('x:acct:testuser', {
+      value: {
+        fetched_at: '2026-02-20T16:00:00Z',
+        items: [{ id: 'x-cached-1', source: 'x', title: 'Cached tweet', url: 'https://x.com/testuser/status/cached-1', heat: null, account: 'testuser', handle: 'testuser', published_at: '2026-02-20T16:00:00Z' }],
+      },
+      expires: Infinity,
+    })
+
+    const mod = await import('./x_posts')
+    const items = await mod.fetchXPosts(authConfig(), 10)
+
+    expect(items).toHaveLength(1)
+    expect(items[0].id).toBe('x-cached-1')
+    expect(mockScraper.getTweets).not.toHaveBeenCalled()
+  })
+
+  it('fetches fresh when cache is empty', async () => {
+    mockDb()
+    const mod = await import('./x_posts')
+    const items = await mod.fetchXPosts(authConfig(), 10)
+
+    expect(mockScraper.getTweets).toHaveBeenCalled()
+    expect(items).toHaveLength(1)
+    expect(items[0].id).toBe('x-111')
+  })
+
+  it('fetches only uncached handles in partial cache', async () => {
+    const store = mockDb()
+    // Cache handle1 but not handle2
+    store.set('x:acct:handle1', {
+      value: {
+        fetched_at: '2026-02-20T16:00:00Z',
+        items: [{ id: 'x-h1-1', source: 'x', title: 'Handle1 tweet', url: 'https://x.com/handle1/status/1', heat: null, account: 'handle1', handle: 'handle1', published_at: '2026-02-20T16:00:00Z' }],
+      },
+      expires: Infinity,
+    })
+
+    const mod = await import('./x_posts')
+    const config = authConfig({ social_accounts_x: ['handle1', 'handle2'] })
+    const items = await mod.fetchXPosts(config, 10)
+
+    // Should only fetch handle2
+    expect(mockScraper.getTweets).toHaveBeenCalledTimes(1)
+    expect(mockScraper.getTweets).toHaveBeenCalledWith('handle2', expect.any(Number))
+    // Should have both cached and fresh items
+    expect(items.some(i => i.id === 'x-h1-1')).toBe(true)
+  })
+
+  it('caches items after successful fetch', async () => {
+    const store = mockDb()
+    const mod = await import('./x_posts')
+    await mod.fetchXPosts(authConfig(), 10)
+
+    // Cache should now contain testuser
+    const cached = store.get('x:acct:testuser')
+    expect(cached).toBeTruthy()
+    expect((cached!.value as { items: unknown[] }).items).toHaveLength(1)
   })
 })
 

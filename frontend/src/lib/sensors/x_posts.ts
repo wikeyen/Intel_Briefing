@@ -4,6 +4,7 @@ import { Scraper, type Tweet } from '@the-convocation/twitter-scraper'
 import { ApifyClient } from 'apify-client'
 import type { ConfigSettings, IntelItem } from '../models'
 import { delay } from './utils'
+import { kvGet, kvSet } from '../db'
 
 // ── Scraper singleton (reuse across calls to keep auth session) ──────────────
 let _scraper: Scraper | null = null
@@ -115,6 +116,29 @@ export function isCreditError(err: unknown): boolean {
   return msg.includes('credit') || msg.includes('billing') || msg.includes('limit exceeded')
     || msg.includes('payment') || msg.includes('subscription') || msg.includes('quota')
     || msg.includes('402')
+}
+
+// ── Per-account fetch cache ───────────────────────────────────────────────────
+
+const ACCOUNT_CACHE_HOURS = 6
+const ACCOUNT_CACHE_TTL_S = ACCOUNT_CACHE_HOURS * 60 * 60
+const ACCOUNT_CACHE_PREFIX = 'x:acct:'
+
+interface AccountCache {
+  fetched_at: string
+  items: IntelItem[]
+}
+
+async function getAccountCache(handle: string): Promise<AccountCache | null> {
+  return kvGet<AccountCache>(`${ACCOUNT_CACHE_PREFIX}${handle.replace(/^@/, '').toLowerCase()}`)
+}
+
+async function setAccountCache(handle: string, items: IntelItem[]): Promise<void> {
+  await kvSet<AccountCache>(
+    `${ACCOUNT_CACHE_PREFIX}${handle.replace(/^@/, '').toLowerCase()}`,
+    { fetched_at: new Date().toISOString(), items },
+    ACCOUNT_CACHE_TTL_S,
+  )
 }
 
 // ── Strategy: twitter-scraper (authenticated) ────────────────────────────────
@@ -365,6 +389,8 @@ async function fetchAllViaScraper(
     if (result[0].status === 'fulfilled') {
       okCount++
       totalItems += result[0].value.length
+      // Cache successful fetch for this account
+      try { await setAccountCache(handles[i], result[0].value) } catch { /* non-fatal */ }
     } else {
       failCount++
       // Auth errors are systemic — re-throw immediately so fallback can kick in
@@ -467,11 +493,46 @@ export async function fetchXPosts(
   const handles = (config.social_accounts_x ?? []).filter(h => !disabled.has(h))
   if (handles.length === 0) return []
 
+  // Per-account caching: check each account individually
+  const cachedItems: IntelItem[] = []
+  const handlesToFetch: string[] = []
+
+  for (const handle of handles) {
+    try {
+      const cached = await getAccountCache(handle)
+      if (cached) {
+        cachedItems.push(...cached.items)
+        console.log(`[x] Cache hit: ${handle} (fetched ${cached.fetched_at})`)
+        continue
+      }
+    } catch {
+      // Cache read failed — fetch this account
+    }
+    handlesToFetch.push(handle)
+  }
+
+  if (handlesToFetch.length < handles.length) {
+    onProgress?.(`${handles.length - handlesToFetch.length} accounts cached, fetching ${handlesToFetch.length}`, cachedItems.length)
+  }
+
+  if (handlesToFetch.length === 0) return cachedItems.slice(0, limit)
+
   const lookbackHours = config.sensor_lookback_hours?.x ?? 48
   const lookbackMs = lookbackHours * 60 * 60 * 1000
-  const perAccountLimit = Math.max(10, Math.ceil(limit / handles.length) * 2)
+  const perAccountLimit = Math.max(10, Math.ceil(limit / handlesToFetch.length) * 2)
 
   // Always use twitter-scraper for account fetching.
   // Apify is reserved for trends only (via social_trends sensor) to control costs.
-  return fetchAllViaScraper(config, handles, lookbackMs, perAccountLimit, limit, onProgress)
+  const freshItems = await fetchAllViaScraper(config, handlesToFetch, lookbackMs, perAccountLimit, limit, onProgress)
+
+  // Merge cached + fresh items, dedup by id
+  const seenIds = new Set(cachedItems.map(item => item.id))
+  const merged = [...cachedItems]
+  for (const item of freshItems) {
+    if (!seenIds.has(item.id)) {
+      seenIds.add(item.id)
+      merged.push(item)
+    }
+  }
+  return merged.slice(0, limit)
 }

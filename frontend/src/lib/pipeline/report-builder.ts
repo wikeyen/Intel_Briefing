@@ -23,6 +23,8 @@ export interface AssembleReportOptions {
   signal?: AbortSignal
   /** When set, merge results into the existing cached report instead of replacing it. */
   sensorFilter?: string[]
+  /** Pre-computed per-sensor fetch timestamps (for cached sensors that weren't re-fetched). */
+  sensorTimestamps?: Record<string, string>
 }
 
 /**
@@ -117,13 +119,21 @@ export async function assembleReport(
   const now = new Date()
   const nowIso = now.toISOString().replace(/\.\d+Z$/, 'Z')
 
-  // Build per-sensor fetch timestamps for sensors in this run
+  // Build per-sensor fetch timestamps: use pre-computed ones for cached sensors, "now" for fresh
   const fetchedAt: Record<string, string> = {}
-  for (const name of sourcesOk) fetchedAt[name] = nowIso
+  for (const name of sourcesOk) {
+    fetchedAt[name] = opts?.sensorTimestamps?.[name] ?? nowIso
+  }
+
+  // Report-level fetched_at: most recent sensor timestamp (could be "now" for fresh, or earlier for all-cached)
+  const allTimestamps = Object.values(fetchedAt)
+  const reportFetchedAt = allTimestamps.length > 0
+    ? allTimestamps.reduce((latest, ts) => ts > latest ? ts : latest)
+    : nowIso
 
   const newReport = createReport({
     date: now.toISOString().slice(0, 10),
-    fetched_at: nowIso,
+    fetched_at: reportFetchedAt,
     stale: false,
     sources_ok: sourcesOk.sort(),
     sources_failed: sourcesFailed.sort(),

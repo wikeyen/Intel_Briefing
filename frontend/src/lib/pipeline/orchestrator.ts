@@ -24,7 +24,7 @@ import { SensorConfigError } from '../sensors/errors'
 import { assembleReport } from './report-builder'
 import { createBus } from '../summary/events'
 import { runIntelligenceAnalysis } from './intelligence'
-import { readIntelligence, writeIntelligence } from './intelligence-cache'
+import { writeIntelligence } from './intelligence-cache'
 import { writePipelineItem, readFreshPipelineItems, clearRunItems } from '../db'
 
 export interface PipelineResult {
@@ -283,14 +283,14 @@ export async function runPipeline(
 
   // --- Incremental: check pipeline_items for fresh sensors ---
   const resumeWindowHours = config.resume_window_hours ?? 0
-  let cachedSensorItems = new Map<string, unknown[]>()
+  let cachedSensorItems = new Map<string, { items: unknown[]; fetchedAt: string }>()
 
   if (shouldFetch && resumeWindowHours > 0) {
     try {
       const freshItems = await readFreshPipelineItems(resumeWindowHours)
       for (const [sensorName, data] of freshItems) {
         if (registrySensorNames.includes(sensorName)) {
-          cachedSensorItems.set(sensorName, data.items)
+          cachedSensorItems.set(sensorName, data)
           tracker.setCachedSensor(sensorName, data.items.length)
           tracker.addEvent('info', 'fetch', `Cached (${data.items.length} items, within ${resumeWindowHours}h window)`, sensorName)
         }
@@ -307,35 +307,43 @@ export async function runPipeline(
   // Filter out cached sensors from the fetch list
   const sensorsToFetch = registrySensorNames.filter(name => !cachedSensorItems.has(name))
 
-  // Early exit: all sensors cached + existing summary and intelligence — reuse everything
+  // Early exit: all sensors cached — source data unchanged, skip all LLM phases
   if (sensorsToFetch.length === 0 && shouldSummarize && cachedSensorItems.size > 0) {
     const existingSummary = await readSummary(config.summary_language)
-    const existingIntelligence = await readIntelligence()
 
-    if (existingSummary && existingIntelligence) {
-      tracker.addEvent('info', 'system', 'All sensors cached, existing analysis reused')
+    tracker.addEvent('info', 'system', 'All sensors cached — no new data, skipping LLM phases')
 
-      const cachedResults: SensorResult[] = [...cachedSensorItems].map(([sensorName, items]) => ({
-        sensor_name: sensorName,
-        items: items as IntelItem[],
-        error: null,
-        error_kind: null,
-      }))
-      const report = await assembleReport(cachedResults, config, { llmConfig, signal, sensorFilter })
-
-      tracker.addEvent('ok', 'system', `Pipeline complete — ${report ? Object.values(report.items).reduce((sum, arr) => sum + arr.length, 0) : 0} items collected (all cached)`)
-      tracker.complete()
-      clearRunItems(tracker.snapshot().run_id!).catch(err =>
-        console.warn('[pipeline] Failed to clear run items:', err),
-      )
-      await writePipelineStatus(tracker.snapshot()).catch(() => {})
-      if (g.__pipelineAbortController === abortController) {
-        g.__pipelineAbortController = null
-        g.__pipelineTracker = null
-        g.__pipelineSensorSkips = undefined
-      }
-      return { report, summary: existingSummary }
+    // Mark all sensor summaries and overall summary as skipped
+    for (const name of registrySensorNames) {
+      tracker.skipSummaryForSensor(name)
     }
+    tracker.setOverallSummary('skipped')
+
+    const cachedResults: SensorResult[] = [...cachedSensorItems].map(([sensorName, cached]) => ({
+      sensor_name: sensorName,
+      items: cached.items as IntelItem[],
+      error: null,
+      error_kind: null,
+    }))
+
+    const sensorTimestamps: Record<string, string> = {}
+    for (const [name, cached] of cachedSensorItems) {
+      sensorTimestamps[name] = cached.fetchedAt
+    }
+    const report = await assembleReport(cachedResults, config, { llmConfig, signal, sensorFilter, sensorTimestamps })
+
+    tracker.addEvent('ok', 'system', `Pipeline complete — ${report ? Object.values(report.items).reduce((sum, arr) => sum + arr.length, 0) : 0} items collected (all cached)`)
+    tracker.complete()
+    clearRunItems(tracker.snapshot().run_id!).catch(err =>
+      console.warn('[pipeline] Failed to clear run items:', err),
+    )
+    await writePipelineStatus(tracker.snapshot()).catch(() => {})
+    if (g.__pipelineAbortController === abortController) {
+      g.__pipelineAbortController = null
+      g.__pipelineTracker = null
+      g.__pipelineSensorSkips = undefined
+    }
+    return { report, summary: existingSummary }
   }
 
   let report: IntelReport | null = null
@@ -465,11 +473,11 @@ export async function runPipeline(
       }
 
       // Add cached sensor items as successful results for report assembly
-      for (const [sensorName, items] of cachedSensorItems) {
+      for (const [sensorName, cached] of cachedSensorItems) {
         if (!resultMap.has(sensorName)) {
           resultMap.set(sensorName, {
             sensor_name: sensorName,
-            items: items as IntelItem[],
+            items: cached.items as IntelItem[],
             error: null,
             error_kind: null,
           })
@@ -480,7 +488,11 @@ export async function runPipeline(
       const failedCount = [...resultMap.values()].filter(r => !sensorResultSucceeded(r)).length
       tracker.addEvent('info', 'fetch', `Fetch complete — ${freshOk} fetched, ${cachedSensorItems.size} cached, ${failedCount} failed`)
 
-      report = await assembleReport([...resultMap.values()], config, { llmConfig, signal, sensorFilter })
+      const cachedTimestamps: Record<string, string> = {}
+      for (const [name, cached] of cachedSensorItems) {
+        cachedTimestamps[name] = cached.fetchedAt
+      }
+      report = await assembleReport([...resultMap.values()], config, { llmConfig, signal, sensorFilter, sensorTimestamps: cachedTimestamps })
 
       // Mark failed/skipped sensors' summaries as skipped — they don't pass to the next stage
       if (shouldSummarize) {

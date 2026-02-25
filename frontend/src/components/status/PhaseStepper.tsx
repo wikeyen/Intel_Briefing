@@ -122,6 +122,9 @@ export function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePh
   const intelEvents = events.filter(e => e.phase === 'intelligence')
   if (ps.mode === 'fetch') {
     s.intelligence = 'skipped'
+  } else if (s.summary === 'skipped' && s.briefing === 'skipped' && intelEvents.length === 0) {
+    // All LLM phases skipped (e.g. all-cached early exit) — intel is also skipped
+    s.intelligence = 'skipped'
   } else if (intelEvents.some(e => e.level === 'ok')) {
     s.intelligence = 'done'
   } else if (intelEvents.some(e => e.level === 'warn' || e.level === 'error')) {

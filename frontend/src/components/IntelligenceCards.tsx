@@ -390,7 +390,7 @@ export function PublicFocusCard({ data, loading, onClick }: PublicFocusCardProps
             )}
 
             {tagCloudTags.length > 0 && (
-              <TagCloud tags={tagCloudTags} maxTags={15} style={{ marginTop: 'auto' }} />
+              <TagCloud tags={tagCloudTags} maxTags={15} style={{ marginTop: 'auto', justifyContent: 'center' }} />
             )}
           </>
         )}
@@ -493,7 +493,7 @@ export function VoicesCard({ data, loading, onClick }: VoicesCardProps) {
             )}
 
             {tagCloudTags.length > 0 && (
-              <TagCloud tags={tagCloudTags} maxTags={15} style={{ marginTop: 'auto' }} />
+              <TagCloud tags={tagCloudTags} maxTags={15} style={{ marginTop: 'auto', justifyContent: 'center' }} />
             )}
           </>
         )}
@@ -532,7 +532,7 @@ export function PublicFocusDetail({ data }: { data: TrendIntelligence }) {
       {tagCloudTags.length > 0 && (
         <div style={{ margin: '0.25rem 0 0.5rem' }}>
           <SentimentLegend />
-          <TagCloud tags={tagCloudTags} maxTags={25} style={{ marginTop: '0.375rem' }} />
+          <TagCloud tags={tagCloudTags} maxTags={25} style={{ marginTop: '0.375rem', justifyContent: 'center' }} />
         </div>
       )}
 
@@ -709,7 +709,7 @@ export function VoicesDetail({ data }: { data: AccountsIntelligence }) {
       {tagCloudTags.length > 0 && (
         <div style={{ margin: '0.25rem 0 0.5rem' }}>
           <SentimentLegend />
-          <TagCloud tags={tagCloudTags} maxTags={20} style={{ marginTop: '0.375rem' }} />
+          <TagCloud tags={tagCloudTags} maxTags={20} style={{ marginTop: '0.375rem', justifyContent: 'center' }} />
         </div>
       )}
 

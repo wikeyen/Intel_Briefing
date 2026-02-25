@@ -116,7 +116,7 @@ export function Status() {
     const interval = isRunningOrTriggered ? 3_000 : 15_000
     const iv = setInterval(check, interval)
     return () => { clearInterval(iv) }
-  }, [isRunningOrTriggered])
+  }, [isRunningOrTriggered, stopping])
 
   const handleRun = async (mode: RunMode, sensors?: string[]) => {
     setFetching(true)

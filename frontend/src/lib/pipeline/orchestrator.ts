@@ -325,6 +325,9 @@ export async function runPipeline(
 
       tracker.addEvent('ok', 'system', `Pipeline complete — ${report ? Object.values(report.items).reduce((sum, arr) => sum + arr.length, 0) : 0} items collected (all cached)`)
       tracker.complete()
+      clearRunItems(tracker.snapshot().run_id!).catch(err =>
+        console.warn('[pipeline] Failed to clear run items:', err),
+      )
       await writePipelineStatus(tracker.snapshot()).catch(() => {})
       if (g.__pipelineAbortController === abortController) {
         g.__pipelineAbortController = null

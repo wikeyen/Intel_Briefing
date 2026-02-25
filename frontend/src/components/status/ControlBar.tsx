@@ -305,9 +305,9 @@ export function ControlBar({
   // --- Idle state ---
   return (
     <div className="control-bar page-padding" style={barStyle}>
-      <div className="control-bar-row" style={rowStyle}>
+      <div className="control-bar-row" style={{ ...rowStyle, alignItems: 'baseline' }}>
         {/* Left: health dot + label + metrics */}
-        <div className="control-bar-left" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+        <div className="control-bar-left" style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexShrink: 0 }}>
           <span
             data-testid="control-health-dot"
             style={{
@@ -316,12 +316,13 @@ export function ControlBar({
               borderRadius: '50%',
               background: meta.color,
               flexShrink: 0,
+              alignSelf: 'center',
             }}
           />
           <span style={{ ...labelStyle, color: meta.color }}>{t(meta.labelKey)}</span>
         </div>
 
-        <div className="control-bar-metrics" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+        <div className="control-bar-metrics" style={{ display: 'flex', alignItems: 'baseline', gap: '1.25rem' }}>
           <span>
             <span style={metricValueStyle}>{sourcesOk}/{sourcesTotal}</span>
             <span style={metricLabelStyle}>{t('status.sources')}</span>

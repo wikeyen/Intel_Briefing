@@ -157,9 +157,9 @@ export function SensorGrid({
               )}
             </div>
           )}
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: '1.5rem' }}>
-            <span style={headerLabelStyle}>{t('status.col_count')}</span>
-            <span style={headerLabelStyle}>{t('status.col_last_fetch')}</span>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.75rem' }}>
+            <span style={{ ...headerLabelStyle, width: 48, textAlign: 'right' }}>{t('status.col_count')}</span>
+            <span style={{ ...headerLabelStyle, width: 72, textAlign: 'right' }}>{t('status.col_last_fetch')}</span>
           </div>
         </div>
         {visibleSensors.map(sensor => {

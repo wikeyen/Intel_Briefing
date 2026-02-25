@@ -847,8 +847,12 @@ export const SensorRow = memo(function SensorRow(props: SensorCardProps) {
       <span style={{ ...nameStyle, fontSize: '0.8125rem', minWidth: 120, maxWidth: 140, ...(state === 'selected' ? { color: 'var(--accent)' } : {}) }}>{label}</span>
       <span style={categoryBadgeStyle}>{category}</span>
       <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <RowMetric state={state} props={props} t={t} />
-        <RowActions state={state} props={props} t={t} />
+        <span style={{ width: 48, textAlign: 'right', display: 'flex', justifyContent: 'flex-end' }}>
+          <RowMetric state={state} props={props} t={t} />
+        </span>
+        <span style={{ width: 72, textAlign: 'right', display: 'flex', justifyContent: 'flex-end' }}>
+          <RowActions state={state} props={props} t={t} />
+        </span>
       </span>
     </div>
   )

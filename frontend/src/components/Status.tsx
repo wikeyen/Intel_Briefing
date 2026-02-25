@@ -440,6 +440,7 @@ export function Status() {
         config={config}
         pipelineStatus={pipelineStatus}
         retryAttempt={pipelineStatus?.retry_attempt ?? 0}
+        retryMax={pipelineStatus?.retry_max ?? 0}
         selected={selectedSensors}
         onToggleSelect={toggleSensorSelect}
         onSelectAll={selectAll}

@@ -17,6 +17,7 @@ export interface SensorGridProps {
   config: ConfigSettings | null
   pipelineStatus: PipelineStatus | null
   retryAttempt: number
+  retryMax?: number
   selected: Set<string>
   onToggleSelect: (sensor: string) => void
   onSelectAll: () => void
@@ -64,7 +65,7 @@ const toolbarLinkStyle: React.CSSProperties = {
 
 export function SensorGrid({
   isRunning, isPaused, liveSensors, report, config, pipelineStatus,
-  retryAttempt, selected, onToggleSelect, onSelectAll, onSelectNone,
+  retryAttempt, retryMax, selected, onToggleSelect, onSelectAll, onSelectNone,
   onRetry, onSkipSensor, onSkipFetchingSensor, tick, dismissed, onDismiss, autoRetryExhausted, autoRetryDeadlines,
 }: SensorGridProps) {
   const { t } = useTranslation()
@@ -187,6 +188,8 @@ export function SensorGrid({
               summaryError={sensor.summaryError ?? live?.summary_error ?? undefined}
               isSelected={selected.has(sensor.sensorKey)}
               isRetrying={liveRetrying}
+              retryAttempt={retryAttempt}
+              retryMax={retryMax}
               isSkipped={isRunning && !live && !sensor.isDisabled && !pipelineSensorSet.has(sensor.sensorKey)}
               tick={tick}
               onToggleSelect={() => onToggleSelect(sensor.sensorKey)}

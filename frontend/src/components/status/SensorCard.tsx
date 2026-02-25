@@ -26,6 +26,10 @@ export interface SensorCardProps {
   summaryError?: string
   isSelected: boolean
   isRetrying?: boolean
+  /** Current pipeline retry attempt (1-based). */
+  retryAttempt?: number
+  /** Maximum pipeline retry attempts. */
+  retryMax?: number
   /** Sensor was not included in the current pipeline run. */
   isSkipped?: boolean
   /** Current tick counter — changes every second to trigger re-render for elapsed time. */
@@ -565,7 +569,7 @@ function SecondaryContent({ state, props, t }: { state: CardState; props: Sensor
           {liveSensor?.fetch_detail && <span style={secondaryStyle}>{liveSensor.fetch_detail}</span>}
           {!onRetry && (
             <span style={{ fontSize: '0.6875rem', color: 'var(--accent)', opacity: 0.7 }}>
-              <span className="auto-retry-spin">⟳</span> {t('sensor.autoRetry')}{liveSensor?.fetch_detail ? ` · ${liveSensor.fetch_detail}` : ''}
+              <span className="auto-retry-spin">⟳</span> {t('sensor.autoRetryAttempt', { attempt: String(props.retryAttempt || 1), max: String(props.retryMax || 3) })}{liveSensor?.fetch_detail ? ` · ${liveSensor.fetch_detail}` : ''}
             </span>
           )}
         </div>
@@ -706,30 +710,25 @@ function RowMetric({ state, props, t }: { state: CardState; props: SensorCardPro
       return <span style={{ ...mono, color: 'var(--ink)' }}>{itemCount}</span>
     case 'disabled':
       return (
-        <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.0625rem' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
           <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>{t('sensor.disabled')}</span>
-          <span style={{ fontSize: '0.5625rem', color: 'var(--ink-faint)', fontStyle: 'italic' }}>{t('sensor.disabled_reason')}</span>
+          <span style={{ fontSize: '0.5625rem', color: 'var(--ink-faint)', fontStyle: 'italic', opacity: 0.7 }}>{t('sensor.disabled_reason')}</span>
         </span>
       )
     case 'config-error':
       return (
-        <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.0625rem' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-            <ErrorBadge kind="config" t={t} />
-            <span style={{ fontSize: '0.6875rem', color: 'var(--warn)' }}>{t('sensor.needs_api_key')}</span>
-          </span>
-          <span style={{ fontSize: '0.5625rem', color: 'var(--ink-faint)', fontStyle: 'italic' }}>{t('sensor.needs_api_key_reason')}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+          <ErrorBadge kind="config" t={t} />
+          <span style={{ fontSize: '0.6875rem', color: 'var(--warn)' }}>{t('sensor.needs_api_key')}</span>
+          <span style={{ fontSize: '0.5625rem', color: 'var(--ink-faint)', fontStyle: 'italic', opacity: 0.7 }}>{t('sensor.needs_api_key_reason')}</span>
         </span>
       )
     case 'failed':
       return (
-        <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.0625rem', maxWidth: 300 }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-            <ErrorBadge kind={isConfigError ? 'config' : 'api'} isSummaryError={!fetchError && !!summaryError} t={t} />
-            <span style={{ fontSize: '0.6875rem', color: 'var(--err)' }}>{t('sensor.failed')}</span>
-          </span>
-          <span style={{ fontSize: '0.5625rem', color: 'var(--err)', opacity: 0.8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%', textAlign: 'right' }}>
-            {fetchError || summaryError}
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', maxWidth: 360 }}>
+          <ErrorBadge kind={isConfigError ? 'config' : 'api'} isSummaryError={!fetchError && !!summaryError} t={t} />
+          <span style={{ fontSize: '0.6875rem', color: 'var(--err)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {fetchError || summaryError || t('sensor.failed')}
           </span>
         </span>
       )
@@ -759,9 +758,9 @@ function RowMetric({ state, props, t }: { state: CardState; props: SensorCardPro
       return <span style={{ ...mono, color: liveSensor && liveSensor.item_count > 0 ? 'var(--ink)' : 'var(--ink-faint)' }}>{liveSensor && liveSensor.item_count > 0 ? liveSensor.item_count : '0'}</span>
     case 'skipped':
       return (
-        <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.0625rem' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
           <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>{t('sensor.skipped')}</span>
-          <span style={{ fontSize: '0.5625rem', color: 'var(--ink-faint)', fontStyle: 'italic' }}>{t('sensor.skipped_reason')}</span>
+          <span style={{ fontSize: '0.5625rem', color: 'var(--ink-faint)', fontStyle: 'italic', opacity: 0.7 }}>{t('sensor.skipped_reason')}</span>
         </span>
       )
     case 'cached':
@@ -781,16 +780,11 @@ function RowMetric({ state, props, t }: { state: CardState; props: SensorCardPro
     case 'failed-mid-run':
     case 'paused-failed':
       return (
-        <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.0625rem', maxWidth: 300 }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-            <ErrorBadge kind={liveSensor?.fetch_error_kind ?? undefined} isSummaryError={!liveSensor?.fetch_error && !!liveSensor?.summary_error} t={t} />
-            <span style={{ fontSize: '0.6875rem', color: 'var(--err)' }}>{t('sensor.failed')}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', maxWidth: 360 }}>
+          <ErrorBadge kind={liveSensor?.fetch_error_kind ?? undefined} isSummaryError={!liveSensor?.fetch_error && !!liveSensor?.summary_error} t={t} />
+          <span style={{ fontSize: '0.6875rem', color: 'var(--err)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {liveSensor?.fetch_error || liveSensor?.summary_error || t('sensor.failed')}
           </span>
-          {(liveSensor?.fetch_error || liveSensor?.summary_error) && (
-            <span style={{ fontSize: '0.5625rem', color: 'var(--err)', opacity: 0.8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%', textAlign: 'right' }}>
-              {liveSensor?.fetch_error || liveSensor?.summary_error}
-            </span>
-          )}
         </span>
       )
   }
@@ -845,7 +839,7 @@ function RowActions({ state, props, t }: { state: CardState; props: SensorCardPr
       <button style={retryButtonStyle} onClick={(e) => { e.stopPropagation(); onRetry() }}>{t('sensor.retry')}</button>
     ) : (
       <span style={{ fontSize: '0.6875rem', color: 'var(--accent)', opacity: 0.7 }}>
-        <span className="auto-retry-spin">⟳</span> {t('sensor.autoRetry')}
+        <span className="auto-retry-spin">⟳</span> {t('sensor.autoRetryAttempt', { attempt: String(props.retryAttempt || 1), max: String(props.retryMax || 3) })}
       </span>
     )
   }
@@ -878,7 +872,7 @@ export const SensorRow = memo(function SensorRow(props: SensorCardProps) {
       <span style={{ ...nameStyle, fontSize: '0.8125rem', minWidth: 120, maxWidth: 140, ...(state === 'selected' ? { color: 'var(--accent)' } : {}) }}>{label}</span>
       <span style={categoryBadgeStyle}>{category}</span>
       <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <span style={{ width: 48, textAlign: 'right', display: 'flex', justifyContent: 'flex-end' }}>
+        <span style={{ minWidth: 48, textAlign: 'right', display: 'flex', justifyContent: 'flex-end' }}>
           <RowMetric state={state} props={props} t={t} />
         </span>
         <span style={{ width: 72, textAlign: 'right', display: 'flex', justifyContent: 'flex-end' }}>

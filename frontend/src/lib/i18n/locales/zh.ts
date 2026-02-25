@@ -226,6 +226,7 @@ const zh: TranslationDict = {
   'sensor.error_fetch': '获取',
   'sensor.retry': '重试',
   'sensor.autoRetry': '自动重试',
+  'sensor.autoRetryAttempt': '重试中\u2026 {attempt}/{max}',
   'sensor.autoRetryIn': '{seconds}秒后自动重试',
   'sensor.autoRetrying': '重试中\u2026',
   'sensor.dismiss': '忽略',

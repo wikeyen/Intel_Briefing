@@ -98,6 +98,8 @@ export interface SensorJobProgress {
   fetch_detail: string | null
   /** ISO timestamp when this sensor's fetch stage started running. */
   fetch_started_at: string | null
+  /** Whether this sensor's data was loaded from cache (incremental run). */
+  fetch_cached: boolean
   summary: StageState
   summary_error: string | null
   item_count: number

@@ -61,6 +61,7 @@ type CardState =
   | 'waiting'
   | 'fetched'
   | 'skipped'
+  | 'cached'
   | 'done'
   | 'failed-mid-run'
   | 'paused-failed'
@@ -75,6 +76,7 @@ function deriveState(props: SensorCardProps): CardState {
     // During pause, failed sensors get special interactive state
     if (isPaused && (liveSensor.fetch === 'failed' || liveSensor.summary === 'failed')) return 'paused-failed'
     if (liveSensor.fetch === 'failed' || liveSensor.summary === 'failed') return 'failed-mid-run'
+    if (liveSensor.fetch_cached && (liveSensor.fetch === 'ok' || liveSensor.fetch === 'skipped') && (liveSensor.summary === 'ok' || liveSensor.summary === 'skipped')) return 'cached'
     if ((liveSensor.fetch === 'ok' || liveSensor.fetch === 'skipped') && (liveSensor.summary === 'ok' || liveSensor.summary === 'skipped')) return 'done'
     if (liveSensor.summary === 'running') return 'summarizing'
     if (liveSensor.fetch === 'running') return 'fetching'
@@ -120,6 +122,8 @@ function Dot({ state }: { state: CardState }) {
       return <span style={{ ...base, background: 'var(--ok)' }} />
     case 'skipped':
       return <span style={{ ...base, background: 'var(--ink-faint)', opacity: 0.5 }} />
+    case 'cached':
+      return <span style={{ ...base, background: 'var(--ink-faint)' }} />
     case 'done':
       return <span style={{ ...base, background: 'var(--ok)' }} />
   }
@@ -163,7 +167,7 @@ function cardContainerStyle(state: CardState, hovered: boolean): React.CSSProper
     }
   }
 
-  if (state === 'fetching' || state === 'summarizing' || state === 'waiting' || state === 'fetched' || state === 'done' || state === 'failed-mid-run') {
+  if (state === 'fetching' || state === 'summarizing' || state === 'waiting' || state === 'fetched' || state === 'cached' || state === 'done' || state === 'failed-mid-run') {
     return {
       ...base,
       cursor: 'default',
@@ -418,6 +422,14 @@ function PrimaryMetric({ state, props, t }: { state: CardState; props: SensorCar
         </div>
       )
 
+    case 'cached':
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
+          <span style={{ ...metricStyle, fontSize: '0.875rem' }}>{liveSensor?.item_count ?? itemCount}</span>
+          <span style={{ fontSize: '0.5625rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--ink-faint)' }}>{t('sensor.cached')}</span>
+        </div>
+      )
+
     case 'done':
       return (
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
@@ -660,7 +672,7 @@ function rowContainerStyle(state: CardState, hovered: boolean): React.CSSPropert
     return { ...base, borderLeft: '3px solid var(--err)', cursor: state === 'paused-failed' ? 'default' : base.cursor }
   }
 
-  if (state === 'fetching' || state === 'summarizing' || state === 'waiting' || state === 'fetched' || state === 'skipped' || state === 'done') {
+  if (state === 'fetching' || state === 'summarizing' || state === 'waiting' || state === 'fetched' || state === 'skipped' || state === 'cached' || state === 'done') {
     return { ...base, cursor: 'default', ...(state === 'skipped' ? { opacity: 0.5 } : {}) }
   }
 
@@ -750,6 +762,13 @@ function RowMetric({ state, props, t }: { state: CardState; props: SensorCardPro
         <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.0625rem' }}>
           <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)' }}>{t('sensor.skipped')}</span>
           <span style={{ fontSize: '0.5625rem', color: 'var(--ink-faint)', fontStyle: 'italic' }}>{t('sensor.skipped_reason')}</span>
+        </span>
+      )
+    case 'cached':
+      return (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+          <span style={{ ...mono, color: 'var(--ink)' }}>{liveSensor?.item_count ?? itemCount}</span>
+          <span style={{ fontSize: '0.5625rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--ink-faint)' }}>{t('sensor.cached')}</span>
         </span>
       )
     case 'done':

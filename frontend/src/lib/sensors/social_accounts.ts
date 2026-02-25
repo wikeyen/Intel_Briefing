@@ -2,12 +2,10 @@
 // ABOUTME: Aggregates posts from configured watch lists into a unified IntelItem feed.
 import type { ConfigSettings, IntelItem } from '../models'
 import { SensorConfigError } from './errors'
-import { isWithinResumeWindow } from './utils'
 import { createBlueskyAgent, blueskyPostToItem, getBlueskyFollowing } from '../platforms/bluesky'
 import { mastodonGet, mastodonStatusToItem, getMastodonFollowing } from '../platforms/mastodon'
-import { readReport } from '../pipeline/cache'
 
-async function fetchBlueskyAccounts(config: ConfigSettings, limit: number, skipAccounts?: Set<string>): Promise<IntelItem[]> {
+async function fetchBlueskyAccounts(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
   if (!config.bluesky_handle || !config.bluesky_app_password) return []
   const agent = await createBlueskyAgent(config.bluesky_handle, config.bluesky_app_password)
 
@@ -24,14 +22,10 @@ async function fetchBlueskyAccounts(config: ConfigSettings, limit: number, skipA
       }
     }
   }
-  // Filter out accounts already fetched within the resume window
-  const toFetch = skipAccounts
-    ? actors.filter(h => !skipAccounts.has(h.toLowerCase()))
-    : actors
-  if (toFetch.length === 0) return []
+  if (actors.length === 0) return []
 
   const items: IntelItem[] = []
-  for (const actor of toFetch) {
+  for (const actor of actors) {
     if (items.length >= limit) break
     try {
       const { data } = await agent.getAuthorFeed({ actor, limit: Math.min(10, limit * 2) })
@@ -80,7 +74,7 @@ function stitchBlueskyReplies(feed: BlueskyFeedItem[]): void {
   }
 }
 
-async function fetchMastodonAccounts(config: ConfigSettings, limit: number, skipAccounts?: Set<string>): Promise<IntelItem[]> {
+async function fetchMastodonAccounts(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
   if (!config.mastodon_token) return []
 
   // Merge manual accounts with following list when toggle is on (dedup by acct)
@@ -96,14 +90,10 @@ async function fetchMastodonAccounts(config: ConfigSettings, limit: number, skip
       }
     }
   }
-  // Filter out accounts already fetched within the resume window
-  const toFetch = skipAccounts
-    ? accts.filter(a => !skipAccounts.has(a.toLowerCase()))
-    : accts
-  if (toFetch.length === 0) return []
+  if (accts.length === 0) return []
 
   const items: IntelItem[] = []
-  for (const acct of toFetch) {
+  for (const acct of accts) {
     if (items.length >= limit) break
     try {
       const lookup = await mastodonGet<Record<string, unknown>>(
@@ -166,16 +156,6 @@ function buildMastodonSelfReplyMap(statuses: Array<Record<string, unknown>>): {
   return { parentToReply, stitchedIds }
 }
 
-/** Build a set of account handles already present in the cached report's social_accounts items. */
-function buildSkipSet(cachedItems: IntelItem[]): Set<string> {
-  const skip = new Set<string>()
-  for (const item of cachedItems) {
-    const key = item.handle ?? item.account
-    if (key) skip.add(key.toLowerCase())
-  }
-  return skip
-}
-
 export async function fetchSocialAccounts(
   config: ConfigSettings,
   limit: number,
@@ -194,37 +174,13 @@ export async function fetchSocialAccounts(
     throw new SensorConfigError(`No social accounts configured on ${target}`)
   }
 
-  // Resume logic — reuse cached items for accounts already fetched within the window
-  let skipAccounts: Set<string> | undefined
-  let cachedItems: IntelItem[] = []
-  const windowHours = config.resume_window_hours ?? 0
-  if (windowHours > 0) {
-    try {
-      const report = await readReport()
-      const fetchedAt = report?.sources_fetched_at?.social_accounts
-      if (report && isWithinResumeWindow(fetchedAt, windowHours)) {
-        cachedItems = (report.items.social ?? []).filter(item => item.source === 'bluesky' || item.source === 'mastodon')
-        skipAccounts = buildSkipSet(cachedItems)
-        if (skipAccounts.size > 0) {
-          console.log(`[social_accounts] Resume: reusing ${skipAccounts.size} cached accounts (window ${windowHours}h)`)
-        }
-      }
-    } catch {
-      // Cache read failed — proceed with full fetch
-    }
-  }
-
   const fetches: Promise<IntelItem[]>[] = []
-  if (checkBsky) fetches.push(fetchBlueskyAccounts(config, limit, skipAccounts))
-  if (checkMasto) fetches.push(fetchMastodonAccounts(config, limit, skipAccounts))
+  if (checkBsky) fetches.push(fetchBlueskyAccounts(config, limit))
+  if (checkMasto) fetches.push(fetchMastodonAccounts(config, limit))
 
   const results = await Promise.allSettled(fetches)
 
   const items: IntelItem[] = []
-  // Carry forward cached items for skipped accounts
-  if (skipAccounts && skipAccounts.size > 0) {
-    items.push(...cachedItems)
-  }
   for (const r of results) {
     if (r.status === 'fulfilled') items.push(...r.value)
   }

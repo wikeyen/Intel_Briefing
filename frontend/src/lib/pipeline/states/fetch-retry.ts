@@ -2,17 +2,18 @@
 // ABOUTME: Transitions to paused if failures remain after retries (was: silently proceed).
 
 import { sensorResultSucceeded } from '../../models'
-import { fetchSensor, MAX_AUTO_RETRIES } from '../helpers'
+import { fetchSensor, mergeRetryResult, MAX_AUTO_RETRIES } from '../helpers'
+import { writeReport } from '../cache'
 import { writePipelineItem } from '../../db'
 import type { PipelineContext, PipelineState, FailureKind } from '../types'
 
 /**
  * Fetch-retry state: auto-retry failed sensors up to MAX_AUTO_RETRIES times.
  * Config errors (e.g. missing API key) are not retryable — they need user action.
+ * Successful retries merge items back into ctx.report so downstream handlers see them.
  *
  * Returns:
- *  - 'paused'       if failures remain after retries (NEW — was silently continuing)
- *  - 'summarizing'  if all recovered
+ *  - 'summarizing'  always (summarizing handler decides whether to pause)
  *  - 'cancelled'    if aborted
  */
 export async function handleFetchRetry(ctx: PipelineContext): Promise<PipelineState> {
@@ -58,6 +59,16 @@ export async function handleFetchRetry(ctx: PipelineContext): Promise<PipelineSt
         ctx.failures.delete(name)
         ctx.failureKinds.delete(name)
 
+        // Merge the recovered items into the existing report
+        if (ctx.report) {
+          mergeRetryResult(ctx.report, result)
+          await writeReport(ctx.report).catch(() => {})
+          if (!ctx.report.sources_ok.includes(name)) {
+            ctx.report.sources_ok.push(name)
+          }
+          ctx.report.sources_failed = ctx.report.sources_failed.filter(n => n !== name)
+        }
+
         // Write to temp DB for crash-safe incremental recovery
         const runId = tracker.snapshot().run_id!
         const nowIso = new Date().toISOString().replace(/\.\d+Z$/, 'Z')
@@ -77,7 +88,8 @@ export async function handleFetchRetry(ctx: PipelineContext): Promise<PipelineSt
 
   if (signal.aborted) return 'cancelled'
 
-  // If failures remain after retries, transition to paused for user action
-  if (ctx.failures.size > 0) return 'paused'
+  // Always proceed to summarizing — even with failures remaining.
+  // The summarizing handler runs per-sensor summaries (skipping failed sensors),
+  // then transitions to 'paused' if fetch failures exist, or 'briefing' if all ok.
   return 'summarizing'
 }

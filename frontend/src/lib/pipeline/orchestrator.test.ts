@@ -87,22 +87,8 @@ beforeEach(() => {
   vi.clearAllMocks()
   for (const key of Object.keys(mockSensorFns)) delete mockSensorFns[key]
   // Clear globalThis pipeline state to prevent leaks between tests
-  const g = globalThis as unknown as {
-    __pipelineAbortController?: unknown
-    __pipelineTracker?: unknown
-    __pipelineSkipRetries?: boolean
-    __pipelinePauseResolve?: unknown
-    __pipelineReport?: unknown
-    __pipelineFailedSensors?: unknown
-    __pipelineConfig?: unknown
-  }
-  g.__pipelineAbortController = null
-  g.__pipelineTracker = null
-  g.__pipelineSkipRetries = false
-  g.__pipelinePauseResolve = null
-  g.__pipelineReport = null
-  g.__pipelineFailedSensors = null
-  g.__pipelineConfig = null
+  const g = globalThis as unknown as { __activePipeline?: unknown }
+  g.__activePipeline = null
 })
 
 /** Helper: wait for the pipeline to enter paused state, then trigger generateOverall. */
@@ -442,7 +428,7 @@ describe('pipeline auto-retry', () => {
       callCount++
       // During first retry (call #2), set the skip flag (simulates user clicking "Skip")
       if (callCount === 2) {
-        ;(globalThis as unknown as { __pipelineSkipRetries: boolean }).__pipelineSkipRetries = true
+        skipPipelineRetries()
       }
       throw new Error('always fails')
     })

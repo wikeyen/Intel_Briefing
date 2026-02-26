@@ -239,7 +239,7 @@ describe('summarizeReport', () => {
     // hacker_news fails, arxiv succeeds, overall reports failed (plain text not JSON)
     expect(progressCalls).toEqual([
       { sensor: 'hacker_news', state: 'running', error: null },
-      { sensor: 'hacker_news', state: 'failed', error: 'Rate limited' },
+      { sensor: 'hacker_news', state: 'failed', error: 'LLM: Rate limited' },
       { sensor: 'arxiv', state: 'running', error: null },
       { sensor: 'arxiv', state: 'ok', error: null },
       { sensor: '__overall__', state: 'running', error: null },

@@ -301,7 +301,10 @@ export async function summarizeReport(
           return result
         } catch (err) {
           if (signal?.aborted) return null
-          const message = err instanceof Error ? err.message : String(err)
+          const raw = err instanceof Error ? err.message : String(err)
+          // "fetch failed" is the raw Node.js TypeError from a failed HTTP call —
+          // disambiguate so it doesn't look like a sensor-fetch failure.
+          const message = raw.toLowerCase() === 'fetch failed' ? 'LLM connection failed' : raw
           await onProgress?.(sensorName, label, 'failed', message)
           // When progress callback is present, swallow per-sensor errors and continue
           if (onProgress) return null

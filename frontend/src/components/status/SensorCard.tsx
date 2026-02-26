@@ -713,28 +713,45 @@ function RowNote({ state, props, t }: { state: CardState; props: SensorCardProps
   switch (state) {
     case 'healthy':
     case 'selected':
-      return null
+      return props.itemCount > 0
+        ? <span style={{ ...noteStyle, color: 'var(--ink-faint)', fontSize: '0.625rem' }}>{t('sensor.status_n_items', { count: String(props.itemCount) })}</span>
+        : null
 
-    case 'done':
+    case 'done': {
+      const count = (liveSensor?.item_count || 0) > 0 ? liveSensor!.item_count : props.itemCount
+      const fetchOk = liveSensor?.fetch === 'ok'
+      const summaryOk = liveSensor?.summary === 'ok'
+      const parts: string[] = []
+      if (fetchOk) parts.push(t('sensor.status_fetched_n', { count: String(count) }))
+      if (summaryOk) parts.push(t('sensor.status_summarized'))
       return (
         <span style={{ ...noteStyle, color: 'var(--ok)', fontWeight: 500, fontSize: '0.625rem' }}>
-          {okMark} {t('sensor.done')}
+          {okMark} {parts.join(' · ') || t('sensor.done')}
         </span>
       )
+    }
 
-    case 'cached':
+    case 'cached': {
+      const cacheCount = (liveSensor?.item_count || 0) > 0 ? liveSensor!.item_count : props.itemCount
+      const cacheSummaryOk = liveSensor?.summary === 'ok'
+      const cacheLabel = cacheSummaryOk
+        ? t('sensor.status_cached_n_summarized', { count: String(cacheCount) })
+        : t('sensor.status_cached_n', { count: String(cacheCount) })
       return (
         <span style={{ ...noteStyle, color: 'var(--ink-faint)', fontSize: '0.625rem' }}>
-          {okMark} {t('sensor.cached')}
+          {okMark} {cacheLabel}
         </span>
       )
+    }
 
-    case 'fetched':
+    case 'fetched': {
+      const fetchedCount = (liveSensor?.item_count || 0) > 0 ? liveSensor!.item_count : props.itemCount
       return (
         <span style={{ ...noteStyle, color: 'var(--ink-faint)', fontSize: '0.625rem' }}>
-          {okMark} {t('sensor.fetched_awaiting')}
+          {okMark} {t('sensor.status_fetched_n_awaiting', { count: String(fetchedCount) })}
         </span>
       )
+    }
 
     case 'disabled':
       return (
@@ -810,46 +827,6 @@ function RowNote({ state, props, t }: { state: CardState; props: SensorCardProps
   }
 }
 
-function RowMetric({ state, props }: { state: CardState; props: SensorCardProps; t: TFn }) {
-  const { liveSensor, itemCount } = props
-  const pill: React.CSSProperties = {
-    fontFamily: 'ui-monospace, monospace',
-    fontSize: '0.625rem',
-    fontWeight: 600,
-    background: 'var(--surface-alt)',
-    padding: '0.125rem 0.4375rem',
-    borderRadius: 9,
-    lineHeight: 1.6,
-    flexShrink: 0,
-  }
-
-  // States that never show a count
-  if (state === 'disabled' || state === 'config-error' || state === 'skipped' || state === 'waiting') return null
-
-  // During active fetch/summarize: show live count only when > 0
-  if (state === 'fetching' || state === 'summarizing') {
-    if (!liveSensor || liveSensor.item_count === 0) return null
-    return <span style={{ ...pill, color: 'var(--ink-faint)' }}>{liveSensor.item_count}</span>
-  }
-
-  // Done/cached/fetched: show live count (or fallback to report count)
-  if (state === 'done' || state === 'cached' || state === 'fetched') {
-    const count = liveSensor?.item_count ?? itemCount
-    return <span style={{ ...pill, color: count > 0 ? 'var(--ink-muted)' : 'var(--ink-faint)' }}>{count}</span>
-  }
-
-  // Failed mid-run / paused-failed: show live count if available
-  if (state === 'failed-mid-run' || state === 'paused-failed') {
-    const count = liveSensor?.item_count ?? 0
-    if (count === 0) return null
-    return <span style={{ ...pill, color: 'var(--ink-faint)' }}>{count}</span>
-  }
-
-  // Healthy / selected / failed (idle): show report count
-  const count = itemCount
-  if (count === 0 && state === 'failed') return null
-  return <span style={{ ...pill, color: count > 0 ? 'var(--ink-muted)' : 'var(--ink-faint)' }}>{count}</span>
-}
 
 function RowActions({ state, props, t }: { state: CardState; props: SensorCardProps; t: TFn }) {
   const { lastFetchAgo, onRetry, onSkip, onSkipFetching, onDismiss, liveSensor } = props
@@ -930,10 +907,7 @@ export const SensorRow = memo(function SensorRow(props: SensorCardProps) {
       ) : (
         <Dot state={state} />
       )}
-      <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden', minWidth: 0 }}>
-        <span style={{ ...nameStyle, fontSize: '0.8125rem', overflow: 'hidden', textOverflow: 'ellipsis', ...(state === 'selected' ? { color: 'var(--accent)' } : {}) }}>{label}</span>
-        <RowMetric state={state} props={props} t={t} />
-      </span>
+      <span style={{ ...nameStyle, fontSize: '0.8125rem', overflow: 'hidden', textOverflow: 'ellipsis', ...(state === 'selected' ? { color: 'var(--accent)' } : {}) }}>{label}</span>
       <span className="sensor-col-note" style={{ overflow: 'hidden', minWidth: 0 }}>
         <RowNote state={state} props={props} t={t} />
       </span>

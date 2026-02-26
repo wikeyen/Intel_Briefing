@@ -42,17 +42,17 @@ describe('SensorGrid', () => {
     expect(screen.getByText('RSS Feeds')).toBeInTheDocument()
   })
 
-  it('shows item count for sensors with data', () => {
+  it('shows item count for sensors with data in status text', () => {
     const props = buildProps({
       report: makeReport(),
       config: makeConfig(),
       pipelineStatus: makePipelineStatus(),
     })
     renderWithI18n(<SensorGrid {...props} />)
-    // HN has 2 items, ArXiv has 2, GitHub has 1
-    const twos = screen.getAllByText('2')
-    expect(twos.length).toBeGreaterThanOrEqual(2)
-    expect(screen.getByText('1')).toBeInTheDocument()
+    // HN has 2 items, ArXiv has 2, GitHub has 1 — counts appear in status text
+    const twoItems = screen.getAllByText('2 items')
+    expect(twoItems.length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText('1 items')).toBeInTheDocument()
   })
 
   it('shows "Disabled" for disabled sensors', () => {
@@ -142,8 +142,6 @@ describe('SensorGrid', () => {
       config: makeConfig(),
     })
     renderWithI18n(<SensorGrid {...props} />)
-    // Live item count rendered in metric column
-    expect(screen.getByText('5')).toBeInTheDocument()
     // fetch_detail rendered in note column with "Fetching " prefix stripped
     expect(screen.getByText(/@testuser/)).toBeInTheDocument()
   })

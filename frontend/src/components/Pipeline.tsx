@@ -1,4 +1,4 @@
-// ABOUTME: Pipeline page — schedule, cache, expiry, filters, and output limits.
+// ABOUTME: Pipeline page — schedule, cache, expiry, and filters.
 // ABOUTME: Auto-saves on every change; action buttons (mark stale, cleanup) are independent operations.
 'use client'
 import { useState, useEffect } from 'react'
@@ -9,13 +9,7 @@ import { useTranslation } from '@/lib/i18n'
 import { useToast } from '@/lib/toast-context'
 import { useAutoSave } from '@/lib/hooks/useAutoSave'
 import { inputBase, focus, blur, SubLabel, AutoSaveIndicator, ChevronDown } from '@/components/form-styles'
-import { ALL_CATEGORIES, CATEGORY_META } from '@/lib/sensors/taxonomy'
 import { PipelineSkeleton } from '@/components/Skeleton'
-
-const OUTPUT_SECTIONS = ALL_CATEGORIES.map(key => ({
-  key,
-  label: CATEGORY_META[key].label,
-}))
 
 const TIMEZONES = [
   'UTC',
@@ -68,8 +62,6 @@ export function Pipeline() {
   const [postExpiryDays, setPostExpiryDays] = useState(30)
   const [boost, setBoost] = useState<string[]>([])
   const [suppress, setSuppress] = useState<string[]>([])
-  const [defaultLimit, setDefaultLimit] = useState(10)
-  const [sectionLimits, setSectionLimits] = useState<Record<string, number>>({})
   const [invalidating, setInvalidating] = useState(false)
   const [cleaning, setCleaning] = useState(false)
   const [hoverInvalidate, setHoverInvalidate] = useState(false)
@@ -87,7 +79,6 @@ export function Pipeline() {
       post_expiry_days: postExpiryDays,
       boost_keywords: boost,
       suppress_keywords: suppress,
-      sensor_limits: sectionLimits,
     }),
     { onError: (e) => showToast(t('ai.save_failed', { error: e.message })) },
   )
@@ -103,16 +94,9 @@ export function Pipeline() {
       setPostExpiryDays(cfg.post_expiry_days ?? 30)
       setBoost(cfg.boost_keywords)
       setSuppress(cfg.suppress_keywords)
-      setDefaultLimit(cfg.default_limit)
-      setSectionLimits(cfg.sensor_limits ?? {})
       setLoaded(true)
     })
   }, [])
-
-  const updateSection = (section: string, value: number) => {
-    setSectionLimits((prev) => ({ ...prev, [section]: value }))
-    trigger()
-  }
 
   const handleInvalidate = async () => {
     setInvalidating(true)
@@ -407,64 +391,6 @@ export function Pipeline() {
           </div>
         </div>
 
-        {/* ── Output ── */}
-        <div style={cardStyle}>
-          <SubLabel>{t('pipeline.output')}</SubLabel>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '1rem' }}>
-                {t('pipeline.per_section')}
-              </label>
-              <div style={{
-                background: 'var(--surface)',
-                border: '1px solid var(--border)',
-                borderRadius: 6,
-                overflow: 'hidden',
-                boxShadow: 'var(--shadow-card)',
-              }}>
-                {OUTPUT_SECTIONS.map(({ key, label }, i) => {
-                  const val = sectionLimits[key] ?? defaultLimit
-                  return (
-                    <div
-                      key={key}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '1.25rem',
-                        padding: '0.875rem 1.25rem',
-                        borderBottom: i < OUTPUT_SECTIONS.length - 1 ? '1px solid var(--border-soft)' : 'none',
-                      }}
-                    >
-                      <span style={{ fontSize: '0.8125rem', color: 'var(--ink-muted)', width: 104, flexShrink: 0 }}>
-                        {label}
-                      </span>
-                      <input
-                        type="range"
-                        min={1}
-                        max={200}
-                        value={val}
-                        onChange={(e) => updateSection(key, Number(e.target.value))}
-                        style={{ flex: 1 }}
-                      />
-                      <span style={{
-                        fontSize: '0.875rem',
-                        fontWeight: 600,
-                        color: 'var(--ink)',
-                        width: 28,
-                        textAlign: 'right',
-                        fontFamily: 'ui-monospace, monospace',
-                        flexShrink: 0,
-                      }}>
-                        {val}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
   )

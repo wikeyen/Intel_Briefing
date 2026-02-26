@@ -405,29 +405,54 @@ export async function generateOverallBriefing(
     { role: 'user', content: m.overallUser(overallContext) },
   ]
 
-  try {
-    const onTokenOverall = onToken ? (token: string) => onToken('__overall__', token) : undefined
-    let rawOverall: string
-    if (onTokenOverall) {
-      rawOverall = await chatCompletionStream(overallMessages, llmConfig, {
-        onToken: onTokenOverall, signal, timeoutMs: 600_000,
-      }).fullText
-    } else {
-      rawOverall = await chatCompletion(overallMessages, llmConfig, signal, 600_000)
+  const MAX_OVERALL_ATTEMPTS = 3
+  for (let attempt = 1; attempt <= MAX_OVERALL_ATTEMPTS; attempt++) {
+    try {
+      const onTokenOverall = onToken ? (token: string) => onToken('__overall__', token) : undefined
+      let rawOverall: string
+      if (onTokenOverall) {
+        rawOverall = await chatCompletionStream(overallMessages, llmConfig, {
+          onToken: onTokenOverall, signal, timeoutMs: 600_000,
+        }).fullText
+      } else {
+        rawOverall = await chatCompletion(overallMessages, llmConfig, signal, 600_000)
+      }
+      const { parsed, ...overall } = parseOverallJson(rawOverall)
+
+      // Retry when the LLM returned valid JSON but executive_summary is empty
+      // (hollow response). Don't retry plain-text fallback — content is preserved.
+      if (parsed && !overall.executive_summary && attempt < MAX_OVERALL_ATTEMPTS) {
+        console.warn(`[overall-briefing] Attempt ${attempt}/${MAX_OVERALL_ATTEMPTS} parsed but executive_summary empty, retrying…`)
+        continue
+      }
+
+      overall.sources = globalSources
+
+      // Post-hoc citation attribution
+      const cheapConfig: LlmConfig = options.attributionLlmConfig ?? llmConfig
+      await attributeCitations(overall, globalSources, sections, llmConfig, cheapConfig, signal, language)
+
+      if (parsed && overall.executive_summary) {
+        await onProgress?.('__overall__', 'Overall', 'ok', null)
+      } else {
+        const reason = parsed ? 'LLM returned empty executive_summary' : 'LLM response was not valid JSON'
+        console.warn(`[overall-briefing] ${reason}`)
+        await onProgress?.('__overall__', 'Overall', 'failed', reason)
+      }
+      return overall
+    } catch (err) {
+      if (attempt < MAX_OVERALL_ATTEMPTS) {
+        console.warn(`[overall-briefing] Attempt ${attempt}/${MAX_OVERALL_ATTEMPTS} threw error, retrying…`, (err as Error).message)
+        continue
+      }
+      await onProgress?.('__overall__', 'Overall', 'failed', (err as Error).message)
+      return { executive_summary: '', sections: [], sentiment: { ...EMPTY_SENTIMENT } }
     }
-    const overall = parseOverallJson(rawOverall)
-    overall.sources = globalSources
-
-    // Post-hoc citation attribution
-    const cheapConfig: LlmConfig = options.attributionLlmConfig ?? llmConfig
-    await attributeCitations(overall, globalSources, sections, llmConfig, cheapConfig, signal, language)
-
-    await onProgress?.('__overall__', 'Overall', 'ok', null)
-    return overall
-  } catch (err) {
-    await onProgress?.('__overall__', 'Overall', 'failed', (err as Error).message)
-    return { executive_summary: '', sections: [], sentiment: { ...EMPTY_SENTIMENT } }
   }
+
+  // Unreachable but satisfies TypeScript
+  await onProgress?.('__overall__', 'Overall', 'failed', 'Retry loop exhausted')
+  return { executive_summary: '', sections: [], sentiment: { ...EMPTY_SENTIMENT } }
 }
 
 /**

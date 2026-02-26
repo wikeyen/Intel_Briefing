@@ -210,14 +210,14 @@ describe('summarizeReport', () => {
 
     await summarizeReport(makeReport(), makeOptions({ onProgress }))
 
-    // hacker_news: running, ok; arxiv: running, ok; __overall__: running, ok
+    // hacker_news: running, ok; arxiv: running, ok; __overall__: running, failed (plain text not JSON)
     expect(progressCalls).toEqual([
       { sensor: 'hacker_news', label: 'Hacker News', state: 'running', error: null },
       { sensor: 'hacker_news', label: 'Hacker News', state: 'ok', error: null },
       { sensor: 'arxiv', label: 'ArXiv AI', state: 'running', error: null },
       { sensor: 'arxiv', label: 'ArXiv AI', state: 'ok', error: null },
       { sensor: '__overall__', label: 'Overall', state: 'running', error: null },
-      { sensor: '__overall__', label: 'Overall', state: 'ok', error: null },
+      { sensor: '__overall__', label: 'Overall', state: 'failed', error: 'LLM response was not valid JSON' },
     ])
   })
 
@@ -236,14 +236,14 @@ describe('summarizeReport', () => {
 
     const result = await summarizeReport(makeReport(), makeOptions({ onProgress }))
 
-    // hacker_news fails, arxiv succeeds, overall succeeds
+    // hacker_news fails, arxiv succeeds, overall reports failed (plain text not JSON)
     expect(progressCalls).toEqual([
       { sensor: 'hacker_news', state: 'running', error: null },
       { sensor: 'hacker_news', state: 'failed', error: 'Rate limited' },
       { sensor: 'arxiv', state: 'running', error: null },
       { sensor: 'arxiv', state: 'ok', error: null },
       { sensor: '__overall__', state: 'running', error: null },
-      { sensor: '__overall__', state: 'ok', error: null },
+      { sensor: '__overall__', state: 'failed', error: 'LLM response was not valid JSON' },
     ])
 
     // Only arxiv in sections since hacker_news failed

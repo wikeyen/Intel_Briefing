@@ -179,6 +179,97 @@ function derivePhaseProgress(ps: PipelineStatus | null): Record<PipelinePhaseSte
   return p
 }
 
+/** Per-phase tooltip data — only meaningful for terminal phases. */
+export interface PhaseTooltipData {
+  /** Lines to display in the tooltip, e.g. ["8 fetched", "2 cached", "1 failed", "42 items"] */
+  lines: string[]
+}
+
+/**
+ * Aggregate per-phase outcome stats from pipeline status.
+ * Returns null for phases that haven't completed yet.
+ */
+export function derivePhaseTooltipData(
+  ps: PipelineStatus | null,
+  statuses: Record<PipelinePhaseStep, StepStatus>,
+  t: (key: string) => string,
+): Record<PipelinePhaseStep, PhaseTooltipData | null> {
+  const result: Record<PipelinePhaseStep, PhaseTooltipData | null> = {
+    fetch: null, retry: null, summary: null, briefing: null, intelligence: null,
+  }
+  if (!ps) return result
+
+  const TERMINAL: StepStatus[] = ['done', 'error', 'skipped']
+
+  // ── Fetch ──
+  if (TERMINAL.includes(statuses.fetch)) {
+    if (statuses.fetch === 'skipped') {
+      result.fetch = { lines: [t('stepper.skipped')] }
+    } else {
+      const fetched = ps.sensors.filter(s => !s.fetch_cached && s.fetch === 'ok').length
+      const cached = ps.sensors.filter(s => s.fetch_cached).length
+      const failed = ps.sensors.filter(s => s.fetch === 'failed').length
+      const items = ps.sensors.reduce((sum, s) => sum + s.item_count, 0)
+      const lines: string[] = []
+      if (fetched > 0) lines.push(`${fetched} ${t('stepper.fetched')}`)
+      if (cached > 0) lines.push(`${cached} ${t('stepper.cached')}`)
+      if (failed > 0) lines.push(`${failed} ${t('stepper.failed')}`)
+      lines.push(`${items} ${t('stepper.items')}`)
+      result.fetch = { lines }
+    }
+  }
+
+  // ── Summary ──
+  if (TERMINAL.includes(statuses.summary)) {
+    if (statuses.summary === 'skipped') {
+      result.summary = { lines: [t('stepper.skipped')] }
+    } else {
+      const summarized = ps.sensors.filter(s => s.summary === 'ok').length
+      const failed = ps.sensors.filter(s => s.summary === 'failed').length
+      const chunks = ps.sensors.reduce((sum, s) => sum + s.summary_chunks_done, 0)
+      const lines: string[] = []
+      if (summarized > 0) lines.push(`${summarized} ${t('stepper.summarized')}`)
+      if (failed > 0) lines.push(`${failed} ${t('stepper.failed')}`)
+      if (chunks > 0) lines.push(`${chunks} ${t('stepper.chunks')}`)
+      result.summary = { lines }
+    }
+  }
+
+  // ── Briefing ──
+  if (TERMINAL.includes(statuses.briefing)) {
+    if (statuses.briefing === 'skipped') {
+      result.briefing = { lines: [t('stepper.skipped')] }
+    } else {
+      const statusLabel = statuses.briefing === 'done' ? t('stepper.status_ok') : t('stepper.status_failed')
+      const lines = [statusLabel]
+      if (ps.started_at && ps.completed_at) {
+        const durMs = new Date(ps.completed_at).getTime() - new Date(ps.started_at).getTime()
+        const durSec = Math.round(durMs / 1000)
+        lines.push(durSec >= 60 ? `${Math.floor(durSec / 60)}m ${durSec % 60}s` : `${durSec}s`)
+      }
+      result.briefing = { lines }
+    }
+  }
+
+  // ── Intelligence ──
+  if (TERMINAL.includes(statuses.intelligence)) {
+    if (statuses.intelligence === 'skipped') {
+      result.intelligence = { lines: [t('stepper.skipped')] }
+    } else {
+      const statusLabel = statuses.intelligence === 'done' ? t('stepper.status_ok') : t('stepper.status_failed')
+      const lines = [statusLabel]
+      if (ps.started_at && ps.completed_at) {
+        const durMs = new Date(ps.completed_at).getTime() - new Date(ps.started_at).getTime()
+        const durSec = Math.round(durMs / 1000)
+        lines.push(durSec >= 60 ? `${Math.floor(durSec / 60)}m ${durSec % 60}s` : `${durSec}s`)
+      }
+      result.intelligence = { lines }
+    }
+  }
+
+  return result
+}
+
 
 export const STEP_COLORS: Record<StepStatus, { dot: string; label: string }> = {
   pending: { dot: 'var(--border)', label: 'var(--ink-faint)' },

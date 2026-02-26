@@ -36,7 +36,7 @@ const { loadConfig, saveConfig, maskConfig } = await import('./index')
 describe('loadConfig', () => {
   it('returns defaults when db and file have no data', async () => {
     const config = await loadConfig()
-    expect(config.default_limit).toBe(10)
+    expect(config.default_limit).toBe(50)
     expect(config.summary_api_key).toBeNull()
   })
 

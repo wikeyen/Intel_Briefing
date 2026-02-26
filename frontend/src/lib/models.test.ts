@@ -44,20 +44,20 @@ describe('IntelReport', () => {
 describe('ConfigSettings', () => {
   it('should have safe defaults', () => {
     const cfg = defaultConfig()
-    expect(cfg.default_limit).toBe(10)
+    expect(cfg.default_limit).toBe(50)
     expect(cfg.cache_ttl_hours).toBe(6)
   })
 
   it('should fall back to default_limit for sensorLimit', () => {
     const cfg = defaultConfig()
-    expect(sensorLimit(cfg, 'hacker_news')).toBe(10)
-    expect(sensorLimit(cfg, 'nonexistent')).toBe(10)
+    expect(sensorLimit(cfg, 'hacker_news')).toBe(50)
+    expect(sensorLimit(cfg, 'nonexistent')).toBe(50)
   })
 
   it('should use sensor override in sensorLimit', () => {
     const cfg = { ...defaultConfig(), sensor_limits: { arxiv: 5 } }
     expect(sensorLimit(cfg, 'arxiv')).toBe(5)
-    expect(sensorLimit(cfg, 'hacker_news')).toBe(10)
+    expect(sensorLimit(cfg, 'hacker_news')).toBe(50)
   })
 })
 

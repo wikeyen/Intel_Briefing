@@ -2,7 +2,7 @@
 // ABOUTME: Produces structured IntelligenceReport from fetched IntelItem data via chatCompletion.
 
 import type { IntelItem, IntelReport, SummaryLanguage } from '../models'
-import type { LlmConfig } from '../summary/llm'
+import type { LlmConfig, ChatMessage } from '../summary/llm'
 import { chatCompletion } from '../summary/llm'
 import type { CategoryKey } from '../sensors/taxonomy'
 import { ALL_CATEGORIES, SENSOR_CATEGORY_MAP } from '../sensors/taxonomy'
@@ -219,19 +219,31 @@ export async function analyzeTrendIntelligence(
       return `[${i}] ${item.title} (${item.source}, heat: ${heat})`
     }).join('\n')
 
-    const raw = await chatCompletion(
-      [
-        { role: 'system', content: trendSystemPrompt(language) },
-        { role: 'user', content: numbered },
-      ],
-      llmConfig,
-      signal,
-    )
+    const messages: ChatMessage[] = [
+      { role: 'system', content: trendSystemPrompt(language) },
+      { role: 'user', content: numbered },
+    ]
 
-    const parsed = robustJsonParse(raw)
+    const raw = await chatCompletion(messages, llmConfig, signal)
+
+    let parsed = robustJsonParse(raw)
     if (!parsed) {
-      console.error('[intelligence] trend: failed to parse LLM JSON. First 200 chars:', raw.slice(0, 200))
-      return null
+      // Retry once with JSON-fix nudge
+      console.warn('[intelligence] trend: JSON parse failed, retrying. First 200 chars:', raw.slice(0, 200))
+      const retryRaw = await chatCompletion(
+        [
+          ...messages,
+          { role: 'assistant', content: raw },
+          { role: 'user', content: 'Your response was not valid JSON. Please respond with ONLY the JSON object, no explanation or markdown fences.' },
+        ],
+        llmConfig,
+        signal,
+      )
+      parsed = robustJsonParse(retryRaw)
+      if (!parsed) {
+        console.error('[intelligence] trend: failed to parse LLM JSON after retry. First 200 chars:', retryRaw.slice(0, 200))
+        return null
+      }
     }
 
     const topics: TrendTopic[] = Array.isArray(parsed.topics)
@@ -296,19 +308,31 @@ export async function analyzeTopicIntelligence(
       sections.push(`## Topic: ${topic} (${topicItems.length} posts)\n${posts}`)
     })
 
-    const raw = await chatCompletion(
-      [
-        { role: 'system', content: topicSystemPrompt(language) },
-        { role: 'user', content: sections.join('\n\n') },
-      ],
-      llmConfig,
-      signal,
-    )
+    const messages: ChatMessage[] = [
+      { role: 'system', content: topicSystemPrompt(language) },
+      { role: 'user', content: sections.join('\n\n') },
+    ]
 
-    const parsed = robustJsonParse(raw)
+    const raw = await chatCompletion(messages, llmConfig, signal)
+
+    let parsed = robustJsonParse(raw)
     if (!parsed) {
-      console.error('[intelligence] topic: failed to parse LLM JSON. First 200 chars:', raw.slice(0, 200))
-      return null
+      // Retry once with JSON-fix nudge
+      console.warn('[intelligence] topic: JSON parse failed, retrying. First 200 chars:', raw.slice(0, 200))
+      const retryRaw = await chatCompletion(
+        [
+          ...messages,
+          { role: 'assistant', content: raw },
+          { role: 'user', content: 'Your response was not valid JSON. Please respond with ONLY the JSON object, no explanation or markdown fences.' },
+        ],
+        llmConfig,
+        signal,
+      )
+      parsed = robustJsonParse(retryRaw)
+      if (!parsed) {
+        console.error('[intelligence] topic: failed to parse LLM JSON after retry. First 200 chars:', retryRaw.slice(0, 200))
+        return null
+      }
     }
 
     const topics: TopicSentimentEntry[] = Array.isArray(parsed.topics)
@@ -374,19 +398,31 @@ export async function analyzeAccountsIntelligence(
       sections.push(`## Account: ${account} (@${handle}, ${platform}, ${accountItems.length} posts)\n${posts}`)
     })
 
-    const raw = await chatCompletion(
-      [
-        { role: 'system', content: accountsSystemPrompt(language) },
-        { role: 'user', content: sections.join('\n\n') },
-      ],
-      llmConfig,
-      signal,
-    )
+    const messages: ChatMessage[] = [
+      { role: 'system', content: accountsSystemPrompt(language) },
+      { role: 'user', content: sections.join('\n\n') },
+    ]
 
-    const parsed = robustJsonParse(raw)
+    const raw = await chatCompletion(messages, llmConfig, signal)
+
+    let parsed = robustJsonParse(raw)
     if (!parsed) {
-      console.error('[intelligence] accounts: failed to parse LLM JSON. First 200 chars:', raw.slice(0, 200))
-      return null
+      // Retry once with JSON-fix nudge
+      console.warn('[intelligence] accounts: JSON parse failed, retrying. First 200 chars:', raw.slice(0, 200))
+      const retryRaw = await chatCompletion(
+        [
+          ...messages,
+          { role: 'assistant', content: raw },
+          { role: 'user', content: 'Your response was not valid JSON. Please respond with ONLY the JSON object, no explanation or markdown fences.' },
+        ],
+        llmConfig,
+        signal,
+      )
+      parsed = robustJsonParse(retryRaw)
+      if (!parsed) {
+        console.error('[intelligence] accounts: failed to parse LLM JSON after retry. First 200 chars:', retryRaw.slice(0, 200))
+        return null
+      }
     }
 
     const accounts: AccountFocus[] = Array.isArray(parsed.accounts)

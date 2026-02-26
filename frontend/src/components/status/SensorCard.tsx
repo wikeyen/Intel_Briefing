@@ -929,16 +929,13 @@ export const SensorRow = memo(function SensorRow(props: SensorCardProps) {
       )}
       <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden', minWidth: 0 }}>
         <span style={{ ...nameStyle, fontSize: '0.8125rem', overflow: 'hidden', textOverflow: 'ellipsis', ...(state === 'selected' ? { color: 'var(--accent)' } : {}) }}>{label}</span>
-        <span className="sensor-category" style={categoryBadgeStyle}>{category}</span>
+        <RowMetric state={state} props={props} t={t} />
       </span>
       <span className="sensor-col-fetch" style={{ display: 'flex', justifyContent: 'center' }}>
         {props.isRunning && <StageIcon stage={props.liveSensor?.fetch} cached={props.liveSensor?.fetch_cached} />}
       </span>
       <span className="sensor-col-summary" style={{ display: 'flex', justifyContent: 'center' }}>
         {props.isRunning && <StageIcon stage={props.liveSensor?.summary} />}
-      </span>
-      <span style={{ textAlign: 'right', display: 'flex', justifyContent: 'flex-end' }}>
-        <RowMetric state={state} props={props} t={t} />
       </span>
       <span className="sensor-col-note" style={{ overflow: 'hidden', minWidth: 0 }}>
         <RowNote state={state} props={props} t={t} />

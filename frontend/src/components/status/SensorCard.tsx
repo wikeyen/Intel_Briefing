@@ -655,7 +655,7 @@ function rowContainerStyle(state: CardState, hovered: boolean): React.CSSPropert
   // keeps layout stable so dots don't shift when toggling selection.
   const base: React.CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: '6px 1fr 48px 56px 44px minmax(0, 2fr) auto',
+    gridTemplateColumns: '6px 1fr 48px 56px 44px minmax(0, 1fr) auto',
     alignItems: 'center',
     gap: '0 0.5rem',
     paddingTop: '0.6875rem',

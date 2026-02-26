@@ -136,7 +136,7 @@ export function SensorGrid({
         {/* Toolbar + column labels */}
         <div className="sensor-header" style={{
           display: 'grid',
-          gridTemplateColumns: '6px 1fr 48px 56px 44px minmax(0, 2fr) auto',
+          gridTemplateColumns: '6px 1fr 48px 56px 44px minmax(0, 1fr) auto',
           alignItems: 'center',
           gap: '0 0.5rem',
           padding: '0.625rem 1rem',

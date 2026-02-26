@@ -222,6 +222,7 @@ const en: TranslationDict = {
   'sensor.done': 'Done',
   'sensor.cached': 'Cached',
   'sensor.cached_reason': 'Data loaded from recent run',
+  'sensor.fetched_awaiting': 'Fetched · awaiting summary',
   'sensor.failed': 'Failed',
   'sensor.error_api': 'API',
   'sensor.error_config': 'CONFIG',

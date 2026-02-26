@@ -3,7 +3,7 @@
 'use client'
 
 import { memo } from 'react'
-import type { SensorJobProgress, StageState } from '@/api/client'
+import type { SensorJobProgress } from '@/api/client'
 import { useTranslation } from '@/lib/i18n'
 
 export interface SensorCardProps {
@@ -696,34 +696,6 @@ function rowContainerStyle(state: CardState, hovered: boolean): React.CSSPropert
   return { ...base, ...(hovered && { background: 'var(--surface-alt, rgba(0,0,0,0.02))' }) }
 }
 
-function StageIcon({ stage, cached }: { stage?: StageState; cached?: boolean }) {
-  if (!stage || stage === 'queued') return null
-
-  const iconStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '0.0625rem',
-  }
-
-  if (stage === 'ok') {
-    return (
-      <span style={iconStyle}>
-        <span style={{ fontSize: '0.6875rem', color: 'var(--ok)', fontWeight: 700, lineHeight: 1 }}>{'\u2713'}</span>
-        {cached && <span style={{ fontSize: '0.4375rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--ink-faint)', lineHeight: 1 }}>cached</span>}
-      </span>
-    )
-  }
-  if (stage === 'failed') {
-    return <span style={{ fontSize: '0.6875rem', color: 'var(--err)', fontWeight: 700, lineHeight: 1 }}>{'\u2715'}</span>
-  }
-  if (stage === 'running') {
-    return <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)', animation: 'pulseDot 1.6s ease-in-out infinite', flexShrink: 0 }} />
-  }
-  // skipped / cancelled
-  return <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)', opacity: 0.5, lineHeight: 1 }}>{'\u2014'}</span>
-}
-
 function RowNote({ state, props, t }: { state: CardState; props: SensorCardProps; t: TFn }) {
   const { liveSensor, fetchError, summaryError, isConfigError } = props
   const noteStyle: React.CSSProperties = {
@@ -736,13 +708,33 @@ function RowNote({ state, props, t }: { state: CardState; props: SensorCardProps
     gap: '0.375rem',
   }
 
+  const okMark = '\u2713'
+
   switch (state) {
     case 'healthy':
     case 'selected':
-    case 'cached':
-    case 'done':
-    case 'fetched':
       return null
+
+    case 'done':
+      return (
+        <span style={{ ...noteStyle, color: 'var(--ok)', fontWeight: 500, fontSize: '0.625rem' }}>
+          {okMark} {t('sensor.done')}
+        </span>
+      )
+
+    case 'cached':
+      return (
+        <span style={{ ...noteStyle, color: 'var(--ink-faint)', fontSize: '0.625rem' }}>
+          {okMark} {t('sensor.cached')}
+        </span>
+      )
+
+    case 'fetched':
+      return (
+        <span style={{ ...noteStyle, color: 'var(--ink-faint)', fontSize: '0.625rem' }}>
+          {okMark} {t('sensor.fetched_awaiting')}
+        </span>
+      )
 
     case 'disabled':
       return (
@@ -786,9 +778,9 @@ function RowNote({ state, props, t }: { state: CardState; props: SensorCardProps
       const retrying = props.isRetrying
       const detail = liveSensor?.fetch_detail?.replace(/^Fetching\s+/i, '')
       return (
-        <span style={{ ...noteStyle, color: retrying ? 'var(--warn)' : 'var(--ink-faint)' }}>
-          {retrying && <span style={{ fontWeight: 500 }}>{t('sensor.retrying')}</span>}
-          {detail && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{detail}</span>}
+        <span style={{ ...noteStyle, color: retrying ? 'var(--warn)' : 'var(--accent)', fontWeight: 500, fontSize: '0.625rem' }}>
+          {retrying ? t('sensor.retrying') : t('sensor.fetching')}
+          {detail && <span style={{ fontWeight: 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}> · {detail}</span>}
         </span>
       )
     }
@@ -796,9 +788,11 @@ function RowNote({ state, props, t }: { state: CardState; props: SensorCardProps
     case 'summarizing': {
       const total = liveSensor?.summary_chunks_total ?? 0
       const done = liveSensor?.summary_chunks_done ?? 0
-      return total > 0
-        ? <span style={{ ...noteStyle, color: 'var(--ink-faint)' }}>{t('sensor.chunks', { done: String(done), total: String(total) })}</span>
-        : null
+      return (
+        <span style={{ ...noteStyle, color: 'var(--accent)', fontWeight: 500, fontSize: '0.625rem' }}>
+          {t('sensor.summarizing')}{total > 0 ? ` · ${t('sensor.chunks', { done: String(done), total: String(total) })}` : ''}
+        </span>
+      )
     }
 
     case 'waiting':
@@ -939,12 +933,6 @@ export const SensorRow = memo(function SensorRow(props: SensorCardProps) {
       <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden', minWidth: 0 }}>
         <span style={{ ...nameStyle, fontSize: '0.8125rem', overflow: 'hidden', textOverflow: 'ellipsis', ...(state === 'selected' ? { color: 'var(--accent)' } : {}) }}>{label}</span>
         <RowMetric state={state} props={props} t={t} />
-      </span>
-      <span className="sensor-col-fetch" style={{ display: 'flex', justifyContent: 'center' }}>
-        {props.isRunning && <StageIcon stage={props.liveSensor?.fetch} cached={props.liveSensor?.fetch_cached} />}
-      </span>
-      <span className="sensor-col-summary" style={{ display: 'flex', justifyContent: 'center' }}>
-        {props.isRunning && <StageIcon stage={props.liveSensor?.summary} />}
       </span>
       <span className="sensor-col-note" style={{ overflow: 'hidden', minWidth: 0 }}>
         <RowNote state={state} props={props} t={t} />

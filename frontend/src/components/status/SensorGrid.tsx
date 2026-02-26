@@ -128,7 +128,7 @@ export function SensorGrid({
       <style dangerouslySetInnerHTML={{ __html: CARD_CSS }} />
       <div className="sensor-list" style={{
         display: 'grid',
-        gridTemplateColumns: '6px 1fr 48px 56px minmax(0, 1fr) auto',
+        gridTemplateColumns: '6px 1fr minmax(0, 1fr) auto',
         gap: '0 0.5rem',
         padding: '0 1rem',
         background: 'var(--surface)',
@@ -168,8 +168,6 @@ export function SensorGrid({
               </>
             )}
           </div>
-          <span className="sensor-col-fetch" style={{ ...headerLabelStyle, textAlign: 'center' }}>{t('status.col_fetch')}</span>
-          <span className="sensor-col-summary" style={{ ...headerLabelStyle, textAlign: 'center' }}>{t('status.col_summary')}</span>
           <span className="sensor-col-note" style={headerLabelStyle}>{t('status.col_note')}</span>
           <span style={{ ...headerLabelStyle, textAlign: 'right' }}>{t('status.col_last_fetch')}</span>
         </div>

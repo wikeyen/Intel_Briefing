@@ -222,6 +222,7 @@ const zh: TranslationDict = {
   'sensor.done': '完成',
   'sensor.cached': '已缓存',
   'sensor.cached_reason': '数据来自最近的运行',
+  'sensor.fetched_awaiting': '已获取 · 等待摘要',
   'sensor.failed': '失败',
   'sensor.error_api': 'API',
   'sensor.error_config': '配置',

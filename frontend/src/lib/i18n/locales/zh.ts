@@ -573,6 +573,12 @@ const zh: TranslationDict = {
   'stepper.status_ok': '已完成',
   'stepper.status_failed': '失败',
 
+  // ── Pipeline halt banner ───────────────────────────────────────────────────
+  'halt.title': '流水线已暂停',
+  'halt.message': '{count} 个源重试后仍失败',
+  'halt.retry': '重试失败项',
+  'halt.skip': '跳过并继续',
+
   // ── Sensor validation errors ───────────────────────────────────────────────
   'sources.invalid_x_handle': '无效的用户名格式',
   'sources.invalid_bluesky_handle': '格式: name.bsky.social',

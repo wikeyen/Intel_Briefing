@@ -573,6 +573,12 @@ const en: TranslationDict = {
   'stepper.status_ok': 'Completed',
   'stepper.status_failed': 'Failed',
 
+  // ── Pipeline halt banner ───────────────────────────────────────────────────
+  'halt.title': 'Pipeline halted',
+  'halt.message': '{count} source(s) failed after retries',
+  'halt.retry': 'Retry Failed',
+  'halt.skip': 'Skip & Continue',
+
   // ── Sensor validation errors ───────────────────────────────────────────────
   'sources.invalid_x_handle': 'Invalid handle format',
   'sources.invalid_bluesky_handle': 'Use format: name.bsky.social',

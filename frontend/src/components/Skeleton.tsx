@@ -2,13 +2,6 @@
 // ABOUTME: Provides Skeleton (single bar), SkeletonBlock (card-sized), and page-level skeleton layouts.
 'use client'
 
-const SHIMMER_CSS = `
-@keyframes skeletonShimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-`
-
 /** Single skeleton bar — set width/height via style or defaults. */
 export function Skeleton({ width, height = 14, borderRadius = 4, style }: {
   width?: number | string
@@ -17,18 +10,15 @@ export function Skeleton({ width, height = 14, borderRadius = 4, style }: {
   style?: React.CSSProperties
 }) {
   return (
-    <>
-      <style>{SHIMMER_CSS}</style>
-      <div style={{
-        width: width ?? '100%',
-        height,
-        borderRadius,
-        background: 'linear-gradient(90deg, var(--surface-alt, #f0ede8) 30%, var(--border-soft, #e5e2dc) 50%, var(--surface-alt, #f0ede8) 70%)',
-        backgroundSize: '200% 100%',
-        animation: 'skeletonShimmer 1.8s ease-in-out infinite',
-        ...style,
-      }} />
-    </>
+    <div style={{
+      width: width ?? '100%',
+      height,
+      borderRadius,
+      background: 'linear-gradient(90deg, var(--surface-alt, #f0ede8) 30%, var(--border-soft, #e5e2dc) 50%, var(--surface-alt, #f0ede8) 70%)',
+      backgroundSize: '200% 100%',
+      animation: 'skeletonShimmer 1.8s ease-in-out infinite',
+      ...style,
+    }} />
   )
 }
 

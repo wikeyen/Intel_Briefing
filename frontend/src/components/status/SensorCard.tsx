@@ -841,7 +841,7 @@ function RowMetric({ state, props }: { state: CardState; props: SensorCardProps;
   // Done/cached/fetched: show live count (or fallback to report count)
   if (state === 'done' || state === 'cached' || state === 'fetched') {
     const count = liveSensor?.item_count ?? itemCount
-    return <span style={{ ...pill, color: count > 0 ? 'var(--ink)' : 'var(--ink-faint)' }}>{count}</span>
+    return <span style={{ ...pill, color: count > 0 ? 'var(--ink-muted)' : 'var(--ink-faint)' }}>{count}</span>
   }
 
   // Failed mid-run / paused-failed: show live count if available
@@ -854,7 +854,7 @@ function RowMetric({ state, props }: { state: CardState; props: SensorCardProps;
   // Healthy / selected / failed (idle): show report count
   const count = itemCount
   if (count === 0 && state === 'failed') return null
-  return <span style={{ ...pill, color: count > 0 ? 'var(--ink)' : 'var(--ink-faint)' }}>{count}</span>
+  return <span style={{ ...pill, color: count > 0 ? 'var(--ink-muted)' : 'var(--ink-faint)' }}>{count}</span>
 }
 
 function RowActions({ state, props, t }: { state: CardState; props: SensorCardProps; t: TFn }) {

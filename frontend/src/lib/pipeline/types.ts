@@ -4,7 +4,7 @@
 import type { ConfigSettings, IntelReport, RunMode, BriefingSummary, SummaryProgress } from '../models'
 import type { PipelineProgressTracker } from './progress'
 import type { LlmConfig } from '../summary/llm'
-import type { SummaryProgressCallback } from '../summary/summarizer'
+import type { SummaryProgressCallback, SummarizeOptions } from '../summary/summarizer'
 import type { createBus } from '../summary/events'
 
 export type PipelineState =
@@ -56,7 +56,7 @@ export interface PipelineContext {
   summaryStatus: SummaryProgress | null
   summaryBus: ReturnType<typeof createBus> | null
   onProgress: SummaryProgressCallback | null
-  baseSummarizeOpts: Record<string, unknown> | null
+  baseSummarizeOpts: SummarizeOptions | null
 
   // Pause/resume channel
   pauseResolve: ((action: PauseAction) => void) | null

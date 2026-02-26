@@ -9,7 +9,6 @@ import { SENSOR_CATEGORY_MAP } from '../sensors/taxonomy'
 import type { CategoryKey } from '../sensors/taxonomy'
 import { SensorConfigError } from '../sensors/errors'
 import { summarizeSingleSensor } from '../summary/summarizer'
-import type { SummarizeOptions } from '../summary/summarizer'
 import { writeReport } from './cache'
 import { runIntelligenceAnalysis } from './intelligence'
 import { writeIntelligence } from './intelligence-cache'
@@ -143,7 +142,7 @@ export async function retryOneSensor(ctx: PipelineContext, sensorName: string): 
     if (!ctx.report || !ctx.baseSummarizeOpts) return false
 
     const sensorSummary = await summarizeSingleSensor(ctx.report, sensorName, {
-      ...(ctx.baseSummarizeOpts as SummarizeOptions),
+      ...ctx.baseSummarizeOpts!,
       skipCache: true,
     })
 
@@ -191,7 +190,7 @@ export async function retryOneSensor(ctx: PipelineContext, sensorName: string): 
       // Summarize just this sensor
       if (ctx.baseSummarizeOpts) {
         const sensorSummary = await summarizeSingleSensor(ctx.report, sensorName, {
-          ...(ctx.baseSummarizeOpts as SummarizeOptions),
+          ...ctx.baseSummarizeOpts!,
           skipCache: true,
         })
 

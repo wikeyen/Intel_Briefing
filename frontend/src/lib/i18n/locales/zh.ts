@@ -205,7 +205,7 @@ const zh: TranslationDict = {
   'status.col_fetch': '获取',
   'status.col_summary': '摘要',
   'status.col_count': '#',
-  'status.col_note': '备注',
+  'status.col_note': '状态',
   'status.col_last_fetch': '上次获取',
 
   // ── Status page — SensorCard ──────────────────────────────────────────────

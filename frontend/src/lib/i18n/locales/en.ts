@@ -205,7 +205,7 @@ const en: TranslationDict = {
   'status.col_fetch': 'Fetch',
   'status.col_summary': 'Summary',
   'status.col_count': '#',
-  'status.col_note': 'Note',
+  'status.col_note': 'Status',
   'status.col_last_fetch': 'Last Fetch',
 
   // ── Status page — SensorCard ──────────────────────────────────────────────

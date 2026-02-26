@@ -29,7 +29,8 @@ import { fetchBaidu } from './baidu'
 import { SensorConfigError } from './errors'
 
 export type FetchProgressFn = (detail: string, itemCount?: number) => void
-export type SensorFetchFn = (config: ConfigSettings, limit: number, onProgress?: FetchProgressFn) => Promise<IntelItem[]>
+export type SubItemProgressFn = (key: string, state: 'queued' | 'running' | 'ok' | 'failed', itemCount?: number, error?: string) => void
+export type SensorFetchFn = (config: ConfigSettings, limit: number, onProgress?: FetchProgressFn, onSubItemProgress?: SubItemProgressFn) => Promise<IntelItem[]>
 
 export { SENSOR_TOKEN_FIELD } from './constants'
 
@@ -38,7 +39,7 @@ function fetchX(config: ConfigSettings, limit: number, onProgress?: FetchProgres
   return fetchXPosts(config, limit, onProgress)
 }
 
-async function fetchBluesky(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
+async function fetchBluesky(config: ConfigSettings, limit: number, onProgress?: FetchProgressFn, onSubItemProgress?: SubItemProgressFn): Promise<IntelItem[]> {
   const items: IntelItem[] = []
   try {
     items.push(...await fetchSocialAccounts(config, limit, 'bluesky'))
@@ -47,12 +48,12 @@ async function fetchBluesky(config: ConfigSettings, limit: number): Promise<Inte
     if (!(err instanceof SensorConfigError)) throw err
   }
   if (config.bluesky_topics_enabled) {
-    items.push(...await fetchSocialTopics(config, limit, 'bluesky'))
+    items.push(...await fetchSocialTopics(config, limit, 'bluesky', onSubItemProgress))
   }
   return items
 }
 
-async function fetchMastodon(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
+async function fetchMastodon(config: ConfigSettings, limit: number, onProgress?: FetchProgressFn, onSubItemProgress?: SubItemProgressFn): Promise<IntelItem[]> {
   const items: IntelItem[] = []
   try {
     items.push(...await fetchSocialAccounts(config, limit, 'mastodon'))
@@ -61,7 +62,7 @@ async function fetchMastodon(config: ConfigSettings, limit: number): Promise<Int
     if (!(err instanceof SensorConfigError)) throw err
   }
   if (config.mastodon_topics_enabled) {
-    items.push(...await fetchSocialTopics(config, limit, 'mastodon'))
+    items.push(...await fetchSocialTopics(config, limit, 'mastodon', onSubItemProgress))
   }
   if (config.mastodon_trends_enabled) {
     items.push(...await fetchSocialTrends(config, limit, 'mastodon'))

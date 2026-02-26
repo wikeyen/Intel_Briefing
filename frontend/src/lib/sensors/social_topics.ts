@@ -5,14 +5,16 @@ import { SensorConfigError } from './errors'
 import { createBlueskyAgent, blueskyPostToItem } from '../platforms/bluesky'
 import { mastodonPublicGet, mastodonStatusToItem } from '../platforms/mastodon'
 
-async function fetchBlueskyTopics(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
+async function fetchBlueskyTopics(config: ConfigSettings, limit: number, onSubItemProgress?: import('./index').SubItemProgressFn): Promise<IntelItem[]> {
   if (!config.bluesky_handle || !config.bluesky_app_password || config.social_topics_keywords.length === 0) return []
   const agent = await createBlueskyAgent(config.bluesky_handle, config.bluesky_app_password)
   const items: IntelItem[] = []
   for (const keyword of config.social_topics_keywords) {
+    onSubItemProgress?.(keyword, 'running')
     const kwLimit = topicLimit(config, keyword)
     const lookbackHours = config.topic_lookback_hours[keyword]
     const cutoff = lookbackHours ? Date.now() - lookbackHours * 3600_000 : 0
+    let kwCount = 0
     try {
       const { data } = await agent.app.bsky.feed.searchPosts({ q: keyword, limit: kwLimit })
       for (const post of data.posts) {
@@ -21,21 +23,27 @@ async function fetchBlueskyTopics(config: ConfigSettings, limit: number): Promis
           if (cutoff && item.published_at && new Date(item.published_at).getTime() < cutoff) continue
           item.topic = keyword
           items.push(item)
+          kwCount++
         }
       }
-    } catch { /* search may not be available, skip */ }
+      onSubItemProgress?.(keyword, 'ok', kwCount)
+    } catch {
+      onSubItemProgress?.(keyword, 'failed', 0, 'Search unavailable')
+    }
   }
   return items
 }
 
-async function fetchMastodonTopics(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
+async function fetchMastodonTopics(config: ConfigSettings, limit: number, onSubItemProgress?: import('./index').SubItemProgressFn): Promise<IntelItem[]> {
   if (config.social_topics_keywords.length === 0) return []
   const items: IntelItem[] = []
   for (const keyword of config.social_topics_keywords) {
+    onSubItemProgress?.(keyword, 'running')
     const kwLimit = topicLimit(config, keyword)
     const lookbackHours = config.topic_lookback_hours[keyword]
     const cutoff = lookbackHours ? Date.now() - lookbackHours * 3600_000 : 0
     const tag = keyword.replace(/^#/, '')
+    let kwCount = 0
     try {
       const statuses = await mastodonPublicGet<Array<Record<string, unknown>>>(
         `/api/v1/timelines/tag/${encodeURIComponent(tag)}?limit=${kwLimit}`,
@@ -46,9 +54,13 @@ async function fetchMastodonTopics(config: ConfigSettings, limit: number): Promi
           if (cutoff && item.published_at && new Date(item.published_at).getTime() < cutoff) continue
           item.topic = keyword
           items.push(item)
+          kwCount++
         }
       }
-    } catch { /* tag may not exist, skip */ }
+      onSubItemProgress?.(keyword, 'ok', kwCount)
+    } catch {
+      onSubItemProgress?.(keyword, 'failed', 0, 'Tag unavailable')
+    }
   }
   return items
 }
@@ -57,6 +69,7 @@ export async function fetchSocialTopics(
   config: ConfigSettings,
   limit: number,
   platform?: 'bluesky' | 'mastodon',
+  onSubItemProgress?: import('./index').SubItemProgressFn,
 ): Promise<IntelItem[]> {
   if (config.social_topics_keywords.length === 0) {
     throw new SensorConfigError('No topic keywords configured')
@@ -66,8 +79,8 @@ export async function fetchSocialTopics(
   const checkMasto = !platform || platform === 'mastodon'
 
   const fetches: Promise<IntelItem[]>[] = []
-  if (checkBsky) fetches.push(fetchBlueskyTopics(config, limit))
-  if (checkMasto) fetches.push(fetchMastodonTopics(config, limit))
+  if (checkBsky) fetches.push(fetchBlueskyTopics(config, limit, onSubItemProgress))
+  if (checkMasto) fetches.push(fetchMastodonTopics(config, limit, onSubItemProgress))
 
   const results = await Promise.allSettled(fetches)
 

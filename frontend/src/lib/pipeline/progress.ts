@@ -61,6 +61,7 @@ export class PipelineProgressTracker {
       verify_attempt: 0,
       verify_max_retries: 0,
       verify_failures: 0,
+      sub_items: undefined,
     }))
 
     this.overallSummary = skipSummary ? 'skipped' : 'queued'
@@ -162,6 +163,29 @@ export class PipelineProgressTracker {
     s.verify_attempt = attempt
     s.verify_max_retries = maxRetries
     s.verify_failures = failures
+    this.notify()
+  }
+
+  /** Initialize sub-items for a sensor (e.g. topic keywords). */
+  initSubItems(sensorName: string, items: Array<{ key: string; label: string }>): void {
+    const s = this.find(sensorName)
+    s.sub_items = items.map(item => ({
+      key: item.key,
+      label: item.label,
+      fetch: 'queued' as StageState,
+      item_count: 0,
+    }))
+    this.notify()
+  }
+
+  /** Update a sub-item's fetch state within a sensor. */
+  setSubItemState(sensorName: string, key: string, state: StageState, itemCount?: number, error?: string | null): void {
+    const s = this.find(sensorName)
+    const sub = s.sub_items?.find(si => si.key === key)
+    if (!sub) return
+    sub.fetch = state
+    if (itemCount !== undefined) sub.item_count = itemCount
+    if (error !== undefined) sub.fetch_error = error
     this.notify()
   }
 
@@ -270,7 +294,10 @@ export class PipelineProgressTracker {
       local_summary_concurrency: this.localSummaryConcurrency,
       started_at: this.startedAt,
       completed_at: this.completedAt,
-      sensors: this.sensors.map(s => ({ ...s })),
+      sensors: this.sensors.map(s => ({
+        ...s,
+        sub_items: s.sub_items ? s.sub_items.map(si => ({ ...si })) : undefined,
+      })),
       overall_summary: this.overallSummary,
       total_items: this.sensors
         .filter(s => s.fetch === 'ok')

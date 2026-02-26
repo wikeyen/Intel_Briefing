@@ -1,7 +1,7 @@
 // ABOUTME: Fetching state handler — runs concurrent sensor fetches with skip-race support.
 // ABOUTME: Assembles the report from results, marks failed summaries, invalidates caches.
 
-import type { IntelItem, SensorResult } from '../../models'
+import type { IntelItem, SensorResult, StageState } from '../../models'
 import { sensorResultSucceeded } from '../../models'
 import { Semaphore } from '../semaphore'
 import { assembleReport } from '../report-builder'
@@ -36,6 +36,15 @@ export async function handleFetching(ctx: PipelineContext): Promise<PipelineStat
     const promises = sensorNames.map(name =>
       fetchSemaphore.run(async () => {
         if (signal.aborted) return
+
+        // Initialize sub-items for social sensors with topic keywords
+        if ((name === 'bluesky' || name === 'mastodon') && config.social_topics_keywords.length > 0) {
+          const topicsEnabled = name === 'bluesky' ? config.bluesky_topics_enabled : config.mastodon_topics_enabled
+          if (topicsEnabled) {
+            tracker.initSubItems(name, config.social_topics_keywords.map(kw => ({ key: kw, label: kw })))
+          }
+        }
+
         tracker.setFetchState(name, 'running')
 
         // Race the actual fetch against a per-sensor skip promise
@@ -48,6 +57,8 @@ export async function handleFetching(ctx: PipelineContext): Promise<PipelineStat
         const outcome = await Promise.race([
           fetchSensor(name, config, (detail, itemCount) => {
             tracker.setFetchDetail(name, detail, itemCount)
+          }, (key, state, itemCount, error) => {
+            tracker.setSubItemState(name, key, state as StageState, itemCount, error)
           }),
           skipPromise,
         ])

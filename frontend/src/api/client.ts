@@ -90,6 +90,14 @@ export interface IntelItem {
 export type RunMode = 'fetch' | 'summarize' | 'fetch_summarize'
 export type StageState = 'queued' | 'running' | 'ok' | 'failed' | 'skipped' | 'cancelled'
 
+export interface SubItemProgress {
+  key: string
+  label: string
+  fetch: StageState
+  item_count: number
+  fetch_error?: string | null
+}
+
 export interface SensorJobProgress {
   name: string
   fetch: StageState
@@ -110,6 +118,8 @@ export interface SensorJobProgress {
   verify_attempt: number
   verify_max_retries: number
   verify_failures: number
+  /** Per-keyword sub-item progress (e.g. topic keywords within bluesky/mastodon). */
+  sub_items?: SubItemProgress[]
 }
 
 export type PipelineEventLevel = 'info' | 'ok' | 'warn' | 'error'

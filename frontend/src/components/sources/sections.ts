@@ -11,7 +11,7 @@ export interface SectionDef {
   sensors: SensorDef[]
 }
 
-const SENSOR_TO_SECTION: Record<string, SourceSection> = {
+export const SENSOR_TO_SECTION: Record<string, SourceSection> = {
   hacker_news: 'general',
   github: 'general',
   arxiv: 'general',

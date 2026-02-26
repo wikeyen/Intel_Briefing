@@ -2,7 +2,7 @@
 // ABOUTME: Flat list of SensorRow components, ordered by category (same-category sensors adjacent).
 'use client'
 
-import { useMemo } from 'react'
+import React, { useMemo } from 'react'
 import type { IntelReport, ConfigSettings, PipelineStatus, SensorJobProgress } from '@/api/client'
 import { useTranslation } from '@/lib/i18n'
 import { SECTION_SENSORS, SENSOR_LABEL_MAP } from './constants'
@@ -189,44 +189,112 @@ export function SensorGrid({
           <span className="sensor-col-note" style={{ ...headerLabelStyle, textAlign: 'right' }}>{t('status.col_note')}</span>
           <span></span>
         </div>
-        {visibleSensors.map(sensor => {
-          const live = liveSensors[sensor.sensorKey]
-          const liveFailed = live?.fetch === 'failed' || live?.summary === 'failed'
-          const liveRetrying = retryAttempt > 0 && (live?.fetch === 'running' || live?.fetch === 'queued')
+        {SECTION_SENSORS.map((section, sIdx) => {
+          const sectionSensors = visibleSensors.filter(s => s.category === section.label)
+          if (sectionSensors.length === 0) return null
           return (
-            <SensorRow
-              key={sensor.sensorKey}
-              sensorKey={sensor.sensorKey}
-              label={sensor.label}
-              category={sensor.category}
-              isRunning={isRunning}
-              isPaused={isPaused}
-              liveSensor={live}
-              itemCount={sensor.itemCount}
-              lastFetchAgo={sensor.lastFetchAgo}
-              isFreshFetch={sensor.isFreshFetch}
-              isOk={sensor.isOk}
-              isFailed={sensor.isFailed}
-              isDisabled={sensor.isDisabled}
-              isConfigError={sensor.isConfigError}
-              isApiError={sensor.isApiError}
-              fetchError={sensor.fetchError ?? live?.fetch_error ?? undefined}
-              summaryError={sensor.summaryError ?? live?.summary_error ?? undefined}
-              isDataStale={sensor.isDataStale}
-              cacheTtlHours={sensor.cacheTtlHours}
-              isSelected={selected.has(sensor.sensorKey)}
-              isRetrying={liveRetrying}
-              retryAttempt={retryAttempt}
-              retryMax={retryMax}
-              isSkipped={isRunning && !live && !sensor.isDisabled && !pipelineSensorSet.has(sensor.sensorKey)}
-              tick={tick}
-              onToggleSelect={() => onToggleSelect(sensor.sensorKey)}
-              onRetry={(sensor.isFailed || liveFailed) && onRetry && (isPaused || autoRetryExhausted?.has(sensor.sensorKey)) ? () => onRetry(sensor.sensorKey) : undefined}
-              onSkip={isPaused && onSkipSensor ? () => onSkipSensor(sensor.sensorKey) : undefined}
-              onSkipFetching={isRunning && live?.fetch === 'running' && onSkipFetchingSensor ? () => onSkipFetchingSensor(sensor.sensorKey) : undefined}
-              onDismiss={sensor.isFailed && !isPaused ? () => onDismiss(sensor.sensorKey) : undefined}
-              autoRetryCountdown={autoRetryDeadlines?.[sensor.sensorKey] ? Math.max(0, Math.ceil((autoRetryDeadlines[sensor.sensorKey] - Date.now()) / 1000)) : undefined}
-            />
+            <React.Fragment key={section.key}>
+              {/* Section header */}
+              <div style={{
+                gridColumn: '1 / -1',
+                padding: '0.5rem 1rem 0.25rem',
+                margin: sIdx > 0 ? '0.25rem -1rem 0' : '0 -1rem',
+                borderTop: sIdx > 0 ? '1px solid var(--border-soft)' : 'none',
+              }}>
+                <span style={{
+                  fontSize: '0.5625rem',
+                  fontWeight: 600,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  color: 'var(--ink-faint)',
+                }}>
+                  {section.label}
+                </span>
+              </div>
+              {sectionSensors.map(sensor => {
+                const live = liveSensors[sensor.sensorKey]
+                const liveFailed = live?.fetch === 'failed' || live?.summary === 'failed'
+                const liveRetrying = retryAttempt > 0 && (live?.fetch === 'running' || live?.fetch === 'queued')
+                return (
+                  <React.Fragment key={sensor.sensorKey}>
+                    <SensorRow
+                      sensorKey={sensor.sensorKey}
+                      label={sensor.label}
+                      category={sensor.category}
+                      isRunning={isRunning}
+                      isPaused={isPaused}
+                      liveSensor={live}
+                      itemCount={sensor.itemCount}
+                      lastFetchAgo={sensor.lastFetchAgo}
+                      isFreshFetch={sensor.isFreshFetch}
+                      isOk={sensor.isOk}
+                      isFailed={sensor.isFailed}
+                      isDisabled={sensor.isDisabled}
+                      isConfigError={sensor.isConfigError}
+                      isApiError={sensor.isApiError}
+                      fetchError={sensor.fetchError ?? live?.fetch_error ?? undefined}
+                      summaryError={sensor.summaryError ?? live?.summary_error ?? undefined}
+                      isDataStale={sensor.isDataStale}
+                      cacheTtlHours={sensor.cacheTtlHours}
+                      isSelected={selected.has(sensor.sensorKey)}
+                      isRetrying={liveRetrying}
+                      retryAttempt={retryAttempt}
+                      retryMax={retryMax}
+                      isSkipped={isRunning && !live && !sensor.isDisabled && !pipelineSensorSet.has(sensor.sensorKey)}
+                      tick={tick}
+                      onToggleSelect={() => onToggleSelect(sensor.sensorKey)}
+                      onRetry={(sensor.isFailed || liveFailed) && onRetry && (isPaused || autoRetryExhausted?.has(sensor.sensorKey)) ? () => onRetry(sensor.sensorKey) : undefined}
+                      onSkip={isPaused && onSkipSensor ? () => onSkipSensor(sensor.sensorKey) : undefined}
+                      onSkipFetching={isRunning && live?.fetch === 'running' && onSkipFetchingSensor ? () => onSkipFetchingSensor(sensor.sensorKey) : undefined}
+                      onDismiss={sensor.isFailed && !isPaused ? () => onDismiss(sensor.sensorKey) : undefined}
+                      autoRetryCountdown={autoRetryDeadlines?.[sensor.sensorKey] ? Math.max(0, Math.ceil((autoRetryDeadlines[sensor.sensorKey] - Date.now()) / 1000)) : undefined}
+                    />
+                    {/* Topic sub-items (e.g. keyword progress within bluesky/mastodon) */}
+                    {live?.sub_items?.map(sub => (
+                      <div
+                        key={`${sensor.sensorKey}:${sub.key}`}
+                        className="sensor-sub-item"
+                        style={{
+                          gridColumn: '1 / -1',
+                          display: 'grid',
+                          gridTemplateColumns: 'subgrid',
+                          alignItems: 'center',
+                          padding: '0.1875rem 1rem 0.1875rem 1.75rem',
+                          borderTop: '1px solid color-mix(in srgb, var(--border-soft) 40%, transparent)',
+                        }}
+                      >
+                        <div style={{
+                          width: 5,
+                          height: 5,
+                          borderRadius: '50%',
+                          background: sub.fetch === 'ok' ? 'var(--ok)'
+                            : sub.fetch === 'running' ? 'var(--accent)'
+                            : sub.fetch === 'failed' ? 'var(--err)'
+                            : 'var(--border)',
+                          transition: 'background 200ms',
+                        }} />
+                        <span style={{
+                          fontSize: '0.6875rem',
+                          color: sub.fetch === 'running' ? 'var(--accent)' : 'var(--ink-muted)',
+                          fontStyle: 'italic',
+                        }}>
+                          {sub.label}
+                        </span>
+                        <span style={{
+                          fontSize: '0.625rem',
+                          fontFamily: 'ui-monospace, monospace',
+                          color: 'var(--ink-faint)',
+                          textAlign: 'right',
+                        }}>
+                          {(sub.fetch === 'ok' || sub.fetch === 'failed') && sub.item_count > 0 ? `${sub.item_count}` : ''}
+                        </span>
+                        <span />
+                      </div>
+                    ))}
+                  </React.Fragment>
+                )
+              })}
+            </React.Fragment>
           )
         })}
       </div>

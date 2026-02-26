@@ -1,13 +1,22 @@
 // ABOUTME: Shared constants for the Status dashboard — derived from taxonomy.
 // ABOUTME: Centralizes sensor/section groupings, status metadata, and error truncation config.
-import { SENSORS, SENSOR_LABELS, ALL_CATEGORIES, CATEGORY_META, sensorsForCategory } from '@/lib/sensors/taxonomy'
+import { SENSORS, SENSOR_LABELS } from '@/lib/sensors/taxonomy'
+import { SENSOR_TO_SECTION, type SourceSection } from '../sources/sections'
 
 export const ALL_SENSORS = SENSORS.map(s => ({ key: s.key, label: s.label }))
 
-export const SECTION_SENSORS = ALL_CATEGORIES.map(cat => ({
-  key: cat,
-  label: CATEGORY_META[cat].label,
-  sensors: sensorsForCategory(cat),
+// Section order and labels matching the Sources page 4-section grouping
+const STATUS_SECTIONS: Array<{ key: SourceSection; label: string }> = [
+  { key: 'general', label: 'General' },
+  { key: 'social', label: 'Social' },
+  { key: 'trend', label: 'Trend' },
+  { key: 'rss', label: 'RSS' },
+]
+
+export const SECTION_SENSORS = STATUS_SECTIONS.map(section => ({
+  key: section.key,
+  label: section.label,
+  sensors: SENSORS.filter(s => SENSOR_TO_SECTION[s.key] === section.key).map(s => s.key),
 }))
 
 export const STATUS_META: Record<string, { color: string; bg: string; labelKey: string }> = {

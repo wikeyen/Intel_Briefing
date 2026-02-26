@@ -25,6 +25,7 @@ export async function fetchSensor(
   name: string,
   config: ConfigSettings,
   onProgress?: (detail: string, itemCount?: number) => void,
+  onSubItemProgress?: (key: string, state: 'queued' | 'running' | 'ok' | 'failed', itemCount?: number, error?: string) => void,
 ): Promise<SensorResult> {
   const fetchFn = SENSOR_REGISTRY[name]
   if (!fetchFn) {
@@ -32,7 +33,7 @@ export async function fetchSensor(
   }
   const limit = sensorLimit(config, name)
   try {
-    const items = await fetchFn(config, limit, onProgress)
+    const items = await fetchFn(config, limit, onProgress, onSubItemProgress)
     return { sensor_name: name, items, error: null, error_kind: null }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
@@ -163,10 +164,20 @@ export async function retryOneSensor(ctx: PipelineContext, sensorName: string): 
   }
 
   // API/config failure: re-fetch then re-summarize
+  // Re-init sub-items for social sensors during retry
+  if ((sensorName === 'bluesky' || sensorName === 'mastodon') && config.social_topics_keywords.length > 0) {
+    const topicsEnabled = sensorName === 'bluesky' ? config.bluesky_topics_enabled : config.mastodon_topics_enabled
+    if (topicsEnabled) {
+      tracker.initSubItems(sensorName, config.social_topics_keywords.map(kw => ({ key: kw, label: kw })))
+    }
+  }
+
   tracker.setFetchState(sensorName, 'running')
 
   const result = await fetchSensor(sensorName, config, (detail, itemCount) => {
     tracker.setFetchDetail(sensorName, detail, itemCount)
+  }, (key, state, itemCount, error) => {
+    tracker.setSubItemState(sensorName, key, state as import('../models').StageState, itemCount, error)
   })
 
   if (signal.aborted) return false

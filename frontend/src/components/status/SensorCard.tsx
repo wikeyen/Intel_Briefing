@@ -651,18 +651,15 @@ export const SensorCard = memo(function SensorCard(props: SensorCardProps) {
 /* ── Compact row variant for list layout ── */
 
 function rowContainerStyle(state: CardState, hovered: boolean): React.CSSProperties {
-  // CSS Grid layout for even column distribution. A transparent left border
-  // keeps layout stable so dots don't shift when toggling selection.
+  // Subgrid row — inherits column tracks from parent .sensor-list grid.
+  // Uses inset box-shadow instead of border-left so content never shifts.
   const base: React.CSSProperties = {
+    gridColumn: '1 / -1',
     display: 'grid',
-    gridTemplateColumns: '6px 1fr 48px 56px 44px minmax(0, 1fr) auto',
+    gridTemplateColumns: 'subgrid',
     alignItems: 'center',
-    gap: '0 0.5rem',
     paddingTop: '0.6875rem',
-    paddingRight: '1rem',
     paddingBottom: '0.6875rem',
-    paddingLeft: 'calc(1rem - 3px)',
-    borderLeft: '3px solid transparent',
     background: 'var(--surface)',
     borderBottom: '1px solid color-mix(in srgb, var(--border) 40%, transparent)',
     transition: 'background 200ms ease',
@@ -673,7 +670,7 @@ function rowContainerStyle(state: CardState, hovered: boolean): React.CSSPropert
   if (state === 'disabled') return { ...base, opacity: 0.4, cursor: 'default' }
 
   if (state === 'paused-failed' || state === 'failed-mid-run') {
-    return { ...base, borderLeft: '3px solid var(--err)', cursor: state === 'paused-failed' ? 'default' : base.cursor }
+    return { ...base, boxShadow: 'inset 3px 0 0 var(--err)', cursor: state === 'paused-failed' ? 'default' : base.cursor }
   }
 
   if (state === 'fetching' || state === 'summarizing' || state === 'waiting' || state === 'fetched' || state === 'skipped' || state === 'cached' || state === 'done') {
@@ -684,17 +681,17 @@ function rowContainerStyle(state: CardState, hovered: boolean): React.CSSPropert
     return {
       ...base,
       background: 'color-mix(in srgb, var(--accent) 8%, var(--surface))',
-      borderLeft: '3px solid var(--accent)',
+      boxShadow: 'inset 3px 0 0 var(--accent)',
       ...(hovered && { background: 'color-mix(in srgb, var(--accent) 12%, var(--surface))' }),
     }
   }
 
   if (state === 'failed') {
-    return { ...base, borderLeft: '3px solid var(--err)', ...(hovered && { background: 'var(--surface-alt)' }) }
+    return { ...base, boxShadow: 'inset 3px 0 0 var(--err)', ...(hovered && { background: 'var(--surface-alt)' }) }
   }
 
   if (state === 'config-error') {
-    return { ...base, borderLeft: '3px solid var(--warn)', ...(hovered && { background: 'var(--surface-alt)' }) }
+    return { ...base, boxShadow: 'inset 3px 0 0 var(--warn)', ...(hovered && { background: 'var(--surface-alt)' }) }
   }
 
   return { ...base, ...(hovered && { background: 'var(--surface-alt, rgba(0,0,0,0.02))' }) }

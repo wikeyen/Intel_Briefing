@@ -127,6 +127,10 @@ export function SensorGrid({
     }}>
       <style dangerouslySetInnerHTML={{ __html: CARD_CSS }} />
       <div className="sensor-list" style={{
+        display: 'grid',
+        gridTemplateColumns: '6px 1fr 48px 56px 44px minmax(0, 1fr) auto',
+        gap: '0 0.5rem',
+        padding: '0 1rem',
         background: 'var(--surface)',
         borderRadius: 10,
         boxShadow: 'var(--shadow-card)',
@@ -135,11 +139,11 @@ export function SensorGrid({
       }}>
         {/* Toolbar + column labels */}
         <div className="sensor-header" style={{
+          gridColumn: '1 / -1',
           display: 'grid',
-          gridTemplateColumns: '6px 1fr 48px 56px 44px minmax(0, 1fr) auto',
+          gridTemplateColumns: 'subgrid',
           alignItems: 'center',
-          gap: '0 0.5rem',
-          padding: '0.625rem 1rem',
+          padding: '0.625rem 0',
           borderBottom: '1px solid var(--border-soft)',
           background: 'var(--surface-inset)',
         }}>

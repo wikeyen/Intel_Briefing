@@ -38,6 +38,18 @@ describe('deriveStepStatuses', () => {
     expect(statuses.summary).toBe('active')
   })
 
+  it('marks summary as done when all sensors are cached', () => {
+    const ps = makePipelineStatus({
+      sensors: [
+        makeSensorJob('a', { fetch: 'ok', summary: 'ok', summary_cached: true }),
+        makeSensorJob('b', { fetch: 'ok', summary: 'ok', summary_cached: true }),
+      ],
+      overall_summary: 'ok',
+    })
+    const s = deriveStepStatuses(ps)
+    expect(s.summary).toBe('done')
+  })
+
   it('summary shows warn after all sensors finish with some errors', () => {
     const ps = makePipelineStatus({
       running: false,

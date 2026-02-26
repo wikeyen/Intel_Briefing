@@ -107,7 +107,7 @@ export function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePh
   if (ps.mode === 'fetch') {
     s.summary = 'skipped'
   } else if (allSummaryCached) {
-    s.summary = 'skipped'
+    s.summary = 'done'
   } else if (anySummaryRunning || anySummaryQueued) {
     s.summary = 'active'
   } else if (briefingStarted) {
@@ -472,7 +472,7 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
               } else if (status === 'error') {
                 lineFillColor = 'var(--err)'
                 lineFillPct = 100
-              } else if (status === 'skipped' && nextDone) {
+              } else if (status === 'skipped') {
                 lineFillColor = 'var(--border)'
                 lineFillPct = 100
               } else {

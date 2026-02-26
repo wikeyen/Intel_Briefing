@@ -561,6 +561,17 @@ const en: TranslationDict = {
   'log.phase_intelligence': 'Intel',
   'log.phase_system': 'System',
 
+  // ── Phase stepper tooltips ────────────────────────────────────────────────
+  'stepper.fetched': 'fetched',
+  'stepper.cached': 'cached',
+  'stepper.failed': 'failed',
+  'stepper.items': 'items',
+  'stepper.summarized': 'summarized',
+  'stepper.chunks': 'chunks',
+  'stepper.skipped': 'Skipped',
+  'stepper.status_ok': 'Completed',
+  'stepper.status_failed': 'Failed',
+
   // ── Sensor validation errors ───────────────────────────────────────────────
   'sources.invalid_x_handle': 'Invalid handle format',
   'sources.invalid_bluesky_handle': 'Use format: name.bsky.social',

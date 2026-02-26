@@ -561,6 +561,17 @@ const zh: TranslationDict = {
   'log.phase_intelligence': '分析',
   'log.phase_system': '系统',
 
+  // ── Phase stepper tooltips ────────────────────────────────────────────────
+  'stepper.fetched': '已获取',
+  'stepper.cached': '缓存',
+  'stepper.failed': '失败',
+  'stepper.items': '条目',
+  'stepper.summarized': '已摘要',
+  'stepper.chunks': '分块',
+  'stepper.skipped': '已跳过',
+  'stepper.status_ok': '已完成',
+  'stepper.status_failed': '失败',
+
   // ── Sensor validation errors ───────────────────────────────────────────────
   'sources.invalid_x_handle': '无效的用户名格式',
   'sources.invalid_bluesky_handle': '格式: name.bsky.social',

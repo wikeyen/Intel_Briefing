@@ -312,9 +312,6 @@ function RetryBranch({ retryStatus, isClickable, onLogToggle, t, counts }: {
   t: (key: string) => string
   counts?: { ok: number; total: number } | null
 }) {
-  const dropHeight = BRANCH_DROP_HEIGHT
-  const borderWidth = 2
-
   // Line color reflects retry status
   const lineColor = retryStatus === 'active' ? 'var(--accent)'
     : retryStatus === 'done' ? 'var(--ok)'
@@ -322,61 +319,99 @@ function RetryBranch({ retryStatus, isClickable, onLogToggle, t, counts }: {
     : 'var(--border)'
 
   const isActive = retryStatus === 'active'
+  const colors = STEP_COLORS[retryStatus]
+  const icon = STEP_ICONS[retryStatus]
+  const showCounts = counts && counts.total > 0 && retryStatus !== 'pending'
 
   return (
     <div style={{
       animation: isActive
         ? 'branchGrow 300ms ease forwards, branchPulse 2s ease-in-out infinite'
         : 'branchGrow 300ms ease forwards',
-      overflow: 'hidden',
+      overflow: 'visible',
     }}>
-      {/* U-shape: left elbow | retry node | right elbow */}
+      {/* Single U-shaped border container */}
       <div style={{
-        display: 'flex',
-        alignItems: 'stretch',
+        position: 'relative',
+        height: BRANCH_DROP_HEIGHT,
+        borderLeft: `${CONNECTOR_HEIGHT}px solid ${lineColor}`,
+        borderRight: `${CONNECTOR_HEIGHT}px solid ${lineColor}`,
+        borderBottom: `${CONNECTOR_HEIGHT}px solid ${lineColor}`,
+        borderRadius: '0 0 10px 10px',
+        boxSizing: 'border-box',
       }}>
-        {/* Left elbow — vertical drop + bottom-left corner */}
-        <div style={{
-          flex: '1 1 0',
-          minWidth: 8,
-          borderLeft: `${borderWidth}px solid ${lineColor}`,
-          borderBottom: `${borderWidth}px solid ${lineColor}`,
-          borderRadius: '0 0 0 8px',
-          height: dropHeight,
-          boxSizing: 'border-box',
-        }} />
-
-        {/* Center — retry node sits at the bottom of the U */}
-        <div style={{
-          flexShrink: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'flex-end',
-          paddingTop: dropHeight - NODE_SIZE,
-          borderBottom: `${borderWidth}px solid ${lineColor}`,
-          boxSizing: 'border-box',
-        }}>
-          <StepNode
-            step={BRANCH_STEP}
-            status={retryStatus}
-            isClickable={isClickable}
-            onLogToggle={onLogToggle}
-            t={t}
-            counts={counts}
-          />
+        {/* Node at bottom center */}
+        <div
+          role={isClickable ? 'button' : undefined}
+          tabIndex={isClickable ? 0 : undefined}
+          onClick={isClickable ? onLogToggle : undefined}
+          onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') onLogToggle!() } : undefined}
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: '50%',
+            transform: 'translate(-50%, 50%)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '0.1875rem',
+            cursor: isClickable ? 'pointer' : 'default',
+          }}
+        >
+          {/* Circle with background mask */}
+          <div style={{ position: 'relative' }}>
+            {/* Mask to hide the border line behind the circle */}
+            <div style={{
+              position: 'absolute',
+              inset: -3,
+              borderRadius: '50%',
+              background: 'var(--canvas)',
+            }} />
+            {/* Actual circle */}
+            <div style={{
+              position: 'relative',
+              width: NODE_SIZE,
+              height: NODE_SIZE,
+              borderRadius: '50%',
+              border: `1.5px solid ${colors.dot}`,
+              background: (retryStatus === 'done' || retryStatus === 'error') ? colors.dot : 'var(--canvas)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '0.5rem',
+              fontWeight: 700,
+              color: (retryStatus === 'done' || retryStatus === 'error') ? 'white' : colors.dot,
+              transition: 'all 300ms ease',
+            }}>
+              {icon}
+            </div>
+          </div>
+          {/* Label */}
+          <span style={{
+            fontSize: '0.5rem',
+            fontWeight: 600,
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+            color: colors.label,
+            whiteSpace: 'nowrap',
+            transition: 'color 300ms ease',
+          }}>
+            {t(BRANCH_STEP.labelKey)}
+          </span>
+          {/* Count annotation */}
+          {showCounts && (
+            <span style={{
+              fontSize: '0.5rem',
+              fontFamily: 'ui-monospace, monospace',
+              fontWeight: 500,
+              color: counts.ok === counts.total ? 'var(--ok)' : 'var(--err)',
+              whiteSpace: 'nowrap',
+              lineHeight: 1,
+            }}>
+              {counts.ok}/{counts.total}
+            </span>
+          )}
         </div>
-
-        {/* Right elbow — bottom-right corner + vertical drop */}
-        <div style={{
-          flex: '1 1 0',
-          minWidth: 8,
-          borderRight: `${borderWidth}px solid ${lineColor}`,
-          borderBottom: `${borderWidth}px solid ${lineColor}`,
-          borderRadius: '0 0 8px 0',
-          height: dropHeight,
-          boxSizing: 'border-box',
-        }} />
       </div>
     </div>
   )
@@ -407,7 +442,7 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: STEPPER_CSS }} />
-      <div style={{ width: '100%', paddingBottom: showBranch ? BRANCH_DROP_HEIGHT : 0 }}>
+      <div style={{ width: '100%', paddingBottom: showBranch ? BRANCH_DROP_HEIGHT + 28 : 0 }}>
         {/* Main line */}
         <div style={{
           display: 'flex',

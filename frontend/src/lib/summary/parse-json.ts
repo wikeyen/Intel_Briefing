@@ -5,10 +5,13 @@ import type { SensorSummaryItem, OverallBriefing, BriefingEntry, BriefingSection
 import { EMPTY_SENTIMENT } from '../models'
 import { jsonrepair } from 'jsonrepair'
 
-/** Strip markdown code fences (```json ... ```) that LLMs sometimes add. */
-function stripCodeFences(text: string): string {
-  const fenced = text.match(/```(?:json)?\s*\n?([\s\S]*?)```/)
-  return fenced ? fenced[1].trim() : text.trim()
+/** Strip LLM wrapper artifacts: <think> blocks and markdown code fences. */
+function stripLlmWrapper(text: string): string {
+  // Remove <think>...</think> blocks (Qwen, DeepSeek, etc.)
+  const noThink = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
+  // Remove markdown code fences
+  const fenced = noThink.match(/```(?:json)?\s*\n?([\s\S]*?)```/)
+  return fenced ? fenced[1].trim() : noThink
 }
 
 /**
@@ -55,7 +58,7 @@ export interface ParsedSensorJson {
  * Falls back to treating the entire response as plain text summary if parsing fails.
  */
 export function parseSensorJson(raw: string): ParsedSensorJson {
-  const cleaned = stripCodeFences(raw)
+  const cleaned = stripLlmWrapper(raw)
   const parsed = robustJsonParse(cleaned)
 
   if (parsed) {
@@ -140,8 +143,8 @@ function parseSentiment(parsed: Record<string, unknown>): SentimentAnalysis {
  * Parse the overall briefing LLM response as JSON.
  * Falls back to a single-section structure with the raw text if parsing fails.
  */
-export function parseOverallJson(raw: string): OverallBriefing {
-  const cleaned = stripCodeFences(raw)
+export function parseOverallJson(raw: string): OverallBriefing & { parsed: boolean } {
+  const cleaned = stripLlmWrapper(raw)
   const parsed = robustJsonParse(cleaned)
 
   if (parsed) {
@@ -173,13 +176,18 @@ export function parseOverallJson(raw: string): OverallBriefing {
 
     const sentiment = parseSentiment(parsed)
 
-    return { quick_scan, executive_summary, sections, sentiment }
+    // parsed: true means valid JSON (even if exec summary is empty).
+    // Caller uses parsed + executive_summary to decide whether to retry.
+    return { quick_scan, executive_summary, sections, sentiment, parsed: true }
   }
 
+  // Not parseable as JSON — wrap raw text as fallback content.
+  // parsed: false tells the caller the response was not structured JSON.
   return {
     quick_scan: [],
     executive_summary: '',
     sections: [{ title: 'Briefing', entries: [{ text: raw.trim(), source: '', refs: [] }] }],
     sentiment: { ...EMPTY_SENTIMENT },
+    parsed: false,
   }
 }

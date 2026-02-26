@@ -56,6 +56,13 @@ describe('parseSensorJson', () => {
     expect(result.items).toHaveLength(1)
     expect(result.items[0].title).toBe('Valid')
   })
+
+  it('strips <think> blocks from sensor JSON', () => {
+    const json = JSON.stringify({ summary: 'After think.', items: [] })
+    const input = `<think>reasoning</think>\n${json}`
+    const result = parseSensorJson(input)
+    expect(result.summary).toBe('After think.')
+  })
 })
 
 describe('parseOverallJson', () => {
@@ -238,6 +245,44 @@ describe('parseOverallJson', () => {
     const result = parseOverallJson(input)
     expect(result.sentiment.controversies).toHaveLength(1)
     expect(result.sentiment.opinion_shifts).toEqual([])
+  })
+
+  it('strips <think> blocks before parsing', () => {
+    const json = JSON.stringify({
+      executive_summary: 'Parsed after think block.',
+      sections: [],
+      sentiment: { overall_mood: 'neutral', mood_summary: '', controversies: [], opinion_shifts: [], risk_flags: [] },
+    })
+    const input = `<think>\nLet me analyze the data...\n</think>\n${json}`
+    const result = parseOverallJson(input)
+    expect(result.executive_summary).toBe('Parsed after think block.')
+    expect(result.parsed).toBe(true)
+  })
+
+  it('returns parsed: true for valid JSON', () => {
+    const input = JSON.stringify({
+      executive_summary: 'A valid summary.',
+      sections: [],
+    })
+    const result = parseOverallJson(input)
+    expect(result.parsed).toBe(true)
+  })
+
+  it('returns parsed: false for unparseable text', () => {
+    const result = parseOverallJson('This is not JSON at all.')
+    expect(result.parsed).toBe(false)
+    expect(result.executive_summary).toBe('')
+  })
+
+  it('returns parsed: true even when executive_summary is empty (hollow JSON)', () => {
+    const input = JSON.stringify({
+      executive_summary: '',
+      sections: [],
+    })
+    const result = parseOverallJson(input)
+    // parsed: true means valid JSON was found — caller uses exec_summary check to decide retry
+    expect(result.parsed).toBe(true)
+    expect(result.executive_summary).toBe('')
   })
 })
 

@@ -45,6 +45,8 @@ export interface SensorCardProps {
   onDismiss?: () => void
   /** Seconds until next auto-retry fires. Present only when a timer is counting down. */
   autoRetryCountdown?: number
+  /** Social sensor has no accounts configured. */
+  noAccounts?: boolean
 }
 
 export const CARD_CSS = `
@@ -1057,7 +1059,14 @@ export const SensorRow = memo(function SensorRow(props: SensorCardProps) {
       ) : (
         <Dot state={state} />
       )}
-      <span style={{ ...nameStyle, fontSize: '0.8125rem', overflow: 'hidden', textOverflow: 'ellipsis', ...(state === 'selected' ? { color: 'var(--accent)' } : {}) }}>{label}</span>
+      <span style={{ ...nameStyle, fontSize: '0.8125rem', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '0.375rem', ...(state === 'selected' ? { color: 'var(--accent)' } : {}) }}>
+        {label}
+        {props.noAccounts && !isDisabled && (
+          <span style={{ ...errorBadgeBase, color: 'var(--ink-faint)', background: 'color-mix(in srgb, var(--border) 40%, transparent)' }}>
+            {t('sensor.no_accounts')}
+          </span>
+        )}
+      </span>
       <span className="sensor-col-note" style={{ overflow: 'hidden', minWidth: 0 }}>
         <RowNote state={state} props={props} t={t} />
       </span>

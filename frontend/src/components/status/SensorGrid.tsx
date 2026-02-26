@@ -414,29 +414,8 @@ export function SensorGrid({
                       onSkipFetching={isRunning && live?.fetch === 'running' && onSkipFetchingSensor ? () => onSkipFetchingSensor(sensor.sensorKey) : undefined}
                       onDismiss={sensor.isFailed && !isPaused ? () => onDismiss(sensor.sensorKey) : undefined}
                       autoRetryCountdown={autoRetryDeadlines?.[sensor.sensorKey] ? Math.max(0, Math.ceil((autoRetryDeadlines[sensor.sensorKey] - Date.now()) / 1000)) : undefined}
+                      noAccounts={noAccountsSensors.has(sensor.sensorKey)}
                     />
-                    {noAccountsSensors.has(sensor.sensorKey) && !sensor.isDisabled && (
-                      <div style={{
-                        gridColumn: '1 / -1',
-                        display: 'grid',
-                        gridTemplateColumns: 'subgrid',
-                        alignItems: 'center',
-                        padding: '0.1875rem 1rem 0.1875rem 0',
-                        borderTop: '1px solid color-mix(in srgb, var(--border-soft) 40%, transparent)',
-                      }}>
-                        <span />
-                        <span style={{
-                          fontSize: '0.6875rem',
-                          color: 'var(--ink-faint)',
-                          fontStyle: 'italic',
-                          paddingLeft: '0.75rem',
-                        }}>
-                          {t('sensor.no_accounts')}
-                        </span>
-                        <span />
-                        <span />
-                      </div>
-                    )}
                   </React.Fragment>
                 )
               })}

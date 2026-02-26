@@ -8,6 +8,7 @@ import { Toaster } from '@/components/Toaster'
 import { ToastContext } from '@/lib/toast-context'
 import { I18nProvider, useTranslation } from '@/lib/i18n'
 import type { Locale } from '@/lib/i18n/types'
+import { PipelineHaltBanner } from '@/components/PipelineHaltBanner'
 
 /** i18n keys for page titles, keyed by pathname. */
 const PAGE_TITLE_KEYS: Record<string, string> = {
@@ -159,6 +160,7 @@ function UiShell({ children, initialPinned }: { children: React.ReactNode; initi
         overflowY: 'auto',
         scrollBehavior: 'smooth',
       }}>
+        <PipelineHaltBanner />
         {children}
       </main>
     </div>

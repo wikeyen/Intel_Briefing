@@ -49,10 +49,10 @@ describe('SensorGrid', () => {
       pipelineStatus: makePipelineStatus(),
     })
     renderWithI18n(<SensorGrid {...props} />)
-    // HN has 2 items, ArXiv has 2, GitHub has 1 — counts appear in status text
-    const twoItems = screen.getAllByText('2 items')
+    // HN has 2 items, ArXiv has 2, GitHub has 1 — counts appear in status text (possibly with timestamp)
+    const twoItems = screen.getAllByText(/2 items/)
     expect(twoItems.length).toBeGreaterThanOrEqual(2)
-    expect(screen.getByText('1 items')).toBeInTheDocument()
+    expect(screen.getByText(/1 items/)).toBeInTheDocument()
   })
 
   it('shows "Disabled" for disabled sensors', () => {

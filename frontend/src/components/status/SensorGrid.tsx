@@ -169,7 +169,7 @@ export function SensorGrid({
             )}
           </div>
           <span className="sensor-col-note" style={headerLabelStyle}>{t('status.col_note')}</span>
-          <span style={{ ...headerLabelStyle, textAlign: 'right' }}>{t('status.col_last_fetch')}</span>
+          <span></span>
         </div>
         {visibleSensors.map(sensor => {
           const live = liveSensors[sensor.sensorKey]

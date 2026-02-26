@@ -712,10 +712,14 @@ function RowNote({ state, props, t }: { state: CardState; props: SensorCardProps
 
   switch (state) {
     case 'healthy':
-    case 'selected':
-      return props.itemCount > 0
-        ? <span style={{ ...noteStyle, color: 'var(--ink-faint)', fontSize: '0.625rem' }}>{t('sensor.status_n_items', { count: String(props.itemCount) })}</span>
+    case 'selected': {
+      const parts: string[] = []
+      if (props.itemCount > 0) parts.push(t('sensor.status_n_items', { count: String(props.itemCount) }))
+      if (props.lastFetchAgo) parts.push(props.lastFetchAgo)
+      return parts.length > 0
+        ? <span style={{ ...noteStyle, color: 'var(--ink-faint)', fontSize: '0.625rem' }}>{parts.join(' · ')}</span>
         : null
+    }
 
     case 'done': {
       const count = (liveSensor?.item_count || 0) > 0 ? liveSensor!.item_count : props.itemCount
@@ -833,7 +837,7 @@ function RowActions({ state, props, t }: { state: CardState; props: SensorCardPr
   const fetchColor = props.isFreshFetch ? 'var(--ok)' : 'var(--warn)'
 
   if (state === 'healthy' || state === 'selected') {
-    return lastFetchAgo ? <span style={{ fontSize: '0.6875rem', color: fetchColor, whiteSpace: 'nowrap' }}>{lastFetchAgo}</span> : null
+    return null
   }
 
   if (state === 'fetching') {

@@ -316,6 +316,7 @@ export interface ConfigSettings {
 
   // Fetch limits — global default + optional per-sensor overrides
   default_limit: number
+  default_lookback_hours: number
   sensor_limits: Record<string, number>
   sensor_lookback_hours: Record<string, number>
 
@@ -350,6 +351,10 @@ export interface ConfigSettings {
 
   // Social sensor topic keywords
   social_topics_keywords: string[]
+
+  // Per-topic limits — overrides for individual keyword search limits
+  topic_limits: Record<string, number>
+  topic_lookback_hours: Record<string, number>
 
   // Include-following toggles (auto-include posts from followed accounts)
   social_following_bluesky: boolean
@@ -424,7 +429,8 @@ export function defaultConfig(): ConfigSettings {
     },
     fetch_time: '07:51',
     fetch_timezone: 'Asia/Shanghai',
-    default_limit: 10,
+    default_limit: 50,
+    default_lookback_hours: 48,
     sensor_limits: {},
     sensor_lookback_hours: {},
     boost_keywords: [],
@@ -441,6 +447,8 @@ export function defaultConfig(): ConfigSettings {
     social_accounts_mastodon: [],
     social_accounts_disabled: [],
     social_topics_keywords: [],
+    topic_limits: {},
+    topic_lookback_hours: {},
     social_following_bluesky: false,
     social_following_mastodon: false,
     bluesky_topics_enabled: true,

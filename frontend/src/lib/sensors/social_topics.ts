@@ -10,43 +10,47 @@ async function fetchBlueskyTopics(config: ConfigSettings, limit: number): Promis
   const agent = await createBlueskyAgent(config.bluesky_handle, config.bluesky_app_password)
   const items: IntelItem[] = []
   for (const keyword of config.social_topics_keywords) {
-    if (items.length >= limit) break
+    const kwLimit = config.topic_limits[keyword] ?? Math.min(5, limit)
+    const lookbackHours = config.topic_lookback_hours[keyword]
+    const cutoff = lookbackHours ? Date.now() - lookbackHours * 3600_000 : 0
     try {
-      const { data } = await agent.app.bsky.feed.searchPosts({ q: keyword, limit: Math.min(5, limit) })
+      const { data } = await agent.app.bsky.feed.searchPosts({ q: keyword, limit: kwLimit })
       for (const post of data.posts) {
-        if (items.length >= limit) break
         const item = blueskyPostToItem(post as unknown as Record<string, unknown>, 'topics')
         if (item) {
+          if (cutoff && item.published_at && new Date(item.published_at).getTime() < cutoff) continue
           item.topic = keyword
           items.push(item)
         }
       }
     } catch { /* search may not be available, skip */ }
   }
-  return items
+  return items.slice(0, limit)
 }
 
 async function fetchMastodonTopics(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
   if (config.social_topics_keywords.length === 0) return []
   const items: IntelItem[] = []
   for (const keyword of config.social_topics_keywords) {
-    if (items.length >= limit) break
+    const kwLimit = config.topic_limits[keyword] ?? 5
+    const lookbackHours = config.topic_lookback_hours[keyword]
+    const cutoff = lookbackHours ? Date.now() - lookbackHours * 3600_000 : 0
     const tag = keyword.replace(/^#/, '')
     try {
       const statuses = await mastodonPublicGet<Array<Record<string, unknown>>>(
-        `/api/v1/timelines/tag/${encodeURIComponent(tag)}?limit=5`,
+        `/api/v1/timelines/tag/${encodeURIComponent(tag)}?limit=${kwLimit}`,
       )
       for (const status of statuses) {
-        if (items.length >= limit) break
         const item = mastodonStatusToItem(status, 'topics')
         if (item) {
+          if (cutoff && item.published_at && new Date(item.published_at).getTime() < cutoff) continue
           item.topic = keyword
           items.push(item)
         }
       }
     } catch { /* tag may not exist, skip */ }
   }
-  return items
+  return items.slice(0, limit)
 }
 
 export async function fetchSocialTopics(

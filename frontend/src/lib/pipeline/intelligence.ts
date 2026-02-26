@@ -35,11 +35,17 @@ export interface TrendIntelligence {
   generated_at: string
 }
 
+export interface TopicCuratedItem {
+  title: string
+  url: string
+  brief: string
+}
+
 export interface TopicSentimentEntry {
   topic: string
   sentiment: 'positive' | 'negative' | 'neutral' | 'mixed'
   summary: string
-  samplePosts: string[]
+  items: TopicCuratedItem[]
   postCount: number
 }
 
@@ -96,12 +102,19 @@ Respond with ONLY a JSON object, no markdown fences:
 }
 
 function topicSystemPrompt(language?: SummaryLanguage): string {
-  return `You analyze social media posts about specific topics to understand public opinion.
+  return `You analyze social media posts about specific topics to understand public opinion and surface the most noteworthy content.
 
-Given posts grouped by topic, assess the public sentiment on each topic. If a tag was translated from a different source language, include an "original" field with the source-language text.
+Given posts grouped by topic (each post has a title and URL), you must:
+1. Assess the public sentiment on each topic
+2. Curate the 3-8 most noteworthy posts per topic — pick posts with the highest informational value, unique insights, or significant developments
+3. Extract cross-topic tags with importance weights and sentiment
+
+IMPORTANT: The posts are ordered by recency, NOT by popularity or engagement. There are no popularity metrics available. Curate based on content quality, informational value, and significance — not position in the list.
+
+If a tag was translated from a different source language, include an "original" field with the source-language text.
 
 Respond with ONLY JSON:
-{"summary":"Overall paragraph","topics":[{"topic":"AI","sentiment":"positive","summary":"People are optimistic about...","samplePosts":["post1","post2"],"postCount":15}],"tags":[{"text":"Artificial Intelligence","original":"人工智能","weight":0.8,"sentiment":"positive"}]}` + langInstruction(language)
+{"summary":"Overall paragraph","topics":[{"topic":"AI","sentiment":"positive","summary":"People are optimistic about...","items":[{"title":"Post title","url":"https://...","brief":"Why this post matters"}],"postCount":15}],"tags":[{"text":"Artificial Intelligence","original":"人工智能","weight":0.8,"sentiment":"positive"}]}` + langInstruction(language)
 }
 
 function accountsSystemPrompt(language?: SummaryLanguage): string {
@@ -304,7 +317,7 @@ export async function analyzeTopicIntelligence(
     // Build grouped text block
     const sections: string[] = []
     byTopic.forEach((topicItems, topic) => {
-      const posts = topicItems.map((item, i) => `  [${i}] ${item.title}`).join('\n')
+      const posts = topicItems.map((item, i) => `  [${i}] ${item.title} | ${item.url}`).join('\n')
       sections.push(`## Topic: ${topic} (${topicItems.length} posts)\n${posts}`)
     })
 
@@ -340,13 +353,21 @@ export async function analyzeTopicIntelligence(
           .filter((t: unknown) => t && typeof t === 'object' && 'topic' in t)
           .map((t: unknown) => {
             const entry = t as Record<string, unknown>
+            const rawItems = Array.isArray(entry.items) ? entry.items : []
             return {
               topic: String(entry.topic ?? ''),
               sentiment: normalizeSentiment(entry.sentiment),
               summary: String(entry.summary ?? ''),
-              samplePosts: Array.isArray(entry.samplePosts)
-                ? entry.samplePosts.map(String)
-                : [],
+              items: rawItems
+                .filter((it: unknown) => it && typeof it === 'object' && 'title' in it)
+                .map((it: unknown) => {
+                  const item = it as Record<string, unknown>
+                  return {
+                    title: String(item.title ?? ''),
+                    url: String(item.url ?? ''),
+                    brief: String(item.brief ?? ''),
+                  }
+                }),
               postCount: typeof entry.postCount === 'number' ? entry.postCount : 0,
             }
           })

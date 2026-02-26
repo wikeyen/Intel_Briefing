@@ -2,7 +2,7 @@
 // ABOUTME: Uses mocked chatCompletion to simulate LLM failures and recovery.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { robustJsonParse, analyzeTrendIntelligence, analyzeAccountsIntelligence } from '../intelligence'
+import { robustJsonParse, analyzeTrendIntelligence, analyzeTopicIntelligence, analyzeAccountsIntelligence } from '../intelligence'
 import type { IntelItem } from '../../models'
 import type { LlmConfig } from '../../summary/llm'
 
@@ -35,6 +35,14 @@ const fakeAccountItem: IntelItem = {
   source: 'x',
   account: 'Test User',
   handle: 'testuser',
+}
+
+const fakeTopicItem: IntelItem = {
+  id: '3',
+  title: 'AI regulation debate heats up',
+  url: 'https://bsky.app/post/123',
+  source: 'bluesky',
+  topic: 'AI Regulation',
 }
 
 describe('robustJsonParse', () => {
@@ -107,6 +115,72 @@ describe('analyzeTrendIntelligence', () => {
     const result = await analyzeTrendIntelligence([fakeTrendItem], fakeLlmConfig)
     expect(result).toBeNull()
     expect(mockChat).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('analyzeTopicIntelligence', () => {
+  beforeEach(() => { vi.clearAllMocks() })
+
+  it('returns null for empty items', async () => {
+    const result = await analyzeTopicIntelligence([], fakeLlmConfig)
+    expect(result).toBeNull()
+    expect(mockChat).not.toHaveBeenCalled()
+  })
+
+  it('returns items as TopicCuratedItem[] instead of samplePosts', async () => {
+    mockChat.mockResolvedValueOnce(JSON.stringify({
+      summary: 'AI regulation is a hot topic',
+      topics: [{
+        topic: 'AI Regulation',
+        sentiment: 'mixed',
+        summary: 'Debate ongoing',
+        items: [
+          { title: 'New EU AI Act provisions', url: 'https://example.com/1', brief: 'EU tightens AI rules' },
+          { title: 'US proposes AI guidelines', url: 'https://example.com/2', brief: 'Lighter touch from US' },
+        ],
+        postCount: 10,
+      }],
+      tags: [{ text: 'AI Regulation', weight: 0.9, sentiment: 'mixed' }],
+    }))
+
+    const result = await analyzeTopicIntelligence([fakeTopicItem], fakeLlmConfig)
+    expect(result).not.toBeNull()
+    expect(result!.topics).toHaveLength(1)
+    expect(result!.topics[0].items).toHaveLength(2)
+    expect(result!.topics[0].items[0]).toEqual({
+      title: 'New EU AI Act provisions',
+      url: 'https://example.com/1',
+      brief: 'EU tightens AI rules',
+    })
+    // Verify samplePosts is NOT present on the result
+    expect((result!.topics[0] as Record<string, unknown>).samplePosts).toBeUndefined()
+  })
+
+  it('includes item URLs in the LLM prompt', async () => {
+    mockChat.mockResolvedValueOnce(JSON.stringify({
+      summary: 'Test',
+      topics: [{ topic: 'AI Regulation', sentiment: 'neutral', summary: 'Test', items: [], postCount: 1 }],
+      tags: [],
+    }))
+
+    await analyzeTopicIntelligence([fakeTopicItem], fakeLlmConfig)
+
+    // The user message sent to the LLM should contain the item URL
+    const userMessage = mockChat.mock.calls[0][0].find((m: { role: string }) => m.role === 'user')
+    expect(userMessage?.content).toContain('https://bsky.app/post/123')
+    expect(userMessage?.content).toContain('AI regulation debate heats up')
+  })
+
+  it('handles missing items array gracefully', async () => {
+    mockChat.mockResolvedValueOnce(JSON.stringify({
+      summary: 'Test',
+      topics: [{ topic: 'AI', sentiment: 'neutral', summary: 'Test', postCount: 5 }],
+      tags: [],
+    }))
+
+    const result = await analyzeTopicIntelligence([fakeTopicItem], fakeLlmConfig)
+    expect(result).not.toBeNull()
+    expect(result!.topics[0].items).toEqual([])
   })
 })
 

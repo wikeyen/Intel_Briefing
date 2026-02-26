@@ -282,11 +282,17 @@ export interface TrendIntelligence {
   generated_at: string
 }
 
+interface TopicCuratedItem {
+  title: string
+  url: string
+  brief: string
+}
+
 interface TopicSentimentEntry {
   topic: string
   sentiment: 'positive' | 'negative' | 'neutral' | 'mixed'
   summary: string
-  samplePosts: string[]
+  items: TopicCuratedItem[]
   postCount: number
 }
 
@@ -619,6 +625,23 @@ export function PublicFocusDetail({ data }: { data: TrendIntelligence }) {
   )
 }
 
+/** Migrate old cached TopicSentimentEntry (samplePosts) to new format (items). Removable after 48h (cache TTL). */
+function migrateTopicEntry(entry: TopicSentimentEntry & { samplePosts?: string[] }): TopicSentimentEntry {
+  if (entry.items && entry.items.length > 0) return entry
+  const legacy = (entry as unknown as Record<string, unknown>).samplePosts
+  if (Array.isArray(legacy)) {
+    return {
+      ...entry,
+      items: legacy.map((post: unknown) => ({
+        title: String(post),
+        url: '',
+        brief: '',
+      })),
+    }
+  }
+  return { ...entry, items: entry.items ?? [] }
+}
+
 /** Full detail view for Topic Pulse / Social Topic Intelligence. */
 export function TopicPulseDetail({ data }: { data: TopicIntelligence }) {
   return (
@@ -629,73 +652,106 @@ export function TopicPulseDetail({ data }: { data: TopicIntelligence }) {
       )}
 
       {/* All topics with full content */}
-      {data.topics.map((entry) => (
-        <div
-          key={entry.topic}
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.25rem',
-            padding: '0.5rem 0',
-            borderBottom: '1px solid var(--border-soft)',
-          }}
-        >
-          {/* Topic header row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{
-              fontSize: '0.8125rem',
-              fontWeight: 700,
-              color: 'var(--ink)',
-            }}>
-              {entry.topic}
-            </span>
-            <SentimentBadge sentiment={entry.sentiment} />
-            <span style={{
-              fontSize: '0.5625rem',
-              fontFamily: MONO,
-              color: 'var(--ink-tertiary)',
-              marginLeft: 'auto',
-              flexShrink: 0,
-            }}>
-              {entry.postCount} posts
-            </span>
-          </div>
-
-          {/* Summary */}
-          <p style={{
-            fontSize: '0.75rem',
-            color: 'var(--ink-secondary)',
-            margin: 0,
-            lineHeight: 1.5,
-          }}>
-            {entry.summary}
-          </p>
-
-          {/* Sample posts */}
-          {entry.samplePosts.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginTop: '0.125rem' }}>
-              {entry.samplePosts.slice(0, 3).map((post, idx) => (
-                <p
-                  key={idx}
-                  style={{
-                    fontSize: '0.6875rem',
-                    fontStyle: 'italic',
-                    color: 'var(--ink-tertiary)',
-                    margin: 0,
-                    lineHeight: 1.4,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  &ldquo;{post}&rdquo;
-                </p>
-              ))}
+      {data.topics.map((rawEntry) => {
+        const entry = migrateTopicEntry(rawEntry)
+        return (
+          <div
+            key={entry.topic}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.25rem',
+              padding: '0.5rem 0',
+              borderBottom: '1px solid var(--border-soft)',
+            }}
+          >
+            {/* Topic header row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{
+                fontSize: '0.8125rem',
+                fontWeight: 700,
+                color: 'var(--ink)',
+              }}>
+                {entry.topic}
+              </span>
+              <SentimentBadge sentiment={entry.sentiment} />
+              <span style={{
+                fontSize: '0.5625rem',
+                fontFamily: MONO,
+                color: 'var(--ink-tertiary)',
+                marginLeft: 'auto',
+                flexShrink: 0,
+              }}>
+                {entry.postCount} posts
+              </span>
             </div>
-          )}
-        </div>
-      ))}
 
+            {/* Summary */}
+            <p style={{
+              fontSize: '0.75rem',
+              color: 'var(--ink-secondary)',
+              margin: 0,
+              lineHeight: 1.5,
+            }}>
+              {entry.summary}
+            </p>
+
+            {/* Curated items */}
+            {entry.items.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', marginTop: '0.125rem' }}>
+                {entry.items.map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '0.0625rem' }}>
+                    {item.url ? (
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          fontSize: '0.6875rem',
+                          fontWeight: 600,
+                          color: 'var(--accent)',
+                          textDecoration: 'none',
+                          lineHeight: 1.4,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {item.title}
+                      </a>
+                    ) : (
+                      <span style={{
+                        fontSize: '0.6875rem',
+                        fontWeight: 600,
+                        color: 'var(--ink)',
+                        lineHeight: 1.4,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {item.title}
+                      </span>
+                    )}
+                    {item.brief && (
+                      <span style={{
+                        fontSize: '0.625rem',
+                        color: 'var(--ink-tertiary)',
+                        lineHeight: 1.4,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {item.brief}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

@@ -286,11 +286,17 @@ export interface TrendIntelligence {
   generated_at: string
 }
 
+export interface TopicCuratedItem {
+  title: string
+  url: string
+  brief: string
+}
+
 export interface TopicSentimentEntry {
   topic: string
   sentiment: 'positive' | 'negative' | 'neutral' | 'mixed'
   summary: string
-  samplePosts: string[]
+  items: TopicCuratedItem[]
   postCount: number
 }
 

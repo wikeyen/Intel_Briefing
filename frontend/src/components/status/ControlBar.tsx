@@ -390,17 +390,6 @@ export function ControlBar({
             ))}
           </select>
 
-          <div className="control-bar-selection" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-            <button type="button" onClick={onSelectAll} style={quickLinkStyle} className="control-bar-link">{t('status.all')}</button>
-            <button type="button" onClick={onSelectNone} style={quickLinkStyle} className="control-bar-link">{t('status.none')}</button>
-            {hasFailedSensors && (
-              <button type="button" onClick={onSelectFailed} style={quickLinkStyle} className="control-bar-link">{t('status.failed_btn')}</button>
-            )}
-            <span style={selCountStyle}>
-              {allSelected ? t('status.all_sel') : t('status.n_sel', { count: String(selectedCount) })}
-            </span>
-          </div>
-
           {/* Retry failed button — shown when there are failures */}
           {hasFailedSensors && (
             <button

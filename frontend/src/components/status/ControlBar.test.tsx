@@ -88,16 +88,6 @@ describe('ControlBar', () => {
     expect(screen.getByRole('combobox')).toHaveValue('fetch_summarize')
   })
 
-  it('renders All and None quick-select buttons', () => {
-    renderWithI18n(<ControlBar {...buildProps()} />)
-    expect(screen.getByText('All')).toBeInTheDocument()
-    expect(screen.getByText('None')).toBeInTheDocument()
-  })
-
-  it('renders Failed quick-select when hasFailedSensors', () => {
-    renderWithI18n(<ControlBar {...buildProps({ hasFailedSensors: true, failedSensorCount: 2 })} />)
-    expect(screen.getByText('Failed')).toBeInTheDocument()
-  })
 
   it('shows retry failed button when hasFailedSensors', () => {
     const onRetryFailed = vi.fn()
@@ -118,19 +108,6 @@ describe('ControlBar', () => {
     expect(screen.queryByText('Failed')).not.toBeInTheDocument()
   })
 
-  it('calls onSelectAll when All is clicked', () => {
-    const onSelectAll = vi.fn()
-    renderWithI18n(<ControlBar {...buildProps({ onSelectAll })} />)
-    fireEvent.click(screen.getByText('All'))
-    expect(onSelectAll).toHaveBeenCalledOnce()
-  })
-
-  it('calls onSelectNone when None is clicked', () => {
-    const onSelectNone = vi.fn()
-    renderWithI18n(<ControlBar {...buildProps({ onSelectNone })} />)
-    fireEvent.click(screen.getByText('None'))
-    expect(onSelectNone).toHaveBeenCalledOnce()
-  })
 
   it('shows "Run All" when no sensors selected', () => {
     renderWithI18n(<ControlBar {...buildProps({ selectedCount: 0 })} />)

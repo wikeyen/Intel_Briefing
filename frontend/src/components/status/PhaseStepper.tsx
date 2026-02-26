@@ -102,19 +102,18 @@ export function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePh
     s.briefing = 'skipped'
   }
 
-  // Summary phase — if briefing has already started, summary must be complete
+  // Summary phase — active sensors always take priority over briefing state
   const briefingStarted = s.briefing === 'active' || s.briefing === 'done' || s.briefing === 'error'
   if (ps.mode === 'fetch') {
     s.summary = 'skipped'
   } else if (allSummaryCached) {
     s.summary = 'skipped'
-  } else if (briefingStarted) {
-    // Briefing can only start after per-sensor summaries finish. If any sensor's
-    // summary state is non-terminal (e.g. stale 'queued' from a failed retry), the
-    // pipeline has moved past it — treat summary phase as done/error.
-    s.summary = allSummaryIssue ? 'error' : anySummaryIssue ? 'warn' : 'done'
   } else if (anySummaryRunning || anySummaryQueued) {
     s.summary = 'active'
+  } else if (briefingStarted) {
+    // Briefing started and no sensors are actively summarizing — treat any
+    // remaining non-terminal states as stale.
+    s.summary = allSummaryIssue ? 'error' : anySummaryIssue ? 'warn' : 'done'
   } else if (allSummaryCancelled) {
     s.summary = 'skipped'
   } else if (allSummaryTerminal && summaryStates.length > 0) {

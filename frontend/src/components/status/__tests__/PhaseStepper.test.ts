@@ -2,7 +2,7 @@
 // ABOUTME: Covers all phases (fetch, summary, briefing, intelligence) in terminal and non-terminal states.
 import { describe, it, expect } from 'vitest'
 import type { PipelinePhaseStep, StepStatus } from '../PhaseStepper'
-import { derivePhaseTooltipData } from '../PhaseStepper'
+import { derivePhaseTooltipData, deriveStepStatuses } from '../PhaseStepper'
 import { makePipelineStatus, makeSensorJob } from '../test-helpers'
 
 /** Passthrough translator — returns the key as-is. */
@@ -20,6 +20,38 @@ function makeStatuses(
     ...overrides,
   }
 }
+
+describe('deriveStepStatuses', () => {
+  it('summary stays active when a sensor is still running even if briefing finished', () => {
+    const ps = makePipelineStatus({
+      running: true,
+      mode: 'summarize',
+      completed_at: null,
+      overall_summary: 'ok',
+      sensors: [
+        makeSensorJob('s1', { fetch: 'skipped', summary: 'ok' }),
+        makeSensorJob('s2', { fetch: 'skipped', summary: 'ok' }),
+        makeSensorJob('douyin', { fetch: 'skipped', summary: 'running', summary_error: 'fetch failed' }),
+      ],
+    })
+    const statuses = deriveStepStatuses(ps)
+    expect(statuses.summary).toBe('active')
+  })
+
+  it('summary shows warn after all sensors finish with some errors', () => {
+    const ps = makePipelineStatus({
+      running: false,
+      mode: 'summarize',
+      overall_summary: 'ok',
+      sensors: [
+        makeSensorJob('s1', { fetch: 'skipped', summary: 'ok' }),
+        makeSensorJob('s2', { fetch: 'skipped', summary: 'ok', summary_error: 'fetch failed' }),
+      ],
+    })
+    const statuses = deriveStepStatuses(ps)
+    expect(statuses.summary).toBe('warn')
+  })
+})
 
 describe('derivePhaseTooltipData', () => {
   it('returns all nulls when pipelineStatus is null', () => {

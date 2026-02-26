@@ -593,6 +593,7 @@ export async function runPipeline(
               if (chunks) tracker.setSummaryChunks(sensorName, chunks.total, chunks.done)
             } else if (state === 'ok' || state === 'cached') {
               tracker.setSummaryState(sensorName, 'ok')
+              if (state === 'cached') tracker.setSummaryCached(sensorName)
               tracker.addEvent('ok', 'summary', state === 'cached' ? 'Summary loaded from cache' : 'Summary generated', sensorName)
             } else if (state === 'failed') {
               tracker.setSummaryState(sensorName, 'failed', error ?? undefined)

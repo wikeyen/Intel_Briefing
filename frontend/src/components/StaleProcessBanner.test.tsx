@@ -54,6 +54,7 @@ function makeSensor(overrides: Partial<PipelineStatus['sensors'][number]> = {}):
     fetch_cached: false,
     summary: 'queued',
     summary_error: null,
+    summary_cached: false,
     item_count: 0,
     summary_chunks_total: 0,
     summary_chunks_done: 0,

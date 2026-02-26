@@ -538,9 +538,9 @@ export function PublicFocusDetail({ data }: { data: TrendIntelligence }) {
 
       {/* Tag cloud — flat, sorted by weight, colored by sentiment */}
       {tagCloudTags.length > 0 && (
-        <div style={{ margin: '0.25rem 0 0.5rem' }}>
+        <div style={{ margin: '0.75rem 0 1rem' }}>
           <SentimentLegend />
-          <TagCloud tags={tagCloudTags} maxTags={25} style={{ marginTop: '0.75rem', justifyContent: 'center' }} />
+          <TagCloud tags={tagCloudTags} maxTags={25} style={{ marginTop: '1rem', justifyContent: 'center' }} />
         </div>
       )}
 
@@ -716,9 +716,9 @@ export function VoicesDetail({ data }: { data: AccountsIntelligence }) {
 
       {/* Tag cloud — flat, sorted by weight, colored by sentiment */}
       {tagCloudTags.length > 0 && (
-        <div style={{ margin: '0.25rem 0 0.5rem' }}>
+        <div style={{ margin: '0.75rem 0 1rem' }}>
           <SentimentLegend />
-          <TagCloud tags={tagCloudTags} maxTags={20} style={{ marginTop: '0.75rem', justifyContent: 'center' }} />
+          <TagCloud tags={tagCloudTags} maxTags={20} style={{ marginTop: '1rem', justifyContent: 'center' }} />
         </div>
       )}
 

@@ -54,10 +54,10 @@ describe('derivePhaseTooltipData', () => {
 
     expect(result.fetch).not.toBeNull()
     expect(result.fetch!.lines).toEqual([
-      '1 stepper.fetched',
-      '1 stepper.cached',
-      '1 stepper.failed',
-      '15 stepper.items',
+      '1 stepper.sources_fetched',
+      '1 stepper.sources_cached',
+      '1 stepper.sources_failed',
+      '15 stepper.items_collected',
     ])
   })
 
@@ -82,9 +82,9 @@ describe('derivePhaseTooltipData', () => {
 
     expect(result.summary).not.toBeNull()
     expect(result.summary!.lines).toEqual([
-      '1 stepper.summarized',
-      '1 stepper.failed',
-      '3 stepper.chunks',
+      '1 stepper.sources_summarized',
+      '1 stepper.summaries_failed',
+      '3 stepper.chunks_processed',
     ])
   })
 

@@ -212,10 +212,10 @@ export function derivePhaseTooltipData(
       const failed = ps.sensors.filter(s => s.fetch === 'failed').length
       const items = ps.sensors.reduce((sum, s) => sum + s.item_count, 0)
       const lines: string[] = []
-      if (fetched > 0) lines.push(`${fetched} ${t('stepper.fetched')}`)
-      if (cached > 0) lines.push(`${cached} ${t('stepper.cached')}`)
-      if (failed > 0) lines.push(`${failed} ${t('stepper.failed')}`)
-      lines.push(`${items} ${t('stepper.items')}`)
+      if (fetched > 0) lines.push(`${fetched} ${t('stepper.sources_fetched')}`)
+      if (cached > 0) lines.push(`${cached} ${t('stepper.sources_cached')}`)
+      if (failed > 0) lines.push(`${failed} ${t('stepper.sources_failed')}`)
+      lines.push(`${items} ${t('stepper.items_collected')}`)
       result.fetch = { lines }
     }
   }
@@ -229,9 +229,9 @@ export function derivePhaseTooltipData(
       const failed = ps.sensors.filter(s => s.summary === 'failed').length
       const chunks = ps.sensors.reduce((sum, s) => sum + s.summary_chunks_done, 0)
       const lines: string[] = []
-      if (summarized > 0) lines.push(`${summarized} ${t('stepper.summarized')}`)
-      if (failed > 0) lines.push(`${failed} ${t('stepper.failed')}`)
-      if (chunks > 0) lines.push(`${chunks} ${t('stepper.chunks')}`)
+      if (summarized > 0) lines.push(`${summarized} ${t('stepper.sources_summarized')}`)
+      if (failed > 0) lines.push(`${failed} ${t('stepper.summaries_failed')}`)
+      if (chunks > 0) lines.push(`${chunks} ${t('stepper.chunks_processed')}`)
       result.summary = { lines }
     }
   }

@@ -25,7 +25,7 @@ async function fetchBlueskyTopics(config: ConfigSettings, limit: number): Promis
       }
     } catch { /* search may not be available, skip */ }
   }
-  return items.slice(0, limit)
+  return items
 }
 
 async function fetchMastodonTopics(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
@@ -50,7 +50,7 @@ async function fetchMastodonTopics(config: ConfigSettings, limit: number): Promi
       }
     } catch { /* tag may not exist, skip */ }
   }
-  return items.slice(0, limit)
+  return items
 }
 
 export async function fetchSocialTopics(
@@ -75,5 +75,5 @@ export async function fetchSocialTopics(
   for (const r of results) {
     if (r.status === 'fulfilled') items.push(...r.value)
   }
-  return items.slice(0, limit)
+  return items
 }

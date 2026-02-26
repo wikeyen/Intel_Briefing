@@ -87,7 +87,6 @@ export function Pipeline() {
       post_expiry_days: postExpiryDays,
       boost_keywords: boost,
       suppress_keywords: suppress,
-      default_limit: defaultLimit,
       sensor_limits: sectionLimits,
     }),
     { onError: (e) => showToast(t('ai.save_failed', { error: e.message })) },
@@ -412,24 +411,6 @@ export function Pipeline() {
         <div style={cardStyle}>
           <SubLabel>{t('pipeline.output')}</SubLabel>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-
-            <div>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
-                <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
-                  {t('pipeline.default_items')}
-                </label>
-                <span style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--ink)', fontFamily: 'ui-monospace, monospace', letterSpacing: '-0.02em' }}>
-                  {defaultLimit}
-                </span>
-              </div>
-              <input
-                type="range"
-                min={3}
-                max={200}
-                value={defaultLimit}
-                onChange={(e) => { setDefaultLimit(Number(e.target.value)); trigger() }}
-              />
-            </div>
 
             <div>
               <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)', marginBottom: '1rem' }}>

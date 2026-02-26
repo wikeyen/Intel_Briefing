@@ -7,7 +7,7 @@ import { TagInput } from '@/components/TagInput'
 import { useTranslation } from '@/lib/i18n'
 import { useToast } from '@/lib/toast-context'
 import { useAutoSave } from '@/lib/hooks/useAutoSave'
-import { AutoSaveIndicator } from '@/components/form-styles'
+import { AutoSaveIndicator, SubLabel } from '@/components/form-styles'
 import { SENSORS } from '@/lib/sensors/taxonomy'
 import { SOURCE_SECTIONS, HIDDEN_SENSORS, SENSOR_LOOKBACK_SUPPORT } from '@/components/sources/sections'
 import { FoldableSection } from '@/components/sources/FoldableSection'
@@ -240,6 +240,9 @@ export function Sensors() {
   const [sensorLimits, setSensorLimits] = useState<Record<string, number>>({})
   const [sensorLookback, setSensorLookback] = useState<Record<string, number>>({})
   const [defaultLimit, setDefaultLimit] = useState(10)
+  const [defaultLookback, setDefaultLookback] = useState(48)
+  const [topicLimits, setTopicLimits] = useState<Record<string, number>>({})
+  const [topicLookback, setTopicLookback] = useState<Record<string, number>>({})
   const [xScraperProvider, setXScraperProvider] = useState<'twitter-scraper' | 'apify' | 'mixed'>('twitter-scraper')
   const [loaded, setLoaded] = useState(false)
 
@@ -260,6 +263,10 @@ export function Sensors() {
       sensor_limits: sensorLimits,
       sensor_lookback_hours: sensorLookback,
       x_scraper_provider: xScraperProvider,
+      default_limit: defaultLimit,
+      default_lookback_hours: defaultLookback,
+      topic_limits: topicLimits,
+      topic_lookback_hours: topicLookback,
     }),
     { onError: (e) => showToast(t('sources.save_failed', { error: e.message })) },
   )
@@ -285,6 +292,9 @@ export function Sensors() {
       setSensorLimits(cfg.sensor_limits ?? {})
       setSensorLookback(cfg.sensor_lookback_hours ?? {})
       setDefaultLimit(cfg.default_limit)
+      setDefaultLookback(cfg.default_lookback_hours ?? 48)
+      setTopicLimits(cfg.topic_limits ?? {})
+      setTopicLookback(cfg.topic_lookback_hours ?? {})
       setXScraperProvider(cfg.x_scraper_provider ?? 'twitter-scraper')
       setLoaded(true)
     })
@@ -342,6 +352,16 @@ export function Sensors() {
 
   const updateSensorLookback = (key: string, value: number) => {
     setSensorLookback((prev) => ({ ...prev, [key]: value }))
+    trigger()
+  }
+
+  const updateTopicLimit = (keyword: string, value: number) => {
+    setTopicLimits((prev) => ({ ...prev, [keyword]: value }))
+    trigger()
+  }
+
+  const updateTopicLookback = (keyword: string, value: number) => {
+    setTopicLookback((prev) => ({ ...prev, [keyword]: value }))
     trigger()
   }
 
@@ -475,6 +495,57 @@ export function Sensors() {
 
       <div style={{ paddingBottom: '4rem' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+
+          {/* ── Defaults ─────────────────────────────────────────────── */}
+          <div style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            boxShadow: 'var(--shadow-card)',
+            padding: '1.25rem 1.5rem',
+          }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
+                <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
+                  {t('sources.default_limit')}
+                </label>
+                <span style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--ink)', fontFamily: 'ui-monospace, monospace', letterSpacing: '-0.02em' }}>
+                  {defaultLimit}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={3}
+                max={200}
+                value={defaultLimit}
+                onChange={(e) => { setDefaultLimit(Number(e.target.value)); trigger() }}
+              />
+              <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, marginTop: '0.5rem' }}>
+                {t('sources.default_limit_desc')}
+              </p>
+            </div>
+
+            <div style={{ marginTop: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
+                <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
+                  {t('sources.default_lookback')}
+                </label>
+                <span style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--ink)', fontFamily: 'ui-monospace, monospace', letterSpacing: '-0.02em' }}>
+                  {defaultLookback}h
+                </span>
+              </div>
+              <input
+                type="range"
+                min={1}
+                max={336}
+                value={defaultLookback}
+                onChange={(e) => { setDefaultLookback(Number(e.target.value)); trigger() }}
+              />
+              <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, marginTop: '0.5rem' }}>
+                {t('sources.default_lookback_desc')}
+              </p>
+            </div>
+          </div>
 
           {/* ── General ──────────────────────────────────────────────────── */}
           <FoldableSection title={t('sources.section_general')} enabledCount={generalEnabled} totalCount={generalSensors.length}>
@@ -726,13 +797,123 @@ export function Sensors() {
               </div>
             </div>
 
-            {/* Keywords input */}
+            {/* Keywords input with per-topic controls */}
             {topicsOn && (
               <div style={{ padding: '0.5rem 0.875rem', background: 'var(--canvas)' }}>
-                <TagInput
-                  tags={socialTopicsKeywords}
-                  onChange={(tags) => { setSocialTopicsKeywords(tags); trigger() }}
+                {socialTopicsKeywords.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginBottom: '0.625rem' }}>
+                    {socialTopicsKeywords.map((keyword) => (
+                      <div
+                        key={keyword}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.25rem 0',
+                        }}
+                      >
+                        <span style={{
+                          fontSize: '0.8125rem',
+                          fontWeight: 500,
+                          color: 'var(--accent)',
+                          flex: 1,
+                          minWidth: 0,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {keyword}
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
+                          <PillInput
+                            label={t('sources.items')}
+                            value={topicLimits[keyword] ?? 5}
+                            min={1}
+                            max={50}
+                            onChange={(v) => updateTopicLimit(keyword, v)}
+                          />
+                          <PillInput
+                            label={t('sources.lookback')}
+                            value={topicLookback[keyword] ?? 48}
+                            min={1}
+                            max={336}
+                            suffix="h"
+                            onChange={(v) => updateTopicLookback(keyword, v)}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSocialTopicsKeywords(socialTopicsKeywords.filter(k => k !== keyword))
+                              setTopicLimits((prev) => { const next = { ...prev }; delete next[keyword]; return next })
+                              setTopicLookback((prev) => { const next = { ...prev }; delete next[keyword]; return next })
+                              trigger()
+                            }}
+                            style={{
+                              color: 'var(--ink-faint)',
+                              fontSize: '1rem',
+                              lineHeight: 1,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              background: 'none',
+                              border: 'none',
+                              padding: '0.125rem',
+                              transition: 'color 120ms',
+                            }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--err)' }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-faint)' }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <input
+                  type="text"
                   placeholder={t('sources.placeholder_topics')}
+                  style={{
+                    width: '100%',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 4,
+                    padding: '0.75rem 1rem',
+                    fontSize: '0.9375rem',
+                    color: 'var(--ink)',
+                    outline: 'none',
+                    transition: 'border-color 120ms, box-shadow 120ms',
+                    fontFamily: 'inherit',
+                  }}
+                  onFocus={e => {
+                    e.currentTarget.style.borderColor = 'var(--accent)'
+                    e.currentTarget.style.boxShadow = 'var(--focus-ring)'
+                  }}
+                  onBlur={e => {
+                    e.currentTarget.style.borderColor = 'var(--border)'
+                    e.currentTarget.style.boxShadow = 'none'
+                    const val = e.currentTarget.value.trim()
+                    if (val && !socialTopicsKeywords.includes(val)) {
+                      setSocialTopicsKeywords([...socialTopicsKeywords, val])
+                      trigger()
+                    }
+                    e.currentTarget.value = ''
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      const val = (e.currentTarget as HTMLInputElement).value.trim()
+                      if (val && !socialTopicsKeywords.includes(val)) {
+                        setSocialTopicsKeywords([...socialTopicsKeywords, val])
+                        trigger()
+                      }
+                      (e.currentTarget as HTMLInputElement).value = ''
+                    }
+                    if (e.key === 'Backspace' && !(e.currentTarget as HTMLInputElement).value && socialTopicsKeywords.length) {
+                      setSocialTopicsKeywords(socialTopicsKeywords.slice(0, -1))
+                      trigger()
+                    }
+                  }}
                 />
               </div>
             )}

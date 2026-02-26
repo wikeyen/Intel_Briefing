@@ -306,6 +306,8 @@ const en: TranslationDict = {
   'sources.default_limit_desc': 'Fallback fetch count when a source has no individual override.',
   'sources.default_lookback': 'Default Lookback Window',
   'sources.default_lookback_desc': 'Fallback time window (hours) for sources with lookback support.',
+  'sources.default_topic_limit': 'Default Items per Topic',
+  'sources.default_topic_limit_desc': 'Per-keyword fetch count for topic searches. Individual topics can override this.',
   'sources.lookback': 'Lookback',
   'sources.badge_ok': 'OK',
   'sources.badge_failed': 'Failed',

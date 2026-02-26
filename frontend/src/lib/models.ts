@@ -319,6 +319,7 @@ export interface ConfigSettings {
   default_lookback_hours: number
   sensor_limits: Record<string, number>
   sensor_lookback_hours: Record<string, number>
+  default_topic_limit: number
 
   // Keyword filters
   boost_keywords: string[]
@@ -433,6 +434,7 @@ export function defaultConfig(): ConfigSettings {
     default_lookback_hours: 48,
     sensor_limits: {},
     sensor_lookback_hours: {},
+    default_topic_limit: 25,
     boost_keywords: [],
     suppress_keywords: [],
     bluesky_handle: null,
@@ -475,4 +477,9 @@ export function defaultConfig(): ConfigSettings {
 /** Return the configured limit for a sensor, falling back to default_limit. */
 export function sensorLimit(config: ConfigSettings, sensorName: string): number {
   return config.sensor_limits[sensorName] ?? config.default_limit
+}
+
+/** Return the configured limit for a topic keyword, falling back to default_topic_limit. */
+export function topicLimit(config: ConfigSettings, keyword: string): number {
+  return config.topic_limits[keyword] ?? config.default_topic_limit
 }

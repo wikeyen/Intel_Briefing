@@ -242,6 +242,7 @@ export function Sensors() {
   const [defaultLimit, setDefaultLimit] = useState(10)
   const [defaultLookback, setDefaultLookback] = useState(48)
   const [topicLimits, setTopicLimits] = useState<Record<string, number>>({})
+  const [defaultTopicLimit, setDefaultTopicLimit] = useState(25)
   const [topicLookback, setTopicLookback] = useState<Record<string, number>>({})
   const [xScraperProvider, setXScraperProvider] = useState<'twitter-scraper' | 'apify' | 'mixed'>('twitter-scraper')
   const [loaded, setLoaded] = useState(false)
@@ -266,6 +267,7 @@ export function Sensors() {
       default_limit: defaultLimit,
       default_lookback_hours: defaultLookback,
       topic_limits: topicLimits,
+      default_topic_limit: defaultTopicLimit,
       topic_lookback_hours: topicLookback,
     }),
     { onError: (e) => showToast(t('sources.save_failed', { error: e.message })) },
@@ -294,6 +296,7 @@ export function Sensors() {
       setDefaultLimit(cfg.default_limit)
       setDefaultLookback(cfg.default_lookback_hours ?? 48)
       setTopicLimits(cfg.topic_limits ?? {})
+      setDefaultTopicLimit(cfg.default_topic_limit ?? 25)
       setTopicLookback(cfg.topic_lookback_hours ?? {})
       setXScraperProvider(cfg.x_scraper_provider ?? 'twitter-scraper')
       setLoaded(true)
@@ -543,6 +546,27 @@ export function Sensors() {
               />
               <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, marginTop: '0.5rem' }}>
                 {t('sources.default_lookback_desc')}
+              </p>
+            </div>
+
+            <div style={{ marginTop: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
+                <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
+                  {t('sources.default_topic_limit')}
+                </label>
+                <span style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--ink)', fontFamily: 'ui-monospace, monospace', letterSpacing: '-0.02em' }}>
+                  {defaultTopicLimit}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={1}
+                max={100}
+                value={defaultTopicLimit}
+                onChange={(e) => { setDefaultTopicLimit(Number(e.target.value)); trigger() }}
+              />
+              <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, marginTop: '0.5rem' }}>
+                {t('sources.default_topic_limit_desc')}
               </p>
             </div>
           </div>
@@ -827,9 +851,9 @@ export function Sensors() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
                           <PillInput
                             label={t('sources.items')}
-                            value={topicLimits[keyword] ?? 5}
+                            value={topicLimits[keyword] ?? defaultTopicLimit}
                             min={1}
-                            max={50}
+                            max={100}
                             onChange={(v) => updateTopicLimit(keyword, v)}
                           />
                           <PillInput

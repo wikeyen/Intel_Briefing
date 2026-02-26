@@ -1,6 +1,6 @@
 // ABOUTME: Social topics sensor — tracks keywords and hashtags across Bluesky and Mastodon.
 // ABOUTME: Aggregates matching posts from multiple platforms into a unified IntelItem feed.
-import type { ConfigSettings, IntelItem } from '../models'
+import { topicLimit, type ConfigSettings, type IntelItem } from '../models'
 import { SensorConfigError } from './errors'
 import { createBlueskyAgent, blueskyPostToItem } from '../platforms/bluesky'
 import { mastodonPublicGet, mastodonStatusToItem } from '../platforms/mastodon'
@@ -10,7 +10,7 @@ async function fetchBlueskyTopics(config: ConfigSettings, limit: number): Promis
   const agent = await createBlueskyAgent(config.bluesky_handle, config.bluesky_app_password)
   const items: IntelItem[] = []
   for (const keyword of config.social_topics_keywords) {
-    const kwLimit = config.topic_limits[keyword] ?? Math.min(5, limit)
+    const kwLimit = topicLimit(config, keyword)
     const lookbackHours = config.topic_lookback_hours[keyword]
     const cutoff = lookbackHours ? Date.now() - lookbackHours * 3600_000 : 0
     try {
@@ -32,7 +32,7 @@ async function fetchMastodonTopics(config: ConfigSettings, limit: number): Promi
   if (config.social_topics_keywords.length === 0) return []
   const items: IntelItem[] = []
   for (const keyword of config.social_topics_keywords) {
-    const kwLimit = config.topic_limits[keyword] ?? 5
+    const kwLimit = topicLimit(config, keyword)
     const lookbackHours = config.topic_lookback_hours[keyword]
     const cutoff = lookbackHours ? Date.now() - lookbackHours * 3600_000 : 0
     const tag = keyword.replace(/^#/, '')

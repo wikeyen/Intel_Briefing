@@ -705,6 +705,7 @@ function RowNote({ state, props, t }: { state: CardState; props: SensorCardProps
     whiteSpace: 'nowrap',
     display: 'flex',
     alignItems: 'center',
+    justifyContent: 'flex-end',
     gap: '0.375rem',
   }
 

@@ -168,7 +168,7 @@ export function SensorGrid({
               </>
             )}
           </div>
-          <span className="sensor-col-note" style={headerLabelStyle}>{t('status.col_note')}</span>
+          <span className="sensor-col-note" style={{ ...headerLabelStyle, textAlign: 'right' }}>{t('status.col_note')}</span>
           <span></span>
         </div>
         {visibleSensors.map(sensor => {

@@ -7,7 +7,7 @@ import type { PipelineStatus } from '@/api/client'
 import { useTranslation } from '@/lib/i18n'
 
 export type PipelinePhaseStep = 'fetch' | 'retry' | 'summary' | 'briefing' | 'intelligence'
-export type StepStatus = 'pending' | 'active' | 'done' | 'error' | 'skipped'
+export type StepStatus = 'pending' | 'active' | 'done' | 'warn' | 'error' | 'skipped'
 
 interface StepDef {
   key: PipelinePhaseStep
@@ -20,7 +20,7 @@ export const MAIN_STEPS: StepDef[] = [
   { key: 'briefing', labelKey: 'log.phase_briefing' },
   { key: 'intelligence', labelKey: 'log.phase_intelligence' },
 ]
-const NODE_SIZE = 16
+const NODE_SIZE = 20
 const CONNECTOR_HEIGHT = 4
 const CONNECTOR_OFFSET = (NODE_SIZE - CONNECTOR_HEIGHT) / 2  // vertically center connector on node
 
@@ -28,7 +28,8 @@ const STEP_ICONS: Record<StepStatus, string> = {
   pending: '',
   active: '●',
   done: '✓',
-  error: '✕',
+  warn: '✓',
+  error: '✓',
   skipped: '–',
 }
 
@@ -63,13 +64,14 @@ export function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePh
   } else if (anyFetching || anyFetchQueued) {
     s.fetch = 'active'
   } else if (allFetchTerminal && fetchStates.length > 0) {
-    s.fetch = anyFetchFailed ? 'error' : 'done'
+    const allFetchFailed = fetchStates.length > 0 && fetchStates.every(f => f === 'failed')
+    s.fetch = allFetchFailed ? 'error' : anyFetchFailed ? 'warn' : 'done'
   }
 
   // Retry phase
   if (ps.retry_attempt > 0) {
     s.retry = 'active'
-  } else if (s.fetch === 'done' || s.fetch === 'error') {
+  } else if (s.fetch === 'done' || s.fetch === 'warn' || s.fetch === 'error') {
     const hadRetryEvents = events.some(e => e.phase === 'retry')
     s.retry = hadRetryEvents ? 'done' : 'skipped'
   } else if (s.fetch === 'skipped') {
@@ -82,6 +84,8 @@ export function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePh
   const anySummaryQueued = summaryStates.some(su => su === 'queued')
   const allSummaryTerminal = summaryStates.every(su => TERMINAL_STATES.includes(su))
   const anySummaryFailed = summaryStates.some(su => su === 'failed')
+  const anySummaryIssue = anySummaryFailed || ps.sensors.some(sen => !!sen.summary_error)
+  const allSummaryIssue = ps.sensors.every(sen => sen.summary === 'failed' || !!sen.summary_error)
   const allSummaryCancelled = summaryStates.length > 0 && summaryStates.every(su => su === 'cancelled' || su === 'skipped')
   const allSummaryCached = ps.sensors.length > 0 && ps.sensors.every(sen => sen.summary_cached || sen.summary === 'skipped')
 
@@ -108,13 +112,13 @@ export function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePh
     // Briefing can only start after per-sensor summaries finish. If any sensor's
     // summary state is non-terminal (e.g. stale 'queued' from a failed retry), the
     // pipeline has moved past it — treat summary phase as done/error.
-    s.summary = anySummaryFailed ? 'error' : 'done'
+    s.summary = allSummaryIssue ? 'error' : anySummaryIssue ? 'warn' : 'done'
   } else if (anySummaryRunning || anySummaryQueued) {
     s.summary = 'active'
   } else if (allSummaryCancelled) {
     s.summary = 'skipped'
   } else if (allSummaryTerminal && summaryStates.length > 0) {
-    s.summary = anySummaryFailed ? 'error' : 'done'
+    s.summary = allSummaryIssue ? 'error' : anySummaryIssue ? 'warn' : 'done'
   }
 
   // Intelligence
@@ -202,7 +206,7 @@ export function derivePhaseTooltipData(
   }
   if (!ps) return result
 
-  const TERMINAL: StepStatus[] = ['done', 'error', 'skipped']
+  const TERMINAL: StepStatus[] = ['done', 'warn', 'error', 'skipped']
 
   // ── Fetch ──
   if (TERMINAL.includes(statuses.fetch)) {
@@ -278,6 +282,7 @@ export const STEP_COLORS: Record<StepStatus, { dot: string; label: string }> = {
   pending: { dot: 'var(--border)', label: 'var(--ink-faint)' },
   active: { dot: 'var(--accent)', label: 'var(--accent)' },
   done: { dot: 'var(--ok)', label: 'var(--ink-muted)' },
+  warn: { dot: 'var(--warn)', label: 'var(--warn)' },
   error: { dot: 'var(--err)', label: 'var(--err)' },
   skipped: { dot: 'var(--border)', label: 'var(--ink-faint)' },
 }
@@ -378,13 +383,13 @@ function StepNode({ step, status, isClickable, onLogToggle, t, align = 'center',
         height: NODE_SIZE,
         borderRadius: '50%',
         border: `1.5px solid ${colors.dot}`,
-        background: (status === 'done' || status === 'error') ? colors.dot : 'transparent',
+        background: (status === 'done' || status === 'warn' || status === 'error') ? colors.dot : 'transparent',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontSize: '0.5rem',
+        fontSize: '0.5625rem',
         fontWeight: 700,
-        color: (status === 'done' || status === 'error') ? 'white' : colors.dot,
+        color: (status === 'done' || status === 'warn' || status === 'error') ? 'white' : colors.dot,
         transition: 'all 300ms ease',
       }}>
         {icon}
@@ -457,9 +462,12 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
               isIndeterminate = nextIsIndeterminate
               lineFillPct = isIndeterminate ? 0 : Math.round(nextProg * 100)
             } else {
-              const nextDone = nextStatus === 'done' || nextStatus === 'error' || nextStatus === 'skipped'
+              const nextDone = nextStatus === 'done' || nextStatus === 'warn' || nextStatus === 'error' || nextStatus === 'skipped'
               if (status === 'done') {
                 lineFillColor = 'var(--ok)'
+                lineFillPct = 100
+              } else if (status === 'warn') {
+                lineFillColor = 'var(--warn)'
                 lineFillPct = 100
               } else if (status === 'error') {
                 lineFillColor = 'var(--err)'

@@ -582,20 +582,32 @@ input[type="range"]::-moz-range-thumb {
     display: none !important;
   }
 
-  /* Center nav items in mobile dropdown */
+  /* Left-align nav items in mobile dropdown for natural reading flow */
   .sidebar-nav a {
-    justify-content: center !important;
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
+    justify-content: flex-start !important;
+    padding: 0.375rem 1.5rem !important;
+    min-height: 42px !important;
+  }
+  .sidebar-nav a[data-active] {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 0;
   }
   .sidebar-label {
-    text-align: center !important;
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
+    text-align: left !important;
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+    font-size: 0.625rem !important;
+    letter-spacing: 0.1em !important;
   }
   .sidebar-divider {
-    margin-left: 2rem !important;
-    margin-right: 2rem !important;
+    margin-left: 1.5rem !important;
+    margin-right: 1.5rem !important;
+  }
+
+  /* Language selector — match nav padding on mobile */
+  .sidebar-nav > div:last-child {
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
   }
 
   /* Backdrop — frosted glass effect, below top bar */

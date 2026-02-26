@@ -55,6 +55,7 @@ function NavLink({ href, active, onClick, collapsed, title, children }: {
       href={href}
       onClick={onClick}
       title={collapsed ? title : undefined}
+      data-active={active || undefined}
       style={{
         display: 'flex',
         alignItems: 'center',

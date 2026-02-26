@@ -105,9 +105,9 @@ function UiShell({ children, initialPinned }: { children: React.ReactNode; initi
       <div className="mobile-top-bar" onClick={() => mainRef.current?.scrollTo({ top: 0 })}>
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0 }}>
           <span style={{
-            fontSize: sidebarOpen ? '0.625rem' : '0.875rem',
+            fontSize: sidebarOpen ? '0.8125rem' : '0.875rem',
             fontWeight: sidebarOpen ? 700 : 600,
-            letterSpacing: sidebarOpen ? '0.16em' : '-0.01em',
+            letterSpacing: sidebarOpen ? '0.08em' : '-0.01em',
             textTransform: sidebarOpen ? 'uppercase' : 'none' as const,
             color: 'var(--sb-ink)',
             fontFamily: sidebarOpen ? 'ui-monospace, monospace' : 'inherit',

@@ -1,5 +1,5 @@
 // ABOUTME: Pipeline phase stepper — horizontal visual indicator of pipeline workflow phases.
-// ABOUTME: Shows fetch → summary → briefing → intel main line with retry as a git-tree branch below.
+// ABOUTME: Shows fetch → summary → briefing → intel as a connected progress line.
 'use client'
 
 import type { PipelineStatus } from '@/api/client'
@@ -19,13 +19,9 @@ export const MAIN_STEPS: StepDef[] = [
   { key: 'briefing', labelKey: 'log.phase_briefing' },
   { key: 'intelligence', labelKey: 'log.phase_intelligence' },
 ]
-const BRANCH_STEP: StepDef = { key: 'retry', labelKey: 'log.phase_retry' }
-
 const NODE_SIZE = 16
-const NODE_CENTER = NODE_SIZE / 2  // 8
 const CONNECTOR_HEIGHT = 4
 const CONNECTOR_OFFSET = (NODE_SIZE - CONNECTOR_HEIGHT) / 2  // vertically center connector on node
-const BRANCH_DROP_HEIGHT = 28
 
 const STEP_ICONS: Record<StepStatus, string> = {
   pending: '',
@@ -183,25 +179,6 @@ function derivePhaseProgress(ps: PipelineStatus | null): Record<PipelinePhaseSte
   return p
 }
 
-/** Derive count annotations for fetch and retry nodes. */
-function derivePhaseCounts(ps: PipelineStatus | null): Record<string, { ok: number; total: number } | null> {
-  if (!ps) return { fetch: null, retry: null }
-
-  // Fetch counts: exclude cached sensors — they didn't need fetching
-  const fetchActive = ps.sensors.filter(s => s.fetch !== 'skipped' && !s.fetch_cached)
-  const fetchOk = fetchActive.filter(s => s.fetch === 'ok').length
-  const fetchTotal = fetchActive.length
-  const fetchCount = fetchTotal > 0 ? { ok: fetchOk, total: fetchTotal } : null
-
-  // Retry counts: derive from retry events (ok vs error)
-  const retryEvents = (ps.events ?? []).filter(e => e.phase === 'retry')
-  const retryOk = retryEvents.filter(e => e.level === 'ok').length
-  const retryFail = retryEvents.filter(e => e.level === 'error').length
-  const retryTotal = retryOk + retryFail
-  const retryCount = retryTotal > 0 ? { ok: retryOk, total: retryTotal } : null
-
-  return { fetch: fetchCount, retry: retryCount }
-}
 
 export const STEP_COLORS: Record<StepStatus, { dot: string; label: string }> = {
   pending: { dot: 'var(--border)', label: 'var(--ink-faint)' },
@@ -211,35 +188,24 @@ export const STEP_COLORS: Record<StepStatus, { dot: string; label: string }> = {
   skipped: { dot: 'var(--border)', label: 'var(--ink-faint)' },
 }
 
-// CSS for the shimmer, branch grow, and branch pulse animations
 const STEPPER_CSS = `
 @keyframes stepperShimmer {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(200%); }
 }
-@keyframes branchGrow {
-  from { max-height: 0; opacity: 0; }
-  to { max-height: 100px; opacity: 1; }
-}
-@keyframes branchPulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
-}
 `
 
-/** Circle node with icon + label + optional count annotation. */
-function StepNode({ step, status, isClickable, onLogToggle, t, counts, align = 'center' }: {
+/** Circle node with icon + label. */
+function StepNode({ step, status, isClickable, onLogToggle, t, align = 'center' }: {
   step: StepDef
   status: StepStatus
   isClickable: boolean
   onLogToggle?: () => void
   t: (key: string) => string
-  counts?: { ok: number; total: number } | null
   align?: 'flex-start' | 'center' | 'flex-end'
 }) {
   const colors = STEP_COLORS[status]
   const icon = STEP_ICONS[status]
-  const showCounts = counts && counts.total > 0 && status !== 'pending'
 
   return (
     <div
@@ -286,136 +252,10 @@ function StepNode({ step, status, isClickable, onLogToggle, t, counts, align = '
       }}>
         {t(step.labelKey)}
       </span>
-      {/* Count annotation (e.g. "22/24") */}
-      {showCounts && (
-        <span style={{
-          fontSize: '0.5rem',
-          fontFamily: 'ui-monospace, monospace',
-          fontWeight: 500,
-          color: counts.ok === counts.total ? 'var(--ok)' : 'var(--err)',
-          whiteSpace: 'nowrap',
-          lineHeight: 1,
-          marginTop: '-0.0625rem',
-        }}>
-          {counts.ok}/{counts.total}
-        </span>
-      )}
     </div>
   )
 }
 
-/** Retry branch rendered as a git-tree U-shape below the connector between fetch and summary. */
-function RetryBranch({ retryStatus, isClickable, onLogToggle, t, counts }: {
-  retryStatus: StepStatus
-  isClickable: boolean
-  onLogToggle?: () => void
-  t: (key: string) => string
-  counts?: { ok: number; total: number } | null
-}) {
-  // Line color reflects retry status
-  const lineColor = retryStatus === 'active' ? 'var(--accent)'
-    : retryStatus === 'done' ? 'var(--ok)'
-    : retryStatus === 'error' ? 'var(--err)'
-    : 'var(--border)'
-
-  const isActive = retryStatus === 'active'
-  const colors = STEP_COLORS[retryStatus]
-  const icon = STEP_ICONS[retryStatus]
-  const showCounts = counts && counts.total > 0 && retryStatus !== 'pending'
-
-  return (
-    <div style={{
-      animation: isActive
-        ? 'branchGrow 300ms ease forwards, branchPulse 2s ease-in-out infinite'
-        : 'branchGrow 300ms ease forwards',
-      overflow: 'visible',
-    }}>
-      {/* Single U-shaped border container */}
-      <div style={{
-        position: 'relative',
-        height: BRANCH_DROP_HEIGHT,
-        borderLeft: `${CONNECTOR_HEIGHT}px solid ${lineColor}`,
-        borderRight: `${CONNECTOR_HEIGHT}px solid ${lineColor}`,
-        borderBottom: `${CONNECTOR_HEIGHT}px solid ${lineColor}`,
-        borderRadius: '0 0 10px 10px',
-        boxSizing: 'border-box',
-      }}>
-        {/* Node at bottom center */}
-        <div
-          role={isClickable ? 'button' : undefined}
-          tabIndex={isClickable ? 0 : undefined}
-          onClick={isClickable ? onLogToggle : undefined}
-          onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') onLogToggle!() } : undefined}
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: '50%',
-            transform: 'translate(-50%, 50%)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '0.1875rem',
-            cursor: isClickable ? 'pointer' : 'default',
-          }}
-        >
-          {/* Circle with background mask */}
-          <div style={{ position: 'relative' }}>
-            {/* Mask to hide the border line behind the circle */}
-            <div style={{
-              position: 'absolute',
-              inset: -3,
-              borderRadius: '50%',
-              background: 'var(--canvas)',
-            }} />
-            {/* Actual circle */}
-            <div style={{
-              position: 'relative',
-              width: NODE_SIZE,
-              height: NODE_SIZE,
-              borderRadius: '50%',
-              border: `1.5px solid ${colors.dot}`,
-              background: (retryStatus === 'done' || retryStatus === 'error') ? colors.dot : 'var(--canvas)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '0.5rem',
-              fontWeight: 700,
-              color: (retryStatus === 'done' || retryStatus === 'error') ? 'white' : colors.dot,
-              transition: 'all 300ms ease',
-            }}>
-              {icon}
-            </div>
-          </div>
-          {/* Label */}
-          <span style={{
-            fontSize: '0.5rem',
-            fontWeight: 600,
-            letterSpacing: '0.04em',
-            textTransform: 'uppercase',
-            color: colors.label,
-            whiteSpace: 'nowrap',
-            transition: 'color 300ms ease',
-          }}>
-            {t(BRANCH_STEP.labelKey)}
-          </span>
-          {/* Count annotation */}
-          {showCounts && (
-            <span style={{
-              fontSize: '0.5rem',
-              fontFamily: 'ui-monospace, monospace',
-              fontWeight: 500,
-              color: counts.ok === counts.total ? 'var(--ok)' : 'var(--err)',
-              whiteSpace: 'nowrap',
-              lineHeight: 1,
-            }}>
-              {counts.ok}/{counts.total}
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
 
 interface PipelinePhaseStepperProps {
   pipelineStatus: PipelineStatus | null
@@ -427,22 +267,14 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
   const { t } = useTranslation()
   const statuses = deriveStepStatuses(pipelineStatus)
   const progress = derivePhaseProgress(pipelineStatus)
-  const counts = derivePhaseCounts(pipelineStatus)
 
-  // Always show all main steps so the stepper demonstrates the full pipeline flow.
-  // Skipped steps render with a muted dash instead of being hidden.
   const visibleSteps = MAIN_STEPS
   const hasEvents = (pipelineStatus?.events ?? []).length > 0
-
-  // Branch visibility: show during active retries, when retries failed, or when
-  // retries succeeded — so users see all phase results after pipeline completion.
-  const retryStatus = statuses.retry
-  const showBranch = retryStatus === 'active' || retryStatus === 'error' || retryStatus === 'done'
 
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: STEPPER_CSS }} />
-      <div style={{ width: '100%', paddingBottom: showBranch ? BRANCH_DROP_HEIGHT + 28 : 0 }}>
+      <div style={{ width: '100%' }}>
         {/* Main line */}
         <div style={{
           display: 'flex',
@@ -453,9 +285,7 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
           {visibleSteps.map((step, i) => {
             const status = statuses[step.key]
             const isLast = i === visibleSteps.length - 1
-            const phaseProg = progress[step.key]
             const isClickable = hasEvents && status !== 'pending' && !!onLogToggle
-            const isActive = status === 'active'
 
             // Connector line represents progress toward the NEXT step.
             // When the next step is active, show its progress as a partial fill + shimmer.
@@ -486,9 +316,6 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
 
             const showShimmer = nextIsActive
 
-            // Phase-specific counts (only fetch gets annotation on main line)
-            const stepCounts = step.key === 'fetch' ? counts.fetch : null
-
             return (
               <div key={step.key} style={{
                 display: 'flex',
@@ -496,20 +323,17 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
                 flex: isLast ? '0 0 auto' : '1 1 0',
                 minWidth: 0,
               }}>
-                {/* Step node with optional count */}
                 <StepNode
                   step={step}
                   status={status}
                   isClickable={isClickable}
                   onLogToggle={onLogToggle}
                   t={t}
-                  counts={stepCounts}
                   align={i === 0 ? 'flex-start' : isLast ? 'flex-end' : 'center'}
                 />
 
-                {/* Connector wrapper — relative so the branch can be absolutely positioned */}
                 {!isLast && (
-                  <div style={{ flex: '1 1 0', position: 'relative', minWidth: 12 }}>
+                  <div style={{ flex: '1 1 0', minWidth: 12 }}>
                     {/* Connector line with progress fill */}
                     <div style={{
                       height: CONNECTOR_HEIGHT,
@@ -556,24 +380,6 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
                         </div>
                       )}
                     </div>
-
-                    {/* Branch — absolutely positioned from connector bottom */}
-                    {i === 0 && showBranch && (
-                      <div style={{
-                        position: 'absolute',
-                        top: CONNECTOR_OFFSET + CONNECTOR_HEIGHT,
-                        left: 0,
-                        right: 0,
-                      }}>
-                        <RetryBranch
-                          retryStatus={retryStatus}
-                          isClickable={hasEvents && retryStatus !== 'pending' && !!onLogToggle}
-                          onLogToggle={onLogToggle}
-                          t={t}
-                          counts={counts.retry}
-                        />
-                      </div>
-                    )}
                   </div>
                 )}
               </div>

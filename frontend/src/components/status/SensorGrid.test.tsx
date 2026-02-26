@@ -130,7 +130,11 @@ describe('SensorGrid', () => {
 
   it('shows live sensor state during a run', () => {
     const liveSensors = {
-      hacker_news: makeSensorJob('hacker_news', { fetch: 'running', item_count: 5 }),
+      hacker_news: makeSensorJob('hacker_news', {
+        fetch: 'running',
+        item_count: 5,
+        fetch_detail: 'Fetching @testuser (2/3)',
+      }),
     }
     const props = buildProps({
       isRunning: true,
@@ -138,6 +142,9 @@ describe('SensorGrid', () => {
       config: makeConfig(),
     })
     renderWithI18n(<SensorGrid {...props} />)
-    expect(screen.getByText(/Fetching/)).toBeInTheDocument()
+    // Live item count rendered in metric column
+    expect(screen.getByText('5')).toBeInTheDocument()
+    // fetch_detail rendered in note column with "Fetching " prefix stripped
+    expect(screen.getByText(/@testuser/)).toBeInTheDocument()
   })
 })

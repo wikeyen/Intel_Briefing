@@ -13,7 +13,7 @@ export interface SectionDef {
 
 export const SENSOR_TO_SECTION: Record<string, SourceSection> = {
   hacker_news: 'general',
-  github: 'general',
+  github: 'trend',
   arxiv: 'general',
   product_hunt: 'general',
   chrome_radar: 'general',

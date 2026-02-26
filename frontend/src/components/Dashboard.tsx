@@ -2231,7 +2231,7 @@ export function Dashboard() {
   }, [isActive])
 
   const hasReport = report && Object.values(report.items).some(arr => arr.length > 0)
-  const hasSummary = summary && isStructuredOverall(summary.overall) && !!summary.overall.executive_summary
+  const hasSummary = summary && isStructuredOverall(summary.overall)
 
   return (
     <div className="dashboard-root page-padding" style={{ maxWidth: 1360, margin: '0 auto', paddingLeft: '2.5rem', paddingRight: '2.5rem' }}>

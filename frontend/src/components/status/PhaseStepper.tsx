@@ -2,6 +2,7 @@
 // ABOUTME: Shows fetch → summary → briefing → intel as a connected progress line.
 'use client'
 
+import { useState } from 'react'
 import type { PipelineStatus } from '@/api/client'
 import { useTranslation } from '@/lib/i18n'
 
@@ -284,17 +285,70 @@ const STEPPER_CSS = `
   0% { transform: translateX(-100%); }
   100% { transform: translateX(200%); }
 }
+@keyframes tooltipFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 `
 
+/** Soft-UI tooltip rendered below a completed stepper node. */
+function PhaseTooltip({ data }: { data: PhaseTooltipData }) {
+  return (
+    <div style={{
+      position: 'absolute',
+      top: '100%',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      marginTop: 8,
+      padding: '6px 10px',
+      background: 'var(--surface-overlay)',
+      border: '1px solid var(--border-subtle)',
+      borderRadius: 6,
+      boxShadow: 'var(--shadow-md)',
+      zIndex: 20,
+      whiteSpace: 'nowrap',
+      animation: 'tooltipFadeIn 200ms ease',
+      pointerEvents: 'none',
+    }}>
+      {/* Upward caret */}
+      <div style={{
+        position: 'absolute',
+        top: -4,
+        left: '50%',
+        transform: 'translateX(-50%) rotate(45deg)',
+        width: 8,
+        height: 8,
+        background: 'var(--surface-overlay)',
+        borderTop: '1px solid var(--border-subtle)',
+        borderLeft: '1px solid var(--border-subtle)',
+      }} />
+      {data.lines.map((line, i) => (
+        <div key={i} style={{
+          fontSize: '0.625rem',
+          fontWeight: 500,
+          fontFamily: 'var(--font-mono)',
+          color: 'var(--ink-muted)',
+          lineHeight: 1.5,
+          letterSpacing: '0.02em',
+        }}>
+          {line}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 /** Circle node with icon + label. */
-function StepNode({ step, status, isClickable, onLogToggle, t, align = 'center' }: {
+function StepNode({ step, status, isClickable, onLogToggle, t, align = 'center', tooltipData }: {
   step: StepDef
   status: StepStatus
   isClickable: boolean
   onLogToggle?: () => void
   t: (key: string) => string
   align?: 'flex-start' | 'center' | 'flex-end'
+  tooltipData: PhaseTooltipData | null
 }) {
+  const [hovered, setHovered] = useState(false)
   const colors = STEP_COLORS[status]
   const icon = STEP_ICONS[status]
 
@@ -304,6 +358,8 @@ function StepNode({ step, status, isClickable, onLogToggle, t, align = 'center' 
       tabIndex={isClickable ? 0 : undefined}
       onClick={isClickable ? onLogToggle : undefined}
       onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') onLogToggle!() } : undefined}
+      onMouseEnter={() => tooltipData && setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -343,6 +399,7 @@ function StepNode({ step, status, isClickable, onLogToggle, t, align = 'center' 
       }}>
         {t(step.labelKey)}
       </span>
+      {hovered && tooltipData && <PhaseTooltip data={tooltipData} />}
     </div>
   )
 }
@@ -358,6 +415,7 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
   const { t } = useTranslation()
   const statuses = deriveStepStatuses(pipelineStatus)
   const progress = derivePhaseProgress(pipelineStatus)
+  const tooltipData = derivePhaseTooltipData(pipelineStatus, statuses, t)
 
   const visibleSteps = MAIN_STEPS
   const hasEvents = (pipelineStatus?.events ?? []).length > 0
@@ -421,6 +479,7 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
                   onLogToggle={onLogToggle}
                   t={t}
                   align={i === 0 ? 'flex-start' : isLast ? 'flex-end' : 'center'}
+                  tooltipData={tooltipData[step.key]}
                 />
 
                 {!isLast && (

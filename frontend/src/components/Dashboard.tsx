@@ -2194,8 +2194,8 @@ export function Dashboard() {
     Promise.all([
       api.getLatest().then(setReport).catch(() => {}),
       api.getSummary().then(r => setSummary(r.summary)).catch(() => {}),
+      api.getIntelligence().then(res => setIntelligence(res.intelligence)).catch(() => {}),
     ]).finally(() => setLoading(false))
-    api.getIntelligence().then(res => setIntelligence(res.intelligence)).catch(() => {})
   }, [])
 
   const isActive = !!(summaryProgress?.running) || !!(pipelineStatus?.running && pipelineStatus.alive !== false)

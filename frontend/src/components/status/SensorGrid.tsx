@@ -143,7 +143,8 @@ export function SensorGrid({
           display: 'grid',
           gridTemplateColumns: 'subgrid',
           alignItems: 'center',
-          padding: '0.625rem 0',
+          margin: '0 -1rem',
+          padding: '0.625rem 1rem',
           borderBottom: '1px solid var(--border-soft)',
           background: 'var(--surface-inset)',
         }}>

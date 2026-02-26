@@ -130,18 +130,20 @@ export function SensorGrid({
         background: 'var(--surface)',
         borderRadius: 10,
         boxShadow: 'var(--shadow-card)',
+        border: '1px solid var(--border-subtle)',
         overflow: 'hidden',
       }}>
         {/* Toolbar + column labels */}
         <div className="sensor-header" style={{
           display: 'grid',
-          gridTemplateColumns: '6px minmax(100px, 160px) auto 44px 56px 36px 1fr auto',
+          gridTemplateColumns: '6px 1fr 48px 56px 44px minmax(0, 1fr) auto',
           alignItems: 'center',
           gap: '0 0.5rem',
-          padding: '0.5rem 1rem',
+          padding: '0.625rem 1rem',
           borderBottom: '1px solid var(--border-soft)',
+          background: 'var(--surface-inset)',
         }}>
-          <div className="sensor-toolbar" style={{ gridColumn: '1 / 4', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div className="sensor-toolbar" style={{ gridColumn: '1 / 3', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             {showToolbar && (
               <>
                 <button type="button" onClick={onSelectAll} style={toolbarLinkStyle}>{t('status.select_all')}</button>

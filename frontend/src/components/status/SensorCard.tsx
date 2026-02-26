@@ -655,16 +655,16 @@ function rowContainerStyle(state: CardState, hovered: boolean): React.CSSPropert
   // keeps layout stable so dots don't shift when toggling selection.
   const base: React.CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: '6px minmax(100px, 160px) auto 44px 56px 36px 1fr auto',
+    gridTemplateColumns: '6px 1fr 48px 56px 44px minmax(0, 1fr) auto',
     alignItems: 'center',
     gap: '0 0.5rem',
-    paddingTop: '0.625rem',
+    paddingTop: '0.6875rem',
     paddingRight: '1rem',
-    paddingBottom: '0.625rem',
+    paddingBottom: '0.6875rem',
     paddingLeft: 'calc(1rem - 3px)',
     borderLeft: '3px solid transparent',
     background: 'var(--surface)',
-    borderBottom: '1px solid var(--border-soft, rgba(0,0,0,0.04))',
+    borderBottom: '1px solid color-mix(in srgb, var(--border) 40%, transparent)',
     transition: 'background 200ms ease',
     cursor: 'pointer',
     minHeight: 42,
@@ -936,8 +936,10 @@ export const SensorRow = memo(function SensorRow(props: SensorCardProps) {
       ) : (
         <Dot state={state} />
       )}
-      <span style={{ ...nameStyle, fontSize: '0.8125rem', overflow: 'hidden', textOverflow: 'ellipsis', ...(state === 'selected' ? { color: 'var(--accent)' } : {}) }}>{label}</span>
-      <span className="sensor-category" style={categoryBadgeStyle}>{category}</span>
+      <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden', minWidth: 0 }}>
+        <span style={{ ...nameStyle, fontSize: '0.8125rem', overflow: 'hidden', textOverflow: 'ellipsis', ...(state === 'selected' ? { color: 'var(--accent)' } : {}) }}>{label}</span>
+        <span className="sensor-category" style={categoryBadgeStyle}>{category}</span>
+      </span>
       <span className="sensor-col-fetch" style={{ display: 'flex', justifyContent: 'center' }}>
         {props.isRunning && <StageIcon stage={props.liveSensor?.fetch} cached={props.liveSensor?.fetch_cached} />}
       </span>

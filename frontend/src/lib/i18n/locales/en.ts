@@ -206,6 +206,7 @@ const en: TranslationDict = {
   'status.col_summary': 'Summary',
   'status.col_count': '#',
   'status.col_note': 'Status',
+  'status.no_keywords': 'No keywords configured',
   'status.col_last_fetch': 'Last Fetch',
 
   // ── Status page — SensorCard ──────────────────────────────────────────────

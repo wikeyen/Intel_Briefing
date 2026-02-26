@@ -42,6 +42,8 @@ function countItemsBySensor(report: IntelReport | null): Record<string, number> 
   const counts: Record<string, number> = {}
   for (const [, items] of Object.entries(report.items)) {
     for (const item of items) {
+      // Exclude topic-search items — they belong to the Topics section
+      if (item.topic) continue
       counts[item.source] = (counts[item.source] ?? 0) + 1
     }
   }
@@ -259,9 +261,8 @@ export function SensorGrid({
         {SECTION_SENSORS.map((section, sIdx) => {
           const isTopics = section.key === 'topics'
           const sectionSensors = visibleSensors.filter(s => s.category === section.label)
-          // Skip empty sections — but Topics is keyword-driven, not sensor-driven
+          // Skip empty non-topic sections; Topics always visible
           if (!isTopics && sectionSensors.length === 0) return null
-          if (isTopics && topicKeywords.length === 0) return null
           return (
             <React.Fragment key={section.key}>
               {/* Section header */}
@@ -281,6 +282,18 @@ export function SensorGrid({
                   {section.label}
                 </span>
               </div>
+              {/* Topics section: empty state */}
+              {isTopics && topicKeywords.length === 0 && (
+                <div style={{
+                  gridColumn: '1 / -1',
+                  padding: '0.375rem 1rem',
+                  borderTop: '1px solid color-mix(in srgb, var(--border-soft) 40%, transparent)',
+                }}>
+                  <span style={{ fontSize: '0.6875rem', color: 'var(--ink-faint)', fontStyle: 'italic' }}>
+                    {t('status.no_keywords')}
+                  </span>
+                </div>
+              )}
               {/* Topics section: keyword-grouped progress rows */}
               {isTopics && topicKeywords.map(entry => (
                 <React.Fragment key={entry.keyword}>

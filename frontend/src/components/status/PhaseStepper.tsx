@@ -457,10 +457,24 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
             let isIndeterminate: boolean
 
             if (nextIsActive) {
-              // Show next step's progress on this connector (progress bar effect)
-              lineFillColor = 'var(--accent)'
-              isIndeterminate = nextIsIndeterminate
-              lineFillPct = isIndeterminate ? 0 : Math.round(nextProg * 100)
+              // When the current step already completed, fill the connector as a base
+              // (the pipeline has passed through this connector to reach the active step).
+              // Then overlay the next step's progress/shimmer on top.
+              const currentTerminal = status === 'done' || status === 'warn' || status === 'error' || status === 'skipped'
+              if (currentTerminal) {
+                // Base fill: current step's completion color at 100%
+                lineFillColor = status === 'done' ? 'var(--ok)'
+                  : status === 'warn' ? 'var(--warn)'
+                  : status === 'error' ? 'var(--err)'
+                  : 'var(--border)' // skipped
+                lineFillPct = 100
+                isIndeterminate = false
+              } else {
+                // Current step is still pending — show next step's progress on this connector
+                lineFillColor = 'var(--accent)'
+                isIndeterminate = nextIsIndeterminate
+                lineFillPct = isIndeterminate ? 0 : Math.round(nextProg * 100)
+              }
             } else {
               const nextDone = nextStatus === 'done' || nextStatus === 'warn' || nextStatus === 'error' || nextStatus === 'skipped'
               if (status === 'done') {
@@ -506,8 +520,7 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
                     {/* Connector line with progress fill */}
                     <div style={{
                       height: CONNECTOR_HEIGHT,
-                      background: 'var(--border)',
-                      opacity: 0.4,
+                      background: 'color-mix(in srgb, var(--border) 40%, transparent)',
                       marginTop: CONNECTOR_OFFSET,
                       borderRadius: 2,
                       position: 'relative',
@@ -523,7 +536,6 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
                           width: `${lineFillPct}%`,
                           background: lineFillColor,
                           borderRadius: 2,
-                          opacity: 1 / 0.4, // Counteract parent's opacity
                           transition: 'width 500ms ease',
                         }} />
                       )}
@@ -543,7 +555,6 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
                             height: '100%',
                             background: `linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%)`,
                             borderRadius: 2,
-                            opacity: 1 / 0.4,
                             animation: 'stepperShimmer 1.2s ease-in-out infinite',
                           }} />
                         </div>

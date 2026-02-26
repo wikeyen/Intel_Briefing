@@ -120,11 +120,15 @@ export async function handleSetup(ctx: PipelineContext): Promise<PipelineState> 
     if (existingSummary && existingIntelligence) {
       tracker.addEvent('info', 'system', 'All sensors cached — no new data, reusing existing analysis')
 
-      // Mark all sensor summaries and overall summary as skipped
+      // Mark all sensors as fetched-from-cache and summarized-from-cache
       for (const name of registrySensorNames) {
-        tracker.skipSummaryForSensor(name)
+        const cached = ctx.cachedSensorItems.get(name)
+        tracker.setCachedSensor(name, cached?.items.length ?? 0)
+        tracker.setSummaryState(name, 'ok')
+        tracker.setSummaryCached(name)
       }
-      tracker.setOverallSummary('skipped')
+      tracker.setOverallSummary('ok')
+      tracker.addEvent('ok', 'intelligence', 'Reused cached intelligence')
 
       const cachedResults: SensorResult[] = [...ctx.cachedSensorItems].map(([sensorName, cached]) => ({
         sensor_name: sensorName,

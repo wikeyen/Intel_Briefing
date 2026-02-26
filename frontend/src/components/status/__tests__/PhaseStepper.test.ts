@@ -50,6 +50,40 @@ describe('deriveStepStatuses', () => {
     expect(s.summary).toBe('done')
   })
 
+  it('marks all steps as done when pipeline completes with all cached data', () => {
+    const ps = makePipelineStatus({
+      running: false,
+      mode: 'fetch_summarize',
+      overall_summary: 'ok',
+      sensors: [
+        makeSensorJob('a', { fetch: 'ok', fetch_cached: true, summary: 'ok', summary_cached: true }),
+        makeSensorJob('b', { fetch: 'ok', fetch_cached: true, summary: 'ok', summary_cached: true }),
+      ],
+      events: [
+        { phase: 'intelligence', level: 'ok', message: 'Reused cached intelligence', ts: '2026-01-15T10:00:00Z' },
+      ],
+    })
+    const s = deriveStepStatuses(ps)
+    // Fetch is skipped when all sensors were cached (no actual fetching occurred)
+    expect(s.fetch).toBe('skipped')
+    expect(s.summary).toBe('done')
+    expect(s.briefing).toBe('done')
+    expect(s.intelligence).toBe('done')
+  })
+
+  it('briefing shows done when overall_summary ok and all summaries cached', () => {
+    const ps = makePipelineStatus({
+      running: false,
+      mode: 'fetch_summarize',
+      overall_summary: 'ok',
+      sensors: [
+        makeSensorJob('a', { fetch: 'ok', fetch_cached: true, summary: 'ok', summary_cached: true }),
+      ],
+    })
+    const s = deriveStepStatuses(ps)
+    expect(s.briefing).toBe('done')
+  })
+
   it('summary shows warn after all sensors finish with some errors', () => {
     const ps = makePipelineStatus({
       running: false,
@@ -112,6 +146,21 @@ describe('derivePhaseTooltipData', () => {
 
     expect(result.fetch).not.toBeNull()
     expect(result.fetch!.lines).toEqual(['stepper.skipped'])
+  })
+
+  it('summary tooltip: counts cached summaries alongside summarized count', () => {
+    const ps = makePipelineStatus({
+      sensors: [
+        makeSensorJob('s1', { summary: 'ok', summary_cached: true, summary_chunks_done: 0 }),
+        makeSensorJob('s2', { summary: 'ok', summary_cached: false, summary_chunks_done: 5 }),
+      ],
+    })
+    const statuses = makeStatuses({ summary: 'done' })
+    const result = derivePhaseTooltipData(ps, statuses, t)
+
+    expect(result.summary).not.toBeNull()
+    // Both show as summarized since they have summary='ok'
+    expect(result.summary!.lines).toContain('2 stepper.sources_summarized')
   })
 
   it('summary tooltip: counts summarized, failed, and chunks', () => {

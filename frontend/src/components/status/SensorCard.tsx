@@ -784,13 +784,11 @@ function RowNote({ state, props, t }: { state: CardState; props: SensorCardProps
 
     case 'fetching': {
       const retrying = props.isRetrying
-      const label = retrying ? t('sensor.retrying') : t('sensor.fetching')
-      const color = retrying ? 'var(--warn)' : 'var(--accent)'
-      const detail = liveSensor?.fetch_detail
+      const detail = liveSensor?.fetch_detail?.replace(/^Fetching\s+/i, '')
       return (
-        <span style={{ ...noteStyle, color }}>
-          <span style={{ fontWeight: 500 }}>{label}</span>
-          {detail && <span style={{ color: 'var(--ink-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{detail}</span>}
+        <span style={{ ...noteStyle, color: retrying ? 'var(--warn)' : 'var(--ink-faint)' }}>
+          {retrying && <span style={{ fontWeight: 500 }}>{t('sensor.retrying')}</span>}
+          {detail && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{detail}</span>}
         </span>
       )
     }
@@ -798,12 +796,9 @@ function RowNote({ state, props, t }: { state: CardState; props: SensorCardProps
     case 'summarizing': {
       const total = liveSensor?.summary_chunks_total ?? 0
       const done = liveSensor?.summary_chunks_done ?? 0
-      return (
-        <span style={{ ...noteStyle, color: 'var(--accent)' }}>
-          <span style={{ fontWeight: 500 }}>{t('sensor.summarizing')}</span>
-          {total > 0 && <span style={{ color: 'var(--ink-faint)' }}>{t('sensor.chunks', { done: String(done), total: String(total) })}</span>}
-        </span>
-      )
+      return total > 0
+        ? <span style={{ ...noteStyle, color: 'var(--ink-faint)' }}>{t('sensor.chunks', { done: String(done), total: String(total) })}</span>
+        : null
     }
 
     case 'waiting':

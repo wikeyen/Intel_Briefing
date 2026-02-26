@@ -219,6 +219,7 @@ const en: TranslationDict = {
   'sensor.queued': 'Queued…',
   'sensor.skipped': 'Skipped',
   'sensor.skipped_reason': 'Not included in this run',
+  'sensor.no_accounts': 'No accounts configured',
   'sensor.done': 'Done',
   'sensor.cached': 'Cached',
   'sensor.cached_reason': 'Data loaded from recent run',

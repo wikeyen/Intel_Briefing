@@ -219,6 +219,7 @@ const zh: TranslationDict = {
   'sensor.queued': '排队中…',
   'sensor.skipped': '已跳过',
   'sensor.skipped_reason': '未包含在本次运行中',
+  'sensor.no_accounts': '未配置账号',
   'sensor.done': '完成',
   'sensor.cached': '已缓存',
   'sensor.cached_reason': '数据来自最近的运行',

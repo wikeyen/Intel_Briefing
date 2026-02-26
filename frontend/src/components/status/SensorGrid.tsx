@@ -184,6 +184,20 @@ export function SensorGrid({
     [liveSensors, pipelineStatus],
   )
 
+  // Social sensors with no accounts configured — show a "no accounts" note
+  const noAccountsSensors = useMemo(() => {
+    if (!config) return new Set<string>()
+    const result = new Set<string>()
+    const disabled = new Set(config.social_accounts_disabled ?? [])
+    const xAccounts = (config.social_accounts_x ?? []).filter(h => !disabled.has(h))
+    if (xAccounts.length === 0) result.add('x')
+    const bskyAccounts = config.social_accounts_bluesky.filter(h => !disabled.has(h))
+    if (bskyAccounts.length === 0 && !config.social_following_bluesky) result.add('bluesky')
+    const mastoAccounts = config.social_accounts_mastodon.filter(h => !disabled.has(h))
+    if (mastoAccounts.length === 0 && !config.social_following_mastodon) result.add('mastodon')
+    return result
+  }, [config])
+
   const visibleSensors = allSensors.filter(s => !dismissed.has(s.sensorKey))
   const selectedCount = selected.size
   const showToolbar = !isRunning
@@ -300,25 +314,31 @@ export function SensorGrid({
                         display: 'grid',
                         gridTemplateColumns: 'subgrid',
                         alignItems: 'center',
-                        padding: '0.1875rem 1rem 0.1875rem 1.75rem',
+                        padding: '0.1875rem 1rem 0.1875rem 0',
                         borderTop: '1px solid color-mix(in srgb, var(--border-soft) 40%, transparent)',
                       }}
                     >
-                      <div style={{
-                        width: 5,
-                        height: 5,
-                        borderRadius: '50%',
-                        background: sub.fetch === 'ok' ? 'var(--ok)'
-                          : sub.fetch === 'running' ? 'var(--accent)'
-                          : sub.fetch === 'failed' ? 'var(--err)'
-                          : 'var(--border)',
-                        transition: 'background 200ms',
-                      }} />
+                      <span />
                       <span style={{
                         fontSize: '0.6875rem',
                         color: sub.fetch === 'running' ? 'var(--accent)' : 'var(--ink-muted)',
                         fontStyle: 'italic',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.375rem',
+                        paddingLeft: '0.75rem',
                       }}>
+                        <span style={{
+                          width: 5,
+                          height: 5,
+                          borderRadius: '50%',
+                          flexShrink: 0,
+                          background: sub.fetch === 'ok' ? 'var(--ok)'
+                            : sub.fetch === 'running' ? 'var(--accent)'
+                            : sub.fetch === 'failed' ? 'var(--err)'
+                            : 'var(--border)',
+                          transition: 'background 200ms',
+                        }} />
                         {sensorLabel}
                       </span>
                       <span style={{
@@ -373,48 +393,28 @@ export function SensorGrid({
                       onDismiss={sensor.isFailed && !isPaused ? () => onDismiss(sensor.sensorKey) : undefined}
                       autoRetryCountdown={autoRetryDeadlines?.[sensor.sensorKey] ? Math.max(0, Math.ceil((autoRetryDeadlines[sensor.sensorKey] - Date.now()) / 1000)) : undefined}
                     />
-                    {/* Topic sub-items (e.g. keyword progress within bluesky/mastodon) */}
-                    {live?.sub_items?.map(sub => (
-                      <div
-                        key={`${sensor.sensorKey}:${sub.key}`}
-                        className="sensor-sub-item"
-                        style={{
-                          gridColumn: '1 / -1',
-                          display: 'grid',
-                          gridTemplateColumns: 'subgrid',
-                          alignItems: 'center',
-                          padding: '0.1875rem 1rem 0.1875rem 1.75rem',
-                          borderTop: '1px solid color-mix(in srgb, var(--border-soft) 40%, transparent)',
-                        }}
-                      >
-                        <div style={{
-                          width: 5,
-                          height: 5,
-                          borderRadius: '50%',
-                          background: sub.fetch === 'ok' ? 'var(--ok)'
-                            : sub.fetch === 'running' ? 'var(--accent)'
-                            : sub.fetch === 'failed' ? 'var(--err)'
-                            : 'var(--border)',
-                          transition: 'background 200ms',
-                        }} />
+                    {noAccountsSensors.has(sensor.sensorKey) && !sensor.isDisabled && (
+                      <div style={{
+                        gridColumn: '1 / -1',
+                        display: 'grid',
+                        gridTemplateColumns: 'subgrid',
+                        alignItems: 'center',
+                        padding: '0.1875rem 1rem 0.1875rem 0',
+                        borderTop: '1px solid color-mix(in srgb, var(--border-soft) 40%, transparent)',
+                      }}>
+                        <span />
                         <span style={{
                           fontSize: '0.6875rem',
-                          color: sub.fetch === 'running' ? 'var(--accent)' : 'var(--ink-muted)',
-                          fontStyle: 'italic',
-                        }}>
-                          {sub.label}
-                        </span>
-                        <span style={{
-                          fontSize: '0.625rem',
-                          fontFamily: 'ui-monospace, monospace',
                           color: 'var(--ink-faint)',
-                          textAlign: 'right',
+                          fontStyle: 'italic',
+                          paddingLeft: '0.75rem',
                         }}>
-                          {(sub.fetch === 'ok' || sub.fetch === 'failed') && sub.item_count > 0 ? `${sub.item_count}` : ''}
+                          {t('sensor.no_accounts')}
                         </span>
                         <span />
+                        <span />
                       </div>
-                    ))}
+                    )}
                   </React.Fragment>
                 )
               })}

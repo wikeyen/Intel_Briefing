@@ -3,7 +3,7 @@
 'use client'
 
 import React, { useMemo } from 'react'
-import type { IntelReport, ConfigSettings, PipelineStatus, SensorJobProgress } from '@/api/client'
+import type { IntelReport, ConfigSettings, PipelineStatus, SensorJobProgress, SubItemProgress } from '@/api/client'
 import { useTranslation } from '@/lib/i18n'
 import { SECTION_SENSORS, SENSOR_LABEL_MAP } from './constants'
 import { SensorRow, CARD_CSS } from './SensorCard'
@@ -46,6 +46,54 @@ function countItemsBySensor(report: IntelReport | null): Record<string, number> 
     }
   }
   return counts
+}
+
+/** Sensors that contribute topic sub-items (keyword-level progress). */
+const TOPIC_SENSORS = ['bluesky', 'mastodon'] as const
+
+interface TopicKeywordEntry {
+  keyword: string
+  label: string
+  platforms: Array<{ sensor: string; sensorLabel: string; sub: SubItemProgress }>
+}
+
+/**
+ * Collect keyword-grouped topic progress from sensors that have sub_items.
+ * Merges live (streaming) and pipeline-status (persisted) sub-item data,
+ * preferring live when both exist for the same sensor.
+ */
+function collectTopicKeywords(
+  liveSensors: Record<string, SensorJobProgress>,
+  pipelineStatus: PipelineStatus | null,
+  sensorLabelMap: Record<string, string>,
+): TopicKeywordEntry[] {
+  // keyword → sensor → SubItemProgress
+  const keywordMap = new Map<string, Map<string, { sensorLabel: string; sub: SubItemProgress }>>()
+
+  for (const sensorKey of TOPIC_SENSORS) {
+    // Prefer live data; fall back to pipeline status
+    const subs = liveSensors[sensorKey]?.sub_items
+      ?? pipelineStatus?.sensors.find(s => s.name === sensorKey)?.sub_items
+    if (!subs) continue
+
+    const label = sensorLabelMap[sensorKey] ?? sensorKey
+    for (const sub of subs) {
+      if (!keywordMap.has(sub.key)) keywordMap.set(sub.key, new Map())
+      keywordMap.get(sub.key)!.set(sensorKey, { sensorLabel: label, sub })
+    }
+  }
+
+  // Sort keywords alphabetically, build flat array
+  return Array.from(keywordMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([keyword, platformMap]) => ({
+      keyword,
+      // Use the label from the first platform (labels should be identical across platforms for same keyword)
+      label: platformMap.values().next().value!.sub.label,
+      platforms: Array.from(platformMap.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([sensor, { sensorLabel, sub }]) => ({ sensor, sensorLabel, sub })),
+    }))
 }
 
 const headerLabelStyle: React.CSSProperties = {
@@ -131,6 +179,11 @@ export function SensorGrid({
     )
   }, [report, config, pipelineStatus, sensorCounts, isRunning, pipelineSensorSet, cacheTtlHours, tick])
 
+  const topicKeywords = useMemo(
+    () => collectTopicKeywords(liveSensors, pipelineStatus, SENSOR_LABEL_MAP),
+    [liveSensors, pipelineStatus],
+  )
+
   const visibleSensors = allSensors.filter(s => !dismissed.has(s.sensorKey))
   const selectedCount = selected.size
   const showToolbar = !isRunning
@@ -190,8 +243,11 @@ export function SensorGrid({
           <span></span>
         </div>
         {SECTION_SENSORS.map((section, sIdx) => {
+          const isTopics = section.key === 'topics'
           const sectionSensors = visibleSensors.filter(s => s.category === section.label)
-          if (sectionSensors.length === 0) return null
+          // Skip empty sections — but Topics is keyword-driven, not sensor-driven
+          if (!isTopics && sectionSensors.length === 0) return null
+          if (isTopics && topicKeywords.length === 0) return null
           return (
             <React.Fragment key={section.key}>
               {/* Section header */}
@@ -211,7 +267,75 @@ export function SensorGrid({
                   {section.label}
                 </span>
               </div>
-              {sectionSensors.map(sensor => {
+              {/* Topics section: keyword-grouped progress rows */}
+              {isTopics && topicKeywords.map(entry => (
+                <React.Fragment key={entry.keyword}>
+                  {/* Keyword heading row */}
+                  <div style={{
+                    gridColumn: '1 / -1',
+                    display: 'grid',
+                    gridTemplateColumns: 'subgrid',
+                    alignItems: 'center',
+                    padding: '0.3125rem 1rem',
+                    borderTop: '1px solid color-mix(in srgb, var(--border-soft) 40%, transparent)',
+                  }}>
+                    <span />
+                    <span style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      color: 'var(--ink)',
+                    }}>
+                      {entry.label}
+                    </span>
+                    <span />
+                    <span />
+                  </div>
+                  {/* Platform sub-rows */}
+                  {entry.platforms.map(({ sensor, sensorLabel, sub }) => (
+                    <div
+                      key={`${entry.keyword}:${sensor}`}
+                      className="sensor-sub-item"
+                      style={{
+                        gridColumn: '1 / -1',
+                        display: 'grid',
+                        gridTemplateColumns: 'subgrid',
+                        alignItems: 'center',
+                        padding: '0.1875rem 1rem 0.1875rem 1.75rem',
+                        borderTop: '1px solid color-mix(in srgb, var(--border-soft) 40%, transparent)',
+                      }}
+                    >
+                      <div style={{
+                        width: 5,
+                        height: 5,
+                        borderRadius: '50%',
+                        background: sub.fetch === 'ok' ? 'var(--ok)'
+                          : sub.fetch === 'running' ? 'var(--accent)'
+                          : sub.fetch === 'failed' ? 'var(--err)'
+                          : 'var(--border)',
+                        transition: 'background 200ms',
+                      }} />
+                      <span style={{
+                        fontSize: '0.6875rem',
+                        color: sub.fetch === 'running' ? 'var(--accent)' : 'var(--ink-muted)',
+                        fontStyle: 'italic',
+                      }}>
+                        {sensorLabel}
+                      </span>
+                      <span style={{
+                        fontSize: '0.625rem',
+                        fontFamily: 'ui-monospace, monospace',
+                        color: 'var(--ink-faint)',
+                        textAlign: 'right',
+                      }}>
+                        {(sub.fetch === 'ok' || sub.fetch === 'failed') && sub.item_count > 0 ? `${sub.item_count}` : ''}
+                      </span>
+                      <span />
+                    </div>
+                  ))}
+                </React.Fragment>
+              ))}
+              {/* Standard sensor rows (non-topics sections) */}
+              {!isTopics && sectionSensors.map(sensor => {
                 const live = liveSensors[sensor.sensorKey]
                 const liveFailed = live?.fetch === 'failed' || live?.summary === 'failed'
                 const liveRetrying = retryAttempt > 0 && (live?.fetch === 'running' || live?.fetch === 'queued')

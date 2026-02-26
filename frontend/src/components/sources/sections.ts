@@ -1,9 +1,9 @@
-// ABOUTME: Sources page section definitions — maps sensors to 4 UI categories.
-// ABOUTME: General, Social Accounts, Trend, RSS — each with sensor keys and metadata.
+// ABOUTME: Sources page section definitions — maps sensors to 5 UI categories.
+// ABOUTME: General, Social Accounts, Trend, Topics, RSS — each with sensor keys and metadata.
 import type { SensorDef } from '@/lib/sensors/taxonomy'
 import { SENSORS } from '@/lib/sensors/taxonomy'
 
-export type SourceSection = 'general' | 'social' | 'trend' | 'rss'
+export type SourceSection = 'general' | 'social' | 'trend' | 'topics' | 'rss'
 
 export interface SectionDef {
   key: SourceSection
@@ -45,6 +45,7 @@ export const SOURCE_SECTIONS: SectionDef[] = [
   { key: 'general', label: 'General', sensors: [] },
   { key: 'social', label: 'Social Accounts', sensors: [] },
   { key: 'trend', label: 'Trend', sensors: [] },
+  { key: 'topics', label: 'Topics', sensors: [] },
   { key: 'rss', label: 'RSS', sensors: [] },
 ]
 

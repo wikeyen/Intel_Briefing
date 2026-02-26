@@ -315,6 +315,7 @@ const en: TranslationDict = {
   'sources.section_general': 'General',
   'sources.section_social': 'Social Accounts',
   'sources.section_trend': 'Trend',
+  'sources.section_topics': 'Topics',
   'sources.section_rss': 'RSS',
   'sources.accounts': 'Accounts',
   'sources.include_following': 'Include accounts I follow',

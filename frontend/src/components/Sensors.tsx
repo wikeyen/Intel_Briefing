@@ -1,5 +1,5 @@
-// ABOUTME: Sources page — sensor configuration grouped into 4 foldable sections.
-// ABOUTME: General, Social Accounts, Trend, and RSS with inline controls and i18n.
+// ABOUTME: Sources page — sensor configuration grouped into 5 foldable sections.
+// ABOUTME: General, Social Accounts, Trend, Topics, and RSS with inline controls and i18n.
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { api } from '@/api/client'
@@ -382,8 +382,8 @@ export function Sensors() {
 
   const generalEnabled = generalSensors.filter(s => enabled[s.key] ?? true).length
   const socialEnabled  = socialSensors.filter(s => enabled[s.key] ?? true).length
-  const trendEnabled   = trendSensors.filter(s => enabled[s.key] ?? true).length + (mastodonTrendsEnabled ? 1 : 0) + (topicsOn ? 1 : 0)
-  const trendTotal     = trendSensors.length + 2
+  const trendEnabled   = trendSensors.filter(s => enabled[s.key] ?? true).length + (mastodonTrendsEnabled ? 1 : 0)
+  const trendTotal     = trendSensors.length + 1
   const rssEnabled     = rssSensors.filter(s => enabled[s.key] ?? true).length
 
   /* ── Render helpers ────────────────────────────────────────────────────── */
@@ -752,20 +752,10 @@ export function Sensors() {
             {trendSensors.map((sensor, i) =>
               renderSensorRow(sensor, i < trendSensors.length - 1)
             )}
+          </FoldableSection>
 
-            {/* Sub-header: Search Topics */}
-            <div style={{
-              fontSize: '0.5625rem',
-              fontWeight: 600,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              color: 'var(--ink-faint)',
-              padding: '0.5rem 0.875rem 0.125rem',
-              borderTop: '1px solid var(--border-soft)',
-            }}>
-              {t('sources.topics')}
-            </div>
-
+          {/* ── Topics ────────────────────────────────────────────────────── */}
+          <FoldableSection title={t('sources.section_topics')} enabledCount={topicsOn ? 1 : 0} totalCount={1}>
             {/* Topics toggle + platform checkboxes */}
             <div
               className="sensor-row"

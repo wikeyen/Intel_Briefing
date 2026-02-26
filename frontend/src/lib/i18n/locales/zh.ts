@@ -315,6 +315,7 @@ const zh: TranslationDict = {
   'sources.section_general': '通用',
   'sources.section_social': '社交账号',
   'sources.section_trend': '趋势',
+  'sources.section_topics': '话题搜索',
   'sources.section_rss': 'RSS',
   'sources.accounts': '账号',
   'sources.include_following': '包含我关注的账号',

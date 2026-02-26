@@ -5,11 +5,12 @@ import { SENSOR_TO_SECTION, type SourceSection } from '../sources/sections'
 
 export const ALL_SENSORS = SENSORS.map(s => ({ key: s.key, label: s.label }))
 
-// Section order and labels matching the Sources page 4-section grouping
+// Section order and labels matching the Sources page 5-section grouping
 const STATUS_SECTIONS: Array<{ key: SourceSection; label: string }> = [
   { key: 'general', label: 'General' },
   { key: 'social', label: 'Social' },
   { key: 'trend', label: 'Trend' },
+  { key: 'topics', label: 'Topics' },
   { key: 'rss', label: 'RSS' },
 ]
 

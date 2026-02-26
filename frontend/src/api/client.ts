@@ -102,6 +102,7 @@ export interface SensorJobProgress {
   fetch_cached: boolean
   summary: StageState
   summary_error: string | null
+  summary_cached: boolean
   item_count: number
   summary_chunks_total: number
   summary_chunks_done: number

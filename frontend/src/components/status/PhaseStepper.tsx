@@ -56,10 +56,9 @@ export function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePh
   const allFetchCached = ps.sensors.length > 0 && fetchSensors.length === 0
 
   if (ps.mode === 'summarize') {
-    // Data exists (either cached or from a previous run) — fetch is complete
-    s.fetch = 'done'
+    s.fetch = 'skipped'
   } else if (allFetchCached) {
-    s.fetch = 'done'
+    s.fetch = 'skipped'
   } else if (anyFetching || anyFetchQueued) {
     s.fetch = 'active'
   } else if (allFetchTerminal && fetchStates.length > 0) {
@@ -83,6 +82,7 @@ export function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePh
   const allSummaryTerminal = summaryStates.every(su => TERMINAL_STATES.includes(su))
   const anySummaryFailed = summaryStates.some(su => su === 'failed')
   const allSummaryCancelled = summaryStates.length > 0 && summaryStates.every(su => su === 'cancelled' || su === 'skipped')
+  const allSummaryCached = ps.sensors.length > 0 && ps.sensors.every(sen => sen.summary_cached || sen.summary === 'skipped')
 
   // Briefing (overall summary) — derived first so summary can use it as a guardrail
   if (ps.mode === 'fetch') {
@@ -100,6 +100,8 @@ export function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePh
   // Summary phase — if briefing has already started, summary must be complete
   const briefingStarted = s.briefing === 'active' || s.briefing === 'done' || s.briefing === 'error'
   if (ps.mode === 'fetch') {
+    s.summary = 'skipped'
+  } else if (allSummaryCached) {
     s.summary = 'skipped'
   } else if (briefingStarted) {
     // Briefing can only start after per-sensor summaries finish. If any sensor's
@@ -306,12 +308,21 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
               isIndeterminate = nextIsIndeterminate
               lineFillPct = isIndeterminate ? 0 : Math.round(nextProg * 100)
             } else {
-              // Show current step's completion state
-              lineFillColor = status === 'done' ? 'var(--ok)'
-                : status === 'error' ? 'var(--err)'
-                : 'transparent'
+              const nextDone = nextStatus === 'done' || nextStatus === 'error' || nextStatus === 'skipped'
+              if (status === 'done') {
+                lineFillColor = 'var(--ok)'
+                lineFillPct = 100
+              } else if (status === 'error') {
+                lineFillColor = 'var(--err)'
+                lineFillPct = 100
+              } else if (status === 'skipped' && nextDone) {
+                lineFillColor = 'var(--border)'
+                lineFillPct = 100
+              } else {
+                lineFillColor = 'transparent'
+                lineFillPct = 0
+              }
               isIndeterminate = false
-              lineFillPct = (status === 'done' || status === 'error') ? 100 : 0
             }
 
             const showShimmer = nextIsActive

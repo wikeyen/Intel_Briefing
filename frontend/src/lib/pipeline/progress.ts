@@ -54,6 +54,7 @@ export class PipelineProgressTracker {
       fetch_cached: false,
       summary: skipSummary ? 'skipped' : 'queued',
       summary_error: null,
+      summary_cached: false,
       item_count: 0,
       summary_chunks_total: 0,
       summary_chunks_done: 0,
@@ -135,6 +136,13 @@ export class PipelineProgressTracker {
     this.notify()
   }
 
+  /** Mark a sensor's summary as loaded from content-hash cache. */
+  setSummaryCached(name: string): void {
+    const s = this.find(name)
+    s.summary_cached = true
+    this.notify()
+  }
+
   /** Mark a sensor's summary as skipped (used for sensors that failed fetch). */
   skipSummaryForSensor(name: string): void {
     const s = this.find(name)
@@ -208,6 +216,7 @@ export class PipelineProgressTracker {
     const s = this.find(name)
     s.summary = 'queued'
     s.summary_error = null
+    s.summary_cached = false
     s.summary_chunks_total = 0
     s.summary_chunks_done = 0
     s.verify_attempt = 0

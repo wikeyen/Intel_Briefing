@@ -22,7 +22,7 @@ function makeStatuses(
 }
 
 describe('deriveStepStatuses', () => {
-  it('summary stays active when a sensor is still running even if briefing finished', () => {
+  it('summary shows warn (not active) when briefing already started and a sensor has errors', () => {
     const ps = makePipelineStatus({
       running: true,
       mode: 'summarize',
@@ -35,7 +35,42 @@ describe('deriveStepStatuses', () => {
       ],
     })
     const statuses = deriveStepStatuses(ps)
+    // Pipeline moved past summary (overall_summary is 'ok'), so summary
+    // is effectively complete — shows warn because douyin has a summary_error.
+    expect(statuses.summary).toBe('warn')
+  })
+
+  it('summary shows done when briefing started and no sensor has errors', () => {
+    const ps = makePipelineStatus({
+      running: true,
+      mode: 'summarize',
+      completed_at: null,
+      overall_summary: 'running',
+      sensors: [
+        makeSensorJob('s1', { fetch: 'skipped', summary: 'ok' }),
+        makeSensorJob('s2', { fetch: 'skipped', summary: 'ok' }),
+        makeSensorJob('s3', { fetch: 'skipped', summary: 'queued' }),
+      ],
+    })
+    const statuses = deriveStepStatuses(ps)
+    expect(statuses.summary).toBe('done')
+    expect(statuses.briefing).toBe('active')
+  })
+
+  it('summary stays active when briefing has not started', () => {
+    const ps = makePipelineStatus({
+      running: true,
+      mode: 'summarize',
+      completed_at: null,
+      overall_summary: 'queued',
+      sensors: [
+        makeSensorJob('s1', { fetch: 'skipped', summary: 'ok' }),
+        makeSensorJob('s2', { fetch: 'skipped', summary: 'running' }),
+      ],
+    })
+    const statuses = deriveStepStatuses(ps)
     expect(statuses.summary).toBe('active')
+    expect(statuses.briefing).toBe('pending')
   })
 
   it('marks summary as done when all sensors are cached', () => {
@@ -96,6 +131,25 @@ describe('deriveStepStatuses', () => {
     })
     const statuses = deriveStepStatuses(ps)
     expect(statuses.summary).toBe('warn')
+  })
+
+  it('intelligence lights up when intel events exist even if summary has stragglers', () => {
+    const ps = makePipelineStatus({
+      running: true,
+      mode: 'fetch_summarize',
+      overall_summary: 'ok',
+      sensors: [
+        makeSensorJob('s1', { fetch: 'ok', summary: 'ok' }),
+        makeSensorJob('s2', { fetch: 'skipped', summary: 'queued' }),
+      ],
+      events: [
+        { phase: 'intelligence', level: 'info', message: 'Intelligence analysis started', ts: '2026-01-15T10:00:00Z' },
+      ],
+    })
+    const s = deriveStepStatuses(ps)
+    expect(s.summary).toBe('done')
+    expect(s.briefing).toBe('done')
+    expect(s.intelligence).toBe('active')
   })
 })
 

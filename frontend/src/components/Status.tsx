@@ -19,6 +19,7 @@ export function Status() {
   const [health, setHealth]           = useState<HealthResponse | null>(null)
   const [report, setReport]           = useState<IntelReport | null>(null)
   const [config, setConfig]           = useState<ConfigSettings | null>(null)
+  const [loading, setLoading]          = useState(true)
   const [fetching, setFetching]       = useState(false)
   const [running, setRunning]         = useState(false)
   const [stopping, setStopping]       = useState(false)
@@ -79,7 +80,15 @@ export function Status() {
   }, [])
 
   useEffect(() => {
-    loadAll()
+    Promise.all([
+      api.health().then(setHealth).catch(() => setHealth({ status: 'error', last_fetch: null })),
+      api.getLatest().then(setReport).catch(() => {}),
+      api.getConfig().then(setConfig).catch(() => {}),
+      api.getPipelineStatus().then(s => {
+        setPipelineStatus(s)
+        setPipelineChecked(true)
+      }).catch(() => { setPipelineChecked(true) }),
+    ]).finally(() => setLoading(false))
     const iv = setInterval(() => {
       api.health().then(h => {
         setHealth(h)
@@ -353,7 +362,7 @@ export function Status() {
 
   const sourcesOk = report?.sources_ok.length ?? 0
 
-  if (!health && !report && !pipelineChecked) {
+  if (loading) {
     return (
       <section id="status" className="status-page">
         <StatusSkeleton />

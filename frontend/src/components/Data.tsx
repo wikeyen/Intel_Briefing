@@ -135,8 +135,10 @@ export function Data() {
   const hasChangedSection = useRef(false)
 
   useEffect(() => {
-    api.getConfig().then(setConfig).catch(() => {})
-    api.getLatest().then(setReport).catch(() => {}).finally(() => setLoading(false))
+    Promise.all([
+      api.getConfig().then(setConfig).catch(() => {}),
+      api.getLatest().then(setReport).catch(() => {}),
+    ]).finally(() => setLoading(false))
   }, [])
 
   // Track last-seen pipeline completion so we can refresh when it finishes

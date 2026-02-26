@@ -88,6 +88,25 @@ describe('derivePhaseTooltipData', () => {
     ])
   })
 
+  it('summary tooltip: counts summary_error sensors as failed even when summary=ok', () => {
+    const ps = makePipelineStatus({
+      sensors: [
+        makeSensorJob('s1', { summary: 'ok', summary_chunks_done: 5 }),
+        makeSensorJob('s2', { summary: 'ok', summary_error: 'fetch failed', summary_chunks_done: 0 }),
+        makeSensorJob('s3', { summary: 'ok', summary_error: 'fetch failed', summary_chunks_done: 0 }),
+      ],
+    })
+    const statuses = makeStatuses({ summary: 'done' })
+    const result = derivePhaseTooltipData(ps, statuses, t)
+
+    expect(result.summary).not.toBeNull()
+    expect(result.summary!.lines).toEqual([
+      '1 stepper.sources_summarized',
+      '2 stepper.summaries_failed',
+      '5 stepper.chunks_processed',
+    ])
+  })
+
   it('summary tooltip: shows Skipped when summary is skipped', () => {
     const ps = makePipelineStatus()
     const statuses = makeStatuses({ summary: 'skipped' })

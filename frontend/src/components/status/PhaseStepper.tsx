@@ -227,8 +227,8 @@ export function derivePhaseTooltipData(
     if (statuses.summary === 'skipped') {
       result.summary = { lines: [t('stepper.skipped')] }
     } else {
-      const summarized = ps.sensors.filter(s => s.summary === 'ok').length
-      const failed = ps.sensors.filter(s => s.summary === 'failed').length
+      const summarized = ps.sensors.filter(s => s.summary === 'ok' && !s.summary_error).length
+      const failed = ps.sensors.filter(s => s.summary === 'failed' || !!s.summary_error).length
       const chunks = ps.sensors.reduce((sum, s) => sum + s.summary_chunks_done, 0)
       const lines: string[] = []
       if (summarized > 0) lines.push(`${summarized} ${t('stepper.sources_summarized')}`)

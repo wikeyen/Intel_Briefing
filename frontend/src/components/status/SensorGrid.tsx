@@ -68,6 +68,7 @@ function collectTopicKeywords(
   liveSensors: Record<string, SensorJobProgress>,
   pipelineStatus: PipelineStatus | null,
   sensorLabelMap: Record<string, string>,
+  config: ConfigSettings | null,
 ): TopicKeywordEntry[] {
   // keyword → sensor → SubItemProgress
   const keywordMap = new Map<string, Map<string, { sensorLabel: string; sub: SubItemProgress }>>()
@@ -85,13 +86,21 @@ function collectTopicKeywords(
     }
   }
 
+  // Seed from config when no pipeline data exists (idle state)
+  if (keywordMap.size === 0 && config?.social_topics_keywords) {
+    for (const keyword of config.social_topics_keywords) {
+      keywordMap.set(keyword, new Map())
+    }
+  }
+
   // Sort keywords alphabetically, build flat array
   return Array.from(keywordMap.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([keyword, platformMap]) => ({
       keyword,
-      // Use the label from the first platform (labels should be identical across platforms for same keyword)
-      label: platformMap.values().next().value!.sub.label,
+      label: platformMap.size > 0
+        ? platformMap.values().next().value!.sub.label
+        : keyword,
       platforms: Array.from(platformMap.entries())
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([sensor, { sensorLabel, sub }]) => ({ sensor, sensorLabel, sub })),
@@ -182,8 +191,8 @@ export function SensorGrid({
   }, [report, config, pipelineStatus, sensorCounts, isRunning, pipelineSensorSet, cacheTtlHours, tick])
 
   const topicKeywords = useMemo(
-    () => collectTopicKeywords(liveSensors, pipelineStatus, SENSOR_LABEL_MAP),
-    [liveSensors, pipelineStatus],
+    () => collectTopicKeywords(liveSensors, pipelineStatus, SENSOR_LABEL_MAP, config),
+    [liveSensors, pipelineStatus, config],
   )
 
   // Social sensors with no accounts configured — show a "no accounts" note

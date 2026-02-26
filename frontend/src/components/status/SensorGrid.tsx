@@ -321,7 +321,7 @@ export function SensorGrid({
                       fontWeight: 600,
                       color: 'var(--ink)',
                     }}>
-                      {entry.label}
+                      #{entry.label}
                     </span>
                     <span />
                     <span />

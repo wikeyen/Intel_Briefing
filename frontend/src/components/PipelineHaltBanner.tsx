@@ -29,8 +29,9 @@ export function PipelineHaltBanner() {
   }, [status?.running, status?.paused])
 
   const isHalted = status?.paused && status?.paused_stage === 'pre_overall' && status?.alive
-  const failedSensors = status?.sensors.filter(s => s.fetch === 'failed') ?? []
-  const failedCount = failedSensors.length
+  const fetchFailed = status?.sensors.filter(s => s.fetch === 'failed') ?? []
+  const summaryFailed = status?.sensors.filter(s => s.summary === 'failed' && s.fetch !== 'failed') ?? []
+  const failedCount = fetchFailed.length + summaryFailed.length
 
   const handleRetry = useCallback(async () => {
     setActing(true)
@@ -92,7 +93,11 @@ export function PipelineHaltBanner() {
             fontSize: '0.75rem',
             color: 'var(--ink-muted)',
           }}>
-            {t('halt.message', { count: String(failedCount) })}
+            {fetchFailed.length > 0 && summaryFailed.length > 0
+              ? t('halt.message_mixed', { fetchCount: String(fetchFailed.length), summaryCount: String(summaryFailed.length) })
+              : summaryFailed.length > 0
+              ? t('halt.message_summary', { count: String(summaryFailed.length) })
+              : t('halt.message', { count: String(failedCount) })}
           </span>
         </div>
 

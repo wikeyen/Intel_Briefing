@@ -89,9 +89,32 @@ export function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePh
   const allSummaryCancelled = summaryStates.length > 0 && summaryStates.every(su => su === 'cancelled' || su === 'skipped')
   const allSummaryCached = ps.sensors.length > 0 && ps.sensors.every(sen => sen.summary_cached || sen.summary === 'skipped')
 
-  // Briefing (overall summary) — derived first so summary can use it as a guardrail
+  // Summary phase — gated on fetch being terminal
+  const fetchTerminal = s.fetch === 'done' || s.fetch === 'warn' || s.fetch === 'error' || s.fetch === 'skipped'
+
+  if (ps.mode === 'fetch') {
+    s.summary = 'skipped'
+  } else if (!fetchTerminal) {
+    // Summary can't start until fetch finishes
+    s.summary = 'pending'
+  } else if (allSummaryCached) {
+    s.summary = 'done'
+  } else if (anySummaryRunning || anySummaryQueued) {
+    s.summary = 'active'
+  } else if (allSummaryCancelled) {
+    s.summary = 'skipped'
+  } else if (allSummaryTerminal && summaryStates.length > 0) {
+    s.summary = allSummaryIssue ? 'error' : anySummaryIssue ? 'warn' : 'done'
+  }
+
+  // Briefing (overall summary) — gated on summary being terminal
+  const summaryTerminal = s.summary === 'done' || s.summary === 'warn' || s.summary === 'error' || s.summary === 'skipped'
+
   if (ps.mode === 'fetch') {
     s.briefing = 'skipped'
+  } else if (!summaryTerminal) {
+    // Briefing can't start until summary finishes
+    s.briefing = 'pending'
   } else if (ps.overall_summary === 'running') {
     s.briefing = 'active'
   } else if (ps.overall_summary === 'ok') {
@@ -102,30 +125,14 @@ export function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePh
     s.briefing = 'skipped'
   }
 
-  // Summary phase — active sensors always take priority over briefing state
-  const briefingStarted = s.briefing === 'active' || s.briefing === 'done' || s.briefing === 'error'
-  if (ps.mode === 'fetch') {
-    s.summary = 'skipped'
-  } else if (allSummaryCached) {
-    s.summary = 'done'
-  } else if (anySummaryRunning || anySummaryQueued) {
-    s.summary = 'active'
-  } else if (briefingStarted) {
-    // Briefing started and no sensors are actively summarizing — treat any
-    // remaining non-terminal states as stale.
-    s.summary = allSummaryIssue ? 'error' : anySummaryIssue ? 'warn' : 'done'
-  } else if (allSummaryCancelled) {
-    s.summary = 'skipped'
-  } else if (allSummaryTerminal && summaryStates.length > 0) {
-    s.summary = allSummaryIssue ? 'error' : anySummaryIssue ? 'warn' : 'done'
-  }
-
-  // Intelligence
+  // Intelligence — gated on briefing being terminal
+  const briefingTerminal = s.briefing === 'done' || s.briefing === 'warn' || s.briefing === 'error' || s.briefing === 'skipped'
   const intelEvents = events.filter(e => e.phase === 'intelligence')
   if (ps.mode === 'fetch') {
     s.intelligence = 'skipped'
+  } else if (!briefingTerminal) {
+    s.intelligence = 'pending'
   } else if (s.summary === 'skipped' && s.briefing === 'skipped' && intelEvents.length === 0) {
-    // All LLM phases skipped (e.g. all-cached early exit) — intel is also skipped
     s.intelligence = 'skipped'
   } else if (intelEvents.some(e => e.level === 'ok')) {
     s.intelligence = 'done'
@@ -135,9 +142,9 @@ export function deriveStepStatuses(ps: PipelineStatus | null): Record<PipelinePh
     s.intelligence = 'active'
   }
 
-  // Paused state
+  // Paused state — show briefing as active only when summary is resolved
   if (ps.paused) {
-    if (ps.paused_stage === 'pre_overall') {
+    if (ps.paused_stage === 'pre_overall' && summaryTerminal) {
       s.briefing = 'active'
     }
   }

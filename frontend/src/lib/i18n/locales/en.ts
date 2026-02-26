@@ -584,6 +584,8 @@ const en: TranslationDict = {
   // ── Pipeline halt banner ───────────────────────────────────────────────────
   'halt.title': 'Pipeline halted',
   'halt.message': '{count} source(s) failed after retries',
+  'halt.message_summary': '{count} sensor(s) failed to summarize',
+  'halt.message_mixed': '{fetchCount} fetch + {summaryCount} summary failure(s)',
   'halt.retry': 'Retry Failed',
   'halt.skip': 'Skip & Continue',
 

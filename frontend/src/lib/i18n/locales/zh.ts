@@ -584,6 +584,8 @@ const zh: TranslationDict = {
   // ── Pipeline halt banner ───────────────────────────────────────────────────
   'halt.title': '流水线已暂停',
   'halt.message': '{count} 个源重试后仍失败',
+  'halt.message_summary': '{count} 个传感器摘要失败',
+  'halt.message_mixed': '{fetchCount} 个获取 + {summaryCount} 个摘要失败',
   'halt.retry': '重试失败项',
   'halt.skip': '跳过并继续',
 

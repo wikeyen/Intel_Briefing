@@ -83,8 +83,15 @@ export async function handleSummaryRetry(ctx: PipelineContext): Promise<Pipeline
     .filter(s => s.summary === 'failed')
     .map(s => s.name)
 
-  // If summary failures remain after retries, pause for user action
-  if (finalFailures.length > 0) return 'paused'
+  // If summary failures remain after retries, pause for user action.
+  // Register them in ctx.failures so the pause loop blocks correctly.
+  if (finalFailures.length > 0) {
+    for (const name of finalFailures) {
+      ctx.failures.add(name)
+      ctx.failureKinds.set(name, 'summary')
+    }
+    return 'paused'
+  }
   // If fetch failures exist, also pause (defer overall)
   if (hasFetchFailures) return 'paused'
   return 'briefing'

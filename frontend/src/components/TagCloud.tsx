@@ -82,8 +82,8 @@ export function TagCloud({ tags, maxTags = 30, style }: TagCloudProps) {
         ...style,
       }}
     >
-      {sorted.map((tag) => (
-        <TagPill key={tag.text} tag={tag} />
+      {sorted.map((tag, i) => (
+        <TagPill key={`${tag.text}-${i}`} tag={tag} />
       ))}
     </div>
   )

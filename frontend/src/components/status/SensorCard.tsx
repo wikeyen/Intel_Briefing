@@ -2,7 +2,7 @@
 // ABOUTME: Purely presentational — renders sensor status, live progress, errors, and selection state.
 'use client'
 
-import { memo } from 'react'
+import { memo, useRef, useState } from 'react'
 import type { SensorJobProgress } from '@/api/client'
 import { useTranslation } from '@/lib/i18n'
 
@@ -17,6 +17,8 @@ export interface SensorCardProps {
   lastFetchAgo?: string
   /** True if the last fetch timestamp is from the most recent pipeline run. */
   isFreshFetch?: boolean
+  /** True when the sensor's data is older than the cache TTL (idle mode only). */
+  isDataStale?: boolean
   isOk: boolean
   isFailed: boolean
   isDisabled: boolean
@@ -24,6 +26,8 @@ export interface SensorCardProps {
   isApiError: boolean
   fetchError?: string
   summaryError?: string
+  /** Cache TTL in hours — used to determine if sensor data is stale. */
+  cacheTtlHours?: number
   isSelected: boolean
   isRetrying?: boolean
   /** Current pipeline retry attempt (1-based). */
@@ -69,6 +73,9 @@ type CardState =
   | 'done'
   | 'failed-mid-run'
   | 'paused-failed'
+  | 'warning-no-data'
+  | 'warning-summary-fail'
+  | 'warning-stale'
 
 function deriveState(props: SensorCardProps): CardState {
   const { isRunning, isPaused, liveSensor, isDisabled, isConfigError, isFailed, isSelected } = props
@@ -90,6 +97,12 @@ function deriveState(props: SensorCardProps): CardState {
 
   if (isConfigError) return 'config-error'
   if (isFailed) return 'failed'
+
+  // Warning states (idle only, descending priority): sensor ran but result is not fully healthy
+  if (props.isOk && props.itemCount === 0) return 'warning-no-data'
+  if (props.isOk && props.itemCount > 0 && props.summaryError) return 'warning-summary-fail'
+  if (props.isOk && props.itemCount > 0 && props.isDataStale) return 'warning-stale'
+
   if (isSelected) return 'selected'
   return 'healthy'
 }
@@ -113,6 +126,9 @@ function Dot({ state }: { state: CardState }) {
     case 'paused-failed':
       return <span style={{ ...base, background: 'var(--err)' }} />
     case 'config-error':
+    case 'warning-no-data':
+    case 'warning-summary-fail':
+    case 'warning-stale':
       return <span style={{ ...base, background: 'var(--warn)' }} />
     case 'disabled':
       return <span style={{ ...base, background: 'var(--ink-faint)' }} />
@@ -201,6 +217,15 @@ function cardContainerStyle(state: CardState, hovered: boolean): React.CSSProper
   }
 
   if (state === 'config-error') {
+    return {
+      ...base,
+      borderLeftWidth: 3,
+      borderLeftColor: 'var(--warn)',
+      ...(hovered && { boxShadow: 'var(--shadow-card-hover)', borderTopColor: 'var(--border-strong)', borderRightColor: 'var(--border-strong)', borderBottomColor: 'var(--border-strong)', borderLeftColor: 'var(--warn)' }),
+    }
+  }
+
+  if (state === 'warning-no-data' || state === 'warning-summary-fail' || state === 'warning-stale') {
     return {
       ...base,
       borderLeftWidth: 3,
@@ -452,6 +477,13 @@ function PrimaryMetric({ state, props, t }: { state: CardState; props: SensorCar
         </span>
       )
 
+    case 'warning-no-data':
+      return <span style={{ ...metricStyle, color: 'var(--warn)' }}>0</span>
+    case 'warning-summary-fail':
+      return <span style={metricStyle}>{itemCount}</span>
+    case 'warning-stale':
+      return <span style={metricStyle}>{itemCount}</span>
+
     case 'failed-mid-run':
     case 'paused-failed':
       return (
@@ -473,6 +505,11 @@ function SecondaryContent({ state, props, t }: { state: CardState; props: Sensor
   switch (state) {
     case 'healthy':
     case 'selected':
+      return lastFetchAgo ? <span style={secondaryStyle}>{lastFetchAgo}</span> : null
+
+    case 'warning-no-data':
+    case 'warning-summary-fail':
+    case 'warning-stale':
       return lastFetchAgo ? <span style={secondaryStyle}>{lastFetchAgo}</span> : null
 
     case 'failed': {
@@ -693,7 +730,83 @@ function rowContainerStyle(state: CardState, hovered: boolean): React.CSSPropert
     return { ...base, ...(hovered && { background: 'var(--surface-alt)' }) }
   }
 
+  if (state === 'warning-no-data' || state === 'warning-summary-fail' || state === 'warning-stale') {
+    return { ...base, ...(hovered && { background: 'var(--surface-alt, rgba(0,0,0,0.02))' }) }
+  }
+
   return { ...base, ...(hovered && { background: 'var(--surface-alt, rgba(0,0,0,0.02))' }) }
+}
+
+function WarningBadge({ label, tooltip }: { label: string; tooltip: string }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null)
+  // Split tooltip on newlines: first line = title, rest = detail lines
+  const lines = tooltip.split('\n')
+  return (
+    <span
+      ref={ref}
+      className="warning-badge"
+      style={{
+        ...errorBadgeBase,
+        color: 'var(--warn)',
+        background: 'color-mix(in srgb, var(--warn) 12%, transparent)',
+        cursor: 'help',
+      }}
+      onMouseEnter={() => {
+        const r = ref.current?.getBoundingClientRect()
+        if (r) setPos({ top: r.top - 8, right: window.innerWidth - r.right })
+      }}
+      onMouseLeave={() => setPos(null)}
+    >
+      {label}
+      {pos && (
+        <span style={{
+          position: 'fixed',
+          bottom: `calc(100vh - ${pos.top}px)`,
+          right: pos.right,
+          minWidth: 200,
+          maxWidth: 300,
+          padding: '0.5rem 0.75rem',
+          background: 'var(--surface-overlay)',
+          color: 'var(--ink)',
+          fontSize: '0.6875rem',
+          lineHeight: 1.5,
+          borderRadius: 8,
+          boxShadow: 'var(--shadow-card-hover)',
+          border: '1px solid var(--border-subtle)',
+          zIndex: 50,
+          pointerEvents: 'none',
+          textTransform: 'none',
+          letterSpacing: 'normal',
+          fontWeight: 400,
+        }}>
+          {lines.map((line, i) => (
+            <span key={i} style={{
+              display: 'block',
+              color: i === 0 ? 'var(--ink)' : 'var(--ink-muted)',
+              fontWeight: i === 0 ? 500 : 400,
+              marginTop: i > 0 ? '0.25rem' : 0,
+              fontSize: i === 0 ? '0.6875rem' : '0.625rem',
+            }}>
+              {line}
+            </span>
+          ))}
+          {/* Caret arrow */}
+          <span style={{
+            position: 'absolute',
+            bottom: -5,
+            right: 16,
+            width: 10,
+            height: 10,
+            background: 'var(--surface-overlay)',
+            borderRight: '1px solid var(--border-subtle)',
+            borderBottom: '1px solid var(--border-subtle)',
+            transform: 'rotate(45deg)',
+          }} />
+        </span>
+      )}
+    </span>
+  )
 }
 
 function RowNote({ state, props, t }: { state: CardState; props: SensorCardProps; t: TFn }) {
@@ -720,6 +833,34 @@ function RowNote({ state, props, t }: { state: CardState; props: SensorCardProps
       return parts.length > 0
         ? <span style={{ ...noteStyle, color: 'var(--ink-faint)', fontSize: '0.625rem' }}>{parts.join(' · ')}</span>
         : null
+    }
+
+    case 'warning-no-data':
+      return (
+        <span style={{ ...noteStyle, color: 'var(--warn)', fontSize: '0.625rem' }}>
+          <WarningBadge label={t('sensor.warning_no_data')} tooltip={t('sensor.warning_no_data_tip', { ago: props.lastFetchAgo || '\u2014' })} />
+          {props.lastFetchAgo && <span style={{ color: 'var(--ink-faint)', fontWeight: 400 }}> · {props.lastFetchAgo}</span>}
+        </span>
+      )
+
+    case 'warning-summary-fail':
+      return (
+        <span style={{ ...noteStyle, color: 'var(--warn)', fontSize: '0.625rem' }}>
+          <WarningBadge label={t('sensor.warning_summary_fail')} tooltip={t('sensor.warning_summary_fail_tip', { count: String(props.itemCount), error: props.summaryError || '\u2014', ago: props.lastFetchAgo || '\u2014' })} />
+          <span style={{ color: 'var(--ink-faint)', fontWeight: 400 }}> · {t('sensor.status_n_items', { count: String(props.itemCount) })}</span>
+        </span>
+      )
+
+    case 'warning-stale': {
+      const staleParts: string[] = []
+      if (props.itemCount > 0) staleParts.push(t('sensor.status_n_items', { count: String(props.itemCount) }))
+      if (props.lastFetchAgo) staleParts.push(props.lastFetchAgo)
+      return (
+        <span style={{ ...noteStyle, color: 'var(--warn)', fontSize: '0.625rem' }}>
+          <WarningBadge label={t('sensor.warning_stale')} tooltip={t('sensor.warning_stale_tip', { ago: props.lastFetchAgo || '\u2014', ttl: String(props.cacheTtlHours ?? 6), count: String(props.itemCount) })} />
+          {staleParts.length > 0 && <span style={{ color: 'var(--ink-faint)', fontWeight: 400 }}> · {staleParts.join(' · ')}</span>}
+        </span>
+      )
     }
 
     case 'done': {
@@ -838,6 +979,10 @@ function RowActions({ state, props, t }: { state: CardState; props: SensorCardPr
   const fetchColor = props.isFreshFetch ? 'var(--ok)' : 'var(--warn)'
 
   if (state === 'healthy' || state === 'selected') {
+    return null
+  }
+
+  if (state === 'warning-no-data' || state === 'warning-summary-fail' || state === 'warning-stale') {
     return null
   }
 

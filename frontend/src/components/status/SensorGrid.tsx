@@ -33,6 +33,8 @@ export interface SensorGridProps {
   autoRetryExhausted?: Set<string>
   /** Deadline timestamps (ms) for pending auto-retry timers — used for countdown display. */
   autoRetryDeadlines?: Record<string, number>
+  /** Cache TTL in hours — passed to sensor cards for stale detection. */
+  cacheTtlHours?: number
 }
 
 function countItemsBySensor(report: IntelReport | null): Record<string, number> {
@@ -67,6 +69,7 @@ export function SensorGrid({
   isRunning, isPaused, liveSensors, report, config, pipelineStatus,
   retryAttempt, retryMax, selected, onToggleSelect, onSelectAll, onSelectNone,
   onRetry, onSkipSensor, onSkipFetchingSensor, tick, dismissed, onDismiss, autoRetryExhausted, autoRetryDeadlines,
+  cacheTtlHours,
 }: SensorGridProps) {
   const { t } = useTranslation()
   const sensorCounts = useMemo(() => countItemsBySensor(report), [report])
@@ -95,6 +98,15 @@ export function SensorGrid({
         // is actively running and this sensor is NOT part of the current run.
         const isStale = isRunning && !pipelineSensorSet.has(sensorKey)
 
+        // Data staleness: sensor's last fetch is older than cache TTL
+        const isDataStale = (() => {
+          if (!sensorFetchedAt || !cacheTtlHours) return false
+          const fetchedMs = new Date(sensorFetchedAt).getTime()
+          if (isNaN(fetchedMs)) return false
+          const ttlMs = cacheTtlHours * 60 * 60 * 1000
+          return Date.now() - fetchedMs > ttlMs
+        })()
+
         return {
           sensorKey,
           label,
@@ -105,14 +117,19 @@ export function SensorGrid({
           isConfigError: isConfigErr,
           isApiError: isApiErr,
           fetchError: lastSp?.fetch_error ?? undefined,
+          // NOTE: summaryError only available while pipelineStatus is populated (active
+          // or recently-run pipeline). After a full page reload this will be undefined,
+          // so warning-summary-fail won't trigger until the next pipeline run completes.
           summaryError: lastSp?.summary_error ?? undefined,
           itemCount: count,
           lastFetchAgo: sensorFetchedAt ? timeAgo(sensorFetchedAt) : (report?.fetched_at ? timeAgo(report.fetched_at) : undefined),
           isFreshFetch: !isStale,
+          isDataStale,
+          cacheTtlHours,
         }
       }),
     )
-  }, [report, config, pipelineStatus, sensorCounts, isRunning, pipelineSensorSet])
+  }, [report, config, pipelineStatus, sensorCounts, isRunning, pipelineSensorSet, cacheTtlHours, tick])
 
   const visibleSensors = allSensors.filter(s => !dismissed.has(s.sensorKey))
   const selectedCount = selected.size
@@ -194,6 +211,8 @@ export function SensorGrid({
               isApiError={sensor.isApiError}
               fetchError={sensor.fetchError ?? live?.fetch_error ?? undefined}
               summaryError={sensor.summaryError ?? live?.summary_error ?? undefined}
+              isDataStale={sensor.isDataStale}
+              cacheTtlHours={sensor.cacheTtlHours}
               isSelected={selected.has(sensor.sensorKey)}
               isRetrying={liveRetrying}
               retryAttempt={retryAttempt}

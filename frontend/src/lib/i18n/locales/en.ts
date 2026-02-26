@@ -242,6 +242,15 @@ const en: TranslationDict = {
   'sensor.dismiss': 'Dismiss',
   'sensor.skip': 'Skip',
   'sensor.chunks': '{done}/{total} chunks',
+  'sensor.warning_no_data': 'NO DATA',
+  'sensor.warning_summary_fail': 'SUMMARY FAIL',
+  'sensor.warning_stale': 'STALE',
+  'sensor.warning_no_data_tip': 'Sensor ran without errors but returned 0 items.\nLast fetch: {ago}',
+  'sensor.warning_summary_fail_tip': 'Fetched {count} items but summary failed: {error}\nLast fetch: {ago}',
+  'sensor.warning_stale_tip': 'Data is {ago} old (TTL: {ttl}h).\n{count} items from last fetch.',
+  'sensor.warning_no_data_note': '0 items · {ago}',
+  'sensor.warning_summary_fail_note': '{count} items · summary failed',
+  'sensor.warning_stale_note': '{count} items · {ago}',
 
   // ── Stale process banner ──────────────────────────────────────────────────
   'stale.pipeline': 'Pipeline',

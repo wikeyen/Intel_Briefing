@@ -453,6 +453,7 @@ export function Status() {
         onDismiss={dismissSensor}
         autoRetryExhausted={autoRetryExhausted}
         autoRetryDeadlines={autoRetryDeadlines}
+        cacheTtlHours={config?.cache_ttl_hours}
       />
 
       {/* Slide-out activity log panel */}

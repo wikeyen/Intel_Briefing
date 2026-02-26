@@ -242,6 +242,15 @@ const zh: TranslationDict = {
   'sensor.dismiss': '忽略',
   'sensor.skip': '跳过',
   'sensor.chunks': '{done}/{total} 片段',
+  'sensor.warning_no_data': '无数据',
+  'sensor.warning_summary_fail': '摘要失败',
+  'sensor.warning_stale': '已过期',
+  'sensor.warning_no_data_tip': '传感器运行无错误但返回 0 条数据。\n上次获取: {ago}',
+  'sensor.warning_summary_fail_tip': '获取 {count} 条数据但摘要失败: {error}\n上次获取: {ago}',
+  'sensor.warning_stale_tip': '数据已过期 {ago} (TTL: {ttl}小时)。\n上次获取 {count} 条。',
+  'sensor.warning_no_data_note': '0 条 · {ago}',
+  'sensor.warning_summary_fail_note': '{count} 条 · 摘要失败',
+  'sensor.warning_stale_note': '{count} 条 · {ago}',
 
   // ── Stale process banner ──────────────────────────────────────────────────
   'stale.pipeline': '管道',

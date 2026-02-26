@@ -36,6 +36,7 @@ const MAX_AUTO_RETRIES = 3
 
 export type PauseAction =
   | { type: 'retry_sensor'; sensor: string }
+  | { type: 'retry_all' }
   | { type: 'skip_sensor'; sensor: string }
   | { type: 'generate_overall' }
   | { type: 'cancel' }
@@ -105,6 +106,14 @@ export function retrySensor(sensorName: string): boolean {
 export function skipSensor(sensorName: string): boolean {
   if (!g.__pipelinePauseResolve) return false
   g.__pipelinePauseResolve({ type: 'skip_sensor', sensor: sensorName })
+  g.__pipelinePauseResolve = null
+  return true
+}
+
+/** Retry all failed sensors during pre-overall pause. */
+export function retryAllFailed(): boolean {
+  if (!g.__pipelinePauseResolve) return false
+  g.__pipelinePauseResolve({ type: 'retry_all' })
   g.__pipelinePauseResolve = null
   return true
 }
@@ -769,6 +778,50 @@ export async function runPipeline(
                 tracker.setFetchState(sensorName, 'failed', 0, result.error, result.error_kind ?? 'api')
                 tracker.addEvent('error', 'retry', result.error ?? 'Retry failed', sensorName)
                 // Stays in failedSensors — user can retry again or skip
+              }
+            }
+
+            if (action.type === 'retry_all') {
+              const snap = tracker.snapshot()
+              const retryNames = [...failedSensors].filter(name => {
+                const sp = snap.sensors.find(s => s.name === name)
+                return sp?.fetch_error_kind !== 'config'
+              })
+              tracker.addEvent('info', 'retry', `Retrying all ${retryNames.length} failed sensor(s)`)
+
+              for (const sensorName of retryNames) {
+                if (signal.aborted) break
+                tracker.resetFetchState(sensorName)
+                tracker.resetSummaryState(sensorName)
+                tracker.setFetchState(sensorName, 'running')
+
+                const result = await fetchSensor(sensorName, config, (detail, itemCount) => {
+                  tracker.setFetchDetail(sensorName, detail, itemCount)
+                })
+
+                if (signal.aborted) break
+
+                if (sensorResultSucceeded(result)) {
+                  tracker.setFetchState(sensorName, 'ok', result.items.length)
+                  tracker.addEvent('ok', 'retry', `Retry succeeded — ${result.items.length} items`, sensorName)
+                  failedSensors.delete(sensorName)
+                  mergeRetryResult(sourceReport, result)
+                  await writeReport(sourceReport).catch(() => {})
+                  if (!sourceReport.sources_ok.includes(sensorName)) {
+                    sourceReport.sources_ok.push(sensorName)
+                  }
+                  sourceReport.sources_failed = sourceReport.sources_failed.filter(n => n !== sensorName)
+                  const sensorSummary = await summarizeSingleSensor(sourceReport, sensorName, {
+                    ...baseSummarizeOpts,
+                    skipCache: true,
+                  })
+                  if (sensorSummary && summary) {
+                    mergeSensorSummary(summary, sensorSummary)
+                  }
+                } else {
+                  tracker.setFetchState(sensorName, 'failed', 0, result.error, result.error_kind ?? 'api')
+                  tracker.addEvent('error', 'retry', result.error ?? 'Retry failed', sensorName)
+                }
               }
             }
           }

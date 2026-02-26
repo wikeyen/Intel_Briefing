@@ -1,17 +1,18 @@
 // ABOUTME: Pipeline resume endpoint — POST /api/fetch/resume.
-// ABOUTME: Handles skip-retries, retry-sensor, skip-sensor, skip-fetching-sensor, and generate-overall actions.
+// ABOUTME: Handles skip-retries, retry-sensor, retry-all, skip-sensor, skip-fetching-sensor, and generate-overall actions.
 import { NextRequest, NextResponse } from 'next/server'
 import {
   skipPipelineRetries,
   isPipelineRunning,
   isPipelinePaused,
   retrySensor,
+  retryAllFailed,
   skipSensor,
   skipFetchingSensor,
   generateOverall,
 } from '@/lib/pipeline/orchestrator'
 
-const VALID_ACTIONS = ['proceed', 'retry_sensor', 'skip_sensor', 'skip_fetching_sensor', 'generate_overall'] as const
+const VALID_ACTIONS = ['proceed', 'retry_sensor', 'retry_all', 'skip_sensor', 'skip_fetching_sensor', 'generate_overall'] as const
 type Action = typeof VALID_ACTIONS[number]
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -69,6 +70,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const ok = retrySensor(sensor)
     if (!ok) return NextResponse.json({ error: 'Failed to retry sensor' }, { status: 500 })
     return NextResponse.json({ status: 'retrying_sensor', sensor })
+  }
+
+  if (action === 'retry_all') {
+    const ok = retryAllFailed()
+    if (!ok) return NextResponse.json({ error: 'Failed to retry all' }, { status: 500 })
+    return NextResponse.json({ status: 'retrying_all_failed' })
   }
 
   if (action === 'skip_sensor') {

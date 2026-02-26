@@ -652,7 +652,7 @@ export const SensorCard = memo(function SensorCard(props: SensorCardProps) {
 
 function rowContainerStyle(state: CardState, hovered: boolean): React.CSSProperties {
   // Subgrid row — inherits column tracks from parent .sensor-list grid.
-  // Uses inset box-shadow instead of border-left so content never shifts.
+  // State is communicated via the coloured dot, not a left-border indicator.
   const base: React.CSSProperties = {
     gridColumn: '1 / -1',
     display: 'grid',
@@ -670,7 +670,7 @@ function rowContainerStyle(state: CardState, hovered: boolean): React.CSSPropert
   if (state === 'disabled') return { ...base, opacity: 0.4, cursor: 'default' }
 
   if (state === 'paused-failed' || state === 'failed-mid-run') {
-    return { ...base, boxShadow: 'inset 3px 0 0 var(--err)', cursor: state === 'paused-failed' ? 'default' : base.cursor }
+    return { ...base, cursor: state === 'paused-failed' ? 'default' : base.cursor }
   }
 
   if (state === 'fetching' || state === 'summarizing' || state === 'waiting' || state === 'fetched' || state === 'skipped' || state === 'cached' || state === 'done') {
@@ -681,17 +681,16 @@ function rowContainerStyle(state: CardState, hovered: boolean): React.CSSPropert
     return {
       ...base,
       background: 'color-mix(in srgb, var(--accent) 8%, var(--surface))',
-      boxShadow: 'inset 3px 0 0 var(--accent)',
       ...(hovered && { background: 'color-mix(in srgb, var(--accent) 12%, var(--surface))' }),
     }
   }
 
   if (state === 'failed') {
-    return { ...base, boxShadow: 'inset 3px 0 0 var(--err)', ...(hovered && { background: 'var(--surface-alt)' }) }
+    return { ...base, ...(hovered && { background: 'var(--surface-alt)' }) }
   }
 
   if (state === 'config-error') {
-    return { ...base, boxShadow: 'inset 3px 0 0 var(--warn)', ...(hovered && { background: 'var(--surface-alt)' }) }
+    return { ...base, ...(hovered && { background: 'var(--surface-alt)' }) }
   }
 
   return { ...base, ...(hovered && { background: 'var(--surface-alt, rgba(0,0,0,0.02))' }) }

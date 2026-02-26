@@ -658,8 +658,8 @@ function rowContainerStyle(state: CardState, hovered: boolean): React.CSSPropert
     display: 'grid',
     gridTemplateColumns: 'subgrid',
     alignItems: 'center',
-    paddingTop: '0.6875rem',
-    paddingBottom: '0.6875rem',
+    margin: '0 -1rem',
+    padding: '0.6875rem 1rem',
     background: 'var(--surface)',
     borderBottom: '1px solid color-mix(in srgb, var(--border) 40%, transparent)',
     transition: 'background 200ms ease',
@@ -818,7 +818,16 @@ function RowNote({ state, props, t }: { state: CardState; props: SensorCardProps
 
 function RowMetric({ state, props }: { state: CardState; props: SensorCardProps; t: TFn }) {
   const { liveSensor, itemCount } = props
-  const mono: React.CSSProperties = { fontFamily: 'ui-monospace, monospace', fontSize: '0.75rem', fontWeight: 600 }
+  const pill: React.CSSProperties = {
+    fontFamily: 'ui-monospace, monospace',
+    fontSize: '0.625rem',
+    fontWeight: 600,
+    background: 'var(--surface-alt)',
+    padding: '0.125rem 0.4375rem',
+    borderRadius: 9,
+    lineHeight: 1.6,
+    flexShrink: 0,
+  }
 
   // States that never show a count
   if (state === 'disabled' || state === 'config-error' || state === 'skipped' || state === 'waiting') return null
@@ -826,26 +835,26 @@ function RowMetric({ state, props }: { state: CardState; props: SensorCardProps;
   // During active fetch/summarize: show live count only when > 0
   if (state === 'fetching' || state === 'summarizing') {
     if (!liveSensor || liveSensor.item_count === 0) return null
-    return <span style={{ ...mono, color: 'var(--ink-faint)' }}>{liveSensor.item_count}</span>
+    return <span style={{ ...pill, color: 'var(--ink-faint)' }}>{liveSensor.item_count}</span>
   }
 
   // Done/cached/fetched: show live count (or fallback to report count)
   if (state === 'done' || state === 'cached' || state === 'fetched') {
     const count = liveSensor?.item_count ?? itemCount
-    return <span style={{ ...mono, color: count > 0 ? 'var(--ink)' : 'var(--ink-faint)' }}>{count}</span>
+    return <span style={{ ...pill, color: count > 0 ? 'var(--ink)' : 'var(--ink-faint)' }}>{count}</span>
   }
 
   // Failed mid-run / paused-failed: show live count if available
   if (state === 'failed-mid-run' || state === 'paused-failed') {
     const count = liveSensor?.item_count ?? 0
     if (count === 0) return null
-    return <span style={{ ...mono, color: 'var(--ink-faint)' }}>{count}</span>
+    return <span style={{ ...pill, color: 'var(--ink-faint)' }}>{count}</span>
   }
 
   // Healthy / selected / failed (idle): show report count
   const count = itemCount
   if (count === 0 && state === 'failed') return null
-  return <span style={{ ...mono, color: count > 0 ? 'var(--ink)' : 'var(--ink-faint)' }}>{count}</span>
+  return <span style={{ ...pill, color: count > 0 ? 'var(--ink)' : 'var(--ink-faint)' }}>{count}</span>
 }
 
 function RowActions({ state, props, t }: { state: CardState; props: SensorCardProps; t: TFn }) {

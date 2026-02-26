@@ -2,22 +2,10 @@
 // ABOUTME: Prunes intel items older than post_expiry_days from the cached report.
 import { NextRequest, NextResponse } from 'next/server'
 import { loadConfig } from '@/lib/config'
+import { verifyCronSecret } from '@/lib/cron-auth'
 import { readReport, writeReport } from '@/lib/pipeline/cache'
 import type { IntelItem } from '@/lib/models'
 import type { CategoryKey } from '@/lib/sensors/taxonomy'
-
-/** Constant-time string comparison to prevent timing attacks. */
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false
-  const encoder = new TextEncoder()
-  const bufA = encoder.encode(a)
-  const bufB = encoder.encode(b)
-  let diff = 0
-  for (let i = 0; i < bufA.length; i++) {
-    diff |= bufA[i] ^ bufB[i]
-  }
-  return diff === 0
-}
 
 /** Returns true if the item should be kept (not expired). */
 function isItemAlive(item: IntelItem, cutoffMs: number): boolean {
@@ -32,14 +20,8 @@ function isItemAlive(item: IntelItem, cutoffMs: number): boolean {
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   // Verify cron secret
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret) {
-    const authHeader = request.headers.get('authorization')
-    const expected = `Bearer ${cronSecret}`
-    if (!authHeader || !timingSafeEqual(authHeader, expected)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  }
+  const authError = verifyCronSecret(request)
+  if (authError) return authError
 
   const config = await loadConfig()
   const report = await readReport()

@@ -502,7 +502,6 @@ export async function fetchXPosts(
       const cached = await getAccountCache(handle)
       if (cached) {
         cachedItems.push(...cached.items)
-        console.log(`[x] Cache hit: ${handle} (fetched ${cached.fetched_at})`)
         continue
       }
     } catch {

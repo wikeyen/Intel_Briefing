@@ -1,7 +1,7 @@
 // ABOUTME: Masked input component for API keys — shows 20 dots for saved keys, with show/hide/edit functionality.
 // ABOUTME: Extracted from ApiKeys.tsx for reuse; supports saved, revealed, and editing modes.
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { inputBase as _inputBase, focus, blur } from '@/components/form-styles'
 import { useTranslation } from '@/lib/i18n'
 
@@ -27,11 +27,14 @@ export function MaskedInput({ label, hint, saved, newValue, onNewValue, onReveal
   const [realValue, setRealValue] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  // When parent reloads after save, reset back to saved/editing based on new saved state
-  useEffect(() => {
+  // When parent reloads after save, reset back to saved/editing based on new saved state.
+  // Tracks previous prop value via ref — no useEffect needed.
+  const prevSavedRef = useRef(saved)
+  if (prevSavedRef.current !== saved) {
+    prevSavedRef.current = saved
     setMode(saved ? 'saved' : 'editing')
     setRealValue(null)
-  }, [saved])
+  }
 
   const handleShowHide = async () => {
     if (mode === 'revealed') {

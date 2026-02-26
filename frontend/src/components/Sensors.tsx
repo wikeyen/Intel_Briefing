@@ -458,6 +458,7 @@ export function Sensors() {
   /* ── Main render ───────────────────────────────────────────────────────── */
   return (
     <div>
+      {/* Safe: HIDE_SPINNERS_CSS is a hardcoded CSS string constant — no user/external input. */}
       <style dangerouslySetInnerHTML={{ __html: HIDE_SPINNERS_CSS }} />
 
       <div className="page-header" style={{ paddingBottom: '1rem' }}>

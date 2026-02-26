@@ -358,17 +358,24 @@ function ClickableCard({ onClick, children }: { onClick?: () => void; children: 
 }
 
 // ---------------------------------------------------------------------------
-// 1. PublicFocusCard — Compact Trend Intelligence Preview
+// InsightCard — shared base for cards that show a summary + tag cloud
 // ---------------------------------------------------------------------------
 
-interface PublicFocusCardProps {
-  data: TrendIntelligence | null
-  loading?: boolean
-  onClick?: () => void
+interface InsightCardData {
+  summary: string
+  tags: IntelTag[]
 }
 
-export function PublicFocusCard({ data, loading, onClick }: PublicFocusCardProps) {
-  const { t } = useTranslation()
+interface InsightCardProps {
+  data: InsightCardData | null
+  loading?: boolean
+  onClick?: () => void
+  headerLabel: string
+  accentColor: string
+  emptyMessage: string
+}
+
+function InsightCard({ data, loading, onClick, headerLabel, accentColor, emptyMessage }: InsightCardProps) {
   const tagCloudTags: TagCloudTag[] = useMemo(() => {
     return (data?.tags ?? []).map((t) => ({
       text: t.text,
@@ -381,12 +388,12 @@ export function PublicFocusCard({ data, loading, onClick }: PublicFocusCardProps
   return (
     <ClickableCard onClick={onClick}>
       <div style={{ ...SECTION_GAP, flex: 1 }}>
-        <CardHeader label={t('intel.public_focus')} accentColor="#f39c12" />
+        <CardHeader label={headerLabel} accentColor={accentColor} />
 
         {loading ? (
           <LoadingPlaceholder />
         ) : !data ? (
-          <EmptyHint message={t('intel.no_trend_data')} />
+          <EmptyHint message={emptyMessage} />
         ) : (
           <>
             {data.summary && (
@@ -400,6 +407,30 @@ export function PublicFocusCard({ data, loading, onClick }: PublicFocusCardProps
         )}
       </div>
     </ClickableCard>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// 1. PublicFocusCard — Compact Trend Intelligence Preview
+// ---------------------------------------------------------------------------
+
+interface PublicFocusCardProps {
+  data: TrendIntelligence | null
+  loading?: boolean
+  onClick?: () => void
+}
+
+export function PublicFocusCard({ data, loading, onClick }: PublicFocusCardProps) {
+  const { t } = useTranslation()
+  return (
+    <InsightCard
+      data={data}
+      loading={loading}
+      onClick={onClick}
+      headerLabel={t('intel.public_focus')}
+      accentColor="#f39c12"
+      emptyMessage={t('intel.no_trend_data')}
+    />
   )
 }
 
@@ -475,37 +506,15 @@ interface VoicesCardProps {
 
 export function VoicesCard({ data, loading, onClick }: VoicesCardProps) {
   const { t } = useTranslation()
-  const tagCloudTags: TagCloudTag[] = useMemo(() => {
-    return (data?.tags ?? []).map((t) => ({
-      text: t.text,
-      weight: t.weight,
-      original: t.original,
-      sentiment: t.sentiment,
-    }))
-  }, [data])
-
   return (
-    <ClickableCard onClick={onClick}>
-      <div style={{ ...SECTION_GAP, flex: 1 }}>
-        <CardHeader label={t('intel.voices')} accentColor="#3498db" />
-
-        {loading ? (
-          <LoadingPlaceholder />
-        ) : !data ? (
-          <EmptyHint message={t('intel.no_voices_data')} />
-        ) : (
-          <>
-            {data.summary && (
-              <p style={CLAMPED_SUMMARY}>{data.summary}</p>
-            )}
-
-            {tagCloudTags.length > 0 && (
-              <TagCloud tags={tagCloudTags} maxTags={15} style={{ marginTop: '0.25rem', justifyContent: 'center' }} />
-            )}
-          </>
-        )}
-      </div>
-    </ClickableCard>
+    <InsightCard
+      data={data}
+      loading={loading}
+      onClick={onClick}
+      headerLabel={t('intel.voices')}
+      accentColor="#3498db"
+      emptyMessage={t('intel.no_voices_data')}
+    />
   )
 }
 

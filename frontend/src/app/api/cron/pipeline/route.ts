@@ -2,31 +2,13 @@
 // ABOUTME: Protected by CRON_SECRET; delegates to the pipeline orchestrator.
 import { NextRequest, NextResponse } from 'next/server'
 import { loadConfig } from '@/lib/config'
+import { verifyCronSecret } from '@/lib/cron-auth'
 import { runPipeline, isPipelineRunning } from '@/lib/pipeline/orchestrator'
-
-/** Constant-time string comparison to prevent timing attacks. */
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false
-  const encoder = new TextEncoder()
-  const bufA = encoder.encode(a)
-  const bufB = encoder.encode(b)
-  let diff = 0
-  for (let i = 0; i < bufA.length; i++) {
-    diff |= bufA[i] ^ bufB[i]
-  }
-  return diff === 0
-}
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   // Verify cron secret
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret) {
-    const authHeader = request.headers.get('authorization')
-    const expected = `Bearer ${cronSecret}`
-    if (!authHeader || !timingSafeEqual(authHeader, expected)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  }
+  const authError = verifyCronSecret(request)
+  if (authError) return authError
 
   // Reject if a pipeline is already running (manual or previous cron overlap)
   if (isPipelineRunning()) {

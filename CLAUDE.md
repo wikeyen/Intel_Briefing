@@ -45,6 +45,18 @@ make test                          # frontend (vitest)
 - **Frontend**: `cd frontend && npx vitest run` — uses jsdom environment for component tests
 - Vitest config: `frontend/vitest.config.ts`
 
+## Code Health
+
+Before each `git push`, run a desloppify scan to catch regressions:
+
+```bash
+desloppify --lang typescript scan --path frontend/src
+```
+
+- Fix any new T1/T2 findings before pushing
+- T3/T4 findings can be deferred but should trend downward
+- Resolve false positives with `desloppify resolve wontfix <id> --note 'reason' --attest '...'`
+
 ## UI Verification
 
 All UI changes must be visually verified on both desktop and mobile viewports before merging. Use Playwright (via the MCP browser tools) to:

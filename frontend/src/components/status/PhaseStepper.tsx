@@ -428,6 +428,7 @@ export function PhaseStepper({ pipelineStatus, onLogToggle }: PipelinePhaseStepp
 
   return (
     <>
+      {/* Safe: STEPPER_CSS is a hardcoded CSS string constant — no user/external input. */}
       <style dangerouslySetInnerHTML={{ __html: STEPPER_CSS }} />
       <div style={{ width: '100%' }}>
         {/* Main line */}

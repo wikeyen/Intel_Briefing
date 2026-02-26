@@ -78,7 +78,11 @@ export async function kvGet<T>(key: string): Promise<T | null> {
   if (result.rows.length === 0) {
     return null
   }
-  return JSON.parse(result.rows[0].value as string) as T
+  try {
+    return JSON.parse(result.rows[0].value as string) as T
+  } catch {
+    return null
+  }
 }
 
 // ── Trend snapshot helpers ──────────────────────────────────────────────
@@ -131,7 +135,13 @@ export async function readTrendSnapshots(
     args: [`${prefix}%`],
   })
 
-  return rows.rows.map(row => JSON.parse(row.value as string) as TrendSnapshot)
+  return rows.rows.flatMap(row => {
+    try {
+      return [JSON.parse(row.value as string) as TrendSnapshot]
+    } catch {
+      return []
+    }
+  })
 }
 
 // ── Pipeline items (crash-safe incremental fetch storage) ─────────────
@@ -171,10 +181,14 @@ export async function readFreshPipelineItems(
   for (const row of result.rows) {
     const name = row.sensor_name as string
     if (!map.has(name)) {
-      map.set(name, {
-        items: JSON.parse(row.items_json as string),
-        fetchedAt: row.fetched_at as string,
-      })
+      try {
+        map.set(name, {
+          items: JSON.parse(row.items_json as string),
+          fetchedAt: row.fetched_at as string,
+        })
+      } catch {
+        map.set(name, { items: [], fetchedAt: row.fetched_at as string })
+      }
     }
   }
   return map
@@ -191,11 +205,19 @@ export async function readRunItems(
     sql: `SELECT sensor_name, items_json, fetched_at FROM pipeline_items WHERE run_id = ?`,
     args: [runId],
   })
-  return result.rows.map(row => ({
-    sensorName: row.sensor_name as string,
-    items: JSON.parse(row.items_json as string),
-    fetchedAt: row.fetched_at as string,
-  }))
+  return result.rows.map(row => {
+    let items: unknown[]
+    try {
+      items = JSON.parse(row.items_json as string)
+    } catch {
+      items = []
+    }
+    return {
+      sensorName: row.sensor_name as string,
+      items,
+      fetchedAt: row.fetched_at as string,
+    }
+  })
 }
 
 /**

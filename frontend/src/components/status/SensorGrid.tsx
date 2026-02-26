@@ -142,6 +142,7 @@ export function SensorGrid({
       width: '100%',
       padding: '0.75rem 3rem 1.5rem',
     }}>
+      {/* Safe: CARD_CSS is a hardcoded CSS string constant — no user/external input. */}
       <style dangerouslySetInnerHTML={{ __html: CARD_CSS }} />
       <div className="sensor-list" style={{
         display: 'grid',

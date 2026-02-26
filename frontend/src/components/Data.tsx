@@ -126,6 +126,9 @@ export function Data() {
     hasChangedSection.current = true
     prevSectionIdx.current = activeSectionIdx
     setActiveSection(key)
+    setSearchQuery('')
+    setPage(1)
+    // selectedSources resets via availableFilters sync below
   }, [activeSectionIdx])
 
   const slideDirection = activeSectionIdx >= prevSectionIdx.current ? 1 : -1
@@ -220,15 +223,14 @@ export function Data() {
     return [...seen].sort()
   }, [sectionItems, activeSection])
 
-  // Reset selected filters, search, and page when section changes
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+  // Select all sources when available filters change (new data or section switch).
+  // Uses a ref to detect changes during render — no useEffect needed.
+  const prevFiltersKey = useRef('')
+  const filtersKey = availableFilters.join(',')
+  if (prevFiltersKey.current !== filtersKey) {
+    prevFiltersKey.current = filtersKey
     setSelectedSources(new Set(availableFilters))
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSearchQuery('')
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPage(1)
-  }, [activeSection, availableFilters.join(',')])
+  }
 
   const toggleSource = (src: string) => {
     setSelectedSources(prev => {
@@ -267,6 +269,7 @@ export function Data() {
 
   return (
     <div className="data-page-root" style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
+      {/* Safe: LINE_CLAMP_CSS is a hardcoded CSS string constant — no user/external input. */}
       <style dangerouslySetInnerHTML={{ __html: LINE_CLAMP_CSS }} />
 
       {/* Page header — not sticky (hidden on mobile — shown in top bar) */}

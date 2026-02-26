@@ -97,6 +97,7 @@ export function ActivityLogDrawer({ events, open, onClose }: ActivityLogDrawerPr
 
   return (
     <>
+      {/* Safe: DRAWER_CSS is a hardcoded CSS string constant — no user/external input. */}
       <style dangerouslySetInnerHTML={{ __html: DRAWER_CSS }} />
 
       {/* Backdrop */}

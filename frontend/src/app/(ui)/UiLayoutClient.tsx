@@ -1,7 +1,7 @@
 // ABOUTME: Client-side UI shell — sidebar, toast, i18n provider with locale from cookie.
 // ABOUTME: Manages sidebar pin/collapse/peek states; receives initialLocale from server layout to prevent language flash.
 'use client'
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, type RefObject } from 'react'
 import { usePathname } from 'next/navigation'
 import { Sidebar } from '@/components/Sidebar'
 import { Toaster } from '@/components/Toaster'
@@ -40,12 +40,15 @@ function UiShell({ children, initialPinned }: { children: React.ReactNode; initi
   const pathname = usePathname()
   const { t } = useTranslation()
 
-  const mainRef = useRef<HTMLElement>(null)
-  const closeSidebar = useCallback(() => setSidebarOpen(false), [])
+  // Close mobile sidebar on route change (derived from pathname, no useEffect needed)
+  const prevPathnameRef = useRef(pathname)
+  if (prevPathnameRef.current !== pathname) {
+    prevPathnameRef.current = pathname
+    if (sidebarOpen) setSidebarOpen(false)
+  }
 
-  // Close sidebar on route change
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { setSidebarOpen(false) }, [pathname])
+  const mainRef = useRef<HTMLElement>(null) as RefObject<HTMLElement>
+  const closeSidebar = useCallback(() => setSidebarOpen(false), [])
 
   // Clear peek timeout on unmount
   useEffect(() => {

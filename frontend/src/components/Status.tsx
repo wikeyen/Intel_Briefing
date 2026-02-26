@@ -367,6 +367,7 @@ export function Status() {
       flexDirection: 'column',
       minHeight: '100%',
     }}>
+      {/* Safe: CONTROL_BAR_CSS is a hardcoded CSS string constant — no user/external input. */}
       <style dangerouslySetInnerHTML={{ __html: CONTROL_BAR_CSS }} />
 
       {staleInfo && !isRunning && (

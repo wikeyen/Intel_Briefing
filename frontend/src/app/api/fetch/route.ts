@@ -27,13 +27,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const config = await loadConfig()
 
-  // Run pipeline in background via after() — survives response delivery
+  // Run pipeline in background via after() — survives response delivery.
+  // Errors cannot produce an HTTP response (202 is already sent), but must
+  // propagate so Next.js error handling and monitoring tools can observe them.
   after(async () => {
-    try {
-      await runPipeline(config, mode, sensors)
-    } catch (err) {
-      console.error('Pipeline run failed:', err)
-    }
+    await runPipeline(config, mode, sensors)
   })
 
   return NextResponse.json({ status: 'accepted', mode }, { status: 202 })

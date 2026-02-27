@@ -69,10 +69,13 @@ export function GroupCard({
       <div style={{ ...ACCENT_BAR, background: group.color }} />
 
       {/* Header */}
-      <div style={GROUP_HEADER}>
+      <div style={{
+        ...GROUP_HEADER,
+        background: `${group.color}14`,
+      }}>
         <span style={colorDotStyle(group.color)} />
         <span style={{
-          fontSize: '0.8125rem',
+          fontSize: '0.9375rem',
           fontWeight: 600,
           color: 'var(--ink)',
           flex: 1,
@@ -86,10 +89,13 @@ export function GroupCard({
 
         {/* Sensor count pill */}
         <span style={{
-          fontSize: '0.5625rem',
+          fontSize: '0.625rem',
           fontFamily: 'ui-monospace, monospace',
           color: 'var(--ink-muted)',
-          background: 'var(--surface-inset)',
+          background: 'var(--glass-pill, rgba(255,255,255,0.5))',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+          border: '1px solid var(--glass-border, rgba(255,255,255,0.2))',
           padding: '0.0625rem 0.375rem',
           borderRadius: 999,
         }}>

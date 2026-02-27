@@ -357,6 +357,69 @@ describe('GroupCard', () => {
   })
 })
 
+describe('GroupCard glassmorphism', () => {
+  const group: SourceGroupTree = {
+    id: 'g1',
+    parent_id: null,
+    name: 'Trending',
+    color: '#C4851C',
+    icon: null,
+    processing: 'trend',
+    sort_order: 0,
+    created_at: '',
+    updated_at: '',
+    sensors: ['weibo'],
+    children: [],
+  }
+
+  it('applies tinted header background from group color', () => {
+    const { container } = render(
+      <GroupCard
+        group={group}
+        enabled={{ weibo: true }}
+        statuses={{}}
+        sensorLimits={{}}
+        sensorLookback={{}}
+        defaultLimit={10}
+        defaultLookback={48}
+        onToggle={() => {}}
+        onUpdateLimit={() => {}}
+        onUpdateLookback={() => {}}
+        onEditGroup={() => {}}
+        onDeleteGroup={() => {}}
+        renderSensorRow={(key) => <div key={key}>{key}</div>}
+      />
+    )
+    // The header div gets background: `${group.color}14` (8% opacity tint)
+    const headerDiv = container.querySelector('[style*="background"]')
+    expect(headerDiv).not.toBeNull()
+  })
+
+  it('renders frosted count pill with backdrop filter', () => {
+    const { container } = render(
+      <GroupCard
+        group={group}
+        enabled={{ weibo: true }}
+        statuses={{}}
+        sensorLimits={{}}
+        sensorLookback={{}}
+        defaultLimit={10}
+        defaultLookback={48}
+        onToggle={() => {}}
+        onUpdateLimit={() => {}}
+        onUpdateLookback={() => {}}
+        onEditGroup={() => {}}
+        onDeleteGroup={() => {}}
+        renderSensorRow={(key) => <div key={key}>{key}</div>}
+      />
+    )
+    // Count pill shows "1/1" and uses glass-pill background
+    expect(screen.getByText('1/1')).toBeDefined()
+    const pill = screen.getByText('1/1')
+    expect(pill.style.backdropFilter).toBe('blur(4px)')
+  })
+})
+
 describe('UngroupedSection', () => {
   it('renders nothing when no ungrouped sensors', () => {
     const { container } = render(

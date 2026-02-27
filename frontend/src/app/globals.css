@@ -114,6 +114,11 @@
   --warn-border:     rgba(234, 179, 8, 0.3);
   --err-tint:        rgba(239, 68, 68, 0.08);
 
+  /* Glassmorphism — frosted glass tokens */
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-pill: rgba(255, 255, 255, 0.5);
+
   /* Backward-compat aliases (used by non-dashboard CSS) */
   --surface-alt:     var(--surface-inset);
   --border-soft:     var(--border-subtle);
@@ -272,6 +277,11 @@
     /* Focus */
     --focus-ring:      0 0 0 2px var(--surface), 0 0 0 4px rgba(92, 196, 180, 0.5);
 
+    /* Glassmorphism — frosted glass tokens (dark) */
+    --glass-bg: rgba(30, 30, 30, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-pill: rgba(255, 255, 255, 0.08);
+
     /* Utility — dark-appropriate values */
     --canvas-fade:     rgba(21, 21, 20, 0.9);
     --warn-tint:       rgba(250, 204, 21, 0.08);
@@ -296,6 +306,15 @@
     --destructive:         #F87171;
     --input:               #282724;
     --ring:                #5CC4B4;
+  }
+}
+
+/* ─── Reduced Motion — solid fallback for glassmorphism ─────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --glass-bg: var(--surface);
+    --glass-border: var(--border);
+    --glass-pill: var(--surface-inset);
   }
 }
 

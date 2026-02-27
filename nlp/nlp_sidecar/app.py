@@ -1,5 +1,5 @@
 # ABOUTME: FastAPI application — the NLP sidecar entry point.
-# ABOUTME: Loads all models at startup, exposes /analyze and /health endpoints.
+# ABOUTME: Loads all models at startup, exposes /analyze, /enrich, /cluster, and /health endpoints.
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -15,6 +15,10 @@ from nlp_sidecar.keywords import KeywordModels, extract_keywords, load_keyword_m
 from nlp_sidecar.models import (
     AnalyzeRequest,
     AnalyzeResponse,
+    ClusterRequest,
+    ClusterResponse,
+    EnrichRequest,
+    EnrichResponse,
     EnrichedItem,
     Entities,
     HealthResponse,
@@ -101,3 +105,50 @@ async def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
     )
 
     return AnalyzeResponse(items=enriched, clusters=clusters)
+
+
+@app.post("/enrich")
+async def enrich(request: EnrichRequest) -> EnrichResponse:
+    if not request.items:
+        return EnrichResponse(items=[])
+
+    enriched: list[EnrichedItem] = []
+    for item in request.items:
+        text = f"{item.title} {item.abstract or ''}".strip()
+
+        try:
+            keywords = extract_keywords(text, item.lang, models.keywords)
+            sentiment = analyze_sentiment(text, item.lang, models.sentiment)
+            entities = extract_entities(text, item.lang, models.ner)
+        except Exception:
+            logger.exception("Failed to process item %s", item.id)
+            keywords = []
+            sentiment = Sentiment(label="neutral", score=0.0)
+            entities = Entities()
+
+        enriched.append(
+            EnrichedItem(
+                id=item.id,
+                keywords=keywords,
+                sentiment=sentiment,
+                entities=entities,
+            )
+        )
+
+    return EnrichResponse(items=enriched)
+
+
+@app.post("/cluster")
+async def cluster(request: ClusterRequest) -> ClusterResponse:
+    if not request.items:
+        return ClusterResponse(clusters=[])
+
+    kw_map: dict[str, list[Keyword]] = {}
+    for item_id, kw_list in request.per_item_keywords.items():
+        kw_map[item_id] = kw_list
+
+    clusters = cluster_items(
+        request.items, kw_map, models.embedding, request.per_item_sentiment
+    )
+
+    return ClusterResponse(clusters=clusters)

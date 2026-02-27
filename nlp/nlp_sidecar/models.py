@@ -1,5 +1,5 @@
-# ABOUTME: Pydantic models for the /analyze API — request and response schemas.
-# ABOUTME: Defines item input, per-item enrichments, and cluster output structures.
+# ABOUTME: Pydantic models for the NLP sidecar API — request and response schemas.
+# ABOUTME: Defines item input, per-item enrichments, cluster output, and batch endpoint contracts.
 
 from pydantic import BaseModel, Field
 
@@ -65,6 +65,32 @@ class AnalyzeResponse(BaseModel):
     """Response body for POST /analyze."""
 
     items: list[EnrichedItem]
+    clusters: list[ClusterSummary]
+
+
+class EnrichRequest(BaseModel):
+    """Request body for POST /enrich — per-item enrichment only."""
+
+    items: list[AnalyzeItem]
+
+
+class EnrichResponse(BaseModel):
+    """Response body for POST /enrich."""
+
+    items: list[EnrichedItem]
+
+
+class ClusterRequest(BaseModel):
+    """Request body for POST /cluster — clustering only."""
+
+    items: list[AnalyzeItem]
+    per_item_keywords: dict[str, list[Keyword]]
+    per_item_sentiment: dict[str, str]
+
+
+class ClusterResponse(BaseModel):
+    """Response body for POST /cluster."""
+
     clusters: list[ClusterSummary]
 
 

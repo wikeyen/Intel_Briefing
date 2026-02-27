@@ -24,7 +24,7 @@ import { GroupPicker } from '@/components/sources/GroupPicker'
 import { UngroupedSection } from '@/components/sources/UngroupedSection'
 import { SensorDragItem } from '@/components/sources/SensorDragItem'
 import { SensorDetailPanel } from '@/components/sources/SensorDetailPanel'
-import { ADD_GROUP_BTN, GROUP_CARD } from '@/components/sources/group-styles'
+import { GROUP_CARD } from '@/components/sources/group-styles'
 import type { SourceGroupTree, CreateGroupPayload, UpdateGroupPayload } from '@/lib/groups/types'
 
 /** Sensor key to language lookup for CN badges. */
@@ -812,14 +812,40 @@ export function Sensors() {
 
       <div className="page-header" style={{ paddingBottom: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.01em', marginBottom: '0.125rem' }}>
-            {t('sources.title')}
-          </h2>
-          <AutoSaveIndicator status={saveStatus} />
+          <div>
+            <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.01em', marginBottom: '0.125rem' }}>
+              {t('sources.title')}
+            </h2>
+            <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, margin: 0 }}>
+              {t('sources.desc')}
+            </p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <AutoSaveIndicator status={saveStatus} />
+            {!creatingGroup && !editingGroup && (
+              <button
+                type="button"
+                onClick={() => setCreatingGroup(true)}
+                style={{
+                  padding: '0.5rem 1.25rem',
+                  borderRadius: 6,
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  background: 'var(--accent)',
+                  color: 'white',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.375rem',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                + {t('sources.new_group')}
+              </button>
+            )}
+          </div>
         </div>
-        <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
-          {t('sources.desc')}
-        </p>
       </div>
 
       <div style={{ paddingBottom: '4rem' }}>
@@ -827,19 +853,6 @@ export function Sensors() {
 
           {/* ── Main column: groups ───────────────────────────────────── */}
           <div className="sources-main">
-
-            {/* ── New Group button ──────────────────────────────────── */}
-            {!creatingGroup && !editingGroup && (
-              <button
-                type="button"
-                onClick={() => setCreatingGroup(true)}
-                style={ADD_GROUP_BTN}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--accent-subtle)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)' }}
-              >
-                + {t('sources.new_group')}
-              </button>
-            )}
 
             {/* ── Create Group form ────────────────────────────────── */}
             {creatingGroup && (

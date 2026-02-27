@@ -651,6 +651,18 @@ describe('GROUP_CARD style', () => {
   })
 })
 
+describe('Sources layout matches Dashboard', () => {
+  it('sidebar widths in CSS match Dashboard breakpoints', async () => {
+    // Verify the globals.css sources-columns grid matches dashboard-columns:
+    // 1080px → 1fr 320px, 1280px → 1fr 360px
+    const fs = await import('fs')
+    const css = fs.readFileSync('src/app/globals.css', 'utf8')
+    const sourcesBlock = css.slice(css.indexOf('.sources-columns'))
+    expect(sourcesBlock).toContain('grid-template-columns: 1fr 320px')
+    expect(sourcesBlock).toContain('grid-template-columns: 1fr 360px')
+  })
+})
+
 describe('UngroupedSection', () => {
   it('renders nothing when no ungrouped sensors', () => {
     const { container } = render(

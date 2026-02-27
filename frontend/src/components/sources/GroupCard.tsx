@@ -1,0 +1,172 @@
+// ABOUTME: Soft UI group card — displays a colored accent bar, group header, and sensor list.
+// ABOUTME: Supports sub-groups, kebab menu actions, social controls slot, and drag-over highlighting.
+'use client'
+import { useState, useRef, useEffect, type ReactNode } from 'react'
+import type { SourceGroupTree } from '@/lib/groups/types'
+import {
+  GROUP_CARD, ACCENT_BAR, GROUP_HEADER, SENSOR_LIST,
+  PROCESSING_PILL, KEBAB_BTN, KEBAB_MENU, KEBAB_MENU_ITEM,
+  colorDotStyle,
+} from './group-styles'
+
+interface GroupCardProps {
+  group: SourceGroupTree
+  enabled: Record<string, boolean>
+  statuses: Record<string, 'ok' | 'failed' | 'disabled'>
+  sensorLimits: Record<string, number>
+  sensorLookback: Record<string, number>
+  defaultLimit: number
+  defaultLookback: number
+  isOver?: boolean
+  onToggle: (key: string) => void
+  onUpdateLimit: (key: string, value: number) => void
+  onUpdateLookback: (key: string, value: number) => void
+  onEditGroup: () => void
+  onDeleteGroup: () => void
+  onAddSubGroup?: () => void
+  renderSensorRow: (sensorKey: string, isLast: boolean) => ReactNode
+  renderSubGroup?: (child: SourceGroupTree) => ReactNode
+  renderSocialControls?: () => ReactNode
+}
+
+export function GroupCard({
+  group,
+  enabled,
+  isOver,
+  onEditGroup,
+  onDeleteGroup,
+  onAddSubGroup,
+  renderSensorRow,
+  renderSubGroup,
+  renderSocialControls,
+}: GroupCardProps) {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // Close kebab menu on outside click
+  useEffect(() => {
+    if (!menuOpen) return
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [menuOpen])
+
+  const enabledCount = group.sensors.filter(k => enabled[k] ?? true).length
+
+  return (
+    <div style={{
+      ...GROUP_CARD,
+      ...(isOver ? { boxShadow: 'var(--shadow-md), inset 0 0 0 2px var(--accent-muted)', background: 'var(--accent-subtle)' } : {}),
+      transition: 'box-shadow 150ms, background 150ms',
+    }}>
+      {/* Accent bar */}
+      <div style={{ ...ACCENT_BAR, background: group.color }} />
+
+      {/* Header */}
+      <div style={GROUP_HEADER}>
+        <span style={colorDotStyle(group.color)} />
+        <span style={{
+          fontSize: '0.8125rem',
+          fontWeight: 600,
+          color: 'var(--ink)',
+          flex: 1,
+          minWidth: 0,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}>
+          {group.name}
+        </span>
+
+        {/* Sensor count pill */}
+        <span style={{
+          fontSize: '0.5625rem',
+          fontFamily: 'ui-monospace, monospace',
+          color: 'var(--ink-muted)',
+          background: 'var(--surface-inset)',
+          padding: '0.0625rem 0.375rem',
+          borderRadius: 999,
+        }}>
+          {enabledCount}/{group.sensors.length}
+        </span>
+
+        {/* Processing type badge */}
+        <span style={PROCESSING_PILL}>
+          {group.processing}
+        </span>
+
+        {/* Kebab menu */}
+        <div style={{ position: 'relative' }} ref={menuRef}>
+          <button
+            type="button"
+            onClick={() => setMenuOpen(!menuOpen)}
+            style={KEBAB_BTN}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-inset)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none' }}
+            aria-label="Group options"
+          >
+            &#x22EF;
+          </button>
+          {menuOpen && (
+            <div style={KEBAB_MENU}>
+              <button
+                type="button"
+                style={KEBAB_MENU_ITEM}
+                onClick={() => { setMenuOpen(false); onEditGroup() }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-inset)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none' }}
+              >
+                Edit
+              </button>
+              {onAddSubGroup && (
+                <button
+                  type="button"
+                  style={KEBAB_MENU_ITEM}
+                  onClick={() => { setMenuOpen(false); onAddSubGroup() }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-inset)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none' }}
+                >
+                  Add sub-group
+                </button>
+              )}
+              <button
+                type="button"
+                style={{ ...KEBAB_MENU_ITEM, color: 'var(--err)' }}
+                onClick={() => { setMenuOpen(false); onDeleteGroup() }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--err-bg)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none' }}
+              >
+                Delete
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Sensor list */}
+      <div style={SENSOR_LIST}>
+        {group.sensors.map((sensorKey, i) =>
+          renderSensorRow(sensorKey, i === group.sensors.length - 1 && group.children.length === 0 && !renderSocialControls)
+        )}
+      </div>
+
+      {/* Social controls slot */}
+      {renderSocialControls && renderSocialControls()}
+
+      {/* Sub-groups */}
+      {group.children.length > 0 && renderSubGroup && (
+        <div style={{ paddingLeft: '1rem', background: 'var(--canvas)' }}>
+          {group.children.map(child => (
+            <div key={child.id} style={{ paddingTop: '0.5rem', paddingBottom: '0.5rem' }}>
+              {renderSubGroup(child)}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}

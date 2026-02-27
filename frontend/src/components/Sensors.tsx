@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { DndContext, closestCenter, type DragEndEvent, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { AnimatePresence } from 'framer-motion'
 import { api } from '@/api/client'
 import { TagInput } from '@/components/TagInput'
 import { useTranslation } from '@/lib/i18n'
@@ -22,6 +23,7 @@ import { GroupForm } from '@/components/sources/GroupForm'
 import { GroupPicker } from '@/components/sources/GroupPicker'
 import { UngroupedSection } from '@/components/sources/UngroupedSection'
 import { SensorDragItem } from '@/components/sources/SensorDragItem'
+import { SensorDetailPanel } from '@/components/sources/SensorDetailPanel'
 import { ADD_GROUP_BTN, GROUP_CARD } from '@/components/sources/group-styles'
 import type { SourceGroupTree, CreateGroupPayload, UpdateGroupPayload } from '@/lib/groups/types'
 
@@ -37,6 +39,9 @@ const SENSOR_MAP: Record<string, { key: string; label: string; desc: string; cat
 
 /** Visible sensors — exclude hidden ones. */
 const VISIBLE_SENSORS = SENSORS.filter(s => !HIDDEN_SENSORS.has(s.key))
+
+/** Sensors with complex settings that open a detail panel instead of inline controls. */
+const COMPLEX_SENSORS = new Set(['x_accounts', 'bluesky_accounts', 'mastodon_accounts', 'bluesky_topics', 'mastodon_topics', 'rss_news', 'rss_blogs'])
 
 function normalizeXHandle(value: string): string {
   return value.startsWith('@') ? value : `@${value}`
@@ -112,6 +117,7 @@ export function Sensors() {
   const [creatingSubGroupParentId, setCreatingSubGroupParentId] = useState<string | null>(null)
   const [pickerSensorKey, setPickerSensorKey] = useState<string | null>(null)
   const [overGroupId, setOverGroupId] = useState<string | null>(null)
+  const [detailSensorKey, setDetailSensorKey] = useState<string | null>(null)
 
   /* ── Auto-save ───────────────────────────────────────────────────────────── */
   const { status: saveStatus, trigger } = useAutoSave(
@@ -423,6 +429,7 @@ export function Sensors() {
         onUpdateLookback={hasLookback ? (v) => updateSensorLookback(sensorKey, v) : undefined}
         onAddToGroup={() => setPickerSensorKey(sensorKey)}
         onRemoveFromGroup={() => handleRemoveFromGroup(groupId, sensorKey)}
+        onOpenDetail={COMPLEX_SENSORS.has(sensorKey) ? () => setDetailSensorKey(sensorKey) : undefined}
         isLast={isLast}
       />
     )
@@ -754,7 +761,7 @@ export function Sensors() {
           onAddSubGroup={!group.parent_id ? () => setCreatingSubGroupParentId(group.id) : undefined}
           renderSensorRow={(sensorKey, isLast) => renderDragItem(sensorKey, group.id, isLast)}
           renderSubGroup={(child) => renderGroup(child)}
-          renderSensorControls={(key) => renderSensorInlineControls(key)}
+          renderSensorControls={undefined}
         />
 
         {/* Sub-group creation form */}
@@ -995,6 +1002,70 @@ export function Sensors() {
           </div>
         </div>
       )}
+
+      {/* ── Sensor detail panel ──────────────────────────────────── */}
+      <AnimatePresence>
+        {detailSensorKey && (
+          <SensorDetailPanel
+            sensorKey={detailSensorKey}
+            onClose={() => setDetailSensorKey(null)}
+            socialAccountsX={socialAccountsX}
+            setSocialAccountsX={setSocialAccountsX}
+            xScraperProvider={xScraperProvider}
+            setXScraperProvider={setXScraperProvider}
+            socialAccountsBluesky={socialAccountsBluesky}
+            setSocialAccountsBluesky={setSocialAccountsBluesky}
+            followingBluesky={followingBluesky}
+            setFollowingBluesky={setFollowingBluesky}
+            hasBlueskyCredentials={hasBlueskyCredentials}
+            socialAccountsMastodon={socialAccountsMastodon}
+            setSocialAccountsMastodon={setSocialAccountsMastodon}
+            followingMastodon={followingMastodon}
+            setFollowingMastodon={setFollowingMastodon}
+            hasMastodonCredentials={hasMastodonCredentials}
+            disabledAccounts={disabledAccounts}
+            onToggleAccountDisabled={toggleAccountDisabled}
+            onEnableAllAccounts={enableAllAccounts}
+            onDisableAllAccounts={disableAllAccounts}
+            socialTopicsKeywords={socialTopicsKeywords}
+            setSocialTopicsKeywords={setSocialTopicsKeywords}
+            topicLimits={topicLimits}
+            defaultTopicLimit={defaultTopicLimit}
+            topicLookback={topicLookback}
+            onUpdateTopicLimit={updateTopicLimit}
+            onUpdateTopicLookback={updateTopicLookback}
+            onRemoveTopicKeyword={(keyword) => {
+              setSocialTopicsKeywords(socialTopicsKeywords.filter(k => k !== keyword))
+              setTopicLimits((prev) => { const next = { ...prev }; delete next[keyword]; return next })
+              setTopicLookback((prev) => { const next = { ...prev }; delete next[keyword]; return next })
+              trigger()
+            }}
+            rssFeeds={rssFeeds}
+            setRssFeeds={setRssFeeds}
+            onAddRssFeed={(url) => {
+              const feedType = detailSensorKey === 'rss_news' ? 'news' : 'blog'
+              setRssFeeds(prev => [{ url, type: feedType as 'news' | 'blog' }, ...prev])
+              api.discoverRssFeed(url).then((result) => {
+                if (result.type === 'discovered' && result.feedUrl) {
+                  setRssFeeds((prev) => prev.map((f) => f.url === url ? { ...f, url: result.feedUrl! } : f))
+                  showToast(t('sources.feed_discovered', { title: result.feedTitle ?? result.feedUrl ?? '' }))
+                } else if (result.type === 'not_found') {
+                  setRssFeeds((prev) => prev.filter((f) => f.url !== url))
+                  showToast(t('sources.feed_not_found'))
+                } else if (result.type === 'error') {
+                  setRssFeeds((prev) => prev.filter((f) => f.url !== url))
+                  showToast(t('sources.feed_discovery_failed', { error: result.message ?? '' }))
+                }
+                trigger()
+              }).catch(() => { trigger() })
+            }}
+            validateX={validateX}
+            validateBsky={validateBsky}
+            validateMasto={validateMasto}
+            trigger={trigger}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

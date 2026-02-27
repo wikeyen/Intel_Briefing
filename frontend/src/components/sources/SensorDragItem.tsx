@@ -26,6 +26,7 @@ interface SensorDragItemProps {
   onUpdateLookback?: (value: number) => void
   onAddToGroup: () => void
   onRemoveFromGroup: () => void
+  onOpenDetail?: () => void
   isLast: boolean
 }
 
@@ -67,6 +68,7 @@ export function SensorDragItem({
   onUpdateLookback,
   onAddToGroup,
   onRemoveFromGroup,
+  onOpenDetail,
   isLast,
 }: SensorDragItemProps) {
   const { t } = useTranslation()
@@ -161,6 +163,34 @@ export function SensorDragItem({
             suffix="h"
             onChange={onUpdateLookback}
           />
+        )}
+        {/* Settings gear — always visible for complex sensors */}
+        {onOpenDetail && (
+          <button
+            type="button"
+            onClick={onOpenDetail}
+            aria-label="Sensor settings"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 22,
+              height: 22,
+              borderRadius: '50%',
+              border: '1px solid var(--accent)',
+              background: 'none',
+              color: 'var(--accent)',
+              fontSize: '0.75rem',
+              lineHeight: 1,
+              cursor: 'pointer',
+              transition: 'background 120ms, color 120ms',
+              flexShrink: 0,
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--accent-subtle)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none' }}
+          >
+            ⚙
+          </button>
         )}
         <Badge status={!enabled ? 'disabled' : status} />
       </div>

@@ -7,10 +7,12 @@ import type { LlmConfig } from '../summary/llm'
 import { SENSOR_REGISTRY } from '../sensors'
 import { ALL_CATEGORIES, SENSOR_CATEGORY_MAP } from '../sensors/taxonomy'
 import type { CategoryKey } from '../sensors/taxonomy'
+import { listGroupsFlat } from '../groups'
 import { SensorConfigError } from '../sensors/errors'
 import { summarizeSingleSensor } from '../summary/summarizer'
 import { writeReport } from './cache'
 import { runIntelligenceAnalysis, runNlpIntelligenceAnalysis } from './intelligence'
+import type { IntelligenceSensorSets } from './intelligence'
 import { writeIntelligence } from './intelligence-cache'
 import { checkHealth, enrichItems, clusterItems } from './nlp-client'
 import type { PipelineProgressTracker } from './progress'
@@ -234,6 +236,30 @@ export async function runIntelligence(
   tracker.addEvent('info', 'intelligence', 'Intelligence analysis started')
 
   try {
+    // Load group definitions for section splitting
+    const groups = await listGroupsFlat()
+
+    // Build sensor sets per processing type
+    const trendSensors = new Set<string>()
+    const topicSensors = new Set<string>()
+    const socialSensors = new Set<string>()
+
+    for (const group of groups) {
+      switch (group.processing) {
+        case 'trend':
+          group.sensors.forEach(s => trendSensors.add(s))
+          break
+        case 'topic':
+          group.sensors.forEach(s => topicSensors.add(s))
+          break
+        case 'social':
+          group.sensors.forEach(s => socialSensors.add(s))
+          break
+      }
+    }
+
+    tracker.addEvent('info', 'intelligence', `Groups: ${groups.filter(g => g.processing === 'trend').map(g => g.name).join(', ')} → trend; ${groups.filter(g => g.processing === 'topic').map(g => g.name).join(', ')} → topic; ${groups.filter(g => g.processing === 'social').map(g => g.name).join(', ')} → social`)
+
     // Try NLP sidecar first
     const nlpAvailable = await checkHealth()
 
@@ -246,11 +272,11 @@ export async function runIntelligence(
 
       tracker.addEvent('info', 'intelligence', 'NLP sidecar available — splitting items by section')
 
-      // Split items by section (same as legacy pipeline)
-      const trendItems = allItems.filter(i => SENSOR_CATEGORY_MAP[i.source] === 'trend')
-      const topicItems = allItems.filter(i => i.topic != null && i.topic.length > 0)
+      // Split items by section using group-driven sensor sets
+      const trendItems = allItems.filter(i => trendSensors.has(i.source))
+      const topicItems = allItems.filter(i => topicSensors.has(i.source) && i.topic != null && i.topic.length > 0)
       const accountItems = allItems.filter(
-        i => i.account != null && i.account.length > 0 && SENSOR_CATEGORY_MAP[i.source] === 'social'
+        i => socialSensors.has(i.source) && i.account != null && i.account.length > 0
       )
 
       tracker.addEvent('info', 'intelligence', `Sections: ${trendItems.length} trend, ${topicItems.length} topic, ${accountItems.length} account items`)
@@ -287,8 +313,9 @@ export async function runIntelligence(
 
       // Run NLP intelligence analysis with section-split data
       tracker.addEvent('info', 'intelligence', 'Running LLM narrative synthesis...')
+      const sensorSets: IntelligenceSensorSets = { trendSensors, topicSensors, socialSensors }
       const intelligence = await runNlpIntelligenceAnalysis(
-        report, { trendClusters, enrichmentMap }, llmConfig, signal, language
+        report, { trendClusters, enrichmentMap }, llmConfig, signal, language, sensorSets
       )
       await writeIntelligence(intelligence)
       tracker.addEvent('ok', 'intelligence', `Intelligence complete — ${trendClusters.length} clusters, narrative synthesized`)
@@ -298,7 +325,8 @@ export async function runIntelligence(
     }
 
     // Fallback: legacy LLM-only pipeline
-    const intelligence = await runIntelligenceAnalysis(report, llmConfig, signal, language)
+    const sensorSets: IntelligenceSensorSets = { trendSensors, topicSensors, socialSensors }
+    const intelligence = await runIntelligenceAnalysis(report, llmConfig, signal, language, sensorSets)
     const hasData = intelligence.trend !== null || intelligence.topics !== null || intelligence.accounts !== null
     if (hasData) {
       await writeIntelligence(intelligence)

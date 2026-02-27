@@ -1,9 +1,9 @@
 // ABOUTME: Shared TypeScript data models for Intel Briefing.
 // ABOUTME: Defines IntelItem, IntelReport, HealthResponse, ConfigSettings and pipeline status types.
 
-import { ALL_CATEGORIES, type CategoryKey, type DisplayCategoryKey, emptyCategoryMap } from './sensors/taxonomy'
+import { ALL_CATEGORIES, type CategoryKey, emptyCategoryMap } from './sensors/taxonomy'
 
-export { ALL_CATEGORIES, type CategoryKey, type DisplayCategoryKey }
+export { ALL_CATEGORIES, type CategoryKey }
 
 export interface IntelItem {
   id: string

@@ -1,4 +1,4 @@
-// ABOUTME: Intel feed page — shows fetched items grouped by display-category tabs.
+// ABOUTME: Intel feed page — shows fetched items grouped by source-group tabs.
 // ABOUTME: Card-per-item news reader with source filtering, search, and pagination.
 'use client'
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
@@ -6,8 +6,8 @@ import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
 import { api } from '@/api/client'
 import type { IntelReport, IntelItem, ConfigSettings, PipelineStatus } from '@/api/client'
 import { SENSOR_TOKEN_FIELD } from '@/lib/sensors/constants'
-import { ALL_CATEGORIES, SENSOR_LABELS, sensorsForCategory, DISPLAY_CATEGORIES, DISPLAY_CATEGORY_META, SENSOR_DISPLAY_MAP, CATEGORY_TO_DISPLAY, itemsByDisplayCategory } from '@/lib/sensors/taxonomy'
-import type { CategoryKey, DisplayCategoryKey } from '@/lib/sensors/taxonomy'
+import { SENSOR_LABELS } from '@/lib/sensors/taxonomy'
+import type { SourceGroupTree } from '@/lib/groups/types'
 import { useToast } from '@/lib/toast-context'
 import { useTranslation } from '@/lib/i18n'
 import { Pagination } from './Pagination'
@@ -18,34 +18,39 @@ import { FeedSkeleton } from './Skeleton'
 
 const PAGE_SIZE = 20
 
-const SECTIONS: { key: string; label: string }[] = DISPLAY_CATEGORIES.map(cat => ({
-  key: cat,
-  label: DISPLAY_CATEGORY_META[cat].label,
-}))
-
 const SOURCE_LABELS: Record<string, string> = { ...SENSOR_LABELS }
 
-/** Maps each display-category section to the sensors that feed it. */
-const SECTION_SENSORS: Record<string, string[]> = Object.fromEntries(
-  DISPLAY_CATEGORIES.map(dc => [
-    dc,
-    ALL_CATEGORIES
-      .filter(cat => CATEGORY_TO_DISPLAY[cat] === dc)
-      .flatMap(cat => sensorsForCategory(cat)),
-  ]),
-)
+/** Collect all sensor keys for a group, including children. */
+function groupSensors(group: SourceGroupTree): Set<string> {
+  const sensors = new Set(group.sensors)
+  for (const child of group.children) {
+    for (const s of child.sensors) sensors.add(s)
+  }
+  return sensors
+}
 
 /** Check if a section is empty because every sensor feeding it lacks a required token. */
-function sectionNeedsKey(sectionKey: string, config: ConfigSettings | null): boolean {
+function sectionNeedsKey(sectionKey: string, config: ConfigSettings | null, groups: SourceGroupTree[]): boolean {
   if (!config) return false
-  const sensors = SECTION_SENSORS[sectionKey]
-  if (!sensors || sensors.length === 0) return false
+  const group = groups.find(g => g.id === sectionKey)
+  if (!group) return false
+  const sensors = [...groupSensors(group)]
+  if (sensors.length === 0) return false
   return sensors.every(sensor => {
     const isDisabled = config.sensors_enabled[sensor] === false
     if (isDisabled) return true
     const tokenField = SENSOR_TOKEN_FIELD[sensor]
     return tokenField ? !config[tokenField] : false
   })
+}
+
+/** Get the filter key for an item — uses account name for RSS groups, source elsewhere. */
+function filterKey(item: IntelItem, section: string, groups: SourceGroupTree[]): string {
+  const group = groups.find(g => g.id === section)
+  if (group && (group.sensors.includes('rss_feeds') || group.sensors.includes('rss_news')) && item.account) {
+    return item.account
+  }
+  return item.source
 }
 
 function FilterTag({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
@@ -78,12 +83,6 @@ function FilterTag({ label, active, onClick }: { label: string; active: boolean;
   )
 }
 
-/** Get the filter key for an item — uses feed name for feeds section, source elsewhere. */
-function filterKey(item: IntelItem, section: string): string {
-  if (section === 'feeds' && item.account) return item.account
-  return item.source
-}
-
 function EmptySection({ needsKey, t }: { needsKey?: boolean; t: (key: string, params?: Record<string, string>) => string }) {
   return needsKey ? (
     <EmptyState
@@ -112,15 +111,29 @@ export function Data() {
   const showToast = useToast()
   const [report, setReport] = useState<IntelReport | null>(null)
   const [config, setConfig] = useState<ConfigSettings | null>(null)
+  const [groups, setGroups] = useState<SourceGroupTree[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeSection, setActiveSection] = useState(SECTIONS[0].key)
+  const [activeSection, setActiveSection] = useState('')
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set())
   const [page, setPage] = useState(1)
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
 
+  // Build sections dynamically from groups
+  const sections = useMemo(() => {
+    if (groups.length === 0) return []
+    return groups.map(g => ({ key: g.id, label: g.name, color: g.color }))
+  }, [groups])
+
+  // Set initial active section when groups load
+  useEffect(() => {
+    if (sections.length > 0 && !sections.find(s => s.key === activeSection)) {
+      setActiveSection(sections[0].key)
+    }
+  }, [sections, activeSection])
+
   const prevSectionIdx = useRef(0)
-  const activeSectionIdx = SECTIONS.findIndex(s => s.key === activeSection)
+  const activeSectionIdx = sections.findIndex(s => s.key === activeSection)
 
   const handleSectionChange = useCallback((key: string) => {
     hasChangedSection.current = true
@@ -138,6 +151,7 @@ export function Data() {
     Promise.all([
       api.getConfig().then(setConfig).catch(() => {}),
       api.getLatest().then(setReport).catch(() => {}),
+      api.getGroups().then(setGroups).catch(() => {}),
     ]).finally(() => setLoading(false))
   }, [])
 
@@ -211,19 +225,31 @@ export function Data() {
     }
   }
 
-  // Group report items by display category for the tab view
-  const displayItems = useMemo(() => {
-    if (!report) return null
-    return itemsByDisplayCategory(report.items as Record<CategoryKey, IntelItem[]>)
-  }, [report])
+  // Group report items by source group membership
+  const groupedItems = useMemo(() => {
+    if (!report || groups.length === 0) return null
+    const allItems: IntelItem[] = []
+    for (const arr of Object.values(report.items)) allItems.push(...arr)
+
+    const result: Record<string, IntelItem[]> = {}
+    for (const group of groups) {
+      const sensors = groupSensors(group)
+      result[group.id] = allItems.filter(i => sensors.has(i.source))
+    }
+    return result
+  }, [report, groups])
+
+  // Active group metadata (for RSS detection in filter labels)
+  const activeGroup = groups.find(g => g.id === activeSection)
+  const activeHasFeeds = activeGroup?.sensors.includes('rss_feeds') || activeGroup?.sensors.includes('rss_news')
 
   // Derive the unique filter keys present in the current section
-  const sectionItems = displayItems?.[activeSection as DisplayCategoryKey] ?? []
+  const sectionItems = groupedItems?.[activeSection] ?? []
   const availableFilters = useMemo(() => {
     const seen = new Set<string>()
-    for (const item of sectionItems) seen.add(filterKey(item, activeSection))
+    for (const item of sectionItems) seen.add(filterKey(item, activeSection, groups))
     return [...seen].sort()
-  }, [sectionItems, activeSection])
+  }, [sectionItems, activeSection, groups])
 
   // Select all sources when available filters change (new data or section switch).
   // Uses a ref to detect changes during render — no useEffect needed.
@@ -252,7 +278,7 @@ export function Data() {
   const filteredItems = useMemo(() => {
     const q = searchQuery.toLowerCase().trim()
     return sectionItems.filter(item => {
-      if (!selectedSources.has(filterKey(item, activeSection))) return false
+      if (!selectedSources.has(filterKey(item, activeSection, groups))) return false
       if (!q) return true
       return (
         item.title.toLowerCase().includes(q) ||
@@ -263,7 +289,7 @@ export function Data() {
         (item.authors?.some(a => a.toLowerCase().includes(q)) ?? false)
       )
     })
-  }, [sectionItems, selectedSources, searchQuery, activeSection])
+  }, [sectionItems, selectedSources, searchQuery, activeSection, groups])
   const totalPages = Math.ceil(filteredItems.length / PAGE_SIZE)
   const currentPage = Math.min(page, totalPages || 1)
   const pagedItems = filteredItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
@@ -313,8 +339,8 @@ export function Data() {
               overflowY: 'hidden',
               scrollbarWidth: 'none',
             }}>
-              {SECTIONS.map(({ key, label }, idx) => {
-                const count = displayItems?.[key as DisplayCategoryKey]?.length ?? 0
+              {sections.map(({ key, label, color }, idx) => {
+                const count = groupedItems?.[key]?.length ?? 0
                 const active = activeSection === key
                 return (
                   <button
@@ -359,7 +385,7 @@ export function Data() {
                           left: idx === 0 ? 0 : '1rem',
                           right: '1rem',
                           height: 2,
-                          background: 'var(--accent)',
+                          background: color,
                           borderRadius: 1,
                         }}
                         transition={{ type: 'spring', stiffness: 500, damping: 30 }}
@@ -381,7 +407,7 @@ export function Data() {
               flexWrap: 'wrap',
             }}>
               <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--ink-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '0.25rem' }}>
-                {activeSection === 'feeds' ? t('feed.feed') : t('feed.source')}
+                {activeHasFeeds ? t('feed.feed') : t('feed.source')}
               </span>
               {availableFilters.length === 0 ? (
                 <span style={{ fontSize: '0.75rem', color: 'var(--ink-faint)' }}>—</span>
@@ -390,7 +416,7 @@ export function Data() {
                   {availableFilters.map(key => (
                     <FilterTag
                       key={key}
-                      label={activeSection === 'feeds' ? key : (SOURCE_LABELS[key] ?? key)}
+                      label={activeHasFeeds ? key : (SOURCE_LABELS[key] ?? key)}
                       active={selectedSources.has(key)}
                       onClick={() => toggleSource(key)}
                     />
@@ -494,7 +520,7 @@ export function Data() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {filteredItems.length === 0
-                ? <EmptySection needsKey={sectionNeedsKey(activeSection, config)} t={t} />
+                ? <EmptySection needsKey={sectionNeedsKey(activeSection, config, groups)} t={t} />
                 : (
                   <>
                     {/* Item range indicator */}

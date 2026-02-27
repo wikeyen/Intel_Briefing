@@ -422,6 +422,15 @@ describe('Taxonomy', () => {
     }
   })
 
+  it('emptyCategoryMap returns an empty array for each category key', async () => {
+    const { emptyCategoryMap, ALL_CATEGORIES } = await import('./taxonomy')
+    const map = emptyCategoryMap()
+    for (const cat of ALL_CATEGORIES) {
+      expect(map[cat]).toEqual([])
+    }
+    expect(Object.keys(map)).toHaveLength(ALL_CATEGORIES.length)
+  })
+
   it('sensorsByLanguageAndCategory returns 2 groups (row and cn) with categorized sensors', async () => {
     const { sensorsByLanguageAndCategory } = await import('./taxonomy')
     const groups = sensorsByLanguageAndCategory()

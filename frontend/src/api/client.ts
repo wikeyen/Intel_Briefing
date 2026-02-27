@@ -1,6 +1,8 @@
 // ABOUTME: Typed API client for the Intel Briefing gateway — all requests go through /api.
 // ABOUTME: All functions return typed data or throw on HTTP errors.
 
+import type { SourceGroupTree, SourceGroupFlat, CreateGroupPayload, UpdateGroupPayload } from '@/lib/groups/types'
+
 export interface HealthResponse {
   status: 'ok' | 'stale' | 'no_data' | 'error'
   last_fetch: string | null
@@ -419,4 +421,44 @@ export const api = {
 
   getIntelligence: () =>
     apiFetch<{ intelligence: IntelligenceReport | null }>('/intelligence'),
+
+  // Source groups
+  getGroups: () =>
+    apiFetch<SourceGroupTree[]>('/groups'),
+
+  createGroup: (data: CreateGroupPayload) =>
+    apiFetch<SourceGroupFlat>('/groups', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateGroup: (id: string, data: UpdateGroupPayload) =>
+    apiFetch<SourceGroupFlat>(`/groups/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteGroup: (id: string) =>
+    apiFetch<{ ok: boolean }>(`/groups/${id}`, { method: 'DELETE' }),
+
+  setGroupMembers: (id: string, sensors: string[]) =>
+    apiFetch<SourceGroupFlat>(`/groups/${id}/members`, {
+      method: 'PUT',
+      body: JSON.stringify({ sensors }),
+    }),
+
+  addGroupMember: (id: string, sensorKey: string) =>
+    apiFetch<SourceGroupFlat>(`/groups/${id}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ sensor_key: sensorKey }),
+    }),
+
+  removeGroupMember: (id: string, sensorKey: string) =>
+    apiFetch<{ ok: boolean }>(`/groups/${id}/members/${sensorKey}`, { method: 'DELETE' }),
+
+  reorderGroups: (orderedIds: string[]) =>
+    apiFetch<{ ok: boolean }>('/groups/reorder', {
+      method: 'PUT',
+      body: JSON.stringify({ ordered_ids: orderedIds }),
+    }),
 }

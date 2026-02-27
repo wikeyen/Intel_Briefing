@@ -130,3 +130,31 @@ describe('collectTopicKeywords', () => {
     expect(blueskyPlatform?.sub.item_count).toBe(1)
   })
 })
+
+describe('SECTION_SENSORS', () => {
+  it('groups all taxonomy sensors into status sections', async () => {
+    const { SECTION_SENSORS } = await import('./constants')
+    const { SENSORS } = await import('@/lib/sensors/taxonomy')
+
+    // Collect all sensor keys across all sections
+    const allSectionSensors = new Set(SECTION_SENSORS.flatMap(s => s.sensors))
+
+    // Every sensor in the taxonomy should be in some section (except mastodon_trends which has no section)
+    for (const sensor of SENSORS) {
+      if (!allSectionSensors.has(sensor.key)) {
+        // mastodon_trends doesn't have a section mapping — that's expected
+        expect(sensor.key).toBe('mastodon_trends')
+      }
+    }
+
+    // Sections should have expected keys
+    const sectionKeys = SECTION_SENSORS.map(s => s.key)
+    expect(sectionKeys).toEqual(['general', 'social', 'trend', 'topics', 'rss'])
+
+    // Social section should contain x, bluesky, mastodon
+    const social = SECTION_SENSORS.find(s => s.key === 'social')
+    expect(social?.sensors).toContain('x')
+    expect(social?.sensors).toContain('bluesky')
+    expect(social?.sensors).toContain('mastodon')
+  })
+})

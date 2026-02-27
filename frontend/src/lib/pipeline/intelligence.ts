@@ -538,13 +538,20 @@ export async function analyzeAccountsIntelligence(
 // Main entry point
 // ---------------------------------------------------------------------------
 
+/** Sensor sets that drive intelligence section splitting (built from groups). */
+export interface IntelligenceSensorSets {
+  trendSensors: Set<string>
+  topicSensors: Set<string>
+  socialSensors: Set<string>
+}
+
 /**
  * Run all three intelligence analyses in parallel on a fetched report.
  *
- * Extracts items by role:
- * - Trend items: from sensors in the 'trend' category
- * - Topic items: any item with a `topic` field set
- * - Account items: any item with an `account` field set
+ * Extracts items by role using group-driven sensor sets:
+ * - Trend items: from sensors in trend-processing groups
+ * - Topic items: from sensors in topic-processing groups with a `topic` field set
+ * - Account items: from sensors in social-processing groups with an `account` field set
  *
  * Each analysis runs independently — failures in one do not affect others.
  */
@@ -553,6 +560,7 @@ export async function runIntelligenceAnalysis(
   llmConfig: LlmConfig,
   signal?: AbortSignal,
   language?: SummaryLanguage,
+  sensorSets?: IntelligenceSensorSets,
 ): Promise<IntelligenceReport> {
   // Collect all items across categories
   const allItems: IntelItem[] = []
@@ -561,22 +569,18 @@ export async function runIntelligenceAnalysis(
     if (catItems) allItems.push(...catItems)
   }
 
-  // Trend items: from sensors whose category is 'trend'
-  const trendItems = allItems.filter(
-    item => SENSOR_CATEGORY_MAP[item.source] === 'trend',
-  )
+  // Split items using group-driven sensor sets (with backward-compatible fallback)
+  const trendItems = sensorSets
+    ? allItems.filter(item => sensorSets.trendSensors.has(item.source))
+    : allItems.filter(item => SENSOR_CATEGORY_MAP[item.source] === 'trend')
 
-  // Topic items: any item with a non-empty topic field
-  const topicItems = allItems.filter(
-    item => item.topic != null && item.topic.length > 0,
-  )
+  const topicItems = sensorSets
+    ? allItems.filter(item => sensorSets.topicSensors.has(item.source) && item.topic != null && item.topic.length > 0)
+    : allItems.filter(item => item.topic != null && item.topic.length > 0)
 
-  // Account items: social sensor items with a non-empty account field.
-  // Excludes RSS feeds/news — their `account` is just the feed title, not a social voice.
-  const accountItems = allItems.filter(
-    item => item.account != null && item.account.length > 0
-      && SENSOR_CATEGORY_MAP[item.source] === 'social',
-  )
+  const accountItems = sensorSets
+    ? allItems.filter(item => sensorSets.socialSensors.has(item.source) && item.account != null && item.account.length > 0)
+    : allItems.filter(item => item.account != null && item.account.length > 0 && SENSOR_CATEGORY_MAP[item.source] === 'social')
 
   // Run all three analyses in parallel — each catches its own errors
   const [trend, topics, accounts] = await Promise.all([
@@ -609,6 +613,7 @@ export async function runNlpIntelligenceAnalysis(
   llmConfig: LlmConfig,
   signal?: AbortSignal,
   language?: SummaryLanguage,
+  sensorSets?: IntelligenceSensorSets,
 ): Promise<IntelligenceReport> {
   const { trendClusters, enrichmentMap } = nlpSectionData
 
@@ -619,11 +624,13 @@ export async function runNlpIntelligenceAnalysis(
   }
   const allItemsById = new Map(allItems.map(i => [i.id, i]))
 
-  // Split items by section (same as legacy pipeline)
-  const topicItems = allItems.filter(i => i.topic != null && i.topic.length > 0)
-  const accountItems = allItems.filter(
-    i => i.account != null && i.account.length > 0 && SENSOR_CATEGORY_MAP[i.source] === 'social'
-  )
+  // Split items by section using group-driven sensor sets (with backward-compatible fallback)
+  const topicItems = sensorSets
+    ? allItems.filter(i => sensorSets.topicSensors.has(i.source) && i.topic != null && i.topic.length > 0)
+    : allItems.filter(i => i.topic != null && i.topic.length > 0)
+  const accountItems = sensorSets
+    ? allItems.filter(i => sensorSets.socialSensors.has(i.source) && i.account != null && i.account.length > 0)
+    : allItems.filter(i => i.account != null && i.account.length > 0 && SENSOR_CATEGORY_MAP[i.source] === 'social')
 
   // --- Trend / Public Focus: cluster summaries (parallel LLM calls) ---
   const clusterSummaries = await Promise.all(

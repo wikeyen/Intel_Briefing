@@ -19,9 +19,11 @@ nlp:
 # Download NLP models
 setup-nlp:
 	cd nlp && uv sync
-	cd nlp && uv run python -m spacy download en_core_web_sm
-	cd nlp && uv run python -m spacy download zh_core_web_sm
-	cd nlp && uv run python -c "from nlp_sidecar.app import models; print('Models will download on first run')"
+	cd nlp && uv pip install en_core_web_sm@https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
+	cd nlp && uv pip install zh_core_web_sm@https://github.com/explosion/spacy-models/releases/download/zh_core_web_sm-3.8.0/zh_core_web_sm-3.8.0-py3-none-any.whl
+	cd nlp && uv run python -c "from nlp_sidecar.keywords import load_keyword_models; load_keyword_models(); print('Keyword + embedding models downloaded')"
+	cd nlp && uv run python -c "from nlp_sidecar.sentiment import load_sentiment_model; load_sentiment_model(); print('Sentiment model downloaded')"
+	@echo "NLP models ready."
 
 # Build frontend dist (for Docker deployment)
 build:

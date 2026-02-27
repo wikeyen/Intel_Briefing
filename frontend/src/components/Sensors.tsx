@@ -214,7 +214,13 @@ export function Sensors() {
 
   /* ── Load config + groups ────────────────────────────────────────────────── */
   const refreshGroups = useCallback(() => {
-    api.getGroups().then(setGroups).catch(() => {})
+    const attempt = (retries: number) => {
+      api.getGroups().then(setGroups).catch((err) => {
+        console.warn('[Sources] Failed to fetch groups:', err.message)
+        if (retries > 0) setTimeout(() => attempt(retries - 1), 1000)
+      })
+    }
+    attempt(3)
   }, [])
 
   useEffect(() => {

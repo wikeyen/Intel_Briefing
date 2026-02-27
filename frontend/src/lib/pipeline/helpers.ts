@@ -238,13 +238,13 @@ export async function runIntelligence(
     const nlpAvailable = await checkHealth()
 
     if (nlpAvailable) {
-      tracker.addEvent('info', 'intelligence', 'NLP sidecar available, using Python-first pipeline')
-
       // Collect all items for NLP analysis
       const allItems: IntelItem[] = []
       for (const cat of ALL_CATEGORIES) {
         allItems.push(...(report.items[cat] ?? []))
       }
+
+      tracker.addEvent('info', 'intelligence', `NLP sidecar available — analyzing ${allItems.length} items`)
 
       const nlpInput = allItems.map(item => ({
         id: item.id,
@@ -253,12 +253,15 @@ export async function runIntelligence(
         lang: detectLang(item),
       }))
 
-      const nlpData = await analyzeItems(nlpInput)
+      const nlpData = await analyzeItems(nlpInput, (msg) => {
+        tracker.addEvent('info', 'intelligence', msg)
+      })
 
       if (nlpData) {
+        tracker.addEvent('info', 'intelligence', 'Running LLM narrative synthesis...')
         const intelligence = await runNlpIntelligenceAnalysis(report, nlpData, llmConfig, signal, language)
         await writeIntelligence(intelligence)
-        tracker.addEvent('ok', 'intelligence', 'NLP-first intelligence analysis complete')
+        tracker.addEvent('ok', 'intelligence', `Intelligence complete — ${nlpData.items.length} items, ${nlpData.clusters.length} clusters, narrative synthesized`)
         return
       }
 

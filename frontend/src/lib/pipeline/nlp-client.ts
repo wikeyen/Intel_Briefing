@@ -110,18 +110,27 @@ async function clusterAll(
 }
 
 /** Send items to the NLP sidecar for analysis. Returns null if sidecar is unavailable. */
-export async function analyzeItems(items: AnalyzeInput[]): Promise<NlpAnalyzeResponse | null> {
+export async function analyzeItems(
+  items: AnalyzeInput[],
+  onProgress?: (message: string) => void,
+): Promise<NlpAnalyzeResponse | null> {
   try {
     // Phase 1: Enrich items in batches
     const allEnriched: NlpEnrichedItem[] = []
+    const totalBatches = Math.ceil(items.length / ENRICH_BATCH_SIZE)
     for (let i = 0; i < items.length; i += ENRICH_BATCH_SIZE) {
+      const batchNum = Math.floor(i / ENRICH_BATCH_SIZE) + 1
       const batch = items.slice(i, i + ENRICH_BATCH_SIZE)
+      onProgress?.(`Enriching batch ${batchNum}/${totalBatches} (${batch.length} items)`)
       const enriched = await enrichBatch(batch)
       allEnriched.push(...enriched)
     }
+    onProgress?.(`Enrichment complete — ${allEnriched.length} items processed`)
 
     // Phase 2: Global clustering (one call with all items)
+    onProgress?.(`Clustering ${items.length} items...`)
     const clusters = await clusterAll(items, allEnriched)
+    onProgress?.(`Analysis complete — ${allEnriched.length} items enriched, ${clusters.length} clusters found`)
 
     return { items: allEnriched, clusters }
   } catch (err) {

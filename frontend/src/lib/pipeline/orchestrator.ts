@@ -226,8 +226,14 @@ export async function runPipeline(
 
     // Completion bookkeeping
     if (!signal.aborted && ctx.tracker) {
-      const totalItems = ctx.tracker.snapshot().total_items
-      ctx.tracker.addEvent('ok', 'system', `Pipeline complete — ${totalItems} items collected`)
+      const fetchedItems = ctx.tracker.snapshot().total_items
+      const reportItems = ctx.report
+        ? Object.values(ctx.report.items).reduce((sum, arr) => sum + arr.length, 0)
+        : 0
+      const message = fetchedItems > 0
+        ? `Pipeline complete — ${fetchedItems} items fetched, ${reportItems} in report`
+        : `Pipeline complete — ${reportItems} items in report (cached)`
+      ctx.tracker.addEvent('ok', 'system', message)
       ctx.tracker.complete()
       // Clear temp pipeline_items now that results are promoted to permanent cache
       clearRunItems(ctx.tracker.snapshot().run_id!).catch(err =>

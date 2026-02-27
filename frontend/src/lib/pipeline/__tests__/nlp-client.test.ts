@@ -87,6 +87,33 @@ describe('NLP client', () => {
     expect(clusterCalls).toHaveLength(1)
   })
 
+  it('reports progress via callback during batch processing', async () => {
+    globalThis.fetch = vi.fn(async (url: string | URL | Request) => {
+      const urlStr = typeof url === 'string' ? url : url.toString()
+      if (urlStr.includes('/enrich')) {
+        return new Response(JSON.stringify({
+          items: [{ id: 'x', keywords: [], sentiment: { label: 'neutral', score: 0.5 }, entities: { people: [], orgs: [], places: [] } }],
+        }))
+      }
+      if (urlStr.includes('/cluster')) {
+        return new Response(JSON.stringify({ clusters: [{ id: 0, label: 'test', item_ids: ['x'], top_keywords: [], sentiment_distribution: {}, representative_items: [] }] }))
+      }
+      return new Response('', { status: 404 })
+    })
+
+    const messages: string[] = []
+    const items = [{ id: 'p1', title: 'Test', lang: 'en' }]
+    await analyzeItems(items, (msg) => messages.push(msg))
+
+    expect(messages.length).toBeGreaterThanOrEqual(3)
+    expect(messages[0]).toContain('Enriching batch')
+    expect(messages).toEqual(expect.arrayContaining([
+      expect.stringContaining('Enrichment complete'),
+      expect.stringContaining('Clustering'),
+      expect.stringContaining('Analysis complete'),
+    ]))
+  })
+
   it('health check returns status', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,

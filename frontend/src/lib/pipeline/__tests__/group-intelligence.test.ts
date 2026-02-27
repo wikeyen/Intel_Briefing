@@ -4,8 +4,6 @@
 import { describe, it, expect } from 'vitest'
 import type { IntelItem } from '../../models'
 import { createReport } from '../../models'
-import { ALL_CATEGORIES, SENSOR_CATEGORY_MAP } from '../../sensors/taxonomy'
-import type { CategoryKey } from '../../sensors/taxonomy'
 import type { IntelligenceSensorSets } from '../intelligence'
 
 // ── Replicate the filtering logic from runIntelligenceAnalysis ────────────
@@ -14,9 +12,8 @@ import type { IntelligenceSensorSets } from '../intelligence'
 
 function collectAllItems(report: { items: Record<string, IntelItem[]> }): IntelItem[] {
   const allItems: IntelItem[] = []
-  for (const cat of ALL_CATEGORIES) {
-    const catItems = report.items[cat as CategoryKey]
-    if (catItems) allItems.push(...catItems)
+  for (const items of Object.values(report.items)) {
+    if (items) allItems.push(...items)
   }
   return allItems
 }
@@ -25,13 +22,6 @@ function splitWithGroups(allItems: IntelItem[], sensorSets: IntelligenceSensorSe
   const trendItems = allItems.filter(i => sensorSets.trendSensors.has(i.source))
   const topicItems = allItems.filter(i => sensorSets.topicSensors.has(i.source) && i.topic != null && i.topic.length > 0)
   const accountItems = allItems.filter(i => sensorSets.socialSensors.has(i.source) && i.account != null && i.account.length > 0)
-  return { trendItems, topicItems, accountItems }
-}
-
-function splitWithLegacy(allItems: IntelItem[]) {
-  const trendItems = allItems.filter(i => SENSOR_CATEGORY_MAP[i.source] === 'trend')
-  const topicItems = allItems.filter(i => i.topic != null && i.topic.length > 0)
-  const accountItems = allItems.filter(i => i.account != null && i.account.length > 0 && SENSOR_CATEGORY_MAP[i.source] === 'social')
   return { trendItems, topicItems, accountItems }
 }
 
@@ -45,7 +35,7 @@ function buildReport(items: IntelItem[]) {
   return createReport({
     date: '2026-02-27',
     fetched_at: new Date().toISOString(),
-    items: { tech: items } as Record<string, IntelItem[]>,
+    items: { 'test-group': items },
   })
 }
 
@@ -185,67 +175,5 @@ describe('group-driven intelligence splitting', () => {
     expect(trendItems).toHaveLength(3)
     expect(topicItems).toHaveLength(3)
     expect(accountItems).toHaveLength(2)
-  })
-})
-
-describe('legacy fallback (no sensorSets)', () => {
-  it('trend items come from SENSOR_CATEGORY_MAP trend category', () => {
-    const allItems = collectAllItems(buildReport([...TREND_ITEMS, ...NEWS_ITEMS]))
-    const { trendItems } = splitWithLegacy(allItems)
-
-    // weibo, zhihu, douyin are all 'trend' category in taxonomy
-    expect(trendItems).toHaveLength(3)
-    expect(trendItems.every(i => SENSOR_CATEGORY_MAP[i.source] === 'trend')).toBe(true)
-  })
-
-  it('topic items include any item with topic field regardless of sensor', () => {
-    const mixedItems: IntelItem[] = [
-      makeItem({ id: 'm1', source: 'x', title: 'X topic', topic: 'ai' }),
-      makeItem({ id: 'm2', source: 'hacker_news', title: 'HN topic', topic: 'tech' }),
-    ]
-    const allItems = collectAllItems(buildReport(mixedItems))
-    const { topicItems } = splitWithLegacy(allItems)
-
-    // Legacy behavior: any item with topic, regardless of sensor
-    expect(topicItems).toHaveLength(2)
-  })
-
-  it('account items only from social-category sensors', () => {
-    const allItems = collectAllItems(buildReport([...SOCIAL_ITEMS, ...NEWS_ITEMS]))
-    const { accountItems } = splitWithLegacy(allItems)
-
-    // x is 'social' category, bluesky is 'social', rss_news is 'feeds'
-    expect(accountItems).toHaveLength(2)
-    expect(accountItems.every(i => SENSOR_CATEGORY_MAP[i.source] === 'social')).toBe(true)
-    // rss_news excluded despite having account field
-    expect(accountItems.some(i => i.source === 'rss_news')).toBe(false)
-  })
-})
-
-describe('group-driven vs legacy equivalence', () => {
-  it('default groups produce equivalent splits to legacy SENSOR_CATEGORY_MAP', () => {
-    // Sensor sets matching the default group seeds (source-level values after sensorToSource)
-    const defaultSets: IntelligenceSensorSets = {
-      trendSensors: new Set([
-        'v2ex', 'zhihu', 'weibo', 'xiaohongshu', 'baidu_tieba', 'douyin',
-        'toutiao', 'netease', '36kr_trending', 'juejin', 'baidu', 'mastodon_trends',
-      ]),
-      topicSensors: new Set(['bluesky', 'mastodon']),
-      socialSensors: new Set(['x', 'bluesky', 'mastodon']),
-    }
-
-    const allItems = collectAllItems(buildReport([...TREND_ITEMS, ...TOPIC_ITEMS]))
-    const groupSplit = splitWithGroups(allItems, defaultSets)
-    const legacySplit = splitWithLegacy(allItems)
-
-    // Trend items should match exactly — same sensors
-    expect(groupSplit.trendItems).toHaveLength(legacySplit.trendItems.length)
-
-    // Topic items differ: group-driven requires sensor membership,
-    // legacy accepts any item with a topic field.
-    // X is now in the Voices (social) group, not Topics, so group-driven
-    // filtering excludes the X topic item (source: 'x').
-    expect(groupSplit.topicItems).toHaveLength(2) // bluesky + mastodon
-    expect(legacySplit.topicItems).toHaveLength(3) // all items with topic field
   })
 })

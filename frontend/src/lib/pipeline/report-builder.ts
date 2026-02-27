@@ -5,16 +5,15 @@ import type {
   IntelItem,
   IntelReport,
   SensorResult,
-  CategoryKey,
 } from '../models'
-import { createReport, sensorResultSucceeded, emptyItemsMap } from '../models'
+import { createReport, sensorResultSucceeded } from '../models'
 import { dedupItems, dedupAcrossSections } from './dedup'
 import { verifyLink } from '../utils/verifier'
 import { fetchContent } from '../utils/jina-reader'
 import { decodeItemEntities } from '../utils/decode-entities'
 import { suppressItems, boostItems } from './keyword-filter'
 import { readReport, writeReport } from './cache'
-import { SENSOR_CATEGORY_MAP } from '../sensors/taxonomy'
+import { listGroupsFlat } from '../groups'
 import type { LlmConfig } from '../summary/llm'
 import { enrichSentiment } from './sentiment'
 
@@ -52,23 +51,33 @@ export async function assembleReport(
     })
   }
 
-  // Assemble sections
-  const sections = emptyItemsMap()
+  // Load group definitions to route items by group membership
+  const groups = await listGroupsFlat()
+  const sensorToGroup = new Map<string, string>()
+  for (const group of groups) {
+    for (const sensor of group.sensors) {
+      sensorToGroup.set(sensor, group.id)
+    }
+  }
+
+  // Assemble sections by group
+  const sections: Record<string, IntelItem[]> = {}
   const sourcesOk: string[] = []
   const sourcesFailed: string[] = []
 
   for (const result of results) {
     if (sensorResultSucceeded(result)) {
       sourcesOk.push(result.sensor_name)
-      const section = SENSOR_CATEGORY_MAP[result.sensor_name] ?? 'tech'
-      sections[section].push(...result.items)
+      const groupId = sensorToGroup.get(result.sensor_name) ?? 'ungrouped'
+      if (!sections[groupId]) sections[groupId] = []
+      sections[groupId].push(...result.items)
     } else {
       sourcesFailed.push(result.sensor_name)
     }
   }
 
   // Deduplicate within each section
-  for (const key of Object.keys(sections) as CategoryKey[]) {
+  for (const key of Object.keys(sections)) {
     sections[key] = dedupItems(sections[key])
   }
 
@@ -76,7 +85,7 @@ export async function assembleReport(
   const dedupedSections = dedupAcrossSections(sections)
 
   // Decode HTML entities in all text fields
-  for (const key of Object.keys(dedupedSections) as CategoryKey[]) {
+  for (const key of Object.keys(dedupedSections)) {
     for (const item of dedupedSections[key]) {
       decodeItemEntities(item as unknown as Record<string, unknown>)
     }
@@ -91,14 +100,14 @@ export async function assembleReport(
   }
 
   // Keyword filtering: suppress matching items, boost matching items to the top
-  for (const key of Object.keys(dedupedSections) as CategoryKey[]) {
+  for (const key of Object.keys(dedupedSections)) {
     dedupedSections[key] = suppressItems(dedupedSections[key], config.suppress_keywords ?? [])
     dedupedSections[key] = boostItems(dedupedSections[key], config.boost_keywords ?? [])
   }
 
   // Post-processing: verify links + enrich content (hn_blogs) — concurrent
   const postProcessTasks: Promise<void>[] = []
-  for (const key of Object.keys(dedupedSections) as CategoryKey[]) {
+  for (const key of Object.keys(dedupedSections)) {
     for (const item of dedupedSections[key]) {
       if (item.source === 'x' && item.url) {
         postProcessTasks.push(
@@ -137,7 +146,7 @@ export async function assembleReport(
     stale: false,
     sources_ok: sourcesOk.sort(),
     sources_failed: sourcesFailed.sort(),
-    items: dedupedSections as Record<CategoryKey, IntelItem[]>,
+    items: dedupedSections,
     sources_fetched_at: fetchedAt,
   })
 
@@ -171,28 +180,20 @@ function mergePartialReport(
   sensorsInRun: string[],
 ): IntelReport {
   const runSet = new Set(sensorsInRun)
-
-  // Merge items: keep existing items from sensors NOT in this run
-  const merged = emptyItemsMap()
-  for (const key of Object.keys(existing.items) as CategoryKey[]) {
-    const kept = (existing.items[key] ?? []).filter(item => !runSet.has(item.source))
-    merged[key] = kept
+  const merged: Record<string, IntelItem[]> = {}
+  for (const key of Object.keys(existing.items)) {
+    merged[key] = (existing.items[key] ?? []).filter(item => !runSet.has(item.source))
   }
-  // Add all items from the new partial report
-  for (const key of Object.keys(partial.items) as CategoryKey[]) {
+  for (const key of Object.keys(partial.items)) {
+    if (!merged[key]) merged[key] = []
     merged[key].push(...(partial.items[key] ?? []))
   }
-
-  // Merge sources_ok / sources_failed: remove run sensors from existing lists, add new ones
   const existingOk = existing.sources_ok.filter(s => !runSet.has(s))
   const existingFailed = existing.sources_failed.filter(s => !runSet.has(s))
-
-  // Merge sources_fetched_at: keep existing timestamps, overlay new ones
   const mergedFetchedAt: Record<string, string> = {
     ...(existing.sources_fetched_at ?? {}),
     ...(partial.sources_fetched_at ?? {}),
   }
-
   return createReport({
     date: partial.date,
     fetched_at: partial.fetched_at,

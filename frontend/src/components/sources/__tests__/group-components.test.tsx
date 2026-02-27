@@ -289,7 +289,7 @@ describe('GroupCard', () => {
     children: [],
   }
 
-  it('renders group name and accent bar', () => {
+  it('renders group name and sensors', () => {
     render(
       <GroupCard
         group={group}
@@ -311,6 +311,110 @@ describe('GroupCard', () => {
     expect(screen.getByText('Trend')).toBeDefined()
     expect(screen.getByText('weibo')).toBeDefined()
     expect(screen.getByText('zhihu')).toBeDefined()
+  })
+
+  it('collapses sensor list when chevron is clicked', () => {
+    render(
+      <GroupCard
+        group={group}
+        enabled={{ weibo: true, zhihu: true }}
+        statuses={{}}
+        sensorLimits={{}}
+        sensorLookback={{}}
+        defaultLimit={10}
+        defaultLookback={48}
+        onToggle={() => {}}
+        onUpdateLimit={() => {}}
+        onUpdateLookback={() => {}}
+        onEditGroup={() => {}}
+        onDeleteGroup={() => {}}
+        renderSensorRow={(key) => <div key={key}>{key}</div>}
+      />
+    )
+    // Sensors visible by default
+    expect(screen.getByText('weibo')).toBeDefined()
+    expect(screen.getByText('zhihu')).toBeDefined()
+
+    // Click the collapse button
+    fireEvent.click(screen.getByLabelText('Collapse group'))
+
+    // Sensors hidden after collapse
+    expect(screen.queryByText('weibo')).toBeNull()
+    expect(screen.queryByText('zhihu')).toBeNull()
+
+    // Header still visible
+    expect(screen.getByText('Trending')).toBeDefined()
+  })
+
+  it('expands sensor list when collapsed chevron is clicked again', () => {
+    render(
+      <GroupCard
+        group={group}
+        enabled={{ weibo: true, zhihu: true }}
+        statuses={{}}
+        sensorLimits={{}}
+        sensorLookback={{}}
+        defaultLimit={10}
+        defaultLookback={48}
+        onToggle={() => {}}
+        onUpdateLimit={() => {}}
+        onUpdateLookback={() => {}}
+        onEditGroup={() => {}}
+        onDeleteGroup={() => {}}
+        renderSensorRow={(key) => <div key={key}>{key}</div>}
+      />
+    )
+    // Collapse
+    fireEvent.click(screen.getByLabelText('Collapse group'))
+    expect(screen.queryByText('weibo')).toBeNull()
+
+    // Expand
+    fireEvent.click(screen.getByLabelText('Expand group'))
+    expect(screen.getByText('weibo')).toBeDefined()
+    expect(screen.getByText('zhihu')).toBeDefined()
+  })
+
+  it('hides sub-groups when collapsed', () => {
+    const groupWithChildren: SourceGroupTree = {
+      ...group,
+      children: [{
+        id: 'g1-sub',
+        parent_id: 'g1',
+        name: 'Sub Trending',
+        color: '#FF0000',
+        icon: null,
+        processing: 'trend',
+        sort_order: 0,
+        created_at: '',
+        updated_at: '',
+        sensors: [],
+        children: [],
+      }],
+    }
+    render(
+      <GroupCard
+        group={groupWithChildren}
+        enabled={{ weibo: true, zhihu: true }}
+        statuses={{}}
+        sensorLimits={{}}
+        sensorLookback={{}}
+        defaultLimit={10}
+        defaultLookback={48}
+        onToggle={() => {}}
+        onUpdateLimit={() => {}}
+        onUpdateLookback={() => {}}
+        onEditGroup={() => {}}
+        onDeleteGroup={() => {}}
+        renderSensorRow={(key) => <div key={key}>{key}</div>}
+        renderSubGroup={(child) => <div data-testid={`sub-${child.id}`}>{child.name}</div>}
+      />
+    )
+    // Sub-group visible by default
+    expect(screen.getByText('Sub Trending')).toBeDefined()
+
+    // Collapse
+    fireEvent.click(screen.getByLabelText('Collapse group'))
+    expect(screen.queryByText('Sub Trending')).toBeNull()
   })
 
   it('shows enabled count', () => {

@@ -1,5 +1,5 @@
 // ABOUTME: Shared soft UI style constants for group-based Sources page components.
-// ABOUTME: Defines reusable CSSProperties objects for cards, accent bars, headers, and drop zones.
+// ABOUTME: Defines reusable CSSProperties objects for cards, headers, and drop zones.
 import type React from 'react'
 
 /** Glassmorphism card container — frosted glass with soft shadow. */
@@ -12,16 +12,6 @@ export const GROUP_CARD: React.CSSProperties = {
   border: '1px solid var(--glass-border, rgba(255, 255, 255, 0.3))',
   overflow: 'hidden',
   position: 'relative',
-}
-
-/** 3px colored accent bar on the left edge of a group card. */
-export const ACCENT_BAR: React.CSSProperties = {
-  position: 'absolute',
-  left: 0,
-  top: 0,
-  bottom: 0,
-  width: 3,
-  borderRadius: '3px 0 0 3px',
 }
 
 /** Group header row — flex row with center alignment and breathing room. */

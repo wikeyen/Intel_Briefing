@@ -1,11 +1,11 @@
-// ABOUTME: Soft UI group card — displays a colored accent bar, group header, and sensor list.
+// ABOUTME: Soft UI group card — displays a tinted header, collapsible sensor list, and sub-groups.
 // ABOUTME: Supports sub-groups, kebab menu actions, per-sensor inline controls, and drag-over highlighting.
 'use client'
 import { useState, useRef, useEffect, type ReactNode } from 'react'
 import type { SourceGroupTree } from '@/lib/groups/types'
 import { useTranslation } from '@/lib/i18n'
 import {
-  GROUP_CARD, ACCENT_BAR, GROUP_HEADER, SENSOR_LIST,
+  GROUP_CARD, GROUP_HEADER, SENSOR_LIST,
   PROCESSING_PILL, KEBAB_BTN, KEBAB_MENU, KEBAB_MENU_ITEM,
   colorDotStyle,
 } from './group-styles'
@@ -42,6 +42,7 @@ export function GroupCard({
   renderSensorControls,
 }: GroupCardProps) {
   const { t } = useTranslation()
+  const [collapsed, setCollapsed] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -65,14 +66,35 @@ export function GroupCard({
       ...(isOver ? { boxShadow: 'var(--shadow-md), inset 0 0 0 2px var(--accent-muted)', background: 'var(--accent-subtle)' } : {}),
       transition: 'box-shadow 150ms, background 150ms',
     }}>
-      {/* Accent bar */}
-      <div style={{ ...ACCENT_BAR, background: group.color }} />
-
       {/* Header */}
       <div style={{
         ...GROUP_HEADER,
         background: `${group.color}14`,
       }}>
+        <button
+          type="button"
+          onClick={() => setCollapsed(c => !c)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 20,
+            height: 20,
+            borderRadius: 4,
+            border: 'none',
+            background: 'none',
+            cursor: 'pointer',
+            color: 'var(--ink-muted)',
+            fontSize: '0.625rem',
+            transition: 'transform 200ms ease',
+            transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+            flexShrink: 0,
+            padding: 0,
+          }}
+          aria-label={collapsed ? 'Expand group' : 'Collapse group'}
+        >
+          ▼
+        </button>
         <span style={colorDotStyle(group.color)} />
         <span style={{
           fontSize: '0.9375rem',
@@ -155,25 +177,29 @@ export function GroupCard({
         </div>
       </div>
 
-      {/* Sensor list */}
-      <div style={SENSOR_LIST}>
-        {group.sensors.map((sensorKey, i) => (
-          <div key={sensorKey}>
-            {renderSensorRow(sensorKey, i === group.sensors.length - 1 && group.children.length === 0)}
-            {renderSensorControls && renderSensorControls(sensorKey)}
+      {!collapsed && (
+        <>
+          {/* Sensor list */}
+          <div style={SENSOR_LIST}>
+            {group.sensors.map((sensorKey, i) => (
+              <div key={sensorKey}>
+                {renderSensorRow(sensorKey, i === group.sensors.length - 1 && group.children.length === 0)}
+                {renderSensorControls && renderSensorControls(sensorKey)}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* Sub-groups */}
-      {group.children.length > 0 && renderSubGroup && (
-        <div style={{ paddingLeft: '1rem', background: 'var(--canvas)' }}>
-          {group.children.map(child => (
-            <div key={child.id} style={{ paddingTop: '0.5rem', paddingBottom: '0.5rem' }}>
-              {renderSubGroup(child)}
+          {/* Sub-groups */}
+          {group.children.length > 0 && renderSubGroup && (
+            <div style={{ paddingLeft: '1rem', background: 'var(--canvas)' }}>
+              {group.children.map(child => (
+                <div key={child.id} style={{ paddingTop: '0.5rem', paddingBottom: '0.5rem' }}>
+                  {renderSubGroup(child)}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   )

@@ -1109,7 +1109,7 @@ input[type="range"]::-moz-range-thumb {
 
 @media (min-width: 1080px) {
   .sources-columns {
-    grid-template-columns: 1fr 300px;
+    grid-template-columns: 1fr 320px;
   }
   .sources-sidebar {
     align-self: start;
@@ -1120,7 +1120,7 @@ input[type="range"]::-moz-range-thumb {
 
 @media (min-width: 1280px) {
   .sources-columns {
-    grid-template-columns: 1fr 340px;
+    grid-template-columns: 1fr 360px;
     gap: 1rem;
   }
 }

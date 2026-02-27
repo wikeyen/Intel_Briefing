@@ -138,7 +138,7 @@ const stopBtnBase: React.CSSProperties = {
 }
 
 const barStyle: React.CSSProperties = {
-  maxWidth: 1024,
+  maxWidth: 1360,
   width: '100%',
   margin: '0 auto',
   display: 'flex',

@@ -10,7 +10,7 @@ export const GROUP_CARD: React.CSSProperties = {
   backdropFilter: 'blur(12px)',
   WebkitBackdropFilter: 'blur(12px)',
   border: '1px solid var(--glass-border, rgba(255, 255, 255, 0.3))',
-  overflow: 'hidden',
+  overflow: 'visible',
   position: 'relative',
 }
 

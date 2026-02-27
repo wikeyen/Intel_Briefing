@@ -380,7 +380,7 @@ export function Status() {
       <style dangerouslySetInnerHTML={{ __html: CONTROL_BAR_CSS }} />
 
       {staleInfo && !isRunning && (
-        <div className="stale-banner-wrap" style={{ maxWidth: 1024, margin: '0 auto', width: '100%', padding: '0.75rem 3rem 0' }}>
+        <div className="stale-banner-wrap" style={{ maxWidth: 1360, margin: '0 auto', width: '100%', padding: '0.75rem 2.5rem 0' }}>
           <StaleProcessBanner
             stale={staleInfo}
             onAbort={handleAbortStale}
@@ -434,7 +434,7 @@ export function Status() {
           isStopping={stopping}
         />
 
-        <div className="phase-stepper-wrap" style={{ maxWidth: 1024, margin: '0 auto', width: '100%', padding: '0.5rem 3rem 0.25rem' }}>
+        <div className="phase-stepper-wrap" style={{ maxWidth: 1360, margin: '0 auto', width: '100%', padding: '0.5rem 2.5rem 0.25rem' }}>
           <PhaseStepper
             pipelineStatus={pipelineStatus}
             onLogToggle={hasEvents ? () => setLogDrawerOpen(o => !o) : undefined}

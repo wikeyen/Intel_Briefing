@@ -5,7 +5,8 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Toggle } from './Toggle'
 import { PillInput } from './PillInput'
-import { Badge, CnBadge, type SensorStatus } from './SensorBadge'
+import { Badge, CnBadge, CategoryBadge, type SensorStatus } from './SensorBadge'
+import type { CategoryKey } from '@/lib/sensors/taxonomy'
 import { useTranslation } from '@/lib/i18n'
 
 interface SensorDragItemProps {
@@ -13,6 +14,7 @@ interface SensorDragItemProps {
   sensorLabel: string
   sensorDesc: string
   language: 'cn' | 'row'
+  category: CategoryKey
   groupId: string
   enabled: boolean
   status: SensorStatus | undefined
@@ -53,6 +55,7 @@ export function SensorDragItem({
   sensorLabel,
   sensorDesc,
   language,
+  category,
   groupId,
   enabled,
   status,
@@ -130,6 +133,7 @@ export function SensorDragItem({
           }}>
             {sensorLabel}
             <CnBadge language={language} />
+            <CategoryBadge category={category} />
           </div>
           <div className="sensor-row-desc" style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>
             {t('sensor.desc.' + sensorKey)}

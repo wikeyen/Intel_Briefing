@@ -128,17 +128,21 @@ Respond with ONLY JSON:
 }
 
 function clusterSummaryPrompt(language?: SummaryLanguage): string {
-  return `You are given a pre-analyzed cluster of related news items. Write a concise 2-3 sentence summary of what this cluster is about and why it matters.
+  return `You are given a pre-analyzed cluster of related news items. Write a concise 2-3 sentence summary of what this cluster is about and why it matters. Also extract 3-5 meaningful tags (themes, technologies, organizations) that characterize this cluster.
+
+Tags should be high-level concepts, NOT account handles, platform names, or generic terms like "breaking news". If a tag was translated from a different source language, include an "original" field with the source-language text.
 
 Respond with ONLY JSON:
-{"summary":"Your 2-3 sentence summary here"}` + langInstruction(language)
+{"summary":"Your 2-3 sentence summary here","tags":[{"text":"Artificial Intelligence","weight":0.9,"sentiment":"neutral"},{"text":"Regulation","original":"监管","weight":0.7,"sentiment":"mixed"}]}` + langInstruction(language)
 }
 
 function accountsSummaryPrompt(language?: SummaryLanguage): string {
-  return `You are given tracked social media accounts with their pre-analyzed themes and sentiment. Write a concise paragraph summarizing what these voices are collectively discussing and their overall tone.
+  return `You are given tracked social media accounts with their pre-analyzed themes and sentiment. Write a concise paragraph summarizing what these voices are collectively discussing and their overall tone. Also extract 10-15 meaningful tags (themes, technologies, organizations) that characterize what these voices are focused on.
+
+Tags should be high-level concepts, NOT account handles, platform names, or generic terms like "breaking news". If a tag was translated from a different source language, include an "original" field with the source-language text.
 
 Respond with ONLY JSON:
-{"summary":"Your paragraph here"}` + langInstruction(language)
+{"summary":"Your paragraph here","tags":[{"text":"Artificial Intelligence","weight":0.9,"sentiment":"neutral"}]}` + langInstruction(language)
 }
 
 function riskScanPrompt(language?: SummaryLanguage): string {
@@ -629,9 +633,13 @@ ${repTitles.map((t, i) => `  [${i}] ${t}`).join('\n')}` },
       try {
         const raw = await chatCompletion(messages, llmConfig, signal)
         const parsed = robustJsonParse(raw)
-        return { cluster, summary: typeof parsed?.summary === 'string' ? parsed.summary : '' }
+        return {
+          cluster,
+          summary: typeof parsed?.summary === 'string' ? parsed.summary : '',
+          tags: parseTags(parsed?.tags),
+        }
       } catch {
-        return { cluster, summary: '' }
+        return { cluster, summary: '', tags: [] }
       }
     })
   )
@@ -639,6 +647,7 @@ ${repTitles.map((t, i) => `  [${i}] ${t}`).join('\n')}` },
   // --- Accounts summary (1 LLM call) ---
   const accountItems = allItems.filter(i => i.account && SENSOR_CATEGORY_MAP[i.source] === 'social')
   let accountsSummary = ''
+  let accountTags: IntelTag[] = []
   const accountsFocusMap = new Map<string, { themes: Set<string>; sentiment: string; count: number; handle: string; platform: string }>()
 
   for (const item of accountItems) {
@@ -673,6 +682,7 @@ ${repTitles.map((t, i) => `  [${i}] ${t}`).join('\n')}` },
       ], llmConfig, signal)
       const parsed = robustJsonParse(raw)
       if (typeof parsed?.summary === 'string') accountsSummary = parsed.summary
+      accountTags = parseTags(parsed?.tags)
     } catch { /* continue without accounts summary */ }
   }
 
@@ -735,23 +745,28 @@ ${repTitles.map((t, i) => `  [${i}] ${t}`).join('\n')}` },
     heat: Math.round(cs.cluster.item_ids.length),
   }))
 
-  // Aggregate tags from NLP enrichments
-  const tagFreq = new Map<string, { weight: number; sentiment: string }>()
-  for (const enriched of nlpData.items) {
-    for (const kw of enriched.keywords) {
-      const existing = tagFreq.get(kw.text)
+  // Aggregate tags from LLM cluster summaries
+  const trendTagFreq = new Map<string, { weight: number; sentiment: string; original?: string }>()
+  for (const cs of clusterSummaries) {
+    for (const tag of cs.tags) {
+      const key = tag.text.toLowerCase()
+      const existing = trendTagFreq.get(key)
       if (existing) {
-        existing.weight += kw.weight
+        existing.weight = Math.max(existing.weight, tag.weight)
       } else {
-        tagFreq.set(kw.text, { weight: kw.weight, sentiment: enriched.sentiment.label })
+        trendTagFreq.set(key, {
+          weight: tag.weight,
+          sentiment: tag.sentiment ?? 'neutral',
+          original: tag.original,
+        })
       }
     }
   }
-  const sortedTags = [...tagFreq.entries()].sort((a, b) => b[1].weight - a[1].weight)
-  const maxWeight = sortedTags[0]?.[1].weight ?? 1
-  const tags: IntelTag[] = sortedTags.slice(0, 25).map(([text, { weight, sentiment }]) => ({
+  const sortedTrendTags = [...trendTagFreq.entries()].sort((a, b) => b[1].weight - a[1].weight)
+  const tags: IntelTag[] = sortedTrendTags.slice(0, 25).map(([text, { weight, sentiment, original }]) => ({
     text,
-    weight: Math.round((weight / maxWeight) * 1000) / 1000,
+    weight,
+    ...(original ? { original } : {}),
     sentiment: normalizeSentiment(sentiment),
   }))
 
@@ -775,7 +790,7 @@ ${repTitles.map((t, i) => `  [${i}] ${t}`).join('\n')}` },
     topics: null, // Topic intelligence preserved from existing pipeline if needed
     accounts: accounts.length > 0 ? {
       accounts,
-      tags: tags.slice(0, 20),
+      tags: accountTags.length > 0 ? accountTags : tags.slice(0, 20),
       summary: accountsSummary,
       generated_at: new Date().toISOString(),
     } : null,

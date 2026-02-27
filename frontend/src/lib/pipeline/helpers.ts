@@ -1,17 +1,18 @@
 // ABOUTME: Extracted helper functions for the pipeline state machine — sensor fetch, LLM config, retry, merge.
 // ABOUTME: Pure functions and utilities shared across state handlers; no orchestration logic.
 
-import type { ConfigSettings, IntelReport, SensorResult, SensorSummary, BriefingSummary, SummaryLanguage } from '../models'
+import type { ConfigSettings, IntelItem, IntelReport, SensorResult, SensorSummary, BriefingSummary, SummaryLanguage } from '../models'
 import { sensorResultSucceeded, sensorLimit } from '../models'
 import type { LlmConfig } from '../summary/llm'
 import { SENSOR_REGISTRY } from '../sensors'
-import { SENSOR_CATEGORY_MAP } from '../sensors/taxonomy'
+import { ALL_CATEGORIES, SENSOR_CATEGORY_MAP } from '../sensors/taxonomy'
 import type { CategoryKey } from '../sensors/taxonomy'
 import { SensorConfigError } from '../sensors/errors'
 import { summarizeSingleSensor } from '../summary/summarizer'
 import { writeReport } from './cache'
-import { runIntelligenceAnalysis } from './intelligence'
+import { runIntelligenceAnalysis, runNlpIntelligenceAnalysis } from './intelligence'
 import { writeIntelligence } from './intelligence-cache'
+import { checkHealth, analyzeItems } from './nlp-client'
 import type { PipelineProgressTracker } from './progress'
 import type { PipelineContext, FailureKind } from './types'
 
@@ -221,7 +222,7 @@ export async function retryOneSensor(ctx: PipelineContext, sensorName: string): 
 
 /**
  * Run intelligence analysis and persist results. Logs events to the tracker.
- * Deduplicated from the two identical blocks in the orchestrator (with/without summary stage).
+ * Tries NLP sidecar first for Python-first pipeline, falls back to legacy LLM-only.
  */
 export async function runIntelligence(
   report: IntelReport,
@@ -231,22 +232,64 @@ export async function runIntelligence(
   tracker: PipelineProgressTracker,
 ): Promise<void> {
   tracker.addEvent('info', 'intelligence', 'Intelligence analysis started')
+
   try {
+    // Try NLP sidecar first
+    const nlpAvailable = await checkHealth()
+
+    if (nlpAvailable) {
+      tracker.addEvent('info', 'intelligence', 'NLP sidecar available, using Python-first pipeline')
+
+      // Collect all items for NLP analysis
+      const allItems: IntelItem[] = []
+      for (const cat of ALL_CATEGORIES) {
+        allItems.push(...(report.items[cat] ?? []))
+      }
+
+      const nlpInput = allItems.map(item => ({
+        id: item.id,
+        title: item.title,
+        abstract: item.abstract ?? undefined,
+        lang: detectLang(item),
+      }))
+
+      const nlpData = await analyzeItems(nlpInput)
+
+      if (nlpData) {
+        const intelligence = await runNlpIntelligenceAnalysis(report, nlpData, llmConfig, signal, language)
+        await writeIntelligence(intelligence)
+        tracker.addEvent('ok', 'intelligence', 'NLP-first intelligence analysis complete')
+        return
+      }
+
+      tracker.addEvent('warn', 'intelligence', 'NLP sidecar returned null, falling back to LLM-only')
+    } else {
+      tracker.addEvent('info', 'intelligence', 'NLP sidecar unavailable, using LLM-only pipeline')
+    }
+
+    // Fallback: legacy LLM-only pipeline
     const intelligence = await runIntelligenceAnalysis(report, llmConfig, signal, language)
-
-    if (intelligence.trend === null) tracker.addEvent('warn', 'intelligence', 'Trend analysis returned no results')
-    if (intelligence.topics === null) tracker.addEvent('warn', 'intelligence', 'Topic analysis returned no results')
-    if (intelligence.accounts === null) tracker.addEvent('warn', 'intelligence', 'Account analysis returned no results')
-
     const hasData = intelligence.trend !== null || intelligence.topics !== null || intelligence.accounts !== null
     if (hasData) {
       await writeIntelligence(intelligence)
-      tracker.addEvent('ok', 'intelligence', 'Intelligence analysis complete')
+      tracker.addEvent('ok', 'intelligence', 'Legacy intelligence analysis complete')
     } else {
-      tracker.addEvent('warn', 'intelligence', 'Intelligence analysis produced no results (LLM may have failed)')
+      tracker.addEvent('warn', 'intelligence', 'Intelligence analysis produced no results')
     }
   } catch (err) {
     console.error('Intelligence analysis failed:', err)
     tracker.addEvent('warn', 'intelligence', `Intelligence analysis failed: ${err instanceof Error ? err.message : String(err)}`)
   }
+}
+
+/** Sensors known to produce Chinese-language content. */
+const CN_SENSORS = new Set([
+  'sources_36kr', 'wallstreetcn', 'v2ex', 'zhihu', 'weibo',
+  'xiaohongshu', 'baidu_tieba', 'douyin', 'toutiao', 'netease',
+  '36kr_trending', 'juejin', 'baidu',
+])
+
+/** Detect language of an item based on its source sensor. */
+function detectLang(item: IntelItem): string {
+  return CN_SENSORS.has(item.source) ? 'zh' : 'en'
 }

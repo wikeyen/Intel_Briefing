@@ -7,6 +7,7 @@ import { chatCompletion } from '../summary/llm'
 import type { CategoryKey } from '../sensors/taxonomy'
 import { ALL_CATEGORIES, SENSOR_CATEGORY_MAP } from '../sensors/taxonomy'
 import { jsonrepair } from 'jsonrepair'
+import type { NlpAnalyzeResponse } from './nlp-client'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -124,6 +125,34 @@ Given posts grouped by account, identify what each account focuses on and their 
 
 Respond with ONLY JSON:
 {"summary":"Overall paragraph about what these voices are discussing","accounts":[{"account":"@user","handle":"user","platform":"x","themes":["AI","crypto"],"sentiment":"neutral","postCount":5}],"tags":[{"text":"Artificial Intelligence","original":"人工智能","weight":0.8,"sentiment":"neutral"}]}` + langInstruction(language)
+}
+
+function clusterSummaryPrompt(language?: SummaryLanguage): string {
+  return `You are given a pre-analyzed cluster of related news items. Write a concise 2-3 sentence summary of what this cluster is about and why it matters.
+
+Respond with ONLY JSON:
+{"summary":"Your 2-3 sentence summary here"}` + langInstruction(language)
+}
+
+function accountsSummaryPrompt(language?: SummaryLanguage): string {
+  return `You are given tracked social media accounts with their pre-analyzed themes and sentiment. Write a concise paragraph summarizing what these voices are collectively discussing and their overall tone.
+
+Respond with ONLY JSON:
+{"summary":"Your paragraph here"}` + langInstruction(language)
+}
+
+function riskScanPrompt(language?: SummaryLanguage): string {
+  return `You are given clusters that have been flagged as having negative or mixed sentiment. Identify the top 3-5 actionable risks or concerns. Each risk should have a title and a brief explanation referencing the source clusters.
+
+Respond with ONLY JSON:
+{"risks":[{"title":"Risk title","description":"Why this matters and what to watch","cluster_ids":[0,1]}]}` + langInstruction(language)
+}
+
+function executiveSummaryPrompt(language?: SummaryLanguage): string {
+  return `You are given cluster summaries, risk assessments, and sentiment data. Write a comprehensive executive briefing paragraph (150-250 words) that synthesizes the key themes, connects patterns across clusters, and highlights what matters most.
+
+Respond with ONLY JSON:
+{"summary":"Your executive briefing paragraph"}` + langInstruction(language)
 }
 
 // ---------------------------------------------------------------------------
@@ -553,4 +582,211 @@ export async function runIntelligenceAnalysis(
   ])
 
   return { trend, topics, accounts }
+}
+
+// ---------------------------------------------------------------------------
+// NLP-first intelligence analysis
+// ---------------------------------------------------------------------------
+
+/**
+ * NLP-first intelligence analysis: Python sidecar handles structure,
+ * LLM handles narrative. Falls back to legacy approach if sidecar is down.
+ */
+export async function runNlpIntelligenceAnalysis(
+  report: IntelReport,
+  nlpData: NlpAnalyzeResponse,
+  llmConfig: LlmConfig,
+  signal?: AbortSignal,
+  language?: SummaryLanguage,
+): Promise<IntelligenceReport> {
+  // Build lookup maps from NLP enrichments
+  const itemMap = new Map(nlpData.items.map(i => [i.id, i]))
+
+  // Collect all items for account/trend grouping
+  const allItems: IntelItem[] = []
+  for (const cat of ALL_CATEGORIES) {
+    allItems.push(...(report.items[cat] ?? []))
+  }
+  const allItemsById = new Map(allItems.map(i => [i.id, i]))
+
+  // --- Cluster summaries (parallel LLM calls) ---
+  const clusterSummaries = await Promise.all(
+    nlpData.clusters.map(async (cluster) => {
+      const repTitles = cluster.representative_items
+        .map(id => allItemsById.get(id)?.title)
+        .filter(Boolean)
+        .slice(0, 5)
+
+      const messages: ChatMessage[] = [
+        { role: 'system', content: clusterSummaryPrompt(language) },
+        { role: 'user', content: `Cluster: "${cluster.label}"
+Keywords: ${cluster.top_keywords.map(k => k.text).join(', ')}
+Sentiment: ${Object.entries(cluster.sentiment_distribution).map(([k, v]) => `${k}: ${Math.round(v * 100)}%`).join(', ')}
+Items (${cluster.item_ids.length} total):
+${repTitles.map((t, i) => `  [${i}] ${t}`).join('\n')}` },
+      ]
+
+      try {
+        const raw = await chatCompletion(messages, llmConfig, signal)
+        const parsed = robustJsonParse(raw)
+        return { cluster, summary: typeof parsed?.summary === 'string' ? parsed.summary : '' }
+      } catch {
+        return { cluster, summary: '' }
+      }
+    })
+  )
+
+  // --- Accounts summary (1 LLM call) ---
+  const accountItems = allItems.filter(i => i.account && SENSOR_CATEGORY_MAP[i.source] === 'social')
+  let accountsSummary = ''
+  const accountsFocusMap = new Map<string, { themes: Set<string>; sentiment: string; count: number; handle: string; platform: string }>()
+
+  for (const item of accountItems) {
+    const enriched = itemMap.get(item.id)
+    const existing = accountsFocusMap.get(item.account!)
+    if (existing) {
+      existing.count++
+      enriched?.keywords.forEach(k => existing.themes.add(k.text))
+    } else {
+      accountsFocusMap.set(item.account!, {
+        themes: new Set(enriched?.keywords.map(k => k.text) ?? []),
+        sentiment: enriched?.sentiment.label ?? 'neutral',
+        count: 1,
+        handle: item.handle ?? item.account!,
+        platform: item.source,
+      })
+    }
+  }
+
+  if (accountsFocusMap.size > 0) {
+    const acctLines = [...accountsFocusMap.entries()]
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 30)
+      .map(([name, data]) =>
+        `@${data.handle} (${data.platform}, ${data.count} posts, ${data.sentiment}): ${[...data.themes].slice(0, 5).join(', ')}`)
+      .join('\n')
+
+    try {
+      const raw = await chatCompletion([
+        { role: 'system', content: accountsSummaryPrompt(language) },
+        { role: 'user', content: `${accountsFocusMap.size} tracked accounts:\n${acctLines}` },
+      ], llmConfig, signal)
+      const parsed = robustJsonParse(raw)
+      if (typeof parsed?.summary === 'string') accountsSummary = parsed.summary
+    } catch { /* continue without accounts summary */ }
+  }
+
+  // --- Risk scan (1 LLM call) ---
+  const negativeClusters = clusterSummaries.filter(
+    cs => (cs.cluster.sentiment_distribution.negative ?? 0) > 0.3
+  )
+
+  let risks: Array<{ title: string; description: string }> = []
+  if (negativeClusters.length > 0) {
+    const riskInput = negativeClusters.map(cs =>
+      `Cluster "${cs.cluster.label}" (${Math.round((cs.cluster.sentiment_distribution.negative ?? 0) * 100)}% negative): ${cs.summary}`
+    ).join('\n')
+
+    try {
+      const raw = await chatCompletion([
+        { role: 'system', content: riskScanPrompt(language) },
+        { role: 'user', content: riskInput },
+      ], llmConfig, signal)
+      const parsed = robustJsonParse(raw)
+      if (Array.isArray(parsed?.risks)) {
+        risks = parsed.risks.filter((r: unknown) =>
+          r && typeof r === 'object' && 'title' in r && 'description' in r
+        ).map((r: Record<string, unknown>) => ({
+          title: String(r.title),
+          description: String(r.description),
+        }))
+      }
+    } catch { /* continue without risks */ }
+  }
+
+  // --- Executive summary (1 LLM call, needs cluster summaries) ---
+  let executiveSummary = ''
+  const execInput = clusterSummaries
+    .map(cs => `[${cs.cluster.label}]: ${cs.summary}`)
+    .join('\n')
+  const riskSection = risks.length > 0
+    ? '\n\nRisks:\n' + risks.map(r => `- ${r.title}: ${r.description}`).join('\n')
+    : ''
+
+  try {
+    const raw = await chatCompletion([
+      { role: 'system', content: executiveSummaryPrompt(language) },
+      { role: 'user', content: `${clusterSummaries.length} topic clusters:\n${execInput}${riskSection}` },
+    ], llmConfig, signal)
+    const parsed = robustJsonParse(raw)
+    if (typeof parsed?.summary === 'string') executiveSummary = parsed.summary
+  } catch { /* continue without executive summary */ }
+
+  // --- Assemble into IntelligenceReport (backward-compatible shape) ---
+  // Map clusters to TrendIntelligence topics
+  const trendTopics: TrendTopic[] = clusterSummaries.map(cs => ({
+    name: cs.cluster.label,
+    summary: cs.summary,
+    sources: [...new Set(cs.cluster.item_ids
+      .map(id => allItemsById.get(id)?.source)
+      .filter(Boolean) as string[])],
+    itemCount: cs.cluster.item_ids.length,
+    sentiment: dominantSentiment(cs.cluster.sentiment_distribution),
+    heat: Math.round(cs.cluster.item_ids.length),
+  }))
+
+  // Aggregate tags from NLP enrichments
+  const tagFreq = new Map<string, { weight: number; sentiment: string }>()
+  for (const enriched of nlpData.items) {
+    for (const kw of enriched.keywords) {
+      const existing = tagFreq.get(kw.text)
+      if (existing) {
+        existing.weight += kw.weight
+      } else {
+        tagFreq.set(kw.text, { weight: kw.weight, sentiment: enriched.sentiment.label })
+      }
+    }
+  }
+  const sortedTags = [...tagFreq.entries()].sort((a, b) => b[1].weight - a[1].weight)
+  const maxWeight = sortedTags[0]?.[1].weight ?? 1
+  const tags: IntelTag[] = sortedTags.slice(0, 25).map(([text, { weight, sentiment }]) => ({
+    text,
+    weight: Math.round((weight / maxWeight) * 1000) / 1000,
+    sentiment: normalizeSentiment(sentiment),
+  }))
+
+  // Build accounts focus list
+  const accounts: AccountFocus[] = [...accountsFocusMap.entries()].map(([name, data]) => ({
+    account: name,
+    handle: data.handle,
+    platform: data.platform,
+    themes: [...data.themes].slice(0, 5),
+    sentiment: normalizeSentiment(data.sentiment),
+    postCount: data.count,
+  }))
+
+  return {
+    trend: {
+      topics: trendTopics,
+      tags,
+      summary: executiveSummary,
+      generated_at: new Date().toISOString(),
+    },
+    topics: null, // Topic intelligence preserved from existing pipeline if needed
+    accounts: accounts.length > 0 ? {
+      accounts,
+      tags: tags.slice(0, 20),
+      summary: accountsSummary,
+      generated_at: new Date().toISOString(),
+    } : null,
+  }
+}
+
+/** Pick the dominant sentiment from a distribution. */
+function dominantSentiment(dist: Record<string, number>): 'positive' | 'negative' | 'neutral' | 'mixed' {
+  const entries = Object.entries(dist).sort((a, b) => b[1] - a[1])
+  if (!entries.length) return 'neutral'
+  const [top, topVal] = entries[0]
+  if (topVal < 0.5 && entries.length > 1) return 'mixed'
+  return normalizeSentiment(top)
 }

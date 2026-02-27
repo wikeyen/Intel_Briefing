@@ -207,8 +207,8 @@ describe('GroupForm', () => {
 
 describe('GroupPicker', () => {
   const groups: SourceGroupTree[] = [
-    { id: 'g1', parent_id: null, name: 'News', color: '#2E7D9A', icon: null, trend_enabled: false, topic_enabled: false, social_enabled: false, sentiment_enabled: false, summary_prompt: null, trend_prompt: null, topic_prompt: null, social_prompt: null, suppress_keywords: [], boost_keywords: [], sort_order: 0, created_at: '', updated_at: '', sensors: [], children: [] },
-    { id: 'g2', parent_id: null, name: 'Trending', color: '#C4851C', icon: null, trend_enabled: true, topic_enabled: false, social_enabled: false, sentiment_enabled: false, summary_prompt: null, trend_prompt: null, topic_prompt: null, social_prompt: null, suppress_keywords: [], boost_keywords: [], sort_order: 1, created_at: '', updated_at: '', sensors: [], children: [] },
+    { id: 'g1', parent_id: null, name: 'News', color: '#2E7D9A', icon: null, ...WORKFLOW_DEFAULTS, sort_order: 0, created_at: '', updated_at: '', sensors: [], children: [] },
+    { id: 'g2', parent_id: null, name: 'Trending', color: '#C4851C', icon: null, ...WORKFLOW_DEFAULTS, trend_enabled: true, sort_order: 1, created_at: '', updated_at: '', sensors: [], children: [] },
   ]
 
   it('renders all groups', () => {
@@ -497,6 +497,7 @@ describe('GroupCard', () => {
         onEditGroup={() => {}}
         onDeleteGroup={() => {}}
         renderSensorRow={(key) => <div key={key}>{key}</div>}
+        {...sharedProps}
       />
     )
     fireEvent.click(screen.getByLabelText('Group options'))
@@ -521,6 +522,7 @@ describe('GroupCard', () => {
         onDeleteGroup={() => {}}
         renderSensorRow={(key) => <div key={key}>{key}</div>}
         renderSensorControls={(key) => <div data-testid={`controls-${key}`}>Controls for {key}</div>}
+        {...sharedProps}
       />
     )
     expect(screen.getByTestId('controls-weibo')).toBeDefined()
@@ -545,6 +547,7 @@ describe('GroupCard', () => {
         onEditGroup={() => {}}
         onDeleteGroup={() => {}}
         renderSensorRow={(key) => <div key={key}>{key}</div>}
+        {...sharedProps}
       />
     )
     expect(screen.queryByTestId('controls-weibo')).toBeNull()
@@ -559,7 +562,8 @@ describe('GroupCard drag handle', () => {
     name: 'Trending',
     color: '#C4851C',
     icon: null,
-    processing: 'trend',
+    ...WORKFLOW_DEFAULTS,
+    trend_enabled: true,
     sort_order: 0,
     created_at: '',
     updated_at: '',
@@ -585,6 +589,9 @@ describe('GroupCard drag handle', () => {
             onEditGroup={() => {}}
             onDeleteGroup={() => {}}
             renderSensorRow={(key) => <div key={key}>{key}</div>}
+            hasTopicSensors={false}
+            hasAccountSensors={false}
+            onUpdateGroup={() => {}}
           />
         </SortableContext>
       </DndContext>
@@ -610,7 +617,8 @@ describe('GroupCard card style', () => {
     name: 'Trending',
     color: '#C4851C',
     icon: null,
-    processing: 'trend',
+    ...WORKFLOW_DEFAULTS,
+    trend_enabled: true,
     sort_order: 0,
     created_at: '',
     updated_at: '',
@@ -634,6 +642,9 @@ describe('GroupCard card style', () => {
         onEditGroup={() => {}}
         onDeleteGroup={() => {}}
         renderSensorRow={(key) => <div key={key}>{key}</div>}
+        hasTopicSensors={false}
+        hasAccountSensors={false}
+        onUpdateGroup={() => {}}
       />
     )
     // The header div gets background: `${group.color}14` (8% opacity tint)
@@ -657,6 +668,9 @@ describe('GroupCard card style', () => {
         onEditGroup={() => {}}
         onDeleteGroup={() => {}}
         renderSensorRow={(key) => <div key={key}>{key}</div>}
+        hasTopicSensors={false}
+        hasAccountSensors={false}
+        onUpdateGroup={() => {}}
       />
     )
     // Count pill shows "1/1" with monospace font

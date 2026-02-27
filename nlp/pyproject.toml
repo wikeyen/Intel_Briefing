@@ -1,0 +1,20 @@
+[project]
+name = "nlp-sidecar"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "pydantic>=2.0",
+    "keybert>=0.8",
+    "yake>=0.4.8",
+    "sentence-transformers>=3.0",
+    "transformers>=4.45",
+    "torch>=2.0",
+    "spacy>=3.7",
+    "hdbscan>=0.8.38",
+    "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "httpx>=0.27", "anyio[trio]>=4.0", "pytest-anyio>=0.0.0"]

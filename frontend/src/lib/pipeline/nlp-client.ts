@@ -43,7 +43,7 @@ export interface NlpAnalyzeResponse {
   clusters: NlpCluster[]
 }
 
-interface AnalyzeInput {
+export interface AnalyzeInput {
   id: string
   title: string
   abstract?: string
@@ -107,6 +107,37 @@ async function clusterAll(
   }
   const data = await resp.json()
   return data.clusters as NlpCluster[]
+}
+
+/**
+ * Enrich items in batches via /enrich. Returns all enriched items.
+ * This is the batched enrichment without clustering.
+ */
+export async function enrichItems(
+  items: AnalyzeInput[],
+  onProgress?: (message: string) => void,
+): Promise<NlpEnrichedItem[]> {
+  const allEnriched: NlpEnrichedItem[] = []
+  const totalBatches = Math.ceil(items.length / ENRICH_BATCH_SIZE)
+  for (let i = 0; i < items.length; i += ENRICH_BATCH_SIZE) {
+    const batchNum = Math.floor(i / ENRICH_BATCH_SIZE) + 1
+    const batch = items.slice(i, i + ENRICH_BATCH_SIZE)
+    onProgress?.(`Enriching batch ${batchNum}/${totalBatches} (${batch.length} items)`)
+    const enriched = await enrichBatch(batch)
+    allEnriched.push(...enriched)
+  }
+  return allEnriched
+}
+
+/**
+ * Cluster items via /cluster using pre-computed enrichment data.
+ * Returns cluster results.
+ */
+export async function clusterItems(
+  items: AnalyzeInput[],
+  enrichedItems: NlpEnrichedItem[],
+): Promise<NlpCluster[]> {
+  return clusterAll(items, enrichedItems)
 }
 
 /** Send items to the NLP sidecar for analysis. Returns null if sidecar is unavailable. */

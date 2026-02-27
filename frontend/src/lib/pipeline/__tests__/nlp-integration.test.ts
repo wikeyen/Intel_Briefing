@@ -26,4 +26,11 @@ describe('NLP-first intelligence pipeline', () => {
     for (const s of cnSensors) expect(cnSet.has(s)).toBe(true)
     for (const s of enSensors) expect(cnSet.has(s)).toBe(false)
   })
+
+  it('enrichItems and clusterItems are independently usable', async () => {
+    // Verify the new exports exist and are callable
+    const { enrichItems, clusterItems } = await import('../nlp-client')
+    expect(typeof enrichItems).toBe('function')
+    expect(typeof clusterItems).toBe('function')
+  })
 })

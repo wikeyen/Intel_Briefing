@@ -12,7 +12,7 @@ import { summarizeSingleSensor } from '../summary/summarizer'
 import { writeReport } from './cache'
 import { runIntelligenceAnalysis, runNlpIntelligenceAnalysis } from './intelligence'
 import { writeIntelligence } from './intelligence-cache'
-import { checkHealth, analyzeItems } from './nlp-client'
+import { checkHealth, enrichItems, clusterItems } from './nlp-client'
 import type { PipelineProgressTracker } from './progress'
 import type { PipelineContext, FailureKind } from './types'
 
@@ -244,8 +244,18 @@ export async function runIntelligence(
         allItems.push(...(report.items[cat] ?? []))
       }
 
-      tracker.addEvent('info', 'intelligence', `NLP sidecar available — analyzing ${allItems.length} items`)
+      tracker.addEvent('info', 'intelligence', 'NLP sidecar available — splitting items by section')
 
+      // Split items by section (same as legacy pipeline)
+      const trendItems = allItems.filter(i => SENSOR_CATEGORY_MAP[i.source] === 'trend')
+      const topicItems = allItems.filter(i => i.topic != null && i.topic.length > 0)
+      const accountItems = allItems.filter(
+        i => i.account != null && i.account.length > 0 && SENSOR_CATEGORY_MAP[i.source] === 'social'
+      )
+
+      tracker.addEvent('info', 'intelligence', `Sections: ${trendItems.length} trend, ${topicItems.length} topic, ${accountItems.length} account items`)
+
+      // Enrich ALL items in batches (keywords, sentiment, NER)
       const nlpInput = allItems.map(item => ({
         id: item.id,
         title: item.title,
@@ -253,19 +263,36 @@ export async function runIntelligence(
         lang: detectLang(item),
       }))
 
-      const nlpData = await analyzeItems(nlpInput, (msg) => {
+      const enriched = await enrichItems(nlpInput, (msg) => {
         tracker.addEvent('info', 'intelligence', msg)
       })
+      tracker.addEvent('info', 'intelligence', `Enrichment complete — ${enriched.length} items`)
+      const enrichmentMap = new Map(enriched.map(e => [e.id, e]))
 
-      if (nlpData) {
-        tracker.addEvent('info', 'intelligence', 'Running LLM narrative synthesis...')
-        const intelligence = await runNlpIntelligenceAnalysis(report, nlpData, llmConfig, signal, language)
-        await writeIntelligence(intelligence)
-        tracker.addEvent('ok', 'intelligence', `Intelligence complete — ${nlpData.items.length} items, ${nlpData.clusters.length} clusters, narrative synthesized`)
-        return
+      // Cluster only TREND items for Public Focus
+      const trendInput = trendItems.map(item => ({
+        id: item.id,
+        title: item.title,
+        abstract: item.abstract ?? undefined,
+        lang: detectLang(item),
+      }))
+      const trendEnriched = enriched.filter(e => trendItems.some(t => t.id === e.id))
+
+      tracker.addEvent('info', 'intelligence', `Clustering ${trendItems.length} trend items...`)
+      let trendClusters: import('./nlp-client').NlpCluster[] = []
+      if (trendItems.length >= 2) {
+        trendClusters = await clusterItems(trendInput, trendEnriched)
       }
+      tracker.addEvent('info', 'intelligence', `${trendClusters.length} trend clusters found`)
 
-      tracker.addEvent('warn', 'intelligence', 'NLP sidecar returned null, falling back to LLM-only')
+      // Run NLP intelligence analysis with section-split data
+      tracker.addEvent('info', 'intelligence', 'Running LLM narrative synthesis...')
+      const intelligence = await runNlpIntelligenceAnalysis(
+        report, { trendClusters, enrichmentMap }, llmConfig, signal, language
+      )
+      await writeIntelligence(intelligence)
+      tracker.addEvent('ok', 'intelligence', `Intelligence complete — ${trendClusters.length} clusters, narrative synthesized`)
+      return
     } else {
       tracker.addEvent('info', 'intelligence', 'NLP sidecar unavailable, using LLM-only pipeline')
     }

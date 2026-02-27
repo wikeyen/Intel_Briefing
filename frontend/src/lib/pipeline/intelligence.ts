@@ -7,7 +7,7 @@ import { chatCompletion } from '../summary/llm'
 import type { CategoryKey } from '../sensors/taxonomy'
 import { ALL_CATEGORIES, SENSOR_CATEGORY_MAP } from '../sensors/taxonomy'
 import { jsonrepair } from 'jsonrepair'
-import type { NlpAnalyzeResponse } from './nlp-client'
+import type { NlpCluster, NlpEnrichedItem } from './nlp-client'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -592,30 +592,42 @@ export async function runIntelligenceAnalysis(
 // NLP-first intelligence analysis
 // ---------------------------------------------------------------------------
 
+/** Section-split NLP data for the intelligence pipeline. */
+export interface NlpSectionData {
+  trendClusters: NlpCluster[]
+  enrichmentMap: Map<string, NlpEnrichedItem>
+}
+
 /**
  * NLP-first intelligence analysis: Python sidecar handles structure,
- * LLM handles narrative. Falls back to legacy approach if sidecar is down.
+ * LLM handles narrative. Uses section-split data so each intelligence
+ * section draws from its correct source items.
  */
 export async function runNlpIntelligenceAnalysis(
   report: IntelReport,
-  nlpData: NlpAnalyzeResponse,
+  nlpSectionData: NlpSectionData,
   llmConfig: LlmConfig,
   signal?: AbortSignal,
   language?: SummaryLanguage,
 ): Promise<IntelligenceReport> {
-  // Build lookup maps from NLP enrichments
-  const itemMap = new Map(nlpData.items.map(i => [i.id, i]))
+  const { trendClusters, enrichmentMap } = nlpSectionData
 
-  // Collect all items for account/trend grouping
+  // Collect all items for section splitting and lookups
   const allItems: IntelItem[] = []
   for (const cat of ALL_CATEGORIES) {
     allItems.push(...(report.items[cat] ?? []))
   }
   const allItemsById = new Map(allItems.map(i => [i.id, i]))
 
-  // --- Cluster summaries (parallel LLM calls) ---
+  // Split items by section (same as legacy pipeline)
+  const topicItems = allItems.filter(i => i.topic != null && i.topic.length > 0)
+  const accountItems = allItems.filter(
+    i => i.account != null && i.account.length > 0 && SENSOR_CATEGORY_MAP[i.source] === 'social'
+  )
+
+  // --- Trend / Public Focus: cluster summaries (parallel LLM calls) ---
   const clusterSummaries = await Promise.all(
-    nlpData.clusters.map(async (cluster) => {
+    trendClusters.map(async (cluster) => {
       const repTitles = cluster.representative_items
         .map(id => allItemsById.get(id)?.title)
         .filter(Boolean)
@@ -644,14 +656,90 @@ ${repTitles.map((t, i) => `  [${i}] ${t}`).join('\n')}` },
     })
   )
 
+  // --- Topic intelligence (1 LLM call) ---
+  let topicResult: TopicIntelligence | null = null
+  if (topicItems.length > 0) {
+    // Group items by topic keyword
+    const byTopic = new Map<string, IntelItem[]>()
+    for (const item of topicItems) {
+      const topic = item.topic!
+      if (!byTopic.has(topic)) byTopic.set(topic, [])
+      byTopic.get(topic)!.push(item)
+    }
+
+    // Build grouped text block with NLP enrichment
+    const sections: string[] = []
+    byTopic.forEach((items, topic) => {
+      const posts = items.map((item, i) => {
+        const enriched = enrichmentMap.get(item.id)
+        const sentiment = enriched?.sentiment.label ?? 'unknown'
+        return `  [${i}] ${item.title} (${sentiment}) | ${item.url}`
+      }).join('\n')
+      sections.push(`## Topic: ${topic} (${items.length} posts)\n${posts}`)
+    })
+
+    try {
+      const raw = await chatCompletion([
+        { role: 'system', content: topicSystemPrompt(language) },
+        { role: 'user', content: sections.join('\n\n') },
+      ], llmConfig, signal)
+
+      let parsed = robustJsonParse(raw)
+      if (!parsed) {
+        const retryRaw = await chatCompletion([
+          { role: 'system', content: topicSystemPrompt(language) },
+          { role: 'user', content: sections.join('\n\n') },
+          { role: 'assistant', content: raw },
+          { role: 'user', content: 'Your response was not valid JSON. Please respond with ONLY the JSON object, no explanation or markdown fences.' },
+        ], llmConfig, signal)
+        parsed = robustJsonParse(retryRaw)
+      }
+
+      if (parsed) {
+        const topics: TopicSentimentEntry[] = Array.isArray(parsed.topics)
+          ? parsed.topics
+              .filter((t: unknown) => t && typeof t === 'object' && 'topic' in t)
+              .map((t: unknown) => {
+                const entry = t as Record<string, unknown>
+                const rawItems = Array.isArray(entry.items) ? entry.items : []
+                return {
+                  topic: String(entry.topic ?? ''),
+                  sentiment: normalizeSentiment(entry.sentiment),
+                  summary: String(entry.summary ?? ''),
+                  items: rawItems
+                    .filter((it: unknown) => it && typeof it === 'object' && 'title' in it)
+                    .map((it: unknown) => {
+                      const item = it as Record<string, unknown>
+                      return {
+                        title: String(item.title ?? ''),
+                        url: String(item.url ?? ''),
+                        brief: String(item.brief ?? ''),
+                      }
+                    }),
+                  postCount: typeof entry.postCount === 'number' ? entry.postCount : 0,
+                }
+              })
+          : []
+
+        topicResult = {
+          topics,
+          tags: parseTags(parsed.tags),
+          summary: typeof parsed.summary === 'string' ? parsed.summary : '',
+          generated_at: new Date().toISOString(),
+        }
+      }
+    } catch (err) {
+      console.error('[intelligence] NLP topic analysis failed:', err)
+    }
+  }
+
   // --- Accounts summary (1 LLM call) ---
-  const accountItems = allItems.filter(i => i.account && SENSOR_CATEGORY_MAP[i.source] === 'social')
   let accountsSummary = ''
   let accountTags: IntelTag[] = []
   const accountsFocusMap = new Map<string, { themes: Set<string>; sentiment: string; count: number; handle: string; platform: string }>()
 
   for (const item of accountItems) {
-    const enriched = itemMap.get(item.id)
+    const enriched = enrichmentMap.get(item.id)
     const existing = accountsFocusMap.get(item.account!)
     if (existing) {
       existing.count++
@@ -781,13 +869,13 @@ ${repTitles.map((t, i) => `  [${i}] ${t}`).join('\n')}` },
   }))
 
   return {
-    trend: {
+    trend: trendTopics.length > 0 ? {
       topics: trendTopics,
       tags,
       summary: executiveSummary,
       generated_at: new Date().toISOString(),
-    },
-    topics: null, // Topic intelligence preserved from existing pipeline if needed
+    } : null,
+    topics: topicResult,
     accounts: accounts.length > 0 ? {
       accounts,
       tags: accountTags.length > 0 ? accountTags : tags.slice(0, 20),

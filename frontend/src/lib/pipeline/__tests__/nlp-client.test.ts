@@ -1,7 +1,8 @@
 // ABOUTME: Tests for NLP sidecar client — validates batched /enrich + /cluster calls.
 // ABOUTME: Uses mocked fetch to avoid requiring a running sidecar.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { analyzeItems, checkHealth, NlpAnalyzeResponse } from '../nlp-client'
+import { analyzeItems, checkHealth, enrichItems, clusterItems } from '../nlp-client'
+import type { NlpAnalyzeResponse } from '../nlp-client'
 
 const mockEnrichResponse = {
   items: [
@@ -127,5 +128,97 @@ describe('NLP client', () => {
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('ECONNREFUSED'))
     const result = await checkHealth()
     expect(result).toBe(false)
+  })
+})
+
+describe('enrichItems', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('returns enriched items without clustering', async () => {
+    globalThis.fetch = vi.fn(async (url: string | URL | Request) => {
+      const urlStr = typeof url === 'string' ? url : url.toString()
+      if (urlStr.includes('/enrich')) {
+        return new Response(JSON.stringify(mockEnrichResponse))
+      }
+      return new Response('', { status: 404 })
+    })
+
+    const result = await enrichItems([{ id: 'test-1', title: 'OpenAI releases GPT-5', lang: 'en' }])
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe('test-1')
+    expect(result[0].sentiment.label).toBe('positive')
+
+    // Should NOT have called /cluster
+    const fetchMock = vi.mocked(globalThis.fetch)
+    const calls = fetchMock.mock.calls.map(c => String(c[0]))
+    expect(calls.some(u => u.includes('/cluster'))).toBe(false)
+  })
+
+  it('batches enrichment and reports progress', async () => {
+    globalThis.fetch = vi.fn(async (url: string | URL | Request) => {
+      const urlStr = typeof url === 'string' ? url : url.toString()
+      if (urlStr.includes('/enrich')) {
+        return new Response(JSON.stringify({
+          items: [{ id: 'x', keywords: [], sentiment: { label: 'neutral', score: 0.5 }, entities: { people: [], orgs: [], places: [] } }],
+        }))
+      }
+      return new Response('', { status: 404 })
+    })
+
+    const messages: string[] = []
+    const items = Array.from({ length: 450 }, (_, i) => ({
+      id: `item-${i}`,
+      title: `Title ${i}`,
+      lang: 'en',
+    }))
+
+    await enrichItems(items, (msg) => messages.push(msg))
+
+    expect(messages).toHaveLength(3) // 3 batches
+    expect(messages[0]).toContain('Enriching batch 1/3')
+    expect(messages[2]).toContain('Enriching batch 3/3')
+  })
+})
+
+describe('clusterItems', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('sends items and enrichment to /cluster', async () => {
+    globalThis.fetch = vi.fn(async (url: string | URL | Request) => {
+      const urlStr = typeof url === 'string' ? url : url.toString()
+      if (urlStr.includes('/cluster')) {
+        return new Response(JSON.stringify(mockClusterResponse))
+      }
+      return new Response('', { status: 404 })
+    })
+
+    const items = [{ id: 'test-1', title: 'OpenAI releases GPT-5', lang: 'en' }]
+    const enriched = mockEnrichResponse.items
+
+    const result = await clusterItems(items, enriched)
+    expect(result).toHaveLength(1)
+    expect(result[0].label).toBe('ai')
+
+    // Should have called /cluster
+    const fetchMock = vi.mocked(globalThis.fetch)
+    const calls = fetchMock.mock.calls.map(c => String(c[0]))
+    expect(calls.some(u => u.includes('/cluster'))).toBe(true)
+    // Should NOT have called /enrich
+    expect(calls.some(u => u.includes('/enrich'))).toBe(false)
+  })
+
+  it('propagates errors from /cluster', async () => {
+    globalThis.fetch = vi.fn(async () => {
+      return new Response('Internal Server Error', { status: 500 })
+    })
+
+    const items = [{ id: 'test-1', title: 'test', lang: 'en' }]
+    const enriched = mockEnrichResponse.items
+
+    await expect(clusterItems(items, enriched)).rejects.toThrow('/cluster returned 500')
   })
 })

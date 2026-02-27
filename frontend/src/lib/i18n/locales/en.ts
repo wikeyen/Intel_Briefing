@@ -93,6 +93,7 @@ const en: TranslationDict = {
   'dash.no_summary_title': 'No summary available',
   'dash.no_summary_desc': 'Data has been fetched but no AI summary has been generated yet. Run {link} to generate the briefing.',
   'dash.summarize_link': 'Summarize',
+  'dash.other': 'Other',
   'dash.items_collected': 'ITEMS COLLECTED',
   'dash.percent': 'PERCENT',
   'dash.online': '{ok}/{total} online',

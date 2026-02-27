@@ -62,7 +62,7 @@ describe('i18n locale dictionaries', () => {
       'app.title',
       'nav.dashboard', 'nav.status', 'nav.feed',
       'ticker.updating', 'ticker.idle', 'ticker.items',
-      'dash.exec_summary', 'dash.sentiment', 'dash.trending',
+      'dash.exec_summary', 'dash.sentiment', 'dash.trending', 'dash.other',
       'domain.macro', 'domain.news', 'domain.social',
       'sentiment.bullish', 'sentiment.bearish', 'sentiment.mixed', 'sentiment.neutral',
       'sidebar.language',

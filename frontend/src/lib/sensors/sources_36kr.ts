@@ -95,7 +95,7 @@ function parseFromHTML(html: string, limit: number): IntelItem[] {
       source: 'sources_36kr',
       title,
       url,
-      published_at: timeStr,
+      published_at: null,
     })
   }
   return items

@@ -170,3 +170,17 @@ describe('ItemCard groupColor prop', () => {
     expect(article.style.borderLeft).toBe('')
   })
 })
+
+describe('ItemCard date handling', () => {
+  it('does not render NaN for unparseable published_at', () => {
+    const item = makeItem({ published_at: '2 hours ago' })
+    const { container } = renderWithI18n(<ItemCard item={item} />)
+    expect(container.textContent).not.toContain('NaN')
+  })
+
+  it('does not render date when published_at is null', () => {
+    const item = makeItem({ published_at: null })
+    renderWithI18n(<ItemCard item={item} />)
+    expect(screen.queryByText(/ago/)).not.toBeInTheDocument()
+  })
+})

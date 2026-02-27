@@ -93,6 +93,7 @@ const zh: TranslationDict = {
   'dash.no_summary_title': '暂无摘要',
   'dash.no_summary_desc': '数据已获取，但尚未生成 AI 摘要。运行{link}以生成简报。',
   'dash.summarize_link': '生成摘要',
+  'dash.other': '其他',
   'dash.items_collected': '已收集条目',
   'dash.percent': '百分比',
   'dash.online': '{ok}/{total} 在线',

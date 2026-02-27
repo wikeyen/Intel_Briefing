@@ -46,7 +46,9 @@ function SourceChip({ source, label }: { source: string; label?: string }) {
 }
 
 function relativeDate(iso: string, t: (key: string, params?: Record<string, string>) => string): string {
-  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+  const ms = new Date(iso).getTime()
+  if (Number.isNaN(ms)) return ''
+  const diff = Math.floor((Date.now() - ms) / 1000)
   if (diff < 3600) return t('time.minutes_ago', { n: String(Math.floor(diff / 60)) })
   if (diff < 86400) return t('time.hours_ago', { n: String(Math.floor(diff / 3600)) })
   return t('time.days_ago', { n: String(Math.floor(diff / 86400)) })

@@ -64,11 +64,12 @@ interface TopicKeywordEntry {
  * Merges live (streaming) and pipeline-status (persisted) sub-item data,
  * preferring live when both exist for the same sensor.
  */
-function collectTopicKeywords(
+export function collectTopicKeywords(
   liveSensors: Record<string, SensorJobProgress>,
   pipelineStatus: PipelineStatus | null,
   sensorLabelMap: Record<string, string>,
   config: ConfigSettings | null,
+  report: IntelReport | null,
 ): TopicKeywordEntry[] {
   // keyword → sensor → SubItemProgress
   const keywordMap = new Map<string, Map<string, { sensorLabel: string; sub: SubItemProgress }>>()
@@ -86,10 +87,46 @@ function collectTopicKeywords(
     }
   }
 
-  // Seed from config when no pipeline data exists (idle state)
+  // Seed from config + report when no pipeline data exists (idle state)
   if (keywordMap.size === 0 && config?.social_topics_keywords) {
+    // Count items per (topic, source) from the latest report
+    const topicCounts = new Map<string, Map<string, number>>()
+    if (report) {
+      for (const items of Object.values(report.items)) {
+        for (const item of items) {
+          if (!item.topic) continue
+          if (!topicCounts.has(item.topic)) topicCounts.set(item.topic, new Map())
+          const srcMap = topicCounts.get(item.topic)!
+          srcMap.set(item.source, (srcMap.get(item.source) ?? 0) + 1)
+        }
+      }
+    }
+
+    // Show enabled topic sensors with their item counts from the report
+    const enabledTopicSensors = TOPIC_SENSORS.filter(s => {
+      if (s === 'bluesky') return config.bluesky_topics_enabled !== false
+      if (s === 'mastodon') return config.mastodon_topics_enabled !== false
+      return true
+    })
+
     for (const keyword of config.social_topics_keywords) {
-      keywordMap.set(keyword, new Map())
+      const platforms = new Map<string, { sensorLabel: string; sub: SubItemProgress }>()
+      const counts = topicCounts.get(keyword)
+
+      for (const sensor of enabledTopicSensors) {
+        const count = counts?.get(sensor) ?? 0
+        platforms.set(sensor, {
+          sensorLabel: sensorLabelMap[sensor] ?? sensor,
+          sub: {
+            key: keyword,
+            label: keyword,
+            fetch: count > 0 ? 'ok' : 'queued',
+            item_count: count,
+          },
+        })
+      }
+
+      keywordMap.set(keyword, platforms)
     }
   }
 
@@ -191,8 +228,8 @@ export function SensorGrid({
   }, [report, config, pipelineStatus, sensorCounts, isRunning, pipelineSensorSet, cacheTtlHours, tick])
 
   const topicKeywords = useMemo(
-    () => collectTopicKeywords(liveSensors, pipelineStatus, SENSOR_LABEL_MAP, config),
-    [liveSensors, pipelineStatus, config],
+    () => collectTopicKeywords(liveSensors, pipelineStatus, SENSOR_LABEL_MAP, config, report),
+    [liveSensors, pipelineStatus, config, report],
   )
 
   // Social sensors with no accounts configured — show a "no accounts" note
@@ -304,7 +341,11 @@ export function SensorGrid({
                 </div>
               )}
               {/* Topics section: keyword-grouped progress rows */}
-              {isTopics && topicKeywords.map(entry => (
+              {isTopics && topicKeywords.map(entry => {
+                const keywordTotal = entry.platforms.reduce((sum, p) => sum + p.sub.item_count, 0)
+                const anyRunning = entry.platforms.some(p => p.sub.fetch === 'running')
+                const anyFailed = entry.platforms.some(p => p.sub.fetch === 'failed')
+                return (
                 <React.Fragment key={entry.keyword}>
                   {/* Keyword heading row */}
                   <div style={{
@@ -315,7 +356,16 @@ export function SensorGrid({
                     padding: '0.3125rem 1rem',
                     borderTop: '1px solid color-mix(in srgb, var(--border-soft) 40%, transparent)',
                   }}>
-                    <span />
+                    <span style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: '50%',
+                      background: anyRunning ? 'var(--accent)'
+                        : anyFailed ? 'var(--err)'
+                        : keywordTotal > 0 ? 'var(--ok)'
+                        : 'var(--border)',
+                      transition: 'background 200ms',
+                    }} />
                     <span style={{
                       fontSize: '0.75rem',
                       fontWeight: 600,
@@ -323,7 +373,15 @@ export function SensorGrid({
                     }}>
                       #{entry.label}
                     </span>
-                    <span />
+                    <span style={{
+                      fontSize: '0.625rem',
+                      fontFamily: 'ui-monospace, monospace',
+                      color: 'var(--ink-faint)',
+                      textAlign: 'right',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {keywordTotal > 0 ? `${keywordTotal} items` : ''}
+                    </span>
                     <span />
                   </div>
                   {/* Platform sub-rows */}
@@ -375,7 +433,7 @@ export function SensorGrid({
                     </div>
                   ))}
                 </React.Fragment>
-              ))}
+              )})}
               {/* Standard sensor rows (non-topics sections) */}
               {!isTopics && sectionSensors.map(sensor => {
                 const live = liveSensors[sensor.sensorKey]

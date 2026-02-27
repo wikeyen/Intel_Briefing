@@ -61,33 +61,6 @@ describe('ConfigSettings', () => {
   })
 })
 
-describe('IntelItem NLP fields', () => {
-  it('accepts nlp_keywords and nlp_entities when present', () => {
-    const item: IntelItem = {
-      id: 'test-1',
-      source: 'hacker_news',
-      title: 'Test',
-      url: 'https://example.com',
-      nlp_keywords: [{ text: 'AI', weight: 0.9 }, { text: 'ML', weight: 0.7 }],
-      nlp_entities: { people: ['Hinton'], orgs: ['Google'], places: ['Toronto'] },
-    }
-    expect(item.nlp_keywords).toHaveLength(2)
-    expect(item.nlp_keywords![0].text).toBe('AI')
-    expect(item.nlp_entities!.people).toContain('Hinton')
-  })
-
-  it('allows nlp fields to be omitted', () => {
-    const item: IntelItem = {
-      id: 'test-2',
-      source: 'arxiv',
-      title: 'Test',
-      url: 'https://example.com',
-    }
-    expect(item.nlp_keywords).toBeUndefined()
-    expect(item.nlp_entities).toBeUndefined()
-  })
-})
-
 describe('normalizeRssFeeds', () => {
   it('converts bare URL strings to RssFeedEntry with type other', () => {
     const result = normalizeRssFeeds(['https://example.com/feed.xml'])

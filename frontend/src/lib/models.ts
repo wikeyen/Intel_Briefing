@@ -1,10 +1,6 @@
 // ABOUTME: Shared TypeScript data models for Intel Briefing.
 // ABOUTME: Defines IntelItem, IntelReport, HealthResponse, ConfigSettings and pipeline status types.
 
-import { ALL_CATEGORIES, type CategoryKey, emptyCategoryMap } from './sensors/taxonomy'
-
-export { ALL_CATEGORIES, type CategoryKey }
-
 export interface IntelItem {
   id: string
   source: string
@@ -51,30 +47,13 @@ export interface IntelItem {
   nlp_entities?: { people: string[]; orgs: string[]; places: string[] } | null
 }
 
-export function emptyItemsMap(): Record<CategoryKey, IntelItem[]> {
-  return emptyCategoryMap() as Record<CategoryKey, IntelItem[]>
-}
-
-/** Ensure every expected section key exists, filling missing ones with []. */
-export function ensureAllSections(
-  items: Record<string, IntelItem[]>,
-): Record<CategoryKey, IntelItem[]> {
-  const result = emptyItemsMap()
-  for (const key of ALL_CATEGORIES) {
-    if (items[key]) {
-      result[key] = items[key]
-    }
-  }
-  return result
-}
-
 export interface IntelReport {
   date: string
   fetched_at: string
   stale: boolean
   sources_ok: string[]
   sources_failed: string[]
-  items: Record<CategoryKey, IntelItem[]>
+  items: Record<string, IntelItem[]>
   /** Per-sensor ISO timestamp of last successful fetch. */
   sources_fetched_at?: Record<string, string>
 }
@@ -82,16 +61,12 @@ export interface IntelReport {
 export function createReport(
   overrides: Partial<IntelReport> & Pick<IntelReport, 'date' | 'fetched_at'>,
 ): IntelReport {
-  const raw = {
+  return {
     stale: false,
     sources_ok: [],
     sources_failed: [],
-    items: emptyItemsMap(),
+    items: {},
     ...overrides,
-  }
-  return {
-    ...raw,
-    items: ensureAllSections(raw.items),
   }
 }
 

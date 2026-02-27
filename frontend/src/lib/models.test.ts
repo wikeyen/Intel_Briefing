@@ -2,11 +2,9 @@
 // ABOUTME: Covers IntelReport, ConfigSettings, SensorResult business logic.
 import { describe, it, expect } from 'vitest'
 import {
-  type IntelItem,
   type SensorResult,
   createReport,
   defaultConfig,
-  ensureAllSections,
   normalizeRssFeeds,
   sensorLimit,
   sensorResultSucceeded,
@@ -18,27 +16,17 @@ describe('IntelReport', () => {
     expect(report.stale).toBe(false)
     expect(report.sources_ok).toEqual([])
     expect(report.sources_failed).toEqual([])
-    expect(report.items.tech).toBeDefined()
-    expect(report.items.research).toBeDefined()
-    expect(report.items.social).toBeDefined()
+    expect(report.items).toEqual({})
   })
 
-  it('should have all 9 sections present by default', () => {
-    const report = createReport({ date: '2026-01-01', fetched_at: '2026-01-01T07:00:00Z' })
-    const expected = new Set([
-      'tech', 'research', 'finance', 'products',
-      'community', 'social', 'trend', 'insights', 'feeds',
-    ])
-    expect(new Set(Object.keys(report.items))).toEqual(expected)
+  it('should preserve provided items in createReport', () => {
+    const report = createReport({
+      date: '2026-01-01',
+      fetched_at: '2026-01-01T07:00:00Z',
+      items: { 'group-1': [] },
+    })
+    expect(Object.keys(report.items)).toEqual(['group-1'])
   })
-
-  it('should fill missing sections via ensureAllSections', () => {
-    const partial = { tech: [] as IntelItem[] }
-    const result = ensureAllSections(partial)
-    expect(result.research).toBeDefined()
-    expect(result.social).toBeDefined()
-  })
-
 })
 
 describe('ConfigSettings', () => {

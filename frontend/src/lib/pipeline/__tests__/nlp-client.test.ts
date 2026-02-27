@@ -1,4 +1,4 @@
-// ABOUTME: Tests for NLP sidecar client — validates request building and response parsing.
+// ABOUTME: Tests for NLP sidecar client — validates batched /enrich + /cluster calls.
 // ABOUTME: Uses mocked fetch to avoid requiring a running sidecar.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { analyzeItems, checkHealth, NlpAnalyzeResponse } from '../nlp-client'

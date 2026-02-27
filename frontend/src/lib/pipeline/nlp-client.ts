@@ -2,8 +2,8 @@
 // ABOUTME: Calls POST /enrich (batched) + POST /cluster for analysis, and GET /health for readiness checks.
 
 const NLP_BASE = process.env.NLP_SIDECAR_URL ?? 'http://localhost:8001'
-const NLP_ENRICH_TIMEOUT_MS = 30_000
-const NLP_CLUSTER_TIMEOUT_MS = 60_000
+const NLP_ENRICH_TIMEOUT_MS = 60_000
+const NLP_CLUSTER_TIMEOUT_MS = 120_000
 const ENRICH_BATCH_SIZE = 200
 
 export interface NlpKeyword {

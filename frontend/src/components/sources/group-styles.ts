@@ -1,17 +1,16 @@
-// ABOUTME: Shared soft UI style constants for group-based Sources page components.
-// ABOUTME: Defines reusable CSSProperties objects for cards, headers, and drop zones.
+// ABOUTME: Shared style constants for group-based Sources page components.
+// ABOUTME: Defines reusable CSSProperties objects for cards, headers, and drop zones — matches Dashboard flat style.
 import type React from 'react'
 
-/** Glassmorphism card container — frosted glass with soft shadow. */
+/** Card container — flat solid style matching Dashboard DashCard. */
 export const GROUP_CARD: React.CSSProperties = {
-  borderRadius: 16,
-  boxShadow: '0 2px 8px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)',
-  background: 'var(--glass-bg, rgba(255, 255, 255, 0.6))',
-  backdropFilter: 'blur(12px)',
-  WebkitBackdropFilter: 'blur(12px)',
-  border: '1px solid var(--glass-border, rgba(255, 255, 255, 0.3))',
+  borderRadius: 8,
+  boxShadow: 'var(--shadow-card)',
+  background: 'var(--surface)',
+  border: '1px solid var(--border)',
   overflow: 'visible',
   position: 'relative',
+  transition: 'box-shadow 200ms, border-color 200ms',
 }
 
 /** Group header row — flex row with center alignment and breathing room. */
@@ -19,7 +18,7 @@ export const GROUP_HEADER: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: '0.5rem',
-  padding: '1rem 1.25rem 1rem 1.5rem',
+  padding: '0.75rem 1rem 0.75rem 1.25rem',
 }
 
 /** Vertical sensor list inside a group card — no gap, borders handle separation. */
@@ -35,22 +34,20 @@ export const DROP_ZONE_ACTIVE: React.CSSProperties = {
   borderRadius: 8,
 }
 
-/** Frosted glass pill button for "Add Group" action. */
+/** Pill button for "Add Group" action — matches Dashboard flat style. */
 export const ADD_GROUP_BTN: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   gap: '0.375rem',
   padding: '0.5rem 1rem',
   borderRadius: 999,
-  border: '1px solid var(--glass-border, rgba(255,255,255,0.3))',
-  background: 'var(--glass-bg, rgba(255,255,255,0.6))',
-  backdropFilter: 'blur(8px)',
-  WebkitBackdropFilter: 'blur(8px)',
+  border: '1px solid var(--border)',
+  background: 'var(--surface)',
   color: 'var(--accent)',
   fontSize: '0.8125rem',
   fontWeight: 500,
   cursor: 'pointer',
-  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+  boxShadow: 'var(--shadow-card)',
   transition: 'box-shadow 150ms ease, background 150ms ease',
 }
 
@@ -67,19 +64,17 @@ export function colorDotStyle(color: string, size = 10): React.CSSProperties {
   }
 }
 
-/** Frosted processing-type pill badge shown in group headers. */
+/** Processing-type pill badge shown in group headers. */
 export const PROCESSING_PILL: React.CSSProperties = {
   fontSize: '0.625rem',
   fontWeight: 600,
   letterSpacing: '0.06em',
   textTransform: 'uppercase',
-  background: 'var(--glass-pill, rgba(255, 255, 255, 0.5))',
-  backdropFilter: 'blur(4px)',
-  WebkitBackdropFilter: 'blur(4px)',
+  background: 'var(--surface-alt)',
   color: 'var(--ink-muted)',
   padding: '0.125rem 0.5rem',
   borderRadius: 999,
-  border: '1px solid var(--glass-border, rgba(255,255,255,0.2))',
+  border: '1px solid var(--border-subtle)',
 }
 
 /** Kebab menu button (three dots). */
@@ -99,17 +94,15 @@ export const KEBAB_BTN: React.CSSProperties = {
   flexShrink: 0,
 }
 
-/** Frosted kebab dropdown menu container. */
+/** Kebab dropdown menu container — solid surface with elevation shadow. */
 export const KEBAB_MENU: React.CSSProperties = {
   position: 'absolute',
   right: '1rem',
   top: '2.5rem',
-  background: 'var(--glass-bg, rgba(255,255,255,0.85))',
-  backdropFilter: 'blur(16px)',
-  WebkitBackdropFilter: 'blur(16px)',
-  border: '1px solid var(--glass-border, rgba(255,255,255,0.3))',
-  borderRadius: 10,
-  boxShadow: '0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04)',
+  background: 'var(--surface)',
+  border: '1px solid var(--border)',
+  borderRadius: 8,
+  boxShadow: 'var(--shadow-lg)',
   padding: '0.25rem 0',
   zIndex: 20,
   minWidth: 140,

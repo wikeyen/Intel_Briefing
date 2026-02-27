@@ -577,7 +577,7 @@ describe('GroupCard drag handle', () => {
   })
 })
 
-describe('GroupCard glassmorphism', () => {
+describe('GroupCard card style', () => {
   const group: SourceGroupTree = {
     id: 'g1',
     parent_id: null,
@@ -615,8 +615,8 @@ describe('GroupCard glassmorphism', () => {
     expect(headerDiv).not.toBeNull()
   })
 
-  it('renders frosted count pill with backdrop filter', () => {
-    const { container } = render(
+  it('renders count pill with monospace font', () => {
+    render(
       <GroupCard
         group={group}
         enabled={{ weibo: true }}
@@ -633,21 +633,21 @@ describe('GroupCard glassmorphism', () => {
         renderSensorRow={(key) => <div key={key}>{key}</div>}
       />
     )
-    // Count pill shows "1/1" and uses glass-pill background
-    expect(screen.getByText('1/1')).toBeDefined()
+    // Count pill shows "1/1" with monospace font
     const pill = screen.getByText('1/1')
-    expect(pill.style.backdropFilter).toBe('blur(4px)')
+    expect(pill).toBeDefined()
+    expect(pill.style.fontFamily).toContain('monospace')
   })
 })
 
 describe('GROUP_CARD style', () => {
-  it('provides glassmorphism properties for sidebar config card', () => {
-    // The sidebar defaults card spreads GROUP_CARD — verify the style has
-    // the expected glassmorphism tokens so the sidebar matches group cards.
-    expect(GROUP_CARD.backdropFilter).toBe('blur(12px)')
-    expect(GROUP_CARD.borderRadius).toBe(16)
-    expect(GROUP_CARD.background).toContain('--glass-bg')
-    expect(GROUP_CARD.border).toContain('--glass-border')
+  it('uses flat Dashboard-matching card style', () => {
+    // The sidebar defaults card spreads GROUP_CARD — verify the style
+    // matches Dashboard DashCard: solid background, subtle shadow, 8px radius.
+    expect(GROUP_CARD.borderRadius).toBe(8)
+    expect(GROUP_CARD.background).toBe('var(--surface)')
+    expect(GROUP_CARD.border).toBe('1px solid var(--border)')
+    expect(GROUP_CARD.boxShadow).toBe('var(--shadow-card)')
   })
 })
 

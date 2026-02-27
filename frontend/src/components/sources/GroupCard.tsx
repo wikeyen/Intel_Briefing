@@ -168,10 +168,8 @@ export function GroupCard({
           fontSize: '0.625rem',
           fontFamily: 'ui-monospace, monospace',
           color: 'var(--ink-muted)',
-          background: 'var(--glass-pill, rgba(255,255,255,0.5))',
-          backdropFilter: 'blur(4px)',
-          WebkitBackdropFilter: 'blur(4px)',
-          border: '1px solid var(--glass-border, rgba(255,255,255,0.2))',
+          background: 'var(--surface-alt)',
+          border: '1px solid var(--border-subtle)',
           padding: '0.0625rem 0.375rem',
           borderRadius: 999,
         }}>

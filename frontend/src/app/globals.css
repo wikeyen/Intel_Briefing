@@ -835,17 +835,22 @@ input[type="range"]::-moz-range-thumb {
   /* ── Sources page — sensor row stacks on mobile ── */
   .sensor-row {
     flex-wrap: wrap !important;
-    padding: 0.75rem 1rem !important;
-    gap: 0.5rem !important;
+    padding: 0.625rem 0.75rem !important;
+    gap: 0.25rem 0.5rem !important;
+  }
+  .sensor-row .drag-grip {
+    display: none !important;
   }
   .sensor-row-left {
-    flex: 1 1 100% !important;
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
   }
   .sensor-row-right {
-    padding-left: 3.25rem;
+    margin-left: auto;
   }
   .sensor-row-actions {
-    display: none !important;
+    opacity: 1 !important;
+    position: static !important;
   }
   .sensor-row-desc {
     display: none !important;

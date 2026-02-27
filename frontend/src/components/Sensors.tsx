@@ -2,7 +2,7 @@
 // ABOUTME: Groups loaded from API drive the layout; sensors can be dragged between groups.
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { DndContext, closestCenter, type DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { DndContext, closestCenter, type DragEndEvent, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { api } from '@/api/client'
 import { TagInput } from '@/components/TagInput'
@@ -311,7 +311,10 @@ export function Sensors() {
   }
 
   /* ── DnD ─────────────────────────────────────────────────────────────────── */
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+  )
 
   const handleDragEnd = async (event: DragEndEvent) => {
     setOverGroupId(null)

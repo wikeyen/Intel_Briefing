@@ -113,7 +113,7 @@ export function SensorDragItem({
       }}
     >
       {/* Drag handle */}
-      <span {...attributes} {...listeners}>
+      <span className="drag-grip" {...attributes} {...listeners}>
         <DragGrip />
       </span>
 

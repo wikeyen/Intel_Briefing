@@ -265,6 +265,12 @@ describe('SensorDragItem', () => {
     renderWithDnd({ ...defaultProps, language: 'cn' as const })
     expect(screen.getByText('CN')).toBeDefined()
   })
+
+  it('renders drag grip with className for CSS targeting', () => {
+    const { container } = renderWithDnd()
+    const grip = container.querySelector('.drag-grip')
+    expect(grip).not.toBeNull()
+  })
 })
 
 describe('GroupCard', () => {

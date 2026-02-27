@@ -310,6 +310,7 @@ const en: TranslationDict = {
   'sources.default_lookback_desc': 'Fallback time window (hours) for sources with lookback support.',
   'sources.default_topic_limit': 'Default Items per Topic (per platform)',
   'sources.default_topic_limit_desc': 'Per-keyword fetch count on each platform. Individual topics can override this.',
+  'sources.defaults_heading': 'Defaults',
   'sources.lookback': 'Lookback',
   'sources.badge_ok': 'OK',
   'sources.badge_failed': 'Failed',

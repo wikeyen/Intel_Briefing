@@ -310,6 +310,7 @@ const zh: TranslationDict = {
   'sources.default_lookback_desc': '支持回溯的源在未单独设置时使用此时长（小时）。',
   'sources.default_topic_limit': '每话题默认条目数（每平台）',
   'sources.default_topic_limit_desc': '每个平台上每关键词的获取数量，可逐话题覆盖。',
+  'sources.defaults_heading': '默认配置',
   'sources.lookback': '回溯',
   'sources.badge_ok': '正常',
   'sources.badge_failed': '失败',

@@ -861,10 +861,11 @@ input[type="range"]::-moz-range-thumb {
     display: none !important;
   }
   .sensor-row-left {
-    flex: 1 1 0% !important;
+    flex: 1 1 60% !important;
     min-width: 0 !important;
   }
   .sensor-row-right {
+    flex-shrink: 1 !important;
     margin-left: auto;
   }
   .sensor-row-actions {
@@ -1056,14 +1057,6 @@ input[type="range"]::-moz-range-thumb {
   .dashboard-sidebar {
     align-self: start;
   }
-  .sources-columns {
-    grid-template-columns: 1fr 300px;
-  }
-  .sources-sidebar {
-    align-self: start;
-    position: sticky;
-    top: 1rem;
-  }
 }
 
 @media (min-width: 1280px) {
@@ -1072,10 +1065,6 @@ input[type="range"]::-moz-range-thumb {
   }
   .dashboard-columns {
     grid-template-columns: 1fr 360px;
-    gap: 1rem;
-  }
-  .sources-columns {
-    grid-template-columns: 1fr 340px;
     gap: 1rem;
   }
 }
@@ -1116,6 +1105,24 @@ input[type="range"]::-moz-range-thumb {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+@media (min-width: 1080px) {
+  .sources-columns {
+    grid-template-columns: 1fr 300px;
+  }
+  .sources-sidebar {
+    align-self: start;
+    position: sticky;
+    top: 1rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .sources-columns {
+    grid-template-columns: 1fr 340px;
+    gap: 1rem;
+  }
 }
 
 /* ─── Animations ────────────────────────────────────────────────────────── */

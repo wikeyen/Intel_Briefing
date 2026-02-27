@@ -1,5 +1,5 @@
-// ABOUTME: Dashboard home page — intelligence terminal organized by domain with AI-generated briefs.
-// ABOUTME: Two-column layout with sidebar, compact domain cards, slide-in detail panel.
+// ABOUTME: Dashboard home page — intelligence terminal organized by source groups with AI-generated briefs.
+// ABOUTME: Two-column layout with sidebar, dynamic group cards, slide-in detail panel, and What's Happening strip.
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
@@ -11,6 +11,9 @@ import { SENSOR_LABELS } from '@/lib/sensors/taxonomy'
 import type { SourceGroupTree } from '@/lib/groups/types'
 import { useTranslation } from '@/lib/i18n'
 import { EmptyState } from './EmptyState'
+import WhatsHappeningStrip from './dashboard/WhatsHappeningStrip'
+import { GroupIntelCard } from './dashboard/GroupIntelCard'
+import { GroupDetailPanelAnimated } from './dashboard/GroupDetailPanel'
 
 // ---------------------------------------------------------------------------
 // Animated height container — measures content and smoothly transitions height
@@ -128,44 +131,6 @@ const DASH_CSS = `
 `
 
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
-
-// ---------------------------------------------------------------------------
-// Domain Definitions
-// ---------------------------------------------------------------------------
-
-/** Domain definition for compact cards and detail panel. */
-type SubGroup = { label: string; sensors: string[] }
-type DomainDef = {
-  key: string
-  label: string
-  accent: string
-  sensors: string[]
-  showSentiment?: boolean
-  subGroups?: SubGroup[]
-}
-
-const DOMAINS: DomainDef[] = [
-  { key: 'macro', label: 'Macro & Finance', accent: 'var(--cat-news)', sensors: ['wallstreetcn', 'sources_36kr', 'rss_news'] },
-  {
-    key: 'social', label: 'Social Pulse', accent: 'var(--cat-trend)',
-    sensors: ['x', 'bluesky', 'mastodon', 'weibo', 'xiaohongshu'], showSentiment: true,
-    subGroups: [
-      { label: 'Global', sensors: ['x', 'bluesky', 'mastodon'] },
-      { label: 'China', sensors: ['weibo', 'xiaohongshu'] },
-    ],
-  },
-  { key: 'products', label: 'Product & Opportunities', accent: 'var(--cat-news)', sensors: ['product_hunt', 'chrome_radar', 'github'] },
-  { key: 'research', label: 'Research Radar', accent: 'var(--cat-research)', sensors: ['arxiv'] },
-  {
-    key: 'forums', label: 'Community & Forums', accent: 'var(--cat-opinion)',
-    sensors: ['hacker_news', 'v2ex', 'zhihu'],
-    subGroups: [
-      { label: 'Global', sensors: ['hacker_news'] },
-      { label: 'China', sensors: ['v2ex', 'zhihu'] },
-    ],
-  },
-  { key: 'opinion', label: 'Opinion Digest', accent: 'var(--cat-opinion)', sensors: ['hn_blogs', 'rss_feeds'] },
-]
 
 // ---------------------------------------------------------------------------
 // Shared Components
@@ -828,10 +793,10 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
 }
 
 // ---------------------------------------------------------------------------
-// Widget: Category Distribution Bar
+// Widget: Group Distribution Bar
 // ---------------------------------------------------------------------------
 
-function CategoryDistributionContent({ report, groups }: { report: IntelReport; groups: SourceGroupTree[] }) {
+function GroupDistributionContent({ report, groups }: { report: IntelReport; groups: SourceGroupTree[] }) {
   const { t } = useTranslation()
   const sensorMap = buildSensorGroupMap(groups)
   const counts = new Map<string, { name: string; color: string; count: number }>()
@@ -887,10 +852,10 @@ function CategoryDistributionContent({ report, groups }: { report: IntelReport; 
   )
 }
 
-function CategoryDistributionWidget({ report, groups }: { report: IntelReport; groups: SourceGroupTree[] }) {
+function GroupDistributionWidget({ report, groups }: { report: IntelReport; groups: SourceGroupTree[] }) {
   return (
     <DashCard>
-      <CategoryDistributionContent report={report} groups={groups} />
+      <GroupDistributionContent report={report} groups={groups} />
     </DashCard>
   )
 }
@@ -957,102 +922,6 @@ function SourceHealthWidget({ report }: { report: IntelReport }) {
   return (
     <DashCard>
       <SourceHealthContent report={report} />
-    </DashCard>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Widget: Domain Card (compact, opens detail panel on click)
-// ---------------------------------------------------------------------------
-
-function DomainCardCompact({ domain, summary, onClick }: {
-  domain: DomainDef
-  summary: BriefingSummary
-  onClick: () => void
-}) {
-  const { t } = useTranslation()
-  const matchingSections = summary.sections.filter(s => domain.sensors.includes(s.sensor_name))
-  if (matchingSections.length === 0) return null
-
-  const totalItems = matchingSections.reduce((n, s) => n + s.item_count, 0)
-  const totalNotable = matchingSections.reduce((n, s) => n + s.items.length, 0)
-
-  /** Build summary text — takes first `limit` brief_summaries (each ≈ 1 sentence). */
-  const buildSummary = (sections: typeof matchingSections, limit: number) => {
-    const briefs = sections.map(s => s.brief_summary).filter(Boolean)
-    if (briefs.length > 0) return briefs.slice(0, limit).join(' ')
-    // Fallback: character-based truncation when brief_summary missing
-    const raw = sections.map(s => s.summary).join(' ')
-    const maxChars = limit * 200
-    if (raw.length <= maxChars) return raw
-    const cut = raw.slice(0, maxChars)
-    const endMatch = cut.match(/^([\s\S]*[.!?。！？])\s/)
-    return endMatch ? endMatch[1].trim() : cut.trim() + '\u2026'
-  }
-
-  const hasSubGroups = domain.subGroups && domain.subGroups.length > 0
-
-  return (
-    <DashCard>
-      <div
-        onClick={onClick}
-        style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', cursor: 'pointer', userSelect: 'none' }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <SectionLabel color={domain.accent}>{t('domain.' + domain.key)}</SectionLabel>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-            <span style={{
-              fontFamily: MONO, fontSize: '0.5625rem', fontWeight: 600,
-              background: 'var(--surface-alt)', borderRadius: 4,
-              padding: '1px 5px', color: 'var(--ink-faint)',
-            }}>
-              {totalItems}
-            </span>
-            {totalNotable > 0 && (
-              <span style={{ fontFamily: MONO, fontSize: '0.5625rem', color: 'var(--ink-tertiary)' }}>
-                {t('dash.notable', { count: String(totalNotable) })}
-              </span>
-            )}
-            <span style={{ fontSize: '0.75rem', color: 'var(--ink-tertiary)', lineHeight: 1 }}>&#8250;</span>
-          </div>
-        </div>
-        {hasSubGroups ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
-            {domain.subGroups!.map(group => {
-              const groupSections = matchingSections.filter(s => group.sensors.includes(s.sensor_name))
-              if (groupSections.length === 0) return null
-              const text = buildSummary(groupSections, 1)
-              if (!text) return null
-              return (
-                <p key={group.label} style={{
-                  fontSize: '0.6875rem', color: 'var(--ink-secondary)', lineHeight: 1.5, margin: 0,
-                  overflowWrap: 'break-word', wordBreak: 'break-word',
-                }}>
-                  <span style={{
-                    fontFamily: MONO, fontSize: '0.5rem', fontWeight: 700,
-                    letterSpacing: '0.04em',
-                    textTransform: 'uppercase' as const, marginRight: 4,
-                    padding: '1px 4px', borderRadius: 3,
-                    ...(group.label === 'China'
-                      ? { background: '#c8102e', color: '#ffe066' }
-                      : { background: '#1a4b8c', color: '#fff' }),
-                  }}>
-                    {t('dash.' + group.label.toLowerCase())}
-                  </span>
-                  {text}
-                </p>
-              )
-            })}
-          </div>
-        ) : (
-          <p style={{
-            fontSize: '0.6875rem', color: 'var(--ink-secondary)', lineHeight: 1.5, margin: 0,
-            overflowWrap: 'break-word', wordBreak: 'break-word',
-          }}>
-            {buildSummary(matchingSections, 2)}
-          </p>
-        )}
-      </div>
     </DashCard>
   )
 }
@@ -1351,268 +1220,6 @@ function TrendDetailPanel({ report, summary, groups, onClose }: {
 
         {/* Empty state */}
         {bySource.size === 0 && (
-          <div style={{ padding: '2rem 0', textAlign: 'center', fontSize: '0.75rem', color: 'var(--ink-tertiary)' }}>
-            {t('dash.no_domain_data')}
-          </div>
-        )}
-      </motion.div>
-    </>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Detail Section Content — reusable per-sensor block for detail panel
-// ---------------------------------------------------------------------------
-
-function DetailSectionContent({ section, domain, platformSentiment }: {
-  section: { sensor_name: string; label: string; item_count: number; summary: string; items: { title: string; url: string; brief?: string }[] }
-  domain: DomainDef
-  platformSentiment: Record<string, { positive: number; negative: number; neutral: number; total: number }>
-}) {
-  const { t } = useTranslation()
-  return (
-    <>
-      {/* Source header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-        <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ink)' }}>
-          {section.label}
-        </span>
-        <span style={{
-          fontFamily: MONO, fontSize: '0.5625rem', fontWeight: 600,
-          background: 'var(--surface-alt)', borderRadius: 4,
-          padding: '1px 5px', color: 'var(--ink-faint)',
-        }}>
-          {section.item_count}
-        </span>
-      </div>
-
-      {/* AI summary */}
-      <p style={{ fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.6, margin: 0, overflowWrap: 'break-word', wordBreak: 'break-word' }}>
-        {section.summary}
-      </p>
-
-      {/* Sentiment bar */}
-      {domain.showSentiment && platformSentiment[section.sensor_name] && (() => {
-        const counts = platformSentiment[section.sensor_name]
-        const posPct = Math.round((counts.positive / counts.total) * 100)
-        const negPct = Math.round((counts.negative / counts.total) * 100)
-        const neuPct = 100 - posPct - negPct
-        return (
-          <div>
-            <div style={{ display: 'flex', gap: 6, fontFamily: MONO, fontSize: '0.625rem', color: 'var(--ink-tertiary)', marginBottom: 2 }}>
-              <span style={{ color: 'var(--sent-pos-text)' }}>{posPct}% {t('dash.pos')}</span>
-              <span>{neuPct}% {t('dash.neu')}</span>
-              <span style={{ color: 'var(--sent-neg-text)' }}>{negPct}% {t('dash.neg')}</span>
-            </div>
-            <div style={{ display: 'flex', overflow: 'hidden', height: 4, borderRadius: 2, background: 'var(--border-subtle)', gap: 1 }}>
-              {posPct > 0 && <div style={{ width: `${posPct}%`, background: 'var(--sent-pos)', transition: 'width 400ms ease' }} />}
-              {neuPct > 0 && <div style={{ width: `${neuPct}%`, background: 'var(--sent-neu)', opacity: 0.4, transition: 'width 400ms ease' }} />}
-              {negPct > 0 && <div style={{ width: `${negPct}%`, background: 'var(--sent-neg)', transition: 'width 400ms ease' }} />}
-            </div>
-          </div>
-        )
-      })()}
-
-      {/* Notable items */}
-      {section.items.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {section.items.map((item, idx) => (
-            <a
-              key={idx}
-              href={item.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'flex', gap: '0.5rem', textDecoration: 'none',
-                borderRadius: 6, padding: '6px 10px', margin: '0 -10px',
-                transition: 'background 150ms ease',
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-inset)' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
-            >
-              <span style={{ width: 4, height: 4, borderRadius: '50%', background: domain.accent, flexShrink: 0, marginTop: 6 }} />
-              <div style={{ flex: 1, minWidth: 0, overflowWrap: 'break-word', wordBreak: 'break-word' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--ink)', lineHeight: 1.5 }}>
-                  {item.title}
-                </div>
-                {item.brief && (
-                  <div style={{ fontSize: '0.6875rem', color: 'var(--ink-tertiary)', lineHeight: 1.5, marginTop: 1 }}>
-                    {item.brief}
-                  </div>
-                )}
-              </div>
-            </a>
-          ))}
-        </div>
-      )}
-    </>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Detail Panel — slide-in overlay for domain deep-dive
-// ---------------------------------------------------------------------------
-
-function DetailPanel({ domain, summary, report, onClose }: {
-  domain: DomainDef
-  summary: BriefingSummary
-  report: IntelReport | null
-  onClose: () => void
-}) {
-  const { t } = useTranslation()
-  const matchingSections = summary.sections.filter(s => domain.sensors.includes(s.sensor_name))
-
-  // Per-platform sentiment for social domains
-  const platformSentiment: Record<string, { positive: number; negative: number; neutral: number; total: number }> = {}
-  if (domain.showSentiment && report) {
-    const allItems: IntelItem[] = Object.values(report.items).flat()
-    for (const item of allItems) {
-      if (domain.sensors.includes(item.source) && item.sentiment) {
-        if (!platformSentiment[item.source]) platformSentiment[item.source] = { positive: 0, negative: 0, neutral: 0, total: 0 }
-        platformSentiment[item.source][item.sentiment.label]++
-        platformSentiment[item.source].total++
-      }
-    }
-  }
-
-  const overall = summary.overall
-  const moodSummary = domain.showSentiment && isStructuredOverall(overall)
-    ? overall.sentiment?.mood_summary ?? null
-    : null
-
-  // Close on Escape
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [onClose])
-
-  // Prevent body scroll while panel is open
-  useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = '' }
-  }, [])
-
-  return (
-    <>
-      {/* Backdrop */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
-        onClick={onClose}
-        style={{
-          position: 'fixed', inset: 0, zIndex: 100,
-          background: 'rgba(0, 0, 0, 0.3)',
-          backdropFilter: 'blur(2px)',
-          WebkitBackdropFilter: 'blur(2px)',
-        }}
-      />
-      {/* Panel */}
-      <motion.div
-        initial={{ x: '100%' }}
-        animate={{ x: 0 }}
-        exit={{ x: '100%' }}
-        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        onClick={e => e.stopPropagation()}
-        style={{
-          position: 'fixed', top: 0, right: 0, bottom: 0,
-          width: 560, maxWidth: '90vw',
-          background: 'var(--surface)',
-          borderLeft: '1px solid var(--border)',
-          boxShadow: 'var(--shadow-lg)',
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          overscrollBehavior: 'contain',
-          zIndex: 101,
-          padding: '1.5rem',
-          display: 'flex', flexDirection: 'column', gap: '0.75rem',
-        }}
-      >
-        {/* Header with close button */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <SectionLabel color={domain.accent}>{t('domain.' + domain.key)}</SectionLabel>
-          <button
-            onClick={onClose}
-            style={{
-              width: 28, height: 28, borderRadius: 6,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'var(--surface-inset)', color: 'var(--ink-tertiary)',
-              fontSize: '1rem', lineHeight: 1,
-              transition: 'background 150ms, color 150ms',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--border)'; e.currentTarget.style.color = 'var(--ink)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface-inset)'; e.currentTarget.style.color = 'var(--ink-tertiary)' }}
-          >
-            &times;
-          </button>
-        </div>
-
-        {/* Sector summary — combined from all matching sensors */}
-        {matchingSections.length > 0 && (
-          <div style={{
-            padding: '0.75rem 1rem',
-            borderRadius: 8,
-            background: `color-mix(in srgb, ${domain.accent} 8%, var(--surface))`,
-            border: `1px solid color-mix(in srgb, ${domain.accent} 15%, transparent)`,
-          }}>
-            <p style={{
-              fontSize: '0.8125rem', color: 'var(--ink)', lineHeight: 1.7, margin: 0,
-              overflowWrap: 'break-word', wordBreak: 'break-word',
-            }}>
-              {matchingSections.map(s => s.summary).join(' ')}
-            </p>
-            {moodSummary && (
-              <p style={{
-                fontSize: '0.75rem', color: 'var(--ink-secondary)', lineHeight: 1.6, margin: 0,
-                marginTop: '0.5rem', fontStyle: 'italic',
-              }}>
-                {moodSummary}
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Per-source sections, grouped by sub-group when available */}
-        {domain.subGroups ? domain.subGroups.map((group, gIdx) => {
-          const groupSections = matchingSections.filter(s => group.sensors.includes(s.sensor_name))
-          if (groupSections.length === 0) return null
-          return (
-            <div key={group.label}>
-              {/* Sub-group header */}
-              {gIdx > 0 && <div style={{ borderBottom: '1px solid var(--border)', margin: '0.25rem 0 0.5rem' }} />}
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '0.375rem',
-                marginBottom: '0.5rem',
-              }}>
-                <span style={{
-                  fontFamily: MONO, fontSize: '0.5625rem', fontWeight: 700,
-                  padding: '2px 6px', borderRadius: 3,
-                  background: 'var(--surface-inset)', color: 'var(--ink-faint)',
-                  letterSpacing: '0.04em',
-                }}>
-                  {t('dash.' + group.label.toLowerCase())}
-                </span>
-              </div>
-              {groupSections.map((section, sIdx) => (
-                <div key={section.sensor_name} style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', marginBottom: sIdx < groupSections.length - 1 ? '0.625rem' : 0 }}>
-                  <DetailSectionContent section={section} domain={domain} platformSentiment={platformSentiment} />
-                </div>
-              ))}
-            </div>
-          )
-        }) : matchingSections.map((section, sIdx) => (
-          <div key={section.sensor_name} style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-            <DetailSectionContent section={section} domain={domain} platformSentiment={platformSentiment} />
-            {sIdx < matchingSections.length - 1 && (
-              <div style={{ borderBottom: '1px solid var(--border-subtle)', marginTop: 2 }} />
-            )}
-          </div>
-        ))}
-
-        {/* Empty state */}
-        {matchingSections.length === 0 && (
           <div style={{ padding: '2rem 0', textAlign: 'center', fontSize: '0.75rem', color: 'var(--ink-tertiary)' }}>
             {t('dash.no_domain_data')}
           </div>
@@ -2178,7 +1785,7 @@ export function Dashboard() {
   const [summaryProgress, setSummaryProgress] = useState<SummaryProgress | null>(null)
   const [groups, setGroups] = useState<SourceGroupTree[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedDomain, setSelectedDomain] = useState<DomainDef | null>(null)
+  const [activeGroup, setActiveGroup] = useState<SourceGroupTree | null>(null)
   const [showTrendPanel, setShowTrendPanel] = useState(false)
   const [intelligence, setIntelligence] = useState<IntelligenceReport | null>(null)
   const [selectedIntelCard, setSelectedIntelCard] = useState<'trend' | 'topics' | 'accounts' | null>(null)
@@ -2349,18 +1956,35 @@ export function Dashboard() {
 
                     <hr className="dash-divider" />
 
-                    {/* Domain cards grid */}
-                    <div className="dashboard-domains">
-                      {DOMAINS.filter(d => summary.sections.some(s => d.sensors.includes(s.sensor_name))).map((domain, i) => (
-                        <StaggerChild key={domain.key} index={5 + i}>
-                          <DomainCardCompact
-                            domain={domain}
-                            summary={summary}
-                            onClick={() => setSelectedDomain(domain)}
-                          />
-                        </StaggerChild>
-                      ))}
-                    </div>
+                    {/* What's Happening strip */}
+                    {report && groups.length > 0 && (
+                      <WhatsHappeningStrip report={report} groups={groups} summary={summary} />
+                    )}
+
+                    {/* Group sections grid */}
+                    {groups.length > 0 && (
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                        gap: '0.75rem',
+                      }}>
+                        {groups.map((group, i) => {
+                          const groupItems = report
+                            ? group.sensors.flatMap(s => report.items[s] ?? [])
+                            : []
+                          return (
+                            <StaggerChild key={group.id} index={i}>
+                              <GroupIntelCard
+                                group={group}
+                                items={groupItems}
+                                summary={summary}
+                                onClick={() => setActiveGroup(group)}
+                              />
+                            </StaggerChild>
+                          )
+                        })}
+                      </div>
+                    )}
                   </>
                 ) : hasReport && (
                   <>
@@ -2385,6 +2009,51 @@ export function Dashboard() {
               {/* Sidebar — only rendered when summary exists */}
               {hasSummary && (
                 <div className="dashboard-sidebar">
+                  {/* Group quick-nav */}
+                  {groups.length > 0 && (
+                    <DashCard style={{ padding: '0.625rem 0.75rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                        {groups.map(g => {
+                          const count = report
+                            ? g.sensors.reduce((n, s) => n + (report.items[s]?.length ?? 0), 0)
+                            : 0
+                          return (
+                            <button
+                              key={g.id}
+                              type="button"
+                              onClick={() => setActiveGroup(g)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.375rem',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: '0.25rem 0',
+                                width: '100%',
+                                textAlign: 'left',
+                              }}
+                              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-alt)' }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none' }}
+                            >
+                              <span style={{
+                                width: 8, height: 8, borderRadius: '50%',
+                                background: g.color, flexShrink: 0,
+                              }} />
+                              <span style={{
+                                fontSize: '0.75rem', fontWeight: 500,
+                                color: 'var(--ink)', flex: 1,
+                              }}>{g.name}</span>
+                              <span style={{
+                                fontSize: '0.625rem', fontFamily: MONO,
+                                color: 'var(--ink-faint)',
+                              }}>{count}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </DashCard>
+                  )}
                   {summary && (
                     <>
                       <StaggerChild index={3}>
@@ -2401,7 +2070,7 @@ export function Dashboard() {
                         <TrendingWidget report={report} summary={summary} groups={groups} onViewAll={() => setShowTrendPanel(true)} />
                       </StaggerChild>
                       <StaggerChild index={13}>
-                        <CategoryDistributionWidget report={report} groups={groups} />
+                        <GroupDistributionWidget report={report} groups={groups} />
                       </StaggerChild>
                       <StaggerChild index={14}>
                         <SourceHealthWidget report={report} />
@@ -2414,14 +2083,6 @@ export function Dashboard() {
 
             {/* Detail panel overlays */}
             <AnimatePresence>
-              {selectedDomain && summary && (
-                <DetailPanel
-                  domain={selectedDomain}
-                  summary={summary}
-                  report={report}
-                  onClose={() => setSelectedDomain(null)}
-                />
-              )}
               {showTrendPanel && report && (
                 <TrendDetailPanel
                   report={report}
@@ -2438,6 +2099,16 @@ export function Dashboard() {
                 />
               )}
             </AnimatePresence>
+
+            {/* Group detail panel (manages its own AnimatePresence) */}
+            <GroupDetailPanelAnimated
+              open={!!activeGroup}
+              group={activeGroup ?? { id: '', parent_id: null, name: '', color: '', icon: null, sort_order: 0, trend_enabled: false, topic_enabled: false, social_enabled: false, sentiment_enabled: false, summary_prompt: null, trend_prompt: null, topic_prompt: null, social_prompt: null, suppress_keywords: [], boost_keywords: [], created_at: '', updated_at: '', sensors: [], children: [] }}
+              items={activeGroup ? activeGroup.sensors.flatMap(s => report?.items[s] ?? []) : []}
+              summary={summary}
+              intelligence={intelligence}
+              onClose={() => setActiveGroup(null)}
+            />
           </motion.div>
         )}
       </AnimatePresence>

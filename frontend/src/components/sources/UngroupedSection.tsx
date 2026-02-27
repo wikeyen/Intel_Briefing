@@ -2,6 +2,7 @@
 // ABOUTME: Renders with a muted dashed border and helper text encouraging group assignment.
 'use client'
 import type { ReactNode } from 'react'
+import { useTranslation } from '@/lib/i18n'
 
 interface UngroupedSectionProps {
   sensorKeys: string[]
@@ -9,6 +10,8 @@ interface UngroupedSectionProps {
 }
 
 export function UngroupedSection({ sensorKeys, renderSensorRow }: UngroupedSectionProps) {
+  const { t } = useTranslation()
+
   if (sensorKeys.length === 0) return null
 
   return (
@@ -27,7 +30,7 @@ export function UngroupedSection({ sensorKeys, renderSensorRow }: UngroupedSecti
           textTransform: 'uppercase',
           color: 'var(--ink-faint)',
         }}>
-          Ungrouped
+          {t('sources.ungrouped')}
         </span>
         <span style={{
           fontSize: '0.5625rem',
@@ -57,7 +60,7 @@ export function UngroupedSection({ sensorKeys, renderSensorRow }: UngroupedSecti
           fontStyle: 'italic',
           borderTop: '1px solid var(--border-subtle)',
         }}>
-          Drag sensors to a group to include them in analysis
+          {t('sources.ungrouped_desc')}
         </div>
       </div>
     </div>

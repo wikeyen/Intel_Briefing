@@ -15,7 +15,7 @@ import { GroupPicker } from '../GroupPicker'
 import { UngroupedSection } from '../UngroupedSection'
 import type { SourceGroupTree } from '@/lib/groups/types'
 
-// Mock i18n — Badge and PillInput use useTranslation
+// Mock i18n — components use useTranslation for labels
 vi.mock('@/lib/i18n', () => ({
   useTranslation: () => ({
     t: (key: string) => {
@@ -25,6 +25,26 @@ vi.mock('@/lib/i18n', () => ({
         'sources.badge_off': 'Off',
         'sources.items': 'Items',
         'sources.lookback': 'Lookback',
+        'sources.edit_group': 'Edit',
+        'sources.delete_group': 'Delete',
+        'sources.add_subgroup': 'Add sub-group',
+        'sources.ungrouped': 'Ungrouped',
+        'sources.ungrouped_desc': 'Drag sensors to a group to include them in analysis',
+        'sources.group_name': 'Group name',
+        'sources.group_color': 'Color',
+        'sources.processing_type': 'Processing type',
+        'sources.processing_general': 'General',
+        'sources.processing_trend': 'Trend',
+        'sources.processing_topic': 'Topic',
+        'sources.processing_social': 'Social',
+        'sources.processing_research': 'Research',
+        'sources.processing_news': 'News',
+        'sources.processing_opinion': 'Opinion',
+        'sensor.desc.hacker_news': 'Top stories from HN',
+        'sensor.desc.github': 'Daily trending repos',
+        'sensor.desc.arxiv': 'AI/ML preprints',
+        'sensor.desc.weibo': 'Weibo trending',
+        'sensor.desc.zhihu': 'Zhihu trending',
       }
       return map[key] ?? key
     },
@@ -242,7 +262,7 @@ describe('SensorDragItem', () => {
   })
 
   it('renders CN badge for Chinese sensors', () => {
-    renderWithDnd({ ...defaultProps, language: 'cn' })
+    renderWithDnd({ ...defaultProps, language: 'cn' as const })
     expect(screen.getByText('CN')).toBeDefined()
   })
 })
@@ -281,7 +301,7 @@ describe('GroupCard', () => {
       />
     )
     expect(screen.getByText('Trending')).toBeDefined()
-    expect(screen.getByText('trend')).toBeDefined()
+    expect(screen.getByText('Trend')).toBeDefined()
     expect(screen.getByText('weibo')).toBeDefined()
     expect(screen.getByText('zhihu')).toBeDefined()
   })

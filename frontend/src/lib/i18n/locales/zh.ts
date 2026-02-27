@@ -596,6 +596,27 @@ const zh: TranslationDict = {
   'sources.invalid_bluesky_handle': '格式: name.bsky.social',
   'sources.invalid_mastodon_handle': '格式: @user@instance',
 
+  // ── 数据源分组 ──────────────────────────────────────────────────────────────
+  'sources.new_group': '新建分组',
+  'sources.edit_group': '编辑分组',
+  'sources.delete_group': '删除分组',
+  'sources.delete_group_confirm': '删除此分组？传感器将变为未分组状态。',
+  'sources.ungrouped': '未分组',
+  'sources.ungrouped_desc': '将传感器拖到分组中以纳入分析',
+  'sources.add_subgroup': '添加子分组',
+  'sources.move_to': '移动到',
+  'sources.add_to_group': '添加到分组',
+  'sources.processing_type': '处理类型',
+  'sources.processing_trend': '趋势',
+  'sources.processing_topic': '话题',
+  'sources.processing_social': '社交',
+  'sources.processing_research': '研究',
+  'sources.processing_news': '新闻',
+  'sources.processing_opinion': '观点',
+  'sources.processing_general': '通用',
+  'sources.group_name': '分组名称',
+  'sources.group_color': '颜色',
+
   // ── Intelligence cards ──────────────────────────────────────────────────────
   'intel.public_focus': '公众关注',
   'intel.topic_pulse': '话题脉搏',

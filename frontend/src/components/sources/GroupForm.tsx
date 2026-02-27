@@ -3,6 +3,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import type { GroupProcessing, CreateGroupPayload } from '@/lib/groups/types'
+import { useTranslation } from '@/lib/i18n'
 import { GROUP_CARD } from './group-styles'
 
 /** 8 preset colors for group color selection. */
@@ -17,16 +18,8 @@ const COLOR_PRESETS = [
   '#8B6C5C',
 ] as const
 
-/** Processing type options with display labels. */
-const PROCESSING_OPTIONS: { value: GroupProcessing; label: string }[] = [
-  { value: 'general', label: 'General' },
-  { value: 'trend', label: 'Trend' },
-  { value: 'topic', label: 'Topic' },
-  { value: 'social', label: 'Social' },
-  { value: 'research', label: 'Research' },
-  { value: 'news', label: 'News' },
-  { value: 'opinion', label: 'Opinion' },
-]
+/** Processing type values — labels are resolved via i18n. */
+const PROCESSING_VALUES: GroupProcessing[] = ['general', 'trend', 'topic', 'social', 'research', 'news', 'opinion']
 
 interface GroupFormProps {
   initial?: { name: string; color: string; processing: GroupProcessing }
@@ -36,6 +29,7 @@ interface GroupFormProps {
 }
 
 export function GroupForm({ initial, parentId, onSubmit, onCancel }: GroupFormProps) {
+  const { t } = useTranslation()
   const [name, setName] = useState(initial?.name ?? '')
   const [color, setColor] = useState(initial?.color ?? COLOR_PRESETS[0])
   const [processing, setProcessing] = useState<GroupProcessing>(initial?.processing ?? 'general')
@@ -78,7 +72,7 @@ export function GroupForm({ initial, parentId, onSubmit, onCancel }: GroupFormPr
         <input
           ref={inputRef}
           type="text"
-          placeholder="Group name"
+          placeholder={t('sources.group_name')}
           value={name}
           onChange={e => { setName(e.target.value); setError(null) }}
           maxLength={50}
@@ -115,7 +109,7 @@ export function GroupForm({ initial, parentId, onSubmit, onCancel }: GroupFormPr
           color: 'var(--ink-muted)',
           marginBottom: '0.375rem',
         }}>
-          Color
+          {t('sources.group_color')}
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           {COLOR_PRESETS.map(preset => (
@@ -157,7 +151,7 @@ export function GroupForm({ initial, parentId, onSubmit, onCancel }: GroupFormPr
           color: 'var(--ink-muted)',
           marginBottom: '0.375rem',
         }}>
-          Processing type
+          {t('sources.processing_type')}
         </div>
         <select
           value={processing}
@@ -174,9 +168,9 @@ export function GroupForm({ initial, parentId, onSubmit, onCancel }: GroupFormPr
             cursor: 'pointer',
           }}
         >
-          {PROCESSING_OPTIONS.map(opt => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
+          {PROCESSING_VALUES.map(val => (
+            <option key={val} value={val}>
+              {t('sources.processing_' + val)}
             </option>
           ))}
         </select>

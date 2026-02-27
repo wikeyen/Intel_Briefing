@@ -98,7 +98,7 @@ export function GroupCard({
 
         {/* Processing type badge */}
         <span style={PROCESSING_PILL}>
-          {group.processing}
+          {t('sources.processing_' + group.processing)}
         </span>
 
         {/* Kebab menu */}
@@ -122,7 +122,7 @@ export function GroupCard({
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-inset)' }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none' }}
               >
-                Edit
+                {t('sources.edit_group')}
               </button>
               {onAddSubGroup && (
                 <button
@@ -132,7 +132,7 @@ export function GroupCard({
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-inset)' }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none' }}
                 >
-                  Add sub-group
+                  {t('sources.add_subgroup')}
                 </button>
               )}
               <button
@@ -142,7 +142,7 @@ export function GroupCard({
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--err-bg)' }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none' }}
               >
-                Delete
+                {t('sources.delete_group')}
               </button>
             </div>
           )}

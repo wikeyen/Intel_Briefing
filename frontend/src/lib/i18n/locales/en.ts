@@ -596,6 +596,27 @@ const en: TranslationDict = {
   'sources.invalid_bluesky_handle': 'Use format: name.bsky.social',
   'sources.invalid_mastodon_handle': 'Use format: @user@instance',
 
+  // ── Source groups ──────────────────────────────────────────────────────────
+  'sources.new_group': 'New Group',
+  'sources.edit_group': 'Edit Group',
+  'sources.delete_group': 'Delete Group',
+  'sources.delete_group_confirm': 'Delete this group? Sensors will become ungrouped.',
+  'sources.ungrouped': 'Ungrouped',
+  'sources.ungrouped_desc': 'Drag sensors to a group to include them in analysis',
+  'sources.add_subgroup': 'Add sub-group',
+  'sources.move_to': 'Move to',
+  'sources.add_to_group': 'Add to group',
+  'sources.processing_type': 'Processing type',
+  'sources.processing_trend': 'Trend',
+  'sources.processing_topic': 'Topic',
+  'sources.processing_social': 'Social',
+  'sources.processing_research': 'Research',
+  'sources.processing_news': 'News',
+  'sources.processing_opinion': 'Opinion',
+  'sources.processing_general': 'General',
+  'sources.group_name': 'Group name',
+  'sources.group_color': 'Color',
+
   // ── Intelligence cards ──────────────────────────────────────────────────────
   'intel.public_focus': 'Public Focus',
   'intel.topic_pulse': 'Topic Pulse',

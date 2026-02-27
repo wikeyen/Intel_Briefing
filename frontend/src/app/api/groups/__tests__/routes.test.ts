@@ -67,7 +67,7 @@ describe('GET /api/groups', () => {
 // ── POST /api/groups ─────────────────────────────────────────────────────
 
 describe('POST /api/groups', () => {
-  it('creates a group and returns 201', async () => {
+  it('creates a group and returns 201 with workflow defaults', async () => {
     const req = jsonRequest('/api/groups', 'POST', {
       name: 'Custom Group',
       color: '#FF0000',
@@ -78,7 +78,10 @@ describe('POST /api/groups', () => {
     const body = await res.json()
     expect(body.name).toBe('Custom Group')
     expect(body.color).toBe('#FF0000')
-    expect(body.processing).toBe('general')
+    expect(body.trend_enabled).toBe(false)
+    expect(body.topic_enabled).toBe(false)
+    expect(body.social_enabled).toBe(false)
+    expect(body.sentiment_enabled).toBe(false)
     expect(body.id).toBeTruthy()
     expect(body.sensors).toEqual([])
   })
@@ -169,17 +172,62 @@ describe('POST /api/groups', () => {
     expect(body.error).toMatch(/nest/i)
   })
 
-  it('accepts optional processing type', async () => {
+  it('accepts workflow toggle fields', async () => {
     const req = jsonRequest('/api/groups', 'POST', {
       name: 'Trend Group',
       color: '#AABB00',
-      processing: 'trend',
+      trend_enabled: true,
+      sentiment_enabled: true,
     })
     const res = await createRoute(req)
     expect(res.status).toBe(201)
 
     const body = await res.json()
-    expect(body.processing).toBe('trend')
+    expect(body.trend_enabled).toBe(true)
+    expect(body.sentiment_enabled).toBe(true)
+    expect(body.topic_enabled).toBe(false)
+    expect(body.social_enabled).toBe(false)
+  })
+
+  it('accepts keyword arrays', async () => {
+    const req = jsonRequest('/api/groups', 'POST', {
+      name: 'Keyword Group',
+      color: '#AABB00',
+      suppress_keywords: ['spam'],
+      boost_keywords: ['AI', 'ML'],
+    })
+    const res = await createRoute(req)
+    expect(res.status).toBe(201)
+
+    const body = await res.json()
+    expect(body.suppress_keywords).toEqual(['spam'])
+    expect(body.boost_keywords).toEqual(['AI', 'ML'])
+  })
+
+  it('returns 400 for non-boolean workflow toggle', async () => {
+    const req = jsonRequest('/api/groups', 'POST', {
+      name: 'Bad Toggle',
+      color: '#AABB00',
+      trend_enabled: 'yes',
+    })
+    const res = await createRoute(req)
+    expect(res.status).toBe(400)
+
+    const body = await res.json()
+    expect(body.error).toMatch(/trend_enabled.*boolean/i)
+  })
+
+  it('returns 400 for non-array keyword field', async () => {
+    const req = jsonRequest('/api/groups', 'POST', {
+      name: 'Bad Keywords',
+      color: '#AABB00',
+      suppress_keywords: 'not-an-array',
+    })
+    const res = await createRoute(req)
+    expect(res.status).toBe(400)
+
+    const body = await res.json()
+    expect(body.error).toMatch(/suppress_keywords.*array/i)
   })
 
   it('returns 400 for invalid JSON body', async () => {
@@ -225,6 +273,35 @@ describe('PUT /api/groups/:id', () => {
 
     const body = await res.json()
     expect(body.color).toBe('#ABCDEF')
+  })
+
+  it('updates workflow toggles via PUT', async () => {
+    const groupsRes = await listRoute()
+    const groups = await groupsRes.json()
+    const target = groups[0]
+
+    const req = jsonRequest(`/api/groups/${target.id}`, 'PUT', {
+      trend_enabled: true,
+      social_enabled: true,
+    })
+    const res = await updateRoute(req, { params: paramsOf({ id: target.id }) })
+    expect(res.status).toBe(200)
+
+    const body = await res.json()
+    expect(body.trend_enabled).toBe(true)
+    expect(body.social_enabled).toBe(true)
+  })
+
+  it('returns 400 for non-boolean workflow toggle on PUT', async () => {
+    const groupsRes = await listRoute()
+    const groups = await groupsRes.json()
+    const target = groups[0]
+
+    const req = jsonRequest(`/api/groups/${target.id}`, 'PUT', {
+      trend_enabled: 'yes',
+    })
+    const res = await updateRoute(req, { params: paramsOf({ id: target.id }) })
+    expect(res.status).toBe(400)
   })
 
   it('returns 404 for unknown group ID', async () => {

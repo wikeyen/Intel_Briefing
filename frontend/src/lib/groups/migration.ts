@@ -1,9 +1,8 @@
 // ABOUTME: Migrates old monolithic sensor keys to new split keys in source_group_members.
-// ABOUTME: Runs during initDb() to handle the x→x_accounts, bluesky→bluesky_accounts+bluesky_topics transition.
+// ABOUTME: Runs during initDb() to handle the x->x_accounts, bluesky->bluesky_accounts+bluesky_topics transition.
 
 import { getDb } from '../db'
 import { createGroup, setGroupMembers } from './queries'
-import type { GroupProcessing } from './types'
 
 const KEY_MIGRATIONS: Record<string, string[]> = {
   x: ['x_accounts'],
@@ -12,10 +11,10 @@ const KEY_MIGRATIONS: Record<string, string[]> = {
   rss_feeds: ['rss_blogs'],
 }
 
-/** Sensor→group assignments for the v2 group structure. */
-const GROUP_SENSOR_MAP: Record<string, { color: string; processing: GroupProcessing; sensors: string[] }> = {
-  Voices:  { color: '#E05A8D', processing: 'social', sensors: ['x_accounts', 'bluesky_accounts', 'mastodon_accounts'] },
-  Topics:  { color: '#3B82F6', processing: 'topic',  sensors: ['bluesky_topics', 'mastodon_topics'] },
+/** Sensor->group assignments for the v2 group structure. */
+const GROUP_SENSOR_MAP: Record<string, { color: string; social_enabled?: boolean; sentiment_enabled?: boolean; topic_enabled?: boolean; sensors: string[] }> = {
+  Voices:  { color: '#E05A8D', social_enabled: true, sentiment_enabled: true, sensors: ['x_accounts', 'bluesky_accounts', 'mastodon_accounts'] },
+  Topics:  { color: '#3B82F6', topic_enabled: true, sensors: ['bluesky_topics', 'mastodon_topics'] },
 }
 
 export async function migrateOldSensorKeys(): Promise<void> {
@@ -97,7 +96,9 @@ export async function migrateGroupStructure(): Promise<void> {
       const group = await createGroup({
         name: groupName,
         color: def.color,
-        processing: def.processing,
+        social_enabled: def.social_enabled,
+        sentiment_enabled: def.sentiment_enabled,
+        topic_enabled: def.topic_enabled,
       })
       groupId = group.id
       await db.execute({
@@ -133,6 +134,72 @@ export async function migrateGroupStructure(): Promise<void> {
   // Mark migration as complete so it never runs again
   await db.execute({
     sql: "INSERT OR REPLACE INTO kv (key, value, expires_at) VALUES ('migration:group_structure_v2', '\"done\"', NULL)",
+    args: [],
+  })
+}
+
+/**
+ * Migrates the old `processing` column to 10 discrete workflow columns.
+ * Translates processing enum values to boolean toggles:
+ *   - 'trend'  -> trend_enabled = 1
+ *   - 'topic'  -> topic_enabled = 1
+ *   - 'social' -> social_enabled = 1, sentiment_enabled = 1
+ *   - all others -> all toggles stay 0
+ *
+ * The old `processing` column is left in place (SQLite can't drop columns
+ * in older versions) but is no longer read by the application.
+ */
+export async function migrateWorkflowColumns(): Promise<void> {
+  const db = await getDb()
+
+  // Only run once — gated on kv marker
+  const marker = await db.execute({
+    sql: "SELECT value FROM kv WHERE key = 'migration:workflow_columns_v1'",
+    args: [],
+  })
+  if (marker.rows.length > 0) return
+
+  // Check if the old `processing` column exists
+  let hasProcessing = false
+  try {
+    await db.execute('SELECT processing FROM source_groups LIMIT 1')
+    hasProcessing = true
+  } catch {
+    // Column doesn't exist — fresh schema with new columns already
+  }
+
+  if (hasProcessing) {
+    // Add new columns (ALTER TABLE ADD COLUMN is safe even if table has data)
+    const newColumns = [
+      'trend_enabled    INTEGER NOT NULL DEFAULT 0',
+      'topic_enabled    INTEGER NOT NULL DEFAULT 0',
+      'social_enabled   INTEGER NOT NULL DEFAULT 0',
+      'sentiment_enabled INTEGER NOT NULL DEFAULT 0',
+      'summary_prompt   TEXT',
+      'trend_prompt     TEXT',
+      'topic_prompt     TEXT',
+      'social_prompt    TEXT',
+      'suppress_keywords TEXT NOT NULL DEFAULT \'[]\'',
+      'boost_keywords   TEXT NOT NULL DEFAULT \'[]\'',
+    ]
+
+    for (const colDef of newColumns) {
+      try {
+        await db.execute(`ALTER TABLE source_groups ADD COLUMN ${colDef}`)
+      } catch {
+        // Column already exists — safe to ignore
+      }
+    }
+
+    // Migrate data from processing enum to boolean toggles
+    await db.execute("UPDATE source_groups SET trend_enabled = 1 WHERE processing = 'trend'")
+    await db.execute("UPDATE source_groups SET topic_enabled = 1 WHERE processing = 'topic'")
+    await db.execute("UPDATE source_groups SET social_enabled = 1, sentiment_enabled = 1 WHERE processing = 'social'")
+  }
+
+  // Mark migration as complete
+  await db.execute({
+    sql: "INSERT OR REPLACE INTO kv (key, value, expires_at) VALUES ('migration:workflow_columns_v1', '\"done\"', NULL)",
     args: [],
   })
 }

@@ -1,9 +1,6 @@
 // ABOUTME: TypeScript types for source groups — the user-defined sensor classification system.
 // ABOUTME: Groups are persisted in SQLite and drive intelligence analysis, Data page tabs, and Sources page layout.
 
-/** Processing pipeline hint — determines what intelligence analysis runs on a group's data. */
-export type GroupProcessing = 'trend' | 'topic' | 'social' | 'research' | 'news' | 'opinion' | 'general'
-
 /** A source group as stored in the database. */
 export interface SourceGroup {
   id: string
@@ -11,8 +8,17 @@ export interface SourceGroup {
   name: string
   color: string
   icon: string | null
-  processing: GroupProcessing
   sort_order: number
+  trend_enabled: boolean
+  topic_enabled: boolean
+  social_enabled: boolean
+  sentiment_enabled: boolean
+  summary_prompt: string | null
+  trend_prompt: string | null
+  topic_prompt: string | null
+  social_prompt: string | null
+  suppress_keywords: string[]
+  boost_keywords: string[]
   created_at: string
   updated_at: string
 }
@@ -33,8 +39,17 @@ export interface CreateGroupPayload {
   name: string
   color: string
   icon?: string | null
-  processing?: GroupProcessing
   parent_id?: string | null
+  trend_enabled?: boolean
+  topic_enabled?: boolean
+  social_enabled?: boolean
+  sentiment_enabled?: boolean
+  summary_prompt?: string | null
+  trend_prompt?: string | null
+  topic_prompt?: string | null
+  social_prompt?: string | null
+  suppress_keywords?: string[]
+  boost_keywords?: string[]
 }
 
 /** Payload for updating an existing group. */
@@ -42,5 +57,14 @@ export interface UpdateGroupPayload {
   name?: string
   color?: string
   icon?: string | null
-  processing?: GroupProcessing
+  trend_enabled?: boolean
+  topic_enabled?: boolean
+  social_enabled?: boolean
+  sentiment_enabled?: boolean
+  summary_prompt?: string | null
+  trend_prompt?: string | null
+  topic_prompt?: string | null
+  social_prompt?: string | null
+  suppress_keywords?: string[]
+  boost_keywords?: string[]
 }

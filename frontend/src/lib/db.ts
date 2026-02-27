@@ -40,15 +40,24 @@ export async function initDb(url?: string): Promise<void> {
   `)
   await globalForDb.__dbClient.execute(`
     CREATE TABLE IF NOT EXISTS source_groups (
-      id          TEXT PRIMARY KEY,
-      parent_id   TEXT REFERENCES source_groups(id) ON DELETE CASCADE,
-      name        TEXT NOT NULL,
-      color       TEXT NOT NULL,
-      icon        TEXT,
-      processing  TEXT NOT NULL DEFAULT 'general',
-      sort_order  INTEGER NOT NULL DEFAULT 0,
-      created_at  TEXT NOT NULL,
-      updated_at  TEXT NOT NULL
+      id                TEXT PRIMARY KEY,
+      parent_id         TEXT REFERENCES source_groups(id) ON DELETE CASCADE,
+      name              TEXT NOT NULL,
+      color             TEXT NOT NULL,
+      icon              TEXT,
+      sort_order        INTEGER NOT NULL DEFAULT 0,
+      trend_enabled     INTEGER NOT NULL DEFAULT 0,
+      topic_enabled     INTEGER NOT NULL DEFAULT 0,
+      social_enabled    INTEGER NOT NULL DEFAULT 0,
+      sentiment_enabled INTEGER NOT NULL DEFAULT 0,
+      summary_prompt    TEXT,
+      trend_prompt      TEXT,
+      topic_prompt      TEXT,
+      social_prompt     TEXT,
+      suppress_keywords TEXT NOT NULL DEFAULT '[]',
+      boost_keywords    TEXT NOT NULL DEFAULT '[]',
+      created_at        TEXT NOT NULL,
+      updated_at        TEXT NOT NULL
     )
   `)
   await globalForDb.__dbClient.execute(`
@@ -71,6 +80,10 @@ export async function initDb(url?: string): Promise<void> {
 
   // Ensure v2 group structure (Voices, Topics) exists on existing DBs
   await migrateGroupStructure()
+
+  // Migrate old `processing` column to discrete workflow columns
+  const { migrateWorkflowColumns } = await import('./groups/migration')
+  await migrateWorkflowColumns()
 }
 
 /**

@@ -77,21 +77,52 @@ describe('createGroup', () => {
     const group = await createGroup({
       name: 'Test Group',
       color: '#1A7A6D',
-      processing: 'news',
+      trend_enabled: true,
     })
     expect(group.id).toBeTruthy()
     expect(group.name).toBe('Test Group')
     expect(group.color).toBe('#1A7A6D')
-    expect(group.processing).toBe('news')
+    expect(group.trend_enabled).toBe(true)
+    expect(group.topic_enabled).toBe(false)
+    expect(group.social_enabled).toBe(false)
+    expect(group.sentiment_enabled).toBe(false)
     expect(group.parent_id).toBeNull()
     expect(group.sensors).toEqual([])
     expect(group.created_at).toBeTruthy()
     expect(group.updated_at).toBeTruthy()
   })
 
-  it('defaults processing to general when not specified', async () => {
+  it('defaults all workflow toggles to false when not specified', async () => {
     const group = await createGroup({ name: 'Minimal', color: '#2E7D9A' })
-    expect(group.processing).toBe('general')
+    expect(group.trend_enabled).toBe(false)
+    expect(group.topic_enabled).toBe(false)
+    expect(group.social_enabled).toBe(false)
+    expect(group.sentiment_enabled).toBe(false)
+    expect(group.summary_prompt).toBeNull()
+    expect(group.trend_prompt).toBeNull()
+    expect(group.topic_prompt).toBeNull()
+    expect(group.social_prompt).toBeNull()
+    expect(group.suppress_keywords).toEqual([])
+    expect(group.boost_keywords).toEqual([])
+  })
+
+  it('stores workflow prompts and keyword arrays', async () => {
+    const group = await createGroup({
+      name: 'Full Config',
+      color: '#2E7D9A',
+      summary_prompt: 'Summarize in 3 bullets',
+      suppress_keywords: ['spam', 'ad'],
+      boost_keywords: ['AI', 'ML'],
+    })
+    expect(group.summary_prompt).toBe('Summarize in 3 bullets')
+    expect(group.suppress_keywords).toEqual(['spam', 'ad'])
+    expect(group.boost_keywords).toEqual(['AI', 'ML'])
+
+    // Verify persisted by re-reading
+    const loaded = await getGroup(group.id)
+    expect(loaded!.summary_prompt).toBe('Summarize in 3 bullets')
+    expect(loaded!.suppress_keywords).toEqual(['spam', 'ad'])
+    expect(loaded!.boost_keywords).toEqual(['AI', 'ML'])
   })
 
   it('trims whitespace from name', async () => {
@@ -215,10 +246,45 @@ describe('updateGroup', () => {
     expect(updated.color).toBe('#FF0000')
   })
 
-  it('updates processing type', async () => {
-    const created = await createGroup({ name: 'Processing', color: '#1A7A6D' })
-    const updated = await updateGroup(created.id, { processing: 'trend' })
-    expect(updated.processing).toBe('trend')
+  it('updates workflow toggles', async () => {
+    const created = await createGroup({ name: 'Workflow', color: '#1A7A6D' })
+    const updated = await updateGroup(created.id, { trend_enabled: true, sentiment_enabled: true })
+    expect(updated.trend_enabled).toBe(true)
+    expect(updated.sentiment_enabled).toBe(true)
+    expect(updated.topic_enabled).toBe(false)
+    expect(updated.social_enabled).toBe(false)
+  })
+
+  it('updates prompt fields', async () => {
+    const created = await createGroup({ name: 'Prompts', color: '#1A7A6D' })
+    const updated = await updateGroup(created.id, {
+      summary_prompt: 'Be concise',
+      trend_prompt: 'Focus on tech',
+    })
+    expect(updated.summary_prompt).toBe('Be concise')
+    expect(updated.trend_prompt).toBe('Focus on tech')
+  })
+
+  it('clears prompt field when set to null', async () => {
+    const created = await createGroup({
+      name: 'Clear Prompt',
+      color: '#1A7A6D',
+      summary_prompt: 'Initial prompt',
+    })
+    expect(created.summary_prompt).toBe('Initial prompt')
+
+    const updated = await updateGroup(created.id, { summary_prompt: null })
+    expect(updated.summary_prompt).toBeNull()
+  })
+
+  it('updates keyword arrays', async () => {
+    const created = await createGroup({ name: 'Keywords', color: '#1A7A6D' })
+    const updated = await updateGroup(created.id, {
+      suppress_keywords: ['spam'],
+      boost_keywords: ['AI', 'ML'],
+    })
+    expect(updated.suppress_keywords).toEqual(['spam'])
+    expect(updated.boost_keywords).toEqual(['AI', 'ML'])
   })
 
   it('updates icon', async () => {
@@ -401,15 +467,16 @@ describe('reorderGroups', () => {
 describe('listGroupsFlat', () => {
   beforeEach(initCleanDb)
 
-  it('returns all groups with sensor arrays', async () => {
-    const group = await createGroup({ name: 'Flat Test', color: '#1A7A6D', processing: 'news' })
+  it('returns all groups with sensor arrays and workflow fields', async () => {
+    const group = await createGroup({ name: 'Flat Test', color: '#1A7A6D', trend_enabled: true })
     await setGroupMembers(group.id, ['hacker_news', 'github'])
 
     const groups = await listGroupsFlat()
     expect(groups).toHaveLength(1)
     expect(groups[0].name).toBe('Flat Test')
     expect(groups[0].sensors).toEqual(['hacker_news', 'github'])
-    expect(groups[0].processing).toBe('news')
+    expect(groups[0].trend_enabled).toBe(true)
+    expect(groups[0].topic_enabled).toBe(false)
   })
 
   it('includes both top-level and child groups', async () => {
@@ -451,19 +518,22 @@ describe('sensorGroupMap', () => {
 describe('seedDefaultGroups', () => {
   beforeEach(initCleanDb)
 
-  it('creates 6 default groups with correct sensors', async () => {
+  it('creates 6 default groups with correct sensors and workflow config', async () => {
     await seedDefaultGroups()
     const groups = await listGroupsFlat()
     expect(groups).toHaveLength(6)
 
     const research = groups.find(g => g.name === 'Research & Reports')!
     expect(research.color).toBe('#1A7A6D')
-    expect(research.processing).toBe('research')
+    expect(research.trend_enabled).toBe(false)
+    expect(research.topic_enabled).toBe(false)
+    expect(research.social_enabled).toBe(false)
+    expect(research.sentiment_enabled).toBe(false)
     expect(research.sensors).toEqual(['arxiv'])
 
     const news = groups.find(g => g.name === 'News')!
     expect(news.color).toBe('#2E7D9A')
-    expect(news.processing).toBe('news')
+    expect(news.trend_enabled).toBe(false)
     expect(news.sensors).toEqual([
       'hacker_news', 'product_hunt', 'sources_36kr',
       'wallstreetcn', 'rss_news', 'github',
@@ -471,22 +541,23 @@ describe('seedDefaultGroups', () => {
 
     const trending = groups.find(g => g.name === 'Trending')!
     expect(trending.color).toBe('#C4851C')
-    expect(trending.processing).toBe('trend')
+    expect(trending.trend_enabled).toBe(true)
     expect(trending.sensors).toHaveLength(12)
 
     const opinions = groups.find(g => g.name === 'Opinions')!
     expect(opinions.color).toBe('#8B5CF6')
-    expect(opinions.processing).toBe('opinion')
+    expect(opinions.trend_enabled).toBe(false)
     expect(opinions.sensors).toEqual(['hn_blogs', 'rss_blogs'])
 
     const voices = groups.find(g => g.name === 'Voices')!
     expect(voices.color).toBe('#E05A8D')
-    expect(voices.processing).toBe('social')
+    expect(voices.social_enabled).toBe(true)
+    expect(voices.sentiment_enabled).toBe(true)
     expect(voices.sensors).toEqual(['x_accounts', 'bluesky_accounts', 'mastodon_accounts'])
 
     const topics = groups.find(g => g.name === 'Topics')!
     expect(topics.color).toBe('#3B82F6')
-    expect(topics.processing).toBe('topic')
+    expect(topics.topic_enabled).toBe(true)
     expect(topics.sensors).toEqual(['bluesky_topics', 'mastodon_topics'])
   })
 

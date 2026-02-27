@@ -12,6 +12,16 @@ import type {
 
 // ── Helpers ─────────────────────────────────────────────────────────────
 
+/** Parse a JSON string as a string array, returning [] on failure. */
+function parseJsonArray(val: string | null | undefined): string[] {
+  try {
+    const arr = JSON.parse(val ?? '[]')
+    return Array.isArray(arr) ? arr : []
+  } catch {
+    return []
+  }
+}
+
 /** Convert a raw DB row to a SourceGroup object. */
 function rowToGroup(row: Record<string, unknown>): SourceGroup {
   return {
@@ -20,8 +30,17 @@ function rowToGroup(row: Record<string, unknown>): SourceGroup {
     name: row.name as string,
     color: row.color as string,
     icon: (row.icon as string) ?? null,
-    processing: row.processing as SourceGroup['processing'],
     sort_order: Number(row.sort_order),
+    trend_enabled: Boolean(row.trend_enabled),
+    topic_enabled: Boolean(row.topic_enabled),
+    social_enabled: Boolean(row.social_enabled),
+    sentiment_enabled: Boolean(row.sentiment_enabled),
+    summary_prompt: (row.summary_prompt as string) ?? null,
+    trend_prompt: (row.trend_prompt as string) ?? null,
+    topic_prompt: (row.topic_prompt as string) ?? null,
+    social_prompt: (row.social_prompt as string) ?? null,
+    suppress_keywords: parseJsonArray(row.suppress_keywords as string),
+    boost_keywords: parseJsonArray(row.boost_keywords as string),
     created_at: row.created_at as string,
     updated_at: row.updated_at as string,
   }
@@ -208,13 +227,22 @@ export async function createGroup(payload: CreateGroupPayload): Promise<SourceGr
 
   const id = crypto.randomUUID()
   const now = nowISO()
-  const processing = payload.processing ?? 'general'
   const icon = payload.icon ?? null
+  const trendEnabled = payload.trend_enabled ? 1 : 0
+  const topicEnabled = payload.topic_enabled ? 1 : 0
+  const socialEnabled = payload.social_enabled ? 1 : 0
+  const sentimentEnabled = payload.sentiment_enabled ? 1 : 0
+  const summaryPrompt = payload.summary_prompt ?? null
+  const trendPrompt = payload.trend_prompt ?? null
+  const topicPrompt = payload.topic_prompt ?? null
+  const socialPrompt = payload.social_prompt ?? null
+  const suppressKeywords = JSON.stringify(payload.suppress_keywords ?? [])
+  const boostKeywords = JSON.stringify(payload.boost_keywords ?? [])
 
   await db.execute({
-    sql: `INSERT INTO source_groups (id, parent_id, name, color, icon, processing, sort_order, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)`,
-    args: [id, parentId, name, payload.color, icon, processing, now, now],
+    sql: `INSERT INTO source_groups (id, parent_id, name, color, icon, sort_order, trend_enabled, topic_enabled, social_enabled, sentiment_enabled, summary_prompt, trend_prompt, topic_prompt, social_prompt, suppress_keywords, boost_keywords, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [id, parentId, name, payload.color, icon, trendEnabled, topicEnabled, socialEnabled, sentimentEnabled, summaryPrompt, trendPrompt, topicPrompt, socialPrompt, suppressKeywords, boostKeywords, now, now],
   })
 
   return {
@@ -223,8 +251,17 @@ export async function createGroup(payload: CreateGroupPayload): Promise<SourceGr
     name,
     color: payload.color,
     icon,
-    processing,
     sort_order: 0,
+    trend_enabled: Boolean(payload.trend_enabled),
+    topic_enabled: Boolean(payload.topic_enabled),
+    social_enabled: Boolean(payload.social_enabled),
+    sentiment_enabled: Boolean(payload.sentiment_enabled),
+    summary_prompt: summaryPrompt,
+    trend_prompt: trendPrompt,
+    topic_prompt: topicPrompt,
+    social_prompt: socialPrompt,
+    suppress_keywords: payload.suppress_keywords ?? [],
+    boost_keywords: payload.boost_keywords ?? [],
     created_at: now,
     updated_at: now,
     sensors: [],
@@ -264,9 +301,54 @@ export async function updateGroup(id: string, payload: UpdateGroupPayload): Prom
     args.push(payload.icon)
   }
 
-  if (payload.processing !== undefined) {
-    updates.push('processing = ?')
-    args.push(payload.processing)
+  if (payload.trend_enabled !== undefined) {
+    updates.push('trend_enabled = ?')
+    args.push(payload.trend_enabled ? 1 : 0)
+  }
+
+  if (payload.topic_enabled !== undefined) {
+    updates.push('topic_enabled = ?')
+    args.push(payload.topic_enabled ? 1 : 0)
+  }
+
+  if (payload.social_enabled !== undefined) {
+    updates.push('social_enabled = ?')
+    args.push(payload.social_enabled ? 1 : 0)
+  }
+
+  if (payload.sentiment_enabled !== undefined) {
+    updates.push('sentiment_enabled = ?')
+    args.push(payload.sentiment_enabled ? 1 : 0)
+  }
+
+  if (payload.summary_prompt !== undefined) {
+    updates.push('summary_prompt = ?')
+    args.push(payload.summary_prompt)
+  }
+
+  if (payload.trend_prompt !== undefined) {
+    updates.push('trend_prompt = ?')
+    args.push(payload.trend_prompt)
+  }
+
+  if (payload.topic_prompt !== undefined) {
+    updates.push('topic_prompt = ?')
+    args.push(payload.topic_prompt)
+  }
+
+  if (payload.social_prompt !== undefined) {
+    updates.push('social_prompt = ?')
+    args.push(payload.social_prompt)
+  }
+
+  if (payload.suppress_keywords !== undefined) {
+    updates.push('suppress_keywords = ?')
+    args.push(JSON.stringify(payload.suppress_keywords))
+  }
+
+  if (payload.boost_keywords !== undefined) {
+    updates.push('boost_keywords = ?')
+    args.push(JSON.stringify(payload.boost_keywords))
   }
 
   if (updates.length === 0) {

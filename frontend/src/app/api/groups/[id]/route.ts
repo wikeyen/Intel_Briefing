@@ -2,12 +2,11 @@
 // ABOUTME: Validates at least one update field is present; returns 404 for unknown group IDs.
 import { NextRequest, NextResponse } from 'next/server'
 import { getGroup, updateGroup, deleteGroup } from '@/lib/groups/queries'
-import type { UpdateGroupPayload, GroupProcessing } from '@/lib/groups/types'
+import type { UpdateGroupPayload } from '@/lib/groups/types'
 
 export const dynamic = 'force-dynamic'
 
 const HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}$/
-const VALID_PROCESSING: GroupProcessing[] = ['trend', 'topic', 'social', 'research', 'news', 'opinion', 'general']
 
 export async function PUT(
   request: NextRequest,
@@ -58,14 +57,43 @@ export async function PUT(
     payload.icon = typeof body.icon === 'string' ? body.icon : null
   }
 
-  if (body.processing !== undefined) {
-    if (!VALID_PROCESSING.includes(body.processing as GroupProcessing)) {
-      return NextResponse.json(
-        { error: `processing must be one of: ${VALID_PROCESSING.join(', ')}` },
-        { status: 400 },
-      )
+  // Validate boolean workflow toggles (optional)
+  for (const field of ['trend_enabled', 'topic_enabled', 'social_enabled', 'sentiment_enabled'] as const) {
+    if (body[field] !== undefined) {
+      if (typeof body[field] !== 'boolean') {
+        return NextResponse.json(
+          { error: `${field} must be a boolean` },
+          { status: 400 },
+        )
+      }
+      payload[field] = body[field] as boolean
     }
-    payload.processing = body.processing as GroupProcessing
+  }
+
+  // Validate string prompt fields (optional, nullable)
+  for (const field of ['summary_prompt', 'trend_prompt', 'topic_prompt', 'social_prompt'] as const) {
+    if (body[field] !== undefined) {
+      if (body[field] !== null && typeof body[field] !== 'string') {
+        return NextResponse.json(
+          { error: `${field} must be a string or null` },
+          { status: 400 },
+        )
+      }
+      payload[field] = body[field] as string | null
+    }
+  }
+
+  // Validate keyword arrays (optional)
+  for (const field of ['suppress_keywords', 'boost_keywords'] as const) {
+    if (body[field] !== undefined) {
+      if (!Array.isArray(body[field]) || !(body[field] as unknown[]).every(v => typeof v === 'string')) {
+        return NextResponse.json(
+          { error: `${field} must be an array of strings` },
+          { status: 400 },
+        )
+      }
+      payload[field] = body[field] as string[]
+    }
   }
 
   try {

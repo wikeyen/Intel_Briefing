@@ -8,7 +8,7 @@ import { SortableContext } from '@dnd-kit/sortable'
 import { GROUP_CARD } from '../group-styles'
 import { Toggle } from '../Toggle'
 import { PillInput } from '../PillInput'
-import { Badge, CnBadge, CategoryBadge } from '../SensorBadge'
+import { Badge, CnBadge } from '../SensorBadge'
 import { SensorDragItem } from '../SensorDragItem'
 import { GroupCard } from '../GroupCard'
 import { GroupForm } from '../GroupForm'
@@ -125,23 +125,6 @@ describe('CnBadge', () => {
   it('renders nothing for row language', () => {
     const { container } = render(<CnBadge language="row" />)
     expect(container.innerHTML).toBe('')
-  })
-})
-
-describe('CategoryBadge', () => {
-  it('renders category text for tech', () => {
-    render(<CategoryBadge category="tech" />)
-    expect(screen.getByText('tech')).toBeDefined()
-  })
-
-  it('renders category text for social', () => {
-    render(<CategoryBadge category="social" />)
-    expect(screen.getByText('social')).toBeDefined()
-  })
-
-  it('renders category text for finance', () => {
-    render(<CategoryBadge category="finance" />)
-    expect(screen.getByText('finance')).toBeDefined()
   })
 })
 

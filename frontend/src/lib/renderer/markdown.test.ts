@@ -1,8 +1,8 @@
 // ABOUTME: Unit tests for the Markdown renderer in renderer/markdown.ts.
-// ABOUTME: Covers all 7 sections, empty data, stale warning, and optional field handling.
+// ABOUTME: Covers group-based sections, empty data, stale warning, and optional field handling.
 import { describe, it, expect } from 'vitest'
 import type { IntelItem, IntelReport } from '../models'
-import { createReport, emptyItemsMap } from '../models'
+import { createReport } from '../models'
 import { renderMarkdown } from './markdown'
 
 function makeReport(overrides: Partial<IntelReport> = {}): IntelReport {
@@ -24,24 +24,26 @@ describe('renderMarkdown', () => {
     expect(md).toContain('2026-02-17')
   })
 
-  it('all 7 section headers present', () => {
-    const report = makeReport()
+  it('renders section headers from report group keys', () => {
+    const report = makeReport({
+      items: { 'news-group': [], 'research-group': [] },
+    })
     const md = renderMarkdown(report)
-    for (const header of ['Tech', 'Research', 'Insights', 'Products',
-      'Finance', 'Community', 'Social']) {
-      expect(md).toContain(header)
-    }
+    expect(md).toContain('News-group')
+    expect(md).toContain('Research-group')
   })
 
   it('empty section shows placeholder', () => {
-    const report = makeReport()
+    const report = makeReport({
+      items: { 'empty-group': [] },
+    })
     const md = renderMarkdown(report)
     expect(md).toContain('_No data available for this section._')
   })
 
   it('item title and url rendered', () => {
     const item = makeItem('1', { title: 'My Article', url: 'https://example.com/article' })
-    const items = { ...emptyItemsMap(), tech: [item] }
+    const items = { tech: [item] }
     const report = makeReport({ items })
     const md = renderMarkdown(report)
     expect(md).toContain('My Article')
@@ -64,7 +66,7 @@ describe('renderMarkdown', () => {
 
   it('item with heat shows heat', () => {
     const item = makeItem('1', { heat: '1234 pts' })
-    const items = { ...emptyItemsMap(), tech: [item] }
+    const items = { tech: [item] }
     const report = makeReport({ items })
     const md = renderMarkdown(report)
     expect(md).toContain('1234 pts')
@@ -72,7 +74,7 @@ describe('renderMarkdown', () => {
 
   it('item with authors shows authors', () => {
     const item = makeItem('1', { authors: ['Alice', 'Bob'] })
-    const items = { ...emptyItemsMap(), research: [item] }
+    const items = { research: [item] }
     const report = makeReport({ items })
     const md = renderMarkdown(report)
     expect(md).toContain('Alice')
@@ -82,7 +84,7 @@ describe('renderMarkdown', () => {
   it('long abstract is truncated', () => {
     const longAbstract = 'x'.repeat(500)
     const item = makeItem('1', { abstract: longAbstract })
-    const items = { ...emptyItemsMap(), research: [item] }
+    const items = { research: [item] }
     const report = makeReport({ items })
     const md = renderMarkdown(report)
     expect(md).toContain('…')
@@ -91,7 +93,7 @@ describe('renderMarkdown', () => {
 
   it('item with missing optional fields renders without error', () => {
     const item = makeItem()
-    const items = { ...emptyItemsMap(), community: [item] }
+    const items = { community: [item] }
     const report = makeReport({ items })
     const md = renderMarkdown(report)
     expect(md).toContain('Test Item')

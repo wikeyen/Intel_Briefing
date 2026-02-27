@@ -41,21 +41,15 @@ const topicItems: IntelItem[] = [
 ]
 
 const fakeReport: IntelReport = {
+  date: '2026-02-27',
+  fetched_at: new Date().toISOString(),
+  stale: false,
   items: {
-    tech: [],
-    research: [],
-    finance: [],
-    products: [],
-    community: [],
     social: [...socialItems, ...topicItems],
     trend: trendItems,
-    insights: [],
-    feeds: [],
   },
-  generated_at: new Date().toISOString(),
   sources_ok: ['weibo', 'douyin', 'wallstreetcn', 'x', 'bluesky'],
   sources_failed: [],
-  sources_skipped: [],
 }
 
 const enrichedItems: NlpEnrichedItem[] = [
@@ -94,6 +88,13 @@ const fakeNlpSectionData: NlpSectionData = {
   enrichmentMap: new Map(enrichedItems.map(e => [e.id, e])),
 }
 
+// Sensor sets matching the test data — tells the intelligence pipeline which sensors belong to which analysis
+const fakeSensorSets = {
+  trendSensors: new Set(['weibo', 'douyin', 'wallstreetcn']),
+  topicSensors: new Set(['x', 'bluesky']),
+  socialSensors: new Set(['x', 'bluesky']),
+}
+
 describe('runNlpIntelligenceAnalysis', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
@@ -127,7 +128,7 @@ describe('runNlpIntelligenceAnalysis', () => {
     // executive summary
     mockChat.mockResolvedValueOnce(JSON.stringify({ summary: 'The AI landscape is evolving rapidly.' }))
 
-    const result = await runNlpIntelligenceAnalysis(fakeReport, fakeNlpSectionData, fakeLlmConfig)
+    const result = await runNlpIntelligenceAnalysis(fakeReport, fakeNlpSectionData, fakeLlmConfig, undefined, undefined, fakeSensorSets)
 
     // Trend
     expect(result.trend).not.toBeNull()
@@ -157,7 +158,7 @@ describe('runNlpIntelligenceAnalysis', () => {
     // All LLM calls throw
     mockChat.mockRejectedValue(new Error('LLM down'))
 
-    const result = await runNlpIntelligenceAnalysis(fakeReport, fakeNlpSectionData, fakeLlmConfig)
+    const result = await runNlpIntelligenceAnalysis(fakeReport, fakeNlpSectionData, fakeLlmConfig, undefined, undefined, fakeSensorSets)
 
     // Should still return a result with empty summaries and tags
     expect(result.trend).not.toBeNull()
@@ -187,7 +188,7 @@ describe('runNlpIntelligenceAnalysis', () => {
     // remaining LLM calls
     mockChat.mockResolvedValue(JSON.stringify({ summary: 'test' }))
 
-    const result = await runNlpIntelligenceAnalysis(fakeReport, fakeNlpSectionData, fakeLlmConfig)
+    const result = await runNlpIntelligenceAnalysis(fakeReport, fakeNlpSectionData, fakeLlmConfig, undefined, undefined, fakeSensorSets)
 
     expect(result.trend!.tags.length).toBe(3) // ai, chips, regulation (deduplicated)
     // 'ai' should be top tag with max weight from clusters (0.9)
@@ -206,7 +207,7 @@ describe('runNlpIntelligenceAnalysis', () => {
     // cluster summaries + topic + exec summary
     mockChat.mockResolvedValue(JSON.stringify({ summary: 'test', topics: [], tags: [] }))
 
-    const result = await runNlpIntelligenceAnalysis(reportNoSocial, fakeNlpSectionData, fakeLlmConfig)
+    const result = await runNlpIntelligenceAnalysis(reportNoSocial, fakeNlpSectionData, fakeLlmConfig, undefined, undefined, fakeSensorSets)
     expect(result.accounts).toBeNull()
   })
 
@@ -218,7 +219,7 @@ describe('runNlpIntelligenceAnalysis', () => {
 
     mockChat.mockResolvedValue(JSON.stringify({ summary: 'test', topics: [], tags: [] }))
 
-    const result = await runNlpIntelligenceAnalysis(fakeReport, emptyTrendData, fakeLlmConfig)
+    const result = await runNlpIntelligenceAnalysis(fakeReport, emptyTrendData, fakeLlmConfig, undefined, undefined, fakeSensorSets)
     expect(result.trend).toBeNull()
   })
 
@@ -230,7 +231,7 @@ describe('runNlpIntelligenceAnalysis', () => {
 
     mockChat.mockResolvedValue(JSON.stringify({ summary: 'test' }))
 
-    const result = await runNlpIntelligenceAnalysis(reportNoTopics, fakeNlpSectionData, fakeLlmConfig)
+    const result = await runNlpIntelligenceAnalysis(reportNoTopics, fakeNlpSectionData, fakeLlmConfig, undefined, undefined, fakeSensorSets)
     expect(result.topics).toBeNull()
   })
 
@@ -249,7 +250,7 @@ describe('runNlpIntelligenceAnalysis', () => {
 
     mockChat.mockResolvedValue(JSON.stringify({ summary: 'test', topics: [], tags: [] }))
 
-    const result = await runNlpIntelligenceAnalysis(fakeReport, noNegativeData, fakeLlmConfig)
+    const result = await runNlpIntelligenceAnalysis(fakeReport, noNegativeData, fakeLlmConfig, undefined, undefined, fakeSensorSets)
     expect(result.trend).not.toBeNull()
 
     // Should have called: 1 cluster summary + 1 topic + 1 accounts summary + 1 executive summary = 4
@@ -261,7 +262,7 @@ describe('runNlpIntelligenceAnalysis', () => {
   it('assigns dominant sentiment correctly', async () => {
     mockChat.mockResolvedValue(JSON.stringify({ summary: 'test', topics: [], tags: [] }))
 
-    const result = await runNlpIntelligenceAnalysis(fakeReport, fakeNlpSectionData, fakeLlmConfig)
+    const result = await runNlpIntelligenceAnalysis(fakeReport, fakeNlpSectionData, fakeLlmConfig, undefined, undefined, fakeSensorSets)
 
     // Cluster 0: 80% positive -> 'positive'
     expect(result.trend!.topics[0].sentiment).toBe('positive')
@@ -280,7 +281,7 @@ describe('runNlpIntelligenceAnalysis', () => {
     // remaining calls
     mockChat.mockResolvedValue(JSON.stringify({ summary: 'test' }))
 
-    await runNlpIntelligenceAnalysis(fakeReport, fakeNlpSectionData, fakeLlmConfig)
+    await runNlpIntelligenceAnalysis(fakeReport, fakeNlpSectionData, fakeLlmConfig, undefined, undefined, fakeSensorSets)
 
     // The third call should be for topics — check the user content includes sentiment labels
     const topicCall = mockChat.mock.calls[2]

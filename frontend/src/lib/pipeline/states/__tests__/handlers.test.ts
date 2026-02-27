@@ -120,7 +120,7 @@ function makeReport(overrides: Partial<IntelReport> = {}): IntelReport {
     stale: false,
     sources_ok: [],
     sources_failed: [],
-    items: { tech: [], research: [], finance: [], products: [], community: [], social: [], insights: [], feeds: [] },
+    items: {},
     ...overrides,
   }
 }

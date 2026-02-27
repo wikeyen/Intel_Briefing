@@ -3,7 +3,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 import type { IntelItem, IntelReport, ConfigSettings, PipelineStatus } from './models'
-import { createReport, defaultConfig, emptyItemsMap } from './models'
+import { createReport, defaultConfig } from './models'
 
 // Mock SQLite cache modules
 const mockReadReport = vi.fn()
@@ -208,7 +208,7 @@ describe('GET /api/intel/latest', () => {
 
   it('returns all items without truncation', async () => {
     const items = Array.from({ length: 10 }, (_, i) => makeItem(String(i), `Item ${i}`))
-    const report = makeReport({ items: { ...emptyItemsMap(), tech: items } })
+    const report = makeReport({ items: { tech: items } })
     mockReadReport.mockResolvedValue(report)
     mockIsStale.mockReturnValue(false)
     const { GET } = await import('@/app/api/intel/latest/route')
@@ -230,7 +230,7 @@ describe('GET /api/intel/latest', () => {
 describe('GET /api/intel/[section]', () => {
   it('returns items for known section', async () => {
     const item = makeItem('1', 'HN Top Post')
-    const report = makeReport({ items: { ...emptyItemsMap(), tech: [item] } })
+    const report = makeReport({ items: { tech: [item] } })
     mockReadReport.mockResolvedValue(report)
     mockIsStale.mockReturnValue(false)
     const { GET } = await import('@/app/api/intel/[section]/route')

@@ -58,6 +58,12 @@ vi.mock('../db', () => ({
   clearRunItems: (...args: unknown[]) => mockClearRunItems(...args),
 }))
 
+// Mock groups module — report-builder and helpers call listGroupsFlat to route items by group
+const mockListGroupsFlat = vi.fn().mockResolvedValue([])
+vi.mock('../groups', () => ({
+  listGroupsFlat: (...args: unknown[]) => mockListGroupsFlat(...args),
+}))
+
 // Mock sensor registry with a Proxy to allow dynamic sensor functions
 const mockSensorFns: Record<string, ReturnType<typeof vi.fn>> = {}
 vi.mock('../sensors', () => ({
@@ -123,9 +129,7 @@ describe('runPipeline', () => {
       sources_ok: ['hacker_news'],
       sources_failed: [],
       items: {
-        tech: [makeItem('hn1', 'hacker_news')],
-        research: [], finance: [], products: [],
-        community: [], social: [], insights: [], feeds: [],
+        ungrouped: [makeItem('hn1', 'hacker_news')],
       },
     }
     mockReadReport.mockResolvedValue(cachedReport)

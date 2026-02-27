@@ -97,7 +97,6 @@ vi.mock('../../../sensors', () => ({
 
 vi.mock('../../../sensors/taxonomy', () => ({
   SENSOR_LABELS: {},
-  SENSOR_CATEGORY_MAP: {},
 }))
 
 // ── Imports under test (after mocks) ──────────────────────────────────────────

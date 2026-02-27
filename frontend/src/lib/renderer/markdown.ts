@@ -1,14 +1,6 @@
 // ABOUTME: Pure Markdown renderer for IntelReport — no I/O, no HTTP, no sleeps.
-// ABOUTME: Renders all 8 report sections from the IntelReport model.
+// ABOUTME: Renders all report sections from the IntelReport model.
 import type { IntelItem, IntelReport } from '../models'
-import { ALL_CATEGORIES, CATEGORY_META, type CategoryKey } from '../sensors/taxonomy'
-
-// Ordered section display config: [section_key, display_title, emoji]
-const SECTIONS: [CategoryKey, string, string][] = ALL_CATEGORIES.map(key => [
-  key,
-  CATEGORY_META[key].label,
-  CATEGORY_META[key].emoji,
-])
 
 const NO_DATA_PLACEHOLDER = '_No data available for this section._'
 
@@ -46,7 +38,6 @@ function renderItem(item: IntelItem): string {
   }
 
   if (item.abstract) {
-    // Trim long abstracts to keep the document readable
     const trimmed =
       item.abstract.length > 400
         ? item.abstract.slice(0, 400) + '…'
@@ -58,12 +49,10 @@ function renderItem(item: IntelItem): string {
 }
 
 function renderSection(
-  _sectionKey: CategoryKey,
   title: string,
-  emoji: string,
   items: IntelItem[],
 ): string {
-  const header = `## ${emoji} ${title}`
+  const header = `## ${title}`
   if (items.length === 0) {
     return `${header}\n\n${NO_DATA_PLACEHOLDER}`
   }
@@ -87,9 +76,11 @@ export function renderMarkdown(report: IntelReport): string {
   }
 
   const sectionBlocks: string[] = []
-  for (const [key, title, emoji] of SECTIONS) {
-    const items = report.items[key] ?? []
-    sectionBlocks.push(renderSection(key, title, emoji, items))
+  for (const [key, items] of Object.entries(report.items)) {
+    const title = key === 'ungrouped'
+      ? 'Ungrouped'
+      : key.charAt(0).toUpperCase() + key.slice(1)
+    sectionBlocks.push(renderSection(title, items))
   }
 
   const footerSources =

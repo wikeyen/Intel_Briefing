@@ -3,9 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { readReport, isStale } from '@/lib/pipeline/cache'
 import { loadConfig } from '@/lib/config'
-import { ALL_CATEGORIES, type CategoryKey } from '@/lib/sensors/taxonomy'
 
-const KNOWN_SECTIONS = new Set<string>(ALL_CATEGORIES)
 const MAX_LIMIT = 200
 
 export async function GET(
@@ -13,15 +11,6 @@ export async function GET(
   { params }: { params: Promise<{ section: string }> },
 ): Promise<NextResponse> {
   const { section } = await params
-
-  if (!KNOWN_SECTIONS.has(section)) {
-    return NextResponse.json(
-      {
-        error: `Unknown section '${section}'. Known sections: ${[...ALL_CATEGORIES].sort().join(', ')}`,
-      },
-      { status: 404 },
-    )
-  }
 
   const limitParam = request.nextUrl.searchParams.get('limit')
   let limit = 10
@@ -42,7 +31,14 @@ export async function GET(
 
   const config = await loadConfig()
   const stale = isStale(report, config.cache_ttl_hours)
-  const items = (report.items[section as CategoryKey] ?? []).slice(0, limit)
+  const items = (report.items[section] ?? []).slice(0, limit)
+
+  if (items.length === 0 && !Object.keys(report.items).includes(section)) {
+    return NextResponse.json(
+      { error: `Unknown section '${section}'. Known sections: ${Object.keys(report.items).sort().join(', ')}` },
+      { status: 404 },
+    )
+  }
 
   return NextResponse.json({
     section,

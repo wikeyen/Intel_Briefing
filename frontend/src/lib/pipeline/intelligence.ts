@@ -4,8 +4,6 @@
 import type { IntelItem, IntelReport, SummaryLanguage } from '../models'
 import type { LlmConfig, ChatMessage } from '../summary/llm'
 import { chatCompletion } from '../summary/llm'
-import type { CategoryKey } from '../sensors/taxonomy'
-import { ALL_CATEGORIES, SENSOR_CATEGORY_MAP } from '../sensors/taxonomy'
 import { jsonrepair } from 'jsonrepair'
 import type { NlpCluster, NlpEnrichedItem } from './nlp-client'
 
@@ -562,25 +560,17 @@ export async function runIntelligenceAnalysis(
   language?: SummaryLanguage,
   sensorSets?: IntelligenceSensorSets,
 ): Promise<IntelligenceReport> {
-  // Collect all items across categories
+  // Collect all items across sections
   const allItems: IntelItem[] = []
-  for (const cat of ALL_CATEGORIES) {
-    const catItems = report.items[cat as CategoryKey]
-    if (catItems) allItems.push(...catItems)
+  for (const items of Object.values(report.items)) {
+    allItems.push(...items)
   }
 
-  // Split items using group-driven sensor sets (with backward-compatible fallback)
-  const trendItems = sensorSets
-    ? allItems.filter(item => sensorSets.trendSensors.has(item.source))
-    : allItems.filter(item => SENSOR_CATEGORY_MAP[item.source] === 'trend')
-
-  const topicItems = sensorSets
-    ? allItems.filter(item => sensorSets.topicSensors.has(item.source) && item.topic != null && item.topic.length > 0)
-    : allItems.filter(item => item.topic != null && item.topic.length > 0)
-
-  const accountItems = sensorSets
-    ? allItems.filter(item => sensorSets.socialSensors.has(item.source) && item.account != null && item.account.length > 0)
-    : allItems.filter(item => item.account != null && item.account.length > 0 && SENSOR_CATEGORY_MAP[item.source] === 'social')
+  // Split items using group-driven sensor sets
+  const effectiveSets = sensorSets ?? { trendSensors: new Set<string>(), topicSensors: new Set<string>(), socialSensors: new Set<string>() }
+  const trendItems = allItems.filter(item => effectiveSets.trendSensors.has(item.source))
+  const topicItems = allItems.filter(item => effectiveSets.topicSensors.has(item.source) && item.topic != null && item.topic.length > 0)
+  const accountItems = allItems.filter(item => effectiveSets.socialSensors.has(item.source) && item.account != null && item.account.length > 0)
 
   // Run all three analyses in parallel — each catches its own errors
   const [trend, topics, accounts] = await Promise.all([
@@ -619,18 +609,15 @@ export async function runNlpIntelligenceAnalysis(
 
   // Collect all items for section splitting and lookups
   const allItems: IntelItem[] = []
-  for (const cat of ALL_CATEGORIES) {
-    allItems.push(...(report.items[cat] ?? []))
+  for (const items of Object.values(report.items)) {
+    allItems.push(...items)
   }
   const allItemsById = new Map(allItems.map(i => [i.id, i]))
 
-  // Split items by section using group-driven sensor sets (with backward-compatible fallback)
-  const topicItems = sensorSets
-    ? allItems.filter(i => sensorSets.topicSensors.has(i.source) && i.topic != null && i.topic.length > 0)
-    : allItems.filter(i => i.topic != null && i.topic.length > 0)
-  const accountItems = sensorSets
-    ? allItems.filter(i => sensorSets.socialSensors.has(i.source) && i.account != null && i.account.length > 0)
-    : allItems.filter(i => i.account != null && i.account.length > 0 && SENSOR_CATEGORY_MAP[i.source] === 'social')
+  // Split items by section using group-driven sensor sets
+  const effectiveSets = sensorSets ?? { trendSensors: new Set<string>(), topicSensors: new Set<string>(), socialSensors: new Set<string>() }
+  const topicItems = allItems.filter(i => effectiveSets.topicSensors.has(i.source) && i.topic != null && i.topic.length > 0)
+  const accountItems = allItems.filter(i => effectiveSets.socialSensors.has(i.source) && i.account != null && i.account.length > 0)
 
   // --- Trend / Public Focus: cluster summaries (parallel LLM calls) ---
   const clusterSummaries = await Promise.all(

@@ -5,8 +5,7 @@ import type { ConfigSettings, IntelItem, IntelReport, SensorResult, SensorSummar
 import { sensorResultSucceeded, sensorLimit } from '../models'
 import type { LlmConfig } from '../summary/llm'
 import { SENSOR_REGISTRY } from '../sensors'
-import { ALL_CATEGORIES, SENSOR_CATEGORY_MAP, sensorToSource } from '../sensors/taxonomy'
-import type { CategoryKey } from '../sensors/taxonomy'
+import { sensorToSource } from '../sensors/taxonomy'
 import { listGroupsFlat } from '../groups'
 import { SensorConfigError } from '../sensors/errors'
 import { summarizeSingleSensor } from '../summary/summarizer'
@@ -73,32 +72,32 @@ export function buildAttributionLlmConfig(config: ConfigSettings): LlmConfig | n
 
 /**
  * Merge a retry result into the existing report: remove old items by source, insert new ones.
- * Uses the sensor taxonomy to place items in the correct category section.
+ * Finds the target section dynamically by looking for existing items from this sensor.
  * Mutates the report in place.
  */
 export function mergeRetryResult(report: IntelReport, result: SensorResult): void {
+  // Remove old items from this sensor across all sections
   for (const section of Object.values(report.items)) {
-    // Remove old items from this sensor
     for (let i = section.length - 1; i >= 0; i--) {
       if (section[i].source === result.sensor_name) {
         section.splice(i, 1)
       }
     }
   }
-  // Insert new items into the correct category section using the taxonomy map
-  const category = SENSOR_CATEGORY_MAP[result.sensor_name] as CategoryKey | undefined
-  for (const item of result.items) {
-    // Use the sensor's taxonomy category, falling back to the first non-empty section
-    const targetSection = category ? report.items[category] : undefined
-    if (targetSection) {
-      targetSection.push(item)
-    } else {
-      // Fallback: place in the first section that exists
-      const sections = Object.values(report.items)
-      if (sections.length > 0) {
-        sections[0].push(item)
-      }
+  // Find which section already has items from this sensor, or use first section
+  let targetKey: string | undefined
+  for (const [key, items] of Object.entries(report.items)) {
+    if (items.some(item => item.source === result.sensor_name)) {
+      targetKey = key
+      break
     }
+  }
+  if (!targetKey) {
+    const keys = Object.keys(report.items)
+    targetKey = keys[0]
+  }
+  if (targetKey && report.items[targetKey]) {
+    report.items[targetKey].push(...result.items)
   }
 }
 
@@ -263,8 +262,8 @@ export async function runIntelligence(
     if (nlpAvailable) {
       // Collect all items for NLP analysis
       const allItems: IntelItem[] = []
-      for (const cat of ALL_CATEGORIES) {
-        allItems.push(...(report.items[cat] ?? []))
+      for (const items of Object.values(report.items)) {
+        allItems.push(...items)
       }
 
       tracker.addEvent('info', 'intelligence', 'NLP sidecar available — splitting items by section')

@@ -1,5 +1,5 @@
-# ABOUTME: Integration tests for the FastAPI /analyze and /health endpoints.
-# ABOUTME: Uses httpx TestClient to validate request/response contracts.
+# ABOUTME: Integration tests for the FastAPI /analyze, /enrich, /cluster, and /health endpoints.
+# ABOUTME: Uses httpx AsyncClient to validate request/response contracts.
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -102,3 +102,71 @@ async def test_analyze_mixed_languages(client: AsyncClient):
         assert "entities" in item
 
     assert len(body["clusters"]) >= 1
+
+
+@pytest.mark.anyio
+async def test_enrich_basic(client: AsyncClient):
+    """POST /enrich returns per-item enrichment without clusters."""
+    resp = await client.post(
+        "/enrich",
+        json={
+            "items": [
+                {"id": "e1", "title": "AI safety research advances", "lang": "en"},
+            ]
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "items" in data
+    assert len(data["items"]) == 1
+    assert data["items"][0]["id"] == "e1"
+    assert "clusters" not in data  # enrich doesn't return clusters
+
+
+@pytest.mark.anyio
+async def test_enrich_empty(client: AsyncClient):
+    """POST /enrich with empty list returns empty."""
+    resp = await client.post("/enrich", json={"items": []})
+    assert resp.status_code == 200
+    assert resp.json()["items"] == []
+
+
+@pytest.mark.anyio
+async def test_cluster_basic(client: AsyncClient):
+    """POST /cluster returns clusters from pre-computed enrichment data."""
+    items = [
+        {"id": f"c{i}", "title": f"Topic about AI number {i}", "lang": "en"}
+        for i in range(5)
+    ]
+    per_item_keywords = {
+        f"c{i}": [{"text": "AI", "weight": 0.9}] for i in range(5)
+    }
+    per_item_sentiment = {f"c{i}": "neutral" for i in range(5)}
+
+    resp = await client.post(
+        "/cluster",
+        json={
+            "items": items,
+            "per_item_keywords": per_item_keywords,
+            "per_item_sentiment": per_item_sentiment,
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "clusters" in data
+    assert len(data["clusters"]) >= 1
+
+
+@pytest.mark.anyio
+async def test_cluster_empty(client: AsyncClient):
+    """POST /cluster with empty items returns empty clusters."""
+    resp = await client.post(
+        "/cluster",
+        json={
+            "items": [],
+            "per_item_keywords": {},
+            "per_item_sentiment": {},
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["clusters"] == []

@@ -161,6 +161,9 @@ const zh: TranslationDict = {
   'item.collapse': '收起',
   'item.expand_abstract': '展开摘要',
   'item.more': '更多',
+  'item.sentiment_positive': '正面',
+  'item.sentiment_negative': '负面',
+  'item.sentiment_neutral': '中性',
 
   // ── Status page — ControlBar ──────────────────────────────────────────────
   'status.fetching': '获取中',
@@ -632,6 +635,9 @@ const zh: TranslationDict = {
   'sources.workflow_custom_prompt': '自定义提示词',
   'sources.workflow_no_topic_sensors': '此分组中没有含话题数据的传感器',
   'sources.workflow_no_account_sensors': '此分组中没有含账号数据的传感器',
+
+  // ── What's Happening strip ────────────────────────────────────────────────
+  'dashboard.whats_happening': '正在发生',
 
   // ── Intelligence cards ──────────────────────────────────────────────────────
   'intel.public_focus': '公众关注',

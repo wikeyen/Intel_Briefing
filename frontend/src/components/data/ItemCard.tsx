@@ -66,7 +66,7 @@ function sourcePostUrl(item: IntelItem): string | null {
   return null
 }
 
-export function ItemCard({ item, index = 0, searchQuery }: { item: IntelItem; index?: number; searchQuery?: string }) {
+export function ItemCard({ item, index = 0, searchQuery, groupColor }: { item: IntelItem; index?: number; searchQuery?: string; groupColor?: string }) {
   const { t } = useTranslation()
   const isArxiv = item.source === 'arxiv'
   const [abstractExpanded, setAbstractExpanded] = useState(false)
@@ -86,6 +86,7 @@ export function ItemCard({ item, index = 0, searchQuery }: { item: IntelItem; in
       style={{
         background: 'var(--surface)',
         border: '1px solid var(--border)',
+        borderLeft: groupColor ? `3px solid ${groupColor}` : undefined,
         borderRadius: 8,
         padding: '1.25rem',
         transition: 'box-shadow 150ms, border-color 150ms',
@@ -122,19 +123,35 @@ export function ItemCard({ item, index = 0, searchQuery }: { item: IntelItem; in
       {/* Meta row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
         <SourceChip source={item.source} label={item.source === 'rss_feeds' ? (item.account ?? undefined) : undefined} />
-        {item.sentiment && item.sentiment.label !== 'neutral' && (
-          <span
-            title={`${item.sentiment.label} (${Math.round(item.sentiment.score * 100)}%)`}
-            style={{
-              display: 'inline-block',
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              background: item.sentiment.label === 'positive' ? 'var(--sent-pos)' : 'var(--sent-neg)',
-              flexShrink: 0,
-            }}
-          />
-        )}
+        {item.sentiment && (() => {
+          const label = item.sentiment.label
+          const sentimentColor = label === 'positive' ? 'var(--sent-pos)'
+            : label === 'negative' ? 'var(--sent-neg)'
+            : 'var(--ink-faint)'
+          const sentimentBg = label === 'positive' ? 'rgba(34,197,94,0.12)'
+            : label === 'negative' ? 'rgba(239,68,68,0.12)'
+            : 'var(--surface-alt)'
+          const sentimentLabel = label === 'positive' ? t('item.sentiment_positive')
+            : label === 'negative' ? t('item.sentiment_negative')
+            : t('item.sentiment_neutral')
+          return (
+            <span
+              title={`${label} (${Math.round(item.sentiment.score * 100)}%)`}
+              style={{
+                fontSize: '0.5625rem',
+                fontWeight: 600,
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
+                padding: '0.125rem 0.375rem',
+                borderRadius: 3,
+                color: sentimentColor,
+                background: sentimentBg,
+              }}
+            >
+              {sentimentLabel}
+            </span>
+          )
+        })()}
         {item.verified === false && (
           <span
             title={t('item.link_unverified')}
@@ -239,6 +256,62 @@ export function ItemCard({ item, index = 0, searchQuery }: { item: IntelItem; in
                 {kw.text}
               </span>
             ))}
+          </>
+        )}
+        {/* NLP entity badges */}
+        {item.nlp_entities && (
+          <>
+            {item.nlp_entities.people?.length > 0 && (
+              <>
+                <span style={{ color: 'var(--border)', fontSize: '0.75rem' }}>·</span>
+                {item.nlp_entities.people.slice(0, 2).map(name => (
+                  <span key={name} style={{
+                    fontSize: '0.5625rem', fontWeight: 500,
+                    color: '#3b82f6', background: 'rgba(59,130,246,0.1)',
+                    padding: '0.125rem 0.375rem', borderRadius: 3,
+                  }}>{name}</span>
+                ))}
+                {item.nlp_entities.people.length > 2 && (
+                  <span style={{ fontSize: '0.5625rem', color: 'var(--ink-faint)' }}>
+                    +{item.nlp_entities.people.length - 2}
+                  </span>
+                )}
+              </>
+            )}
+            {item.nlp_entities.orgs?.length > 0 && (
+              <>
+                <span style={{ color: 'var(--border)', fontSize: '0.75rem' }}>·</span>
+                {item.nlp_entities.orgs.slice(0, 2).map(name => (
+                  <span key={name} style={{
+                    fontSize: '0.5625rem', fontWeight: 500,
+                    color: '#8b5cf6', background: 'rgba(139,92,246,0.1)',
+                    padding: '0.125rem 0.375rem', borderRadius: 3,
+                  }}>{name}</span>
+                ))}
+                {item.nlp_entities.orgs.length > 2 && (
+                  <span style={{ fontSize: '0.5625rem', color: 'var(--ink-faint)' }}>
+                    +{item.nlp_entities.orgs.length - 2}
+                  </span>
+                )}
+              </>
+            )}
+            {item.nlp_entities.places?.length > 0 && (
+              <>
+                <span style={{ color: 'var(--border)', fontSize: '0.75rem' }}>·</span>
+                {item.nlp_entities.places.slice(0, 2).map(name => (
+                  <span key={name} style={{
+                    fontSize: '0.5625rem', fontWeight: 500,
+                    color: '#10b981', background: 'rgba(16,185,129,0.1)',
+                    padding: '0.125rem 0.375rem', borderRadius: 3,
+                  }}>{name}</span>
+                ))}
+                {item.nlp_entities.places.length > 2 && (
+                  <span style={{ fontSize: '0.5625rem', color: 'var(--ink-faint)' }}>
+                    +{item.nlp_entities.places.length - 2}
+                  </span>
+                )}
+              </>
+            )}
           </>
         )}
         {sourcePostUrl(item) && sourcePostUrl(item) !== item.url && (

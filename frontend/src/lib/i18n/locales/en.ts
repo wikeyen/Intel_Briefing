@@ -161,6 +161,9 @@ const en: TranslationDict = {
   'item.collapse': 'collapse',
   'item.expand_abstract': 'expand abstract',
   'item.more': 'more',
+  'item.sentiment_positive': 'Positive',
+  'item.sentiment_negative': 'Negative',
+  'item.sentiment_neutral': 'Neutral',
 
   // ── Status page — ControlBar ──────────────────────────────────────────────
   'status.fetching': 'Fetching',
@@ -632,6 +635,9 @@ const en: TranslationDict = {
   'sources.workflow_custom_prompt': 'Custom prompt',
   'sources.workflow_no_topic_sensors': 'No sensors with topic data in this group',
   'sources.workflow_no_account_sensors': 'No sensors with account data in this group',
+
+  // ── What's Happening strip ────────────────────────────────────────────────
+  'dashboard.whats_happening': "What's Happening",
 
   // ── Intelligence cards ──────────────────────────────────────────────────────
   'intel.public_focus': 'Public Focus',

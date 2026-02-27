@@ -639,6 +639,17 @@ const en: TranslationDict = {
   // ── What's Happening strip ────────────────────────────────────────────────
   'dashboard.whats_happening': "What's Happening",
 
+  // ── Group cards (Dashboard) ──────────────────────────────────────────────────
+  'dashboard.group_sources': '{n} sources',
+  'dashboard.group_items': '{n} items',
+  'dashboard.analysis_trend': 'Trend',
+  'dashboard.analysis_topic': 'Topic',
+  'dashboard.analysis_social': 'Social',
+  'dashboard.analysis_sentiment': 'Sentiment',
+  'dashboard.no_summary_yet': 'Summary pending...',
+  'dashboard.all_items': 'All Items',
+  'dashboard.sensor_breakdown': 'Sources',
+
   // ── Intelligence cards ──────────────────────────────────────────────────────
   'intel.public_focus': 'Public Focus',
   'intel.topic_pulse': 'Topic Pulse',

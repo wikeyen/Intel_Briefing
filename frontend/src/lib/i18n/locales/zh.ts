@@ -639,6 +639,17 @@ const zh: TranslationDict = {
   // ── What's Happening strip ────────────────────────────────────────────────
   'dashboard.whats_happening': '正在发生',
 
+  // ── Group cards (Dashboard) ──────────────────────────────────────────────────
+  'dashboard.group_sources': '{n} 个数据源',
+  'dashboard.group_items': '{n} 条信息',
+  'dashboard.analysis_trend': '趋势',
+  'dashboard.analysis_topic': '话题',
+  'dashboard.analysis_social': '社交',
+  'dashboard.analysis_sentiment': '情绪',
+  'dashboard.no_summary_yet': '摘要生成中...',
+  'dashboard.all_items': '全部信息',
+  'dashboard.sensor_breakdown': '数据源',
+
   // ── Intelligence cards ──────────────────────────────────────────────────────
   'intel.public_focus': '公众关注',
   'intel.topic_pulse': '话题脉搏',

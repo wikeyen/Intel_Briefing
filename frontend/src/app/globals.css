@@ -844,6 +844,12 @@ input[type="range"]::-moz-range-thumb {
   .sensor-row-right {
     padding-left: 3.25rem;
   }
+  .sensor-row-actions {
+    display: none !important;
+  }
+  .sensor-row-desc {
+    display: none !important;
+  }
 
   /* ── Dashboard mobile overrides ── */
   .dashboard-root {

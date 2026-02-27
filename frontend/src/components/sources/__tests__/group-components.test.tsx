@@ -1,5 +1,5 @@
 // ABOUTME: Unit tests for extracted and new group-based UI components.
-// ABOUTME: Validates Toggle, PillInput, Badge, CnBadge, SensorDragItem, GroupCard, GroupForm, GroupPicker, UngroupedSection.
+// ABOUTME: Covers Toggle, PillInput, Badge, CnBadge, SensorDragItem, GroupCard, GroupForm, GroupPicker, UngroupedSection.
 import { describe, it, expect, vi } from 'vitest'
 import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'

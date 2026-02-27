@@ -118,7 +118,7 @@ export function SensorDragItem({
       </span>
 
       {/* Toggle + label */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flex: 1, minWidth: 0 }}>
+      <div className="sensor-row-left" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flex: 1, minWidth: 0 }}>
         <Toggle on={enabled} onClick={onToggle} />
         <div style={{ minWidth: 0 }}>
           <div style={{
@@ -131,14 +131,14 @@ export function SensorDragItem({
             {sensorLabel}
             <CnBadge language={language} />
           </div>
-          <div style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>
+          <div className="sensor-row-desc" style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>
             {t('sensor.desc.' + sensorKey)}
           </div>
         </div>
       </div>
 
       {/* Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
+      <div className="sensor-row-right" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
         {enabled && (
           <PillInput
             label={t('sources.items')}
@@ -163,6 +163,7 @@ export function SensorDragItem({
 
       {/* Add/Remove action buttons — visible on hover */}
       <div
+        className="sensor-row-actions"
         data-sensor-actions
         style={{
           display: 'flex',

@@ -806,51 +806,23 @@ export function Sensors() {
 
   /* ── Main render ───────────────────────────────────────────────────────── */
   return (
-    <div style={{ maxWidth: 1360, margin: '0 auto', paddingLeft: '2.5rem', paddingRight: '2.5rem' }} className="page-padding">
+    <div className="sources-root page-padding" style={{ maxWidth: 1360, margin: '0 auto', paddingLeft: '2.5rem', paddingRight: '2.5rem' }}>
       {/* Safe: HIDE_SPINNERS_CSS is a hardcoded CSS string constant — no user/external input. */}
       <style dangerouslySetInnerHTML={{ __html: HIDE_SPINNERS_CSS }} />
 
-      <div className="page-header" style={{ paddingBottom: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.01em', marginBottom: '0.125rem' }}>
-              {t('sources.title')}
-            </h2>
-            <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, margin: 0 }}>
-              {t('sources.desc')}
-            </p>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <AutoSaveIndicator status={saveStatus} />
-            {!creatingGroup && !editingGroup && (
-              <button
-                type="button"
-                onClick={() => setCreatingGroup(true)}
-                style={{
-                  padding: '0.5rem 1.25rem',
-                  borderRadius: 6,
-                  fontSize: '0.8125rem',
-                  fontWeight: 600,
-                  background: 'var(--accent)',
-                  color: 'white',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.375rem',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                + {t('sources.new_group')}
-              </button>
-            )}
-          </div>
-        </div>
+      <div className="page-header" style={{ paddingBottom: '0.25rem' }}>
+        <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.01em', marginBottom: '0.125rem' }}>
+          {t('sources.title')}
+        </h2>
+        <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, margin: 0 }}>
+          {t('sources.desc')}
+        </p>
       </div>
 
-      {/* Mobile-only new group button (page-header is hidden on mobile) */}
-      {!creatingGroup && !editingGroup && (
-        <div className="sources-mobile-new-group">
+      {/* Header bar: auto-save indicator + new group button — visible on all viewports */}
+      <div className="sources-action-bar">
+        <AutoSaveIndicator status={saveStatus} />
+        {!creatingGroup && !editingGroup && (
           <button
             type="button"
             onClick={() => setCreatingGroup(true)}
@@ -871,8 +843,8 @@ export function Sensors() {
           >
             + {t('sources.new_group')}
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       <div style={{ paddingBottom: '4rem' }}>
         <div className="sources-columns">

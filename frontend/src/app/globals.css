@@ -846,9 +846,11 @@ input[type="range"]::-moz-range-thumb {
     padding-right: 0.75rem !important;
   }
 
-  /* ── Sources page — more clearance below fixed header (page-header hidden on mobile) ── */
+  /* ── Sources page — mobile padding matches dashboard ── */
   .sources-root {
     padding-top: 2rem !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
   }
 
   /* ── Sources page — sensor row stacks on mobile ── */
@@ -1119,21 +1121,31 @@ input[type="range"]::-moz-range-thumb {
 }
 
 @media (min-width: 1280px) {
+  .sources-root {
+    max-width: 1360px !important;
+  }
   .sources-columns {
     grid-template-columns: 1fr 360px;
     gap: 1rem;
   }
 }
 
-/* Mobile-only new group button — hidden on desktop (shown in page-header instead). */
-.sources-mobile-new-group {
-  display: none;
+/* Sources action bar — sticky, right-aligned button row below the page header. */
+.sources-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--canvas);
+  padding-top: 0.5rem;
 }
 @media (max-width: 767px) {
-  .sources-mobile-new-group {
-    display: flex;
-    justify-content: flex-end;
-    padding-bottom: 0.75rem;
+  .sources-action-bar {
+    top: calc(56px + env(safe-area-inset-top, 0));
   }
 }
 

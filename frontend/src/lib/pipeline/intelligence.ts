@@ -464,9 +464,34 @@ export async function analyzeAccountsIntelligence(
           })
       : []
 
+    let tags = parseTags(parsed.tags)
+
+    // Fallback: synthesize tags from account themes when LLM omits them
+    if (tags.length === 0 && accounts.length > 0) {
+      const freq = new Map<string, { count: number; sentiment: string }>()
+      for (const acct of accounts) {
+        for (const theme of acct.themes) {
+          const key = theme.toLowerCase()
+          const existing = freq.get(key)
+          if (existing) {
+            existing.count++
+          } else {
+            freq.set(key, { count: 1, sentiment: acct.sentiment })
+          }
+        }
+      }
+      const sorted = [...freq.entries()].sort((a, b) => b[1].count - a[1].count)
+      const maxCount = sorted[0]?.[1].count ?? 1
+      tags = sorted.slice(0, 20).map(([text, { count, sentiment }]) => ({
+        text,
+        weight: Math.round((count / maxCount) * 1000) / 1000,
+        sentiment: normalizeSentiment(sentiment),
+      }))
+    }
+
     return {
       accounts,
-      tags: parseTags(parsed.tags),
+      tags,
       summary: typeof parsed.summary === 'string' ? parsed.summary : '',
       generated_at: new Date().toISOString(),
     }

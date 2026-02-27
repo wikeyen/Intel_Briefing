@@ -8,11 +8,14 @@ export const HIDDEN_SENSORS = new Set(['rss_news'])
 export const SENSOR_LOOKBACK_SUPPORT: Record<string, number> = {
   hacker_news: 24,
   github: 168,
-  x: 48,
-  bluesky: 48,
-  mastodon: 48,
+  x_accounts: 48,
+  bluesky_accounts: 48,
+  bluesky_topics: 48,
+  mastodon_accounts: 48,
+  mastodon_topics: 48,
   hn_blogs: 72,
   arxiv: 72,
   wallstreetcn: 24,
-  rss_feeds: 72,
+  rss_blogs: 72,
+  rss_news: 72,
 }

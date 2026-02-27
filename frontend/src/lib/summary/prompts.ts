@@ -107,15 +107,23 @@ export const DEFAULT_SENSOR_PROMPTS: Record<string, string> = {
 重点关注：完整新产品发布（忽略微调和测试版）、AI相关产品占比、定价模式趋势。
 提炼出当前产品创新的1-2个核心方向。` + JSON_SENSOR_RULE,
 
-  x: `你是一名社交媒体情报分析师。请综合分析以下 X/Twitter 内容的整体信号。
+  x_accounts: `你是一名社交媒体情报分析师。请综合分析以下 X/Twitter 内容的整体信号。
 重点关注：区分事实与观点、提炼关键人物的判断和立场、科技/金融/政策方面的重要信号。
 提炼出这批内容反映的1-2个核心信号。` + JSON_SENSOR_RULE,
 
-  bluesky: `你是一名社交媒体情报分析师。请综合分析以下 Bluesky 内容的整体信号。
+  bluesky_accounts: `你是一名社交媒体情报分析师。请综合分析以下 Bluesky 内容的整体信号。
 重点关注：区分事实与观点、提炼关键人物的判断和立场、正在形成的新叙事和趋势信号。
 提炼出这批内容反映的1-2个核心信号。` + JSON_SENSOR_RULE,
 
-  mastodon: `你是一名社交媒体情报分析师。请综合分析以下 Mastodon 内容的整体信号。
+  bluesky_topics: `你是一名社交媒体情报分析师。请综合分析以下 Bluesky 话题搜索内容的整体信号。
+重点关注：区分事实与观点、提炼关键人物的判断和立场、正在形成的新叙事和趋势信号。
+提炼出这批内容反映的1-2个核心信号。` + JSON_SENSOR_RULE,
+
+  mastodon_accounts: `你是一名社交媒体情报分析师。请综合分析以下 Mastodon 内容的整体信号。
+重点关注：区分事实与观点、提炼关键人物的判断和立场、正在形成的新叙事和趋势信号。
+提炼出这批内容反映的1-2个核心信号。` + JSON_SENSOR_RULE,
+
+  mastodon_topics: `你是一名社交媒体情报分析师。请综合分析以下 Mastodon 话题搜索内容的整体信号。
 重点关注：区分事实与观点、提炼关键人物的判断和立场、正在形成的新叙事和趋势信号。
 提炼出这批内容反映的1-2个核心信号。` + JSON_SENSOR_RULE,
 
@@ -131,7 +139,7 @@ export const DEFAULT_SENSOR_PROMPTS: Record<string, string> = {
 重点关注：文章核心论点、逆势vs共识观点、对行业的深度洞察。
 提炼出这批文章反映的1-2个核心行业洞察。` + JSON_SENSOR_RULE,
 
-  rss_feeds: `你是一名信息分析师。请综合分析以下 RSS 订阅内容的整体趋势。
+  rss_blogs: `你是一名信息分析师。请综合分析以下 RSS 订阅内容的整体趋势。
 重点关注：关键事实和值得注意的主张，涵盖科技、金融、政策和行业动向。
 提炼出1-2个核心信息信号。` + JSON_SENSOR_RULE,
 
@@ -162,15 +170,23 @@ Distill 1-2 core focus areas in the open-source community.` + JSON_SENSOR_RULE_E
 Focus on: complete new product launches (ignore tweaks and beta versions), share of AI-related products, pricing model trends.
 Distill 1-2 core directions in product innovation.` + JSON_SENSOR_RULE_EN,
 
-  x: `You are a social media intelligence analyst. Synthesize the following X/Twitter content into an overall signal analysis.
+  x_accounts: `You are a social media intelligence analyst. Synthesize the following X/Twitter content into an overall signal analysis.
 Focus on: distinguishing facts from opinions, key figures' judgments and positions, important signals in tech/finance/policy.
 Distill 1-2 core signals reflected in this batch.` + JSON_SENSOR_RULE_EN,
 
-  bluesky: `You are a social media intelligence analyst. Synthesize the following Bluesky content into an overall signal analysis.
+  bluesky_accounts: `You are a social media intelligence analyst. Synthesize the following Bluesky content into an overall signal analysis.
 Focus on: distinguishing facts from opinions, key figures' judgments and positions, emerging narratives and trend signals.
 Distill 1-2 core signals reflected in this batch.` + JSON_SENSOR_RULE_EN,
 
-  mastodon: `You are a social media intelligence analyst. Synthesize the following Mastodon content into an overall signal analysis.
+  bluesky_topics: `You are a social media intelligence analyst. Synthesize the following Bluesky topic search content into an overall signal analysis.
+Focus on: distinguishing facts from opinions, key figures' judgments and positions, emerging narratives and trend signals.
+Distill 1-2 core signals reflected in this batch.` + JSON_SENSOR_RULE_EN,
+
+  mastodon_accounts: `You are a social media intelligence analyst. Synthesize the following Mastodon content into an overall signal analysis.
+Focus on: distinguishing facts from opinions, key figures' judgments and positions, emerging narratives and trend signals.
+Distill 1-2 core signals reflected in this batch.` + JSON_SENSOR_RULE_EN,
+
+  mastodon_topics: `You are a social media intelligence analyst. Synthesize the following Mastodon topic search content into an overall signal analysis.
 Focus on: distinguishing facts from opinions, key figures' judgments and positions, emerging narratives and trend signals.
 Distill 1-2 core signals reflected in this batch.` + JSON_SENSOR_RULE_EN,
 
@@ -186,7 +202,7 @@ Distill 1-2 core market signals.` + JSON_SENSOR_RULE_EN,
 Focus on: central arguments, contrarian vs consensus views, deep industry insights.
 Distill 1-2 core industry insights reflected in this batch.` + JSON_SENSOR_RULE_EN,
 
-  rss_feeds: `You are an information analyst. Synthesize the following RSS feed content into an overall trend analysis.
+  rss_blogs: `You are an information analyst. Synthesize the following RSS feed content into an overall trend analysis.
 Focus on: key facts and noteworthy claims spanning tech, finance, policy, and industry developments.
 Distill 1-2 core information signals.` + JSON_SENSOR_RULE_EN,
 
@@ -292,7 +308,7 @@ export function getSensorPrompt(
 ): string {
   if (overrides?.[sensorName]) return overrides[sensorName]
   const defaults = language === 'en' ? DEFAULT_SENSOR_PROMPTS_EN : DEFAULT_SENSOR_PROMPTS
-  return defaults[sensorName] ?? defaults['rss_feeds']
+  return defaults[sensorName] ?? defaults['rss_blogs']
 }
 
 /**

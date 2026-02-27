@@ -26,46 +26,11 @@ import { fetchKrTrending } from './kr_trending'
 import { fetchJuejin } from './juejin'
 import { fetchBaidu } from './baidu'
 
-import { SensorConfigError } from './errors'
-
 export type FetchProgressFn = (detail: string, itemCount?: number) => void
 export type SubItemProgressFn = (key: string, state: 'queued' | 'running' | 'ok' | 'failed', itemCount?: number, error?: string) => void
 export type SensorFetchFn = (config: ConfigSettings, limit: number, onProgress?: FetchProgressFn, onSubItemProgress?: SubItemProgressFn) => Promise<IntelItem[]>
 
 export { SENSOR_TOKEN_FIELD } from './constants'
-
-// Platform wrappers for the sensor registry
-function fetchX(config: ConfigSettings, limit: number, onProgress?: FetchProgressFn): Promise<IntelItem[]> {
-  return fetchXPosts(config, limit, onProgress)
-}
-
-async function fetchBluesky(config: ConfigSettings, limit: number, onProgress?: FetchProgressFn, onSubItemProgress?: SubItemProgressFn): Promise<IntelItem[]> {
-  const items: IntelItem[] = []
-  try {
-    items.push(...await fetchSocialAccounts(config, limit, 'bluesky'))
-  } catch (err) {
-    // No accounts configured is fine — topics/trends can still work
-    if (!(err instanceof SensorConfigError)) throw err
-  }
-  if (config.bluesky_topics_enabled) {
-    items.push(...await fetchSocialTopics(config, limit, 'bluesky', onSubItemProgress))
-  }
-  return items
-}
-
-async function fetchMastodon(config: ConfigSettings, limit: number, onProgress?: FetchProgressFn, onSubItemProgress?: SubItemProgressFn): Promise<IntelItem[]> {
-  const items: IntelItem[] = []
-  try {
-    items.push(...await fetchSocialAccounts(config, limit, 'mastodon'))
-  } catch (err) {
-    // No accounts configured is fine — topics/trends can still work
-    if (!(err instanceof SensorConfigError)) throw err
-  }
-  if (config.mastodon_topics_enabled) {
-    items.push(...await fetchSocialTopics(config, limit, 'mastodon', onSubItemProgress))
-  }
-  return items
-}
 
 async function fetchMastodonTrends(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
   if (!config.mastodon_trends_enabled) return []
@@ -79,14 +44,16 @@ export const SENSOR_REGISTRY: Record<string, SensorFetchFn> = {
   product_hunt: fetchProductHunt,
   v2ex: fetchV2ex,
   hn_blogs: fetchHnBlogs,
-  x: fetchX,
-  bluesky: fetchBluesky,
-  mastodon: fetchMastodon,
+  x_accounts: (config, limit, onProgress) => fetchXPosts(config, limit, onProgress),
+  bluesky_accounts: (config, limit) => fetchSocialAccounts(config, limit, 'bluesky'),
+  bluesky_topics: (config, limit, _onProgress, onSubItemProgress) => config.bluesky_topics_enabled ? fetchSocialTopics(config, limit, 'bluesky', onSubItemProgress) : Promise.resolve([]),
+  mastodon_accounts: (config, limit) => fetchSocialAccounts(config, limit, 'mastodon'),
+  mastodon_topics: (config, limit, _onProgress, onSubItemProgress) => config.mastodon_topics_enabled ? fetchSocialTopics(config, limit, 'mastodon', onSubItemProgress) : Promise.resolve([]),
   mastodon_trends: fetchMastodonTrends,
   sources_36kr: fetch36kr,
   wallstreetcn: fetchWallStreetCN,
   chrome_radar: fetchChromeRadar,
-  rss_feeds: fetchRssFeeds,
+  rss_blogs: fetchRssFeeds,
   rss_news: fetchRssNews,
   weibo: fetchWeibo,
   zhihu: fetchZhihu,

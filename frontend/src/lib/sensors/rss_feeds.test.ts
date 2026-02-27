@@ -82,7 +82,7 @@ describe('RSS Feeds Sensor', () => {
     const items = await fetchRssFeeds(config, 10)
 
     expect(items.length).toBe(2)
-    expect(items[0].source).toBe('rss_feeds')
+    expect(items[0].source).toBe('rss_blogs')
     expect(items[0].title).toBe('Post One')
     expect(items[0].url).toBe('https://example.com/post-1')
     expect(items[0].account).toBe('Test Blog')
@@ -113,7 +113,7 @@ describe('RSS Feeds Sensor', () => {
     const items = await fetchRssFeeds(config, 10)
 
     expect(items.length).toBe(1)
-    expect(items[0].source).toBe('rss_feeds')
+    expect(items[0].source).toBe('rss_blogs')
     expect(items[0].title).toBe('Atom Post')
     expect(items[0].url).toBe('https://example.com/atom-1')
     expect(items[0].account).toBe('Atom Blog')
@@ -149,7 +149,7 @@ describe('RSS Feeds Sensor', () => {
     const items = await fetchRssFeeds(config, 10)
 
     expect(items.length).toBe(2)
-    expect(items[0].source).toBe('rss_feeds')
+    expect(items[0].source).toBe('rss_blogs')
   })
 
   it('falls back to RSS description when article scraping fails', async () => {
@@ -208,7 +208,7 @@ describe('RSS Feeds Sensor', () => {
 
     const config = makeConfig({
       rss_feed_urls: ['https://example.com/feed.xml'],
-      sensor_lookback_hours: { rss_feeds: 72 },
+      sensor_lookback_hours: { rss_blogs: 72 },
     })
     const { fetchRssFeeds } = await import('./rss_feeds')
     const items = await fetchRssFeeds(config, 10)
@@ -295,8 +295,8 @@ describe('RSS Feeds Sensor', () => {
     const items = await fetchRssFeeds(config, 10)
 
     expect(items.length).toBe(2)
-    expect(items[0].source).toBe('rss_feeds')
-    expect(items[1].source).toBe('rss_feeds')
+    expect(items[0].source).toBe('rss_blogs')
+    expect(items[1].source).toBe('rss_blogs')
   })
 
   it('fetchRssFeeds skips news-type feeds', async () => {
@@ -338,7 +338,7 @@ describe('RSS Feeds Sensor', () => {
 
     const blogItems = await fetchRssFeeds(config, 20)
     expect(blogItems.length).toBe(2)
-    expect(blogItems.every(i => i.source === 'rss_feeds')).toBe(true)
+    expect(blogItems.every(i => i.source === 'rss_blogs')).toBe(true)
 
     const newsItems = await fetchRssNews(config, 20)
     expect(newsItems.length).toBe(2)

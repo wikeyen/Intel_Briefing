@@ -127,8 +127,8 @@ async function scrapeArticles(items: RawItem[]): Promise<RawItem[]> {
 /** Source name per feed type — routes items to different taxonomy categories. */
 const SOURCE_BY_TYPE: Record<RssFeedType, string> = {
   news: 'rss_news',
-  blog: 'rss_feeds',
-  other: 'rss_feeds',
+  blog: 'rss_blogs',
+  other: 'rss_blogs',
 }
 
 /**
@@ -196,7 +196,7 @@ async function fetchRssItems(
 }
 
 export function fetchRssFeeds(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
-  return fetchRssItems(config, limit, ['blog', 'other'], 'rss_feeds')
+  return fetchRssItems(config, limit, ['blog', 'other'], 'rss_blogs')
 }
 
 export function fetchRssNews(config: ConfigSettings, limit: number): Promise<IntelItem[]> {

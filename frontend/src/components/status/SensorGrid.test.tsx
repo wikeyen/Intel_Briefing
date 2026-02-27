@@ -38,8 +38,8 @@ describe('SensorGrid', () => {
     expect(screen.getByText('GitHub Trending')).toBeInTheDocument()
     expect(screen.getByText('ArXiv AI')).toBeInTheDocument()
     expect(screen.getByText('Product Hunt')).toBeInTheDocument()
-    expect(screen.getByText('Bluesky')).toBeInTheDocument()
-    expect(screen.getByText('RSS Feeds')).toBeInTheDocument()
+    expect(screen.getByText('Bluesky Accounts')).toBeInTheDocument()
+    expect(screen.getByText('RSS Blogs')).toBeInTheDocument()
   })
 
   it('shows item count for sensors with data in status text', () => {

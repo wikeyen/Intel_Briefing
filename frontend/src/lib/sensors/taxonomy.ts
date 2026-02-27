@@ -20,11 +20,13 @@ export const SENSORS: SensorDef[] = [
   { key: 'product_hunt',    label: 'Product Hunt',      desc: 'Top products of the day',                        language: 'row', category: 'products' },
   { key: 'chrome_radar',    label: 'Chrome Radar',      desc: 'Chrome Web Store surveillance',                  language: 'row', category: 'products' },
   { key: 'hn_blogs',        label: 'HN Blogs',          desc: 'Curated blog posts from Hacker News',            language: 'row', category: 'insights' },
-  { key: 'x',         label: 'X',           desc: 'Posts from monitored X accounts',               language: 'row', category: 'social' },
-  { key: 'bluesky',   label: 'Bluesky',     desc: 'Accounts, topics, and trends on Bluesky',       language: 'row', category: 'social' },
-  { key: 'mastodon',  label: 'Mastodon',    desc: 'Accounts and topics on Mastodon',               language: 'row', category: 'social' },
-  { key: 'mastodon_trends', label: 'Mastodon Trends', desc: 'Trending posts on Mastodon', language: 'row', category: 'trend' },
-  { key: 'rss_feeds',       label: 'RSS Feeds',         desc: 'Custom RSS/Atom feed subscriptions',             language: 'row', category: 'feeds' },
+  { key: 'x_accounts',        label: 'X Accounts',        desc: 'Posts from monitored X accounts',               language: 'row', category: 'social' },
+  { key: 'bluesky_accounts',  label: 'Bluesky Accounts',  desc: 'Posts from monitored Bluesky accounts',         language: 'row', category: 'social' },
+  { key: 'bluesky_topics',    label: 'Bluesky Topics',    desc: 'Keyword and hashtag search on Bluesky',         language: 'row', category: 'social' },
+  { key: 'mastodon_accounts', label: 'Mastodon Accounts', desc: 'Posts from monitored Mastodon accounts',        language: 'row', category: 'social' },
+  { key: 'mastodon_topics',   label: 'Mastodon Topics',   desc: 'Hashtag search on Mastodon',                    language: 'row', category: 'social' },
+  { key: 'mastodon_trends',   label: 'Mastodon Trends',   desc: 'Trending posts on Mastodon',                    language: 'row', category: 'trend' },
+  { key: 'rss_blogs',         label: 'RSS Blogs',         desc: 'Blog and other RSS/Atom feed subscriptions',    language: 'row', category: 'feeds' },
   { key: 'rss_news',        label: 'RSS News',          desc: 'News feeds from RSS subscriptions',              language: 'row', category: 'feeds' },
   // CN
   { key: 'sources_36kr',    label: '36Kr',              desc: 'Chinese startup and tech news',                  language: 'cn',  category: 'finance' },
@@ -42,10 +44,37 @@ export const SENSORS: SensorDef[] = [
   { key: 'baidu',           label: 'Baidu Hot',         desc: 'Baidu real-time hot search ranking',             language: 'cn',  category: 'trend' },
 ]
 
-/** Maps each sensor key to its category. */
-export const SENSOR_CATEGORY_MAP: Record<string, CategoryKey> = Object.fromEntries(
-  SENSORS.map(s => [s.key, s.category])
-) as Record<string, CategoryKey>
+/**
+ * Maps sensor keys to the item source value they produce.
+ * Most sensors produce items with source === sensor key, but split social
+ * sensors share a platform-level source (e.g. x_accounts -> 'x').
+ */
+const SENSOR_SOURCE_OVERRIDES: Record<string, string> = {
+  x_accounts: 'x',
+  bluesky_accounts: 'bluesky',
+  bluesky_topics: 'bluesky',
+  mastodon_accounts: 'mastodon',
+  mastodon_topics: 'mastodon',
+}
+
+/** Resolve the item source value produced by a sensor key. */
+export function sensorToSource(sensorKey: string): string {
+  return SENSOR_SOURCE_OVERRIDES[sensorKey] ?? sensorKey
+}
+
+/** Maps each sensor key (and source alias) to its category. */
+export const SENSOR_CATEGORY_MAP: Record<string, CategoryKey> = (() => {
+  const map: Record<string, CategoryKey> = {}
+  for (const s of SENSORS) {
+    map[s.key] = s.category
+    // Also index by item source value for sensors whose key differs from source
+    const src = sensorToSource(s.key)
+    if (src !== s.key && !(src in map)) {
+      map[src] = s.category
+    }
+  }
+  return map
+})()
 
 /** Maps each sensor key to its human-readable label. */
 export const SENSOR_LABELS: Record<string, string> = Object.fromEntries(

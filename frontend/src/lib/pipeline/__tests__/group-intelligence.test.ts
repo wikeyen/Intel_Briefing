@@ -224,14 +224,14 @@ describe('legacy fallback (no sensorSets)', () => {
 
 describe('group-driven vs legacy equivalence', () => {
   it('default groups produce equivalent splits to legacy SENSOR_CATEGORY_MAP', () => {
-    // Sensor sets matching the default group seeds (from seed.ts)
+    // Sensor sets matching the default group seeds (source-level values after sensorToSource)
     const defaultSets: IntelligenceSensorSets = {
       trendSensors: new Set([
         'v2ex', 'zhihu', 'weibo', 'xiaohongshu', 'baidu_tieba', 'douyin',
         'toutiao', 'netease', '36kr_trending', 'juejin', 'baidu', 'mastodon_trends',
       ]),
-      topicSensors: new Set(['x', 'bluesky', 'mastodon']),
-      socialSensors: new Set([]), // No default group uses 'social' processing
+      topicSensors: new Set(['bluesky', 'mastodon']),
+      socialSensors: new Set(['x', 'bluesky', 'mastodon']),
     }
 
     const allItems = collectAllItems(buildReport([...TREND_ITEMS, ...TOPIC_ITEMS]))
@@ -242,8 +242,10 @@ describe('group-driven vs legacy equivalence', () => {
     expect(groupSplit.trendItems).toHaveLength(legacySplit.trendItems.length)
 
     // Topic items differ: group-driven requires sensor membership,
-    // legacy accepts any item with a topic field. With only topic-sensor items
-    // that have topics, they should match.
-    expect(groupSplit.topicItems).toHaveLength(legacySplit.topicItems.length)
+    // legacy accepts any item with a topic field.
+    // X is now in the Voices (social) group, not Topics, so group-driven
+    // filtering excludes the X topic item (source: 'x').
+    expect(groupSplit.topicItems).toHaveLength(2) // bluesky + mastodon
+    expect(legacySplit.topicItems).toHaveLength(3) // all items with topic field
   })
 })

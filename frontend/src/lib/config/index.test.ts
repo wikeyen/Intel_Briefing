@@ -183,35 +183,40 @@ describe('config migration', () => {
 
   // --- Social platform model migrations ---
 
-  it('migrates sensors_enabled.x_posts to sensors_enabled.x', async () => {
+  it('migrates sensors_enabled.x_posts through x to x_accounts', async () => {
     kvStore['intel:config'] = { sensors_enabled: { x_posts: true } }
     const config = await loadConfig()
-    expect(config.sensors_enabled.x).toBe(true)
+    expect(config.sensors_enabled.x_accounts).toBe(true)
     expect(config.sensors_enabled).not.toHaveProperty('x_posts')
+    expect(config.sensors_enabled).not.toHaveProperty('x')
   })
 
-  it('does not overwrite existing x with legacy x_posts', async () => {
-    kvStore['intel:config'] = { sensors_enabled: { x_posts: true, x: false } }
+  it('does not overwrite existing x_accounts with legacy x_posts', async () => {
+    kvStore['intel:config'] = { sensors_enabled: { x_posts: true, x_accounts: false } }
     const config = await loadConfig()
-    expect(config.sensors_enabled.x).toBe(false)
+    expect(config.sensors_enabled.x_accounts).toBe(false)
     expect(config.sensors_enabled).not.toHaveProperty('x_posts')
   })
 
-  it('migrates sensors_enabled.social_accounts to bluesky + mastodon', async () => {
+  it('migrates sensors_enabled.social_accounts to split accounts+topics keys', async () => {
     kvStore['intel:config'] = { sensors_enabled: { social_accounts: true } }
     const config = await loadConfig()
-    expect(config.sensors_enabled.bluesky).toBe(true)
-    expect(config.sensors_enabled.mastodon).toBe(true)
+    expect(config.sensors_enabled.bluesky_accounts).toBe(true)
+    expect(config.sensors_enabled.bluesky_topics).toBe(true)
+    expect(config.sensors_enabled.mastodon_accounts).toBe(true)
+    expect(config.sensors_enabled.mastodon_topics).toBe(true)
     expect(config.sensors_enabled).not.toHaveProperty('social_accounts')
+    expect(config.sensors_enabled).not.toHaveProperty('bluesky')
+    expect(config.sensors_enabled).not.toHaveProperty('mastodon')
   })
 
-  it('does not overwrite existing bluesky/mastodon with legacy social_accounts', async () => {
+  it('does not overwrite existing split keys with legacy social_accounts', async () => {
     kvStore['intel:config'] = {
-      sensors_enabled: { social_accounts: true, bluesky: false, mastodon: false },
+      sensors_enabled: { social_accounts: true, bluesky_accounts: false, mastodon_accounts: false },
     }
     const config = await loadConfig()
-    expect(config.sensors_enabled.bluesky).toBe(false)
-    expect(config.sensors_enabled.mastodon).toBe(false)
+    expect(config.sensors_enabled.bluesky_accounts).toBe(false)
+    expect(config.sensors_enabled.mastodon_accounts).toBe(false)
     expect(config.sensors_enabled).not.toHaveProperty('social_accounts')
   })
 
@@ -278,13 +283,18 @@ describe('config migration', () => {
       },
     }
     const config = await loadConfig()
-    // x_posts → x
-    expect(config.sensors_enabled.x).toBe(true)
+    // x_posts → x → x_accounts
+    expect(config.sensors_enabled.x_accounts).toBe(true)
     expect(config.sensors_enabled).not.toHaveProperty('x_posts')
-    // social_accounts → bluesky + mastodon
-    expect(config.sensors_enabled.bluesky).toBe(true)
-    expect(config.sensors_enabled.mastodon).toBe(true)
+    expect(config.sensors_enabled).not.toHaveProperty('x')
+    // social_accounts → bluesky/mastodon → split keys
+    expect(config.sensors_enabled.bluesky_accounts).toBe(true)
+    expect(config.sensors_enabled.bluesky_topics).toBe(true)
+    expect(config.sensors_enabled.mastodon_accounts).toBe(true)
+    expect(config.sensors_enabled.mastodon_topics).toBe(true)
     expect(config.sensors_enabled).not.toHaveProperty('social_accounts')
+    expect(config.sensors_enabled).not.toHaveProperty('bluesky')
+    expect(config.sensors_enabled).not.toHaveProperty('mastodon')
     // social_topics → per-platform booleans
     expect(config.bluesky_topics_enabled).toBe(false)
     expect(config.mastodon_topics_enabled).toBe(false)
@@ -299,19 +309,26 @@ describe('config migration', () => {
 })
 
 describe('defaultConfig shape', () => {
-  it('has new sensor keys x, bluesky, mastodon in sensors_enabled', () => {
+  it('has split sensor keys in sensors_enabled', () => {
     const cfg = defaultConfig()
-    expect(cfg.sensors_enabled).toHaveProperty('x')
-    expect(cfg.sensors_enabled).toHaveProperty('bluesky')
-    expect(cfg.sensors_enabled).toHaveProperty('mastodon')
+    expect(cfg.sensors_enabled).toHaveProperty('x_accounts')
+    expect(cfg.sensors_enabled).toHaveProperty('bluesky_accounts')
+    expect(cfg.sensors_enabled).toHaveProperty('bluesky_topics')
+    expect(cfg.sensors_enabled).toHaveProperty('mastodon_accounts')
+    expect(cfg.sensors_enabled).toHaveProperty('mastodon_topics')
+    expect(cfg.sensors_enabled).toHaveProperty('rss_blogs')
   })
 
-  it('does not have old sensor keys x_posts, social_accounts, social_topics, social_trends', () => {
+  it('does not have old monolithic sensor keys', () => {
     const cfg = defaultConfig()
     expect(cfg.sensors_enabled).not.toHaveProperty('x_posts')
+    expect(cfg.sensors_enabled).not.toHaveProperty('x')
+    expect(cfg.sensors_enabled).not.toHaveProperty('bluesky')
+    expect(cfg.sensors_enabled).not.toHaveProperty('mastodon')
     expect(cfg.sensors_enabled).not.toHaveProperty('social_accounts')
     expect(cfg.sensors_enabled).not.toHaveProperty('social_topics')
     expect(cfg.sensors_enabled).not.toHaveProperty('social_trends')
+    expect(cfg.sensors_enabled).not.toHaveProperty('rss_feeds')
   })
 
   it('has per-platform sub-toggle fields defaulting to true', () => {

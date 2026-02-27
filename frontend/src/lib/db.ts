@@ -61,6 +61,10 @@ export async function initDb(url?: string): Promise<void> {
     )
   `)
 
+  // Migrate old monolithic sensor keys (x→x_accounts, etc.) before seeding
+  const { migrateOldSensorKeys } = await import('./groups/migration')
+  await migrateOldSensorKeys()
+
   // Seed default groups on first startup
   const { seedDefaultGroups } = await import('./groups/seed')
   await seedDefaultGroups()

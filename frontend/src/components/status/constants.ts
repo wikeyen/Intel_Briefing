@@ -19,9 +19,11 @@ const SENSOR_TO_STATUS_SECTION: Record<string, StatusSection> = {
   wallstreetcn: 'general',
   v2ex: 'trend',
   zhihu: 'trend',
-  x: 'social',
-  bluesky: 'social',
-  mastodon: 'social',
+  x_accounts: 'social',
+  bluesky_accounts: 'social',
+  bluesky_topics: 'social',
+  mastodon_accounts: 'social',
+  mastodon_topics: 'social',
   weibo: 'trend',
   xiaohongshu: 'trend',
   baidu_tieba: 'trend',
@@ -31,7 +33,7 @@ const SENSOR_TO_STATUS_SECTION: Record<string, StatusSection> = {
   '36kr_trending': 'trend',
   juejin: 'trend',
   baidu: 'trend',
-  rss_feeds: 'rss',
+  rss_blogs: 'rss',
   rss_news: 'rss',
 }
 

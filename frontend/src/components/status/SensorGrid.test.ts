@@ -151,10 +151,10 @@ describe('SECTION_SENSORS', () => {
     const sectionKeys = SECTION_SENSORS.map(s => s.key)
     expect(sectionKeys).toEqual(['general', 'social', 'trend', 'topics', 'rss'])
 
-    // Social section should contain x, bluesky, mastodon
+    // Social section should contain x_accounts, bluesky_accounts, mastodon_accounts, etc.
     const social = SECTION_SENSORS.find(s => s.key === 'social')
-    expect(social?.sensors).toContain('x')
-    expect(social?.sensors).toContain('bluesky')
-    expect(social?.sensors).toContain('mastodon')
+    expect(social?.sensors).toContain('x_accounts')
+    expect(social?.sensors).toContain('bluesky_accounts')
+    expect(social?.sensors).toContain('mastodon_accounts')
   })
 })

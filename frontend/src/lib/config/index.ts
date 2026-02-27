@@ -124,7 +124,7 @@ function migrateConfig(data: Record<string, unknown>): Record<string, unknown> {
   if (migrated.summary_provider === 'custom') {
     migrated.summary_provider = 'local'
   }
-  // x_posts → x (sensor rename)
+  // x_posts → x → x_accounts (sensor renames)
   const se = migrated.sensors_enabled as Record<string, boolean> | undefined
   if (se) {
     if ('x_posts' in se && !('x' in se)) se.x = se.x_posts
@@ -147,6 +147,21 @@ function migrateConfig(data: Record<string, unknown>): Record<string, unknown> {
       if (!('mastodon_trends_enabled' in migrated)) migrated.mastodon_trends_enabled = se.social_trends
       delete se.social_trends
     }
+    // Monolithic → split sensor keys
+    if ('x' in se && !('x_accounts' in se)) se.x_accounts = se.x
+    delete se.x
+    if ('bluesky' in se) {
+      if (!('bluesky_accounts' in se)) se.bluesky_accounts = se.bluesky
+      if (!('bluesky_topics' in se)) se.bluesky_topics = se.bluesky
+      delete se.bluesky
+    }
+    if ('mastodon' in se) {
+      if (!('mastodon_accounts' in se)) se.mastodon_accounts = se.mastodon
+      if (!('mastodon_topics' in se)) se.mastodon_topics = se.mastodon
+      delete se.mastodon
+    }
+    if ('rss_feeds' in se && !('rss_blogs' in se)) se.rss_blogs = se.rss_feeds
+    delete se.rss_feeds
   }
   return migrated
 }

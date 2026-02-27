@@ -5,7 +5,7 @@ import type { ConfigSettings, IntelItem, IntelReport, SensorResult, SensorSummar
 import { sensorResultSucceeded, sensorLimit } from '../models'
 import type { LlmConfig } from '../summary/llm'
 import { SENSOR_REGISTRY } from '../sensors'
-import { ALL_CATEGORIES, SENSOR_CATEGORY_MAP } from '../sensors/taxonomy'
+import { ALL_CATEGORIES, SENSOR_CATEGORY_MAP, sensorToSource } from '../sensors/taxonomy'
 import type { CategoryKey } from '../sensors/taxonomy'
 import { listGroupsFlat } from '../groups'
 import { SensorConfigError } from '../sensors/errors'
@@ -167,12 +167,9 @@ export async function retryOneSensor(ctx: PipelineContext, sensorName: string): 
   }
 
   // API/config failure: re-fetch then re-summarize
-  // Re-init sub-items for social sensors during retry
-  if ((sensorName === 'bluesky' || sensorName === 'mastodon') && config.social_topics_keywords.length > 0) {
-    const topicsEnabled = sensorName === 'bluesky' ? config.bluesky_topics_enabled : config.mastodon_topics_enabled
-    if (topicsEnabled) {
-      tracker.initSubItems(sensorName, config.social_topics_keywords.map(kw => ({ key: kw, label: kw })))
-    }
+  // Re-init sub-items for topic sensors during retry
+  if ((sensorName === 'bluesky_topics' || sensorName === 'mastodon_topics') && config.social_topics_keywords.length > 0) {
+    tracker.initSubItems(sensorName, config.social_topics_keywords.map(kw => ({ key: kw, label: kw })))
   }
 
   tracker.setFetchState(sensorName, 'running')
@@ -247,13 +244,13 @@ export async function runIntelligence(
     for (const group of groups) {
       switch (group.processing) {
         case 'trend':
-          group.sensors.forEach(s => trendSensors.add(s))
+          group.sensors.forEach(s => trendSensors.add(sensorToSource(s)))
           break
         case 'topic':
-          group.sensors.forEach(s => topicSensors.add(s))
+          group.sensors.forEach(s => topicSensors.add(sensorToSource(s)))
           break
         case 'social':
-          group.sensors.forEach(s => socialSensors.add(s))
+          group.sensors.forEach(s => socialSensors.add(sensorToSource(s)))
           break
       }
     }

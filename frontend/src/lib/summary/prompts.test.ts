@@ -26,16 +26,17 @@ describe('getSensorPrompt', () => {
     expect(prompt).toBe(DEFAULT_SENSOR_PROMPTS['arxiv'])
   })
 
-  it('falls back to rss_feeds prompt for unknown sensor', () => {
+  it('falls back to rss_blogs prompt for unknown sensor', () => {
     const prompt = getSensorPrompt('unknown_sensor')
-    expect(prompt).toBe(DEFAULT_SENSOR_PROMPTS['rss_feeds'])
+    expect(prompt).toBe(DEFAULT_SENSOR_PROMPTS['rss_blogs'])
   })
 
   it('has a default prompt for every standard sensor', () => {
     const sensors = [
       'hacker_news', 'arxiv', 'github', 'product_hunt', 'v2ex',
-      'hn_blogs', 'sources_36kr', 'wallstreetcn', 'x',
-      'bluesky', 'mastodon', 'chrome_radar', 'rss_feeds',
+      'hn_blogs', 'sources_36kr', 'wallstreetcn', 'x_accounts',
+      'bluesky_accounts', 'bluesky_topics', 'mastodon_accounts',
+      'mastodon_topics', 'chrome_radar', 'rss_blogs',
     ]
     for (const s of sensors) {
       expect(DEFAULT_SENSOR_PROMPTS[s]).toBeTruthy()
@@ -73,16 +74,17 @@ describe('getSensorPrompt', () => {
     expect(prompt).toBe(custom)
   })
 
-  it('falls back to EN rss_feeds for unknown sensor with language en', () => {
+  it('falls back to EN rss_blogs for unknown sensor with language en', () => {
     const prompt = getSensorPrompt('unknown_sensor', undefined, 'en')
-    expect(prompt).toBe(DEFAULT_SENSOR_PROMPTS_EN['rss_feeds'])
+    expect(prompt).toBe(DEFAULT_SENSOR_PROMPTS_EN['rss_blogs'])
   })
 
   it('has an English prompt for every standard sensor', () => {
     const sensors = [
       'hacker_news', 'arxiv', 'github', 'product_hunt', 'v2ex',
-      'hn_blogs', 'sources_36kr', 'wallstreetcn', 'x',
-      'bluesky', 'mastodon', 'chrome_radar', 'rss_feeds',
+      'hn_blogs', 'sources_36kr', 'wallstreetcn', 'x_accounts',
+      'bluesky_accounts', 'bluesky_topics', 'mastodon_accounts',
+      'mastodon_topics', 'chrome_radar', 'rss_blogs',
     ]
     for (const s of sensors) {
       expect(DEFAULT_SENSOR_PROMPTS_EN[s]).toBeTruthy()

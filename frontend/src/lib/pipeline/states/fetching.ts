@@ -37,12 +37,9 @@ export async function handleFetching(ctx: PipelineContext): Promise<PipelineStat
       fetchSemaphore.run(async () => {
         if (signal.aborted) return
 
-        // Initialize sub-items for social sensors with topic keywords
-        if ((name === 'bluesky' || name === 'mastodon') && config.social_topics_keywords.length > 0) {
-          const topicsEnabled = name === 'bluesky' ? config.bluesky_topics_enabled : config.mastodon_topics_enabled
-          if (topicsEnabled) {
-            tracker.initSubItems(name, config.social_topics_keywords.map(kw => ({ key: kw, label: kw })))
-          }
+        // Initialize sub-items for topic sensors with topic keywords
+        if ((name === 'bluesky_topics' || name === 'mastodon_topics') && config.social_topics_keywords.length > 0) {
+          tracker.initSubItems(name, config.social_topics_keywords.map(kw => ({ key: kw, label: kw })))
         }
 
         tracker.setFetchState(name, 'running')

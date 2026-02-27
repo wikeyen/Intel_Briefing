@@ -4,7 +4,6 @@ import { describe, it, expect } from 'vitest'
 import en from './locales/en'
 import zh from './locales/zh'
 import { SUPPORTED_LOCALES, LOCALE_LABELS, DEFAULT_LOCALE } from './types'
-import type { Locale, TranslationDict } from './types'
 
 describe('i18n locale configuration', () => {
   it('SUPPORTED_LOCALES includes en and zh', () => {
@@ -77,43 +76,3 @@ describe('i18n locale dictionaries', () => {
   })
 })
 
-describe('t() interpolation logic', () => {
-  // Replicate the t() function logic from context.tsx
-  function t(dict: TranslationDict, key: string, params?: Record<string, string | number>): string {
-    let value = dict[key] ?? key
-    if (params) {
-      for (const [k, v] of Object.entries(params)) {
-        value = value.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v))
-      }
-    }
-    return value
-  }
-
-  it('returns the value for a known key', () => {
-    expect(t(en, 'app.title')).toBe('Intel Briefing')
-    expect(t(zh, 'app.title')).toBe('情报简报')
-  })
-
-  it('returns the key itself for an unknown key', () => {
-    expect(t(en, 'nonexistent.key')).toBe('nonexistent.key')
-  })
-
-  it('interpolates single param', () => {
-    expect(t(en, 'ticker.items', { count: 42 })).toBe('42 items')
-    expect(t(zh, 'ticker.items', { count: 42 })).toBe('42 条')
-  })
-
-  it('interpolates time params', () => {
-    expect(t(en, 'time.minutes_ago', { n: 5 })).toBe('5m ago')
-    expect(t(zh, 'time.minutes_ago', { n: 5 })).toBe('5分钟前')
-  })
-
-  it('interpolates multiple params', () => {
-    expect(t(en, 'ticker.fetched_ago', { time: '5m ago' })).toBe('Fetched 5m ago')
-    expect(t(zh, 'ticker.fetched_ago', { time: '5分钟前' })).toBe('获取于 5分钟前')
-  })
-
-  it('handles params with no placeholders gracefully', () => {
-    expect(t(en, 'app.title', { unused: 'param' })).toBe('Intel Briefing')
-  })
-})

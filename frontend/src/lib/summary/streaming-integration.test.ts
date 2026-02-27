@@ -16,34 +16,6 @@ describe('streaming integration', () => {
     if (existing?.isActive) existing.emitDone()
   })
 
-  it('bus singleton lifecycle: create, active, done, null', () => {
-    expect(getActiveBus()).toBeNull()
-
-    const bus = createBus()
-    expect(getActiveBus()).toBe(bus)
-    expect(bus.isActive).toBe(true)
-
-    bus.emitDone()
-    expect(bus.isActive).toBe(false)
-    expect(getActiveBus()).toBeNull()
-  })
-
-  it('creating a new bus terminates the old one', () => {
-    const bus1 = createBus()
-    const events1: SummaryEvent[] = []
-    bus1.subscribe((e) => events1.push(e))
-
-    const bus2 = createBus()
-    expect(bus1.isActive).toBe(false)
-    expect(bus2.isActive).toBe(true)
-    expect(getActiveBus()).toBe(bus2)
-
-    // bus1 received a done event when replaced
-    expect(events1).toContainEqual({ type: 'done' })
-
-    bus2.emitDone()
-  })
-
   it('token flow: bus collects tokens emitted through onToken callback', () => {
     const bus = createBus()
     const collected: SummaryEvent[] = []

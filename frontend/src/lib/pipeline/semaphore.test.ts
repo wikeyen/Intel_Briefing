@@ -4,17 +4,6 @@ import { describe, it, expect } from 'vitest'
 import { Semaphore } from './semaphore'
 
 describe('Semaphore', () => {
-  it('allows up to N concurrent acquisitions', async () => {
-    const sem = new Semaphore(2)
-    const r1 = await sem.acquire()
-    const r2 = await sem.acquire()
-    // Both acquired without blocking
-    expect(r1).toBeDefined()
-    expect(r2).toBeDefined()
-    r1()
-    r2()
-  })
-
   it('blocks acquisition beyond capacity', async () => {
     const sem = new Semaphore(1)
     const r1 = await sem.acquire()

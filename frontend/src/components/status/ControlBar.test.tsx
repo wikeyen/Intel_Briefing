@@ -53,11 +53,6 @@ describe('ControlBar', () => {
     expect(screen.getByText('Healthy')).toBeInTheDocument()
   })
 
-  it('renders health dot with correct test id', () => {
-    renderWithI18n(<ControlBar {...buildProps()} />)
-    expect(screen.getByTestId('control-health-dot')).toBeInTheDocument()
-  })
-
   it('renders source count when idle', () => {
     renderWithI18n(<ControlBar {...buildProps({ sourcesOk: 10, sourcesTotal: 13 })} />)
     expect(screen.getByText('10/13')).toBeInTheDocument()

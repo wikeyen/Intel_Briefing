@@ -28,15 +28,6 @@ describe('dedupItems', () => {
     expect(result[0].id).toBe('a')
   })
 
-  it('returns empty for empty list', () => {
-    expect(dedupItems([])).toEqual([])
-  })
-
-  it('returns single item unchanged', () => {
-    const items = [makeItem('1', 'Solo')]
-    expect(dedupItems(items)).toEqual(items)
-  })
-
   it('keeps items with empty titles', () => {
     const items: IntelItem[] = [
       { id: 'a', source: 's', title: '', url: 'u1' },

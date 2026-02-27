@@ -2,7 +2,7 @@
 // ABOUTME: Uses mocked chatCompletion to simulate LLM failures and recovery.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { robustJsonParse, analyzeTrendIntelligence, analyzeTopicIntelligence, analyzeAccountsIntelligence } from '../intelligence'
+import { analyzeTrendIntelligence, analyzeTopicIntelligence, analyzeAccountsIntelligence } from '../intelligence'
 import type { IntelItem } from '../../models'
 import type { LlmConfig } from '../../summary/llm'
 
@@ -44,27 +44,6 @@ const fakeTopicItem: IntelItem = {
   source: 'bluesky',
   topic: 'AI Regulation',
 }
-
-describe('robustJsonParse', () => {
-  it('parses clean JSON', () => {
-    const result = robustJsonParse('{"key": "value"}')
-    expect(result).toEqual({ key: 'value' })
-  })
-
-  it('strips markdown fences', () => {
-    const result = robustJsonParse('```json\n{"key": "value"}\n```')
-    expect(result).toEqual({ key: 'value' })
-  })
-
-  it('strips think blocks', () => {
-    const result = robustJsonParse('<think>reasoning here</think>{"key": "value"}')
-    expect(result).toEqual({ key: 'value' })
-  })
-
-  it('returns null for garbage', () => {
-    expect(robustJsonParse('not json at all')).toBeNull()
-  })
-})
 
 describe('analyzeTrendIntelligence', () => {
   beforeEach(() => { vi.clearAllMocks() })

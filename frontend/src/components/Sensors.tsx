@@ -22,7 +22,7 @@ import { GroupForm } from '@/components/sources/GroupForm'
 import { GroupPicker } from '@/components/sources/GroupPicker'
 import { UngroupedSection } from '@/components/sources/UngroupedSection'
 import { SensorDragItem } from '@/components/sources/SensorDragItem'
-import { ADD_GROUP_BTN } from '@/components/sources/group-styles'
+import { ADD_GROUP_BTN, GROUP_CARD } from '@/components/sources/group-styles'
 import type { SourceGroupTree, CreateGroupPayload, UpdateGroupPayload } from '@/lib/groups/types'
 
 /** Sensor key to language lookup for CN badges. */
@@ -785,164 +785,178 @@ export function Sensors() {
       </div>
 
       <div style={{ paddingBottom: '4rem' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div className="sources-columns">
 
-          {/* ── Defaults ─────────────────────────────────────────────── */}
-          <div style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            boxShadow: 'var(--shadow-card)',
-            padding: '1.25rem 1.5rem',
-          }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
-                <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
-                  {t('sources.default_limit')}
-                </label>
-                <span style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--ink)', fontFamily: 'ui-monospace, monospace', letterSpacing: '-0.02em' }}>
-                  {defaultLimit}
-                </span>
-              </div>
-              <input
-                type="range"
-                min={3}
-                max={200}
-                value={defaultLimit}
-                onChange={(e) => { setDefaultLimit(Number(e.target.value)); trigger() }}
-              />
-              <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, marginTop: '0.5rem' }}>
-                {t('sources.default_limit_desc')}
-              </p>
-            </div>
+          {/* ── Main column: groups ───────────────────────────────────── */}
+          <div className="sources-main">
 
-            <div style={{ marginTop: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
-                <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
-                  {t('sources.default_lookback')}
-                </label>
-                <span style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--ink)', fontFamily: 'ui-monospace, monospace', letterSpacing: '-0.02em' }}>
-                  {defaultLookback}h
-                </span>
-              </div>
-              <input
-                type="range"
-                min={1}
-                max={336}
-                value={defaultLookback}
-                onChange={(e) => { setDefaultLookback(Number(e.target.value)); trigger() }}
-              />
-              <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, marginTop: '0.5rem' }}>
-                {t('sources.default_lookback_desc')}
-              </p>
-            </div>
+            {/* ── New Group button ──────────────────────────────────── */}
+            {!creatingGroup && !editingGroup && (
+              <button
+                type="button"
+                onClick={() => setCreatingGroup(true)}
+                style={ADD_GROUP_BTN}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--accent-subtle)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)' }}
+              >
+                + {t('sources.new_group')}
+              </button>
+            )}
 
-            <div style={{ marginTop: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
-                <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
-                  {t('sources.default_topic_limit')}
-                </label>
-                <span style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--ink)', fontFamily: 'ui-monospace, monospace', letterSpacing: '-0.02em' }}>
-                  {defaultTopicLimit}
-                </span>
-              </div>
-              <input
-                type="range"
-                min={1}
-                max={100}
-                value={defaultTopicLimit}
-                onChange={(e) => { setDefaultTopicLimit(Number(e.target.value)); trigger() }}
+            {/* ── Create Group form ────────────────────────────────── */}
+            {creatingGroup && (
+              <GroupForm
+                onSubmit={handleCreateGroup}
+                onCancel={() => setCreatingGroup(false)}
               />
-              <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, marginTop: '0.5rem' }}>
-                {t('sources.default_topic_limit_desc')}
-              </p>
+            )}
+
+            {/* ── Edit Group form ──────────────────────────────────── */}
+            {editingGroup && (
+              <GroupForm
+                initial={{
+                  name: editingGroup.name,
+                  color: editingGroup.color,
+                  processing: editingGroup.processing,
+                }}
+                parentId={editingGroup.parent_id}
+                onSubmit={handleUpdateGroup}
+                onCancel={() => setEditingGroup(null)}
+              />
+            )}
+
+            {/* ── Group cards ──────────────────────────────────────── */}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+              onDragOver={(event) => {
+                const overId = event.over?.id ? String(event.over.id) : null
+                if (overId?.includes(':')) {
+                  setOverGroupId(overId.split(':')[0])
+                } else {
+                  setOverGroupId(overId)
+                }
+              }}
+            >
+              {groups.map(group => renderGroup(group))}
+
+              {/* ── Ungrouped section ──────────────────────────────── */}
+              <SortableContext items={ungroupedSortableIds} strategy={verticalListSortingStrategy}>
+                <UngroupedSection
+                  sensorKeys={ungroupedSensorKeys}
+                  renderSensorRow={(key, isLast) => renderDragItem(key, 'ungrouped', isLast)}
+                />
+              </SortableContext>
+            </DndContext>
+          </div>
+
+          {/* ── Sidebar: config defaults ──────────────────────────────── */}
+          <div className="sources-sidebar">
+            <div style={{ ...GROUP_CARD, padding: '1rem 1.25rem' }}>
+              <div style={{
+                fontSize: '0.6875rem',
+                fontWeight: 600,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase' as const,
+                color: 'var(--ink-muted)',
+                marginBottom: '0.875rem',
+              }}>
+                {t('sources.defaults_heading', 'Defaults')}
+              </div>
+
+              {/* Default items slider */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
+                    {t('sources.default_limit')}
+                  </label>
+                  <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--ink)', fontFamily: 'ui-monospace, monospace', letterSpacing: '-0.02em' }}>
+                    {defaultLimit}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={3}
+                  max={200}
+                  value={defaultLimit}
+                  onChange={(e) => { setDefaultLimit(Number(e.target.value)); trigger() }}
+                />
+                <p style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)', lineHeight: 1.4, marginTop: '0.375rem' }}>
+                  {t('sources.default_limit_desc')}
+                </p>
+              </div>
+
+              {/* Default lookback slider */}
+              <div style={{ marginTop: '0.875rem' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
+                    {t('sources.default_lookback')}
+                  </label>
+                  <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--ink)', fontFamily: 'ui-monospace, monospace', letterSpacing: '-0.02em' }}>
+                    {defaultLookback}h
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={1}
+                  max={336}
+                  value={defaultLookback}
+                  onChange={(e) => { setDefaultLookback(Number(e.target.value)); trigger() }}
+                />
+                <p style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)', lineHeight: 1.4, marginTop: '0.375rem' }}>
+                  {t('sources.default_lookback_desc')}
+                </p>
+              </div>
+
+              {/* Default topic items slider */}
+              <div style={{ marginTop: '0.875rem' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
+                  <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--ink)' }}>
+                    {t('sources.default_topic_limit')}
+                  </label>
+                  <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--ink)', fontFamily: 'ui-monospace, monospace', letterSpacing: '-0.02em' }}>
+                    {defaultTopicLimit}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={1}
+                  max={100}
+                  value={defaultTopicLimit}
+                  onChange={(e) => { setDefaultTopicLimit(Number(e.target.value)); trigger() }}
+                />
+                <p style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)', lineHeight: 1.4, marginTop: '0.375rem' }}>
+                  {t('sources.default_topic_limit_desc')}
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* ── New Group button ──────────────────────────────────────── */}
-          {!creatingGroup && !editingGroup && (
-            <button
-              type="button"
-              onClick={() => setCreatingGroup(true)}
-              style={ADD_GROUP_BTN}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--accent-subtle)' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)' }}
-            >
-              + {t('sources.new_group')}
-            </button>
-          )}
-
-          {/* ── Create Group form ─────────────────────────────────────── */}
-          {creatingGroup && (
-            <GroupForm
-              onSubmit={handleCreateGroup}
-              onCancel={() => setCreatingGroup(false)}
-            />
-          )}
-
-          {/* ── Edit Group form ───────────────────────────────────────── */}
-          {editingGroup && (
-            <GroupForm
-              initial={{
-                name: editingGroup.name,
-                color: editingGroup.color,
-                processing: editingGroup.processing,
-              }}
-              parentId={editingGroup.parent_id}
-              onSubmit={handleUpdateGroup}
-              onCancel={() => setEditingGroup(null)}
-            />
-          )}
-
-          {/* ── Group cards ───────────────────────────────────────────── */}
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-            onDragOver={(event) => {
-              const overId = event.over?.id ? String(event.over.id) : null
-              if (overId?.includes(':')) {
-                setOverGroupId(overId.split(':')[0])
-              } else {
-                setOverGroupId(overId)
-              }
-            }}
-          >
-            {groups.map(group => renderGroup(group))}
-
-            {/* ── Ungrouped section ─────────────────────────────────── */}
-            <SortableContext items={ungroupedSortableIds} strategy={verticalListSortingStrategy}>
-              <UngroupedSection
-                sensorKeys={ungroupedSensorKeys}
-                renderSensorRow={(key, isLast) => renderDragItem(key, 'ungrouped', isLast)}
-              />
-            </SortableContext>
-          </DndContext>
-
-          {/* ── Group picker popover ──────────────────────────────────── */}
-          {pickerSensorKey && (
-            <div style={{ position: 'fixed', inset: 0, zIndex: 50 }} onClick={() => setPickerSensorKey(null)}>
-              <div
-                style={{
-                  position: 'fixed',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                }}
-                onClick={e => e.stopPropagation()}
-              >
-                <GroupPicker
-                  groups={groups}
-                  memberOf={sensorGroupMembership(pickerSensorKey)}
-                  onToggle={handlePickerToggle}
-                  onClose={() => setPickerSensorKey(null)}
-                />
-              </div>
-            </div>
-          )}
-
         </div>
       </div>
+
+      {/* ── Group picker popover ──────────────────────────────────── */}
+      {pickerSensorKey && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50 }} onClick={() => setPickerSensorKey(null)}>
+          <div
+            style={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <GroupPicker
+              groups={groups}
+              memberOf={sensorGroupMembership(pickerSensorKey)}
+              onToggle={handlePickerToggle}
+              onClose={() => setPickerSensorKey(null)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

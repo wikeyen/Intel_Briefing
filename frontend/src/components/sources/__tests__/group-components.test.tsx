@@ -5,6 +5,7 @@ import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { DndContext } from '@dnd-kit/core'
 import { SortableContext } from '@dnd-kit/sortable'
+import { GROUP_CARD } from '../group-styles'
 import { Toggle } from '../Toggle'
 import { PillInput } from '../PillInput'
 import { Badge, CnBadge } from '../SensorBadge'
@@ -464,6 +465,17 @@ describe('GroupCard glassmorphism', () => {
     expect(screen.getByText('1/1')).toBeDefined()
     const pill = screen.getByText('1/1')
     expect(pill.style.backdropFilter).toBe('blur(4px)')
+  })
+})
+
+describe('GROUP_CARD style', () => {
+  it('provides glassmorphism properties for sidebar config card', () => {
+    // The sidebar defaults card spreads GROUP_CARD — verify the style has
+    // the expected glassmorphism tokens so the sidebar matches group cards.
+    expect(GROUP_CARD.backdropFilter).toBe('blur(12px)')
+    expect(GROUP_CARD.borderRadius).toBe(16)
+    expect(GROUP_CARD.background).toContain('--glass-bg')
+    expect(GROUP_CARD.border).toContain('--glass-border')
   })
 })
 

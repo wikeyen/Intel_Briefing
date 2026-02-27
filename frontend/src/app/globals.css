@@ -1056,6 +1056,14 @@ input[type="range"]::-moz-range-thumb {
   .dashboard-sidebar {
     align-self: start;
   }
+  .sources-columns {
+    grid-template-columns: 1fr 300px;
+  }
+  .sources-sidebar {
+    align-self: start;
+    position: sticky;
+    top: 1rem;
+  }
 }
 
 @media (min-width: 1280px) {
@@ -1064,6 +1072,10 @@ input[type="range"]::-moz-range-thumb {
   }
   .dashboard-columns {
     grid-template-columns: 1fr 360px;
+    gap: 1rem;
+  }
+  .sources-columns {
+    grid-template-columns: 1fr 340px;
     gap: 1rem;
   }
 }
@@ -1082,6 +1094,29 @@ input[type="range"]::-moz-range-thumb {
   border-color: var(--border-strong);
 }
 
+
+/* ─── Sources Layout ──────────────────────────────────────────────────── */
+
+/* Two-column: groups on left, config sidebar on right on desktop, stacked on mobile. */
+.sources-columns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.sources-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.sources-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
 
 /* ─── Animations ────────────────────────────────────────────────────────── */
 @keyframes fadeInUp {

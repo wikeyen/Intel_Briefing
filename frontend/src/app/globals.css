@@ -1130,24 +1130,6 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
-/* Sources action bar — sticky, right-aligned button row below the page header. */
-.sources-action-bar {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  padding-bottom: 0.75rem;
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: var(--canvas);
-  padding-top: 0.5rem;
-}
-@media (max-width: 767px) {
-  .sources-action-bar {
-    top: calc(56px + env(safe-area-inset-top, 0));
-  }
-}
 
 /* ─── Animations ────────────────────────────────────────────────────────── */
 @keyframes fadeInUp {

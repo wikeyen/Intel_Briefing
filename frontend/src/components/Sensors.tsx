@@ -810,41 +810,44 @@ export function Sensors() {
       {/* Safe: HIDE_SPINNERS_CSS is a hardcoded CSS string constant — no user/external input. */}
       <style dangerouslySetInnerHTML={{ __html: HIDE_SPINNERS_CSS }} />
 
-      <div className="page-header" style={{ paddingBottom: '0.25rem' }}>
-        <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.01em', marginBottom: '0.125rem' }}>
-          {t('sources.title')}
-        </h2>
-        <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, margin: 0 }}>
-          {t('sources.desc')}
-        </p>
+      {/* Header row: uses sources-columns grid so button aligns with main column right edge */}
+      <div className="sources-columns" style={{ marginBottom: '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
+          <div className="page-header" style={{ paddingBottom: 0 }}>
+            <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.01em', marginBottom: '0.125rem' }}>
+              {t('sources.title')}
+            </h2>
+            <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', lineHeight: 1.5, margin: 0 }}>
+              {t('sources.desc')}
+            </p>
+          </div>
+          {!creatingGroup && !editingGroup && (
+            <button
+              type="button"
+              onClick={() => setCreatingGroup(true)}
+              style={{
+                padding: '0.5rem 1.25rem',
+                borderRadius: 6,
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                background: 'var(--accent)',
+                color: 'white',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.375rem',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+              }}
+            >
+              + {t('sources.new_group')}
+            </button>
+          )}
+        </div>
+        <div>{/* sidebar column spacer */}</div>
       </div>
-
-      {/* Header bar: auto-save indicator + new group button — visible on all viewports */}
-      <div className="sources-action-bar">
-        <AutoSaveIndicator status={saveStatus} />
-        {!creatingGroup && !editingGroup && (
-          <button
-            type="button"
-            onClick={() => setCreatingGroup(true)}
-            style={{
-              padding: '0.5rem 1.25rem',
-              borderRadius: 6,
-              fontSize: '0.8125rem',
-              fontWeight: 600,
-              background: 'var(--accent)',
-              color: 'white',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.375rem',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            + {t('sources.new_group')}
-          </button>
-        )}
-      </div>
+      <AutoSaveIndicator status={saveStatus} />
 
       <div style={{ paddingBottom: '4rem' }}>
         <div className="sources-columns">

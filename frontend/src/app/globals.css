@@ -1125,6 +1125,18 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
+/* Mobile-only new group button — hidden on desktop (shown in page-header instead). */
+.sources-mobile-new-group {
+  display: none;
+}
+@media (max-width: 767px) {
+  .sources-mobile-new-group {
+    display: flex;
+    justify-content: flex-end;
+    padding-bottom: 0.75rem;
+  }
+}
+
 /* ─── Animations ────────────────────────────────────────────────────────── */
 @keyframes fadeInUp {
   from {

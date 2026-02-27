@@ -848,6 +848,32 @@ export function Sensors() {
         </div>
       </div>
 
+      {/* Mobile-only new group button (page-header is hidden on mobile) */}
+      {!creatingGroup && !editingGroup && (
+        <div className="sources-mobile-new-group">
+          <button
+            type="button"
+            onClick={() => setCreatingGroup(true)}
+            style={{
+              padding: '0.5rem 1.25rem',
+              borderRadius: 6,
+              fontSize: '0.8125rem',
+              fontWeight: 600,
+              background: 'var(--accent)',
+              color: 'white',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.375rem',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            + {t('sources.new_group')}
+          </button>
+        </div>
+      )}
+
       <div style={{ paddingBottom: '4rem' }}>
         <div className="sources-columns">
 

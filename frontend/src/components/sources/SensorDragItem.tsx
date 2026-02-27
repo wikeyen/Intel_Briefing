@@ -132,6 +132,7 @@ export function SensorDragItem({
             color: enabled ? 'var(--ink)' : 'var(--ink-faint)',
             display: 'flex',
             alignItems: 'center',
+            whiteSpace: 'nowrap',
           }}>
             {sensorLabel}
             <CnBadge language={language} />

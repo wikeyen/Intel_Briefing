@@ -661,6 +661,12 @@ describe('Sources layout matches Dashboard', () => {
     expect(sourcesBlock).toContain('grid-template-columns: 1fr 320px')
     expect(sourcesBlock).toContain('grid-template-columns: 1fr 360px')
   })
+
+  it('mobile new-group button class exists in CSS', async () => {
+    const fs = await import('fs')
+    const css = fs.readFileSync('src/app/globals.css', 'utf8')
+    expect(css).toContain('.sources-mobile-new-group')
+  })
 })
 
 describe('UngroupedSection', () => {

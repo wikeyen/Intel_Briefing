@@ -45,6 +45,10 @@ export interface IntelItem {
     firstSeenAt: string | null
     hoursOnTrend: number | null
   } | null
+
+  // NLP sidecar enrichments (optional — populated when sidecar is available)
+  nlp_keywords?: Array<{ text: string; weight: number }> | null
+  nlp_entities?: { people: string[]; orgs: string[]; places: string[] } | null
 }
 
 export function emptyItemsMap(): Record<CategoryKey, IntelItem[]> {

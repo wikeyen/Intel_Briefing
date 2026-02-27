@@ -84,6 +84,8 @@ export interface IntelItem {
     firstSeenAt: string | null
     hoursOnTrend: number | null
   } | null
+  nlp_keywords?: Array<{ text: string; weight: number }> | null
+  nlp_entities?: { people: string[]; orgs: string[]; places: string[] } | null
 }
 
 

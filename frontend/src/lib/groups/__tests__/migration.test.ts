@@ -3,6 +3,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest'
 import { initDb, getDb } from '../../db'
+import { migrateGroupStructure } from '../migration'
 
 describe('migrateOldSensorKeys', () => {
   beforeEach(async () => {
@@ -48,5 +49,56 @@ describe('migrateOldSensorKeys', () => {
     const db = await getDb()
     const result = await db.execute("SELECT COUNT(*) as cnt FROM source_groups")
     expect(Number(result.rows[0].cnt)).toBe(6)
+  })
+})
+
+describe('migrateGroupStructure idempotency', () => {
+  beforeEach(async () => {
+    await initDb(':memory:')
+  })
+
+  it('should not re-create deleted groups on subsequent runs', async () => {
+    const db = await getDb()
+
+    // Delete the Voices group (simulates user action)
+    await db.execute("DELETE FROM source_groups WHERE name = 'Voices'")
+
+    // Run migration again — should be a no-op because marker is set
+    await migrateGroupStructure()
+
+    const result = await db.execute("SELECT name FROM source_groups WHERE name = 'Voices'")
+    expect(result.rows.length).toBe(0)
+  })
+
+  it('should not move sensors back after migration marker is set', async () => {
+    const db = await getDb()
+
+    // Move x_accounts out of Voices into a different group (simulates user action)
+    const voicesResult = await db.execute("SELECT id FROM source_groups WHERE name = 'Voices'")
+    const voicesId = voicesResult.rows[0].id as string
+    await db.execute({
+      sql: 'DELETE FROM source_group_members WHERE group_id = ? AND sensor_key = ?',
+      args: [voicesId, 'x_accounts'],
+    })
+
+    // Run migration again — should be a no-op
+    await migrateGroupStructure()
+
+    // x_accounts should NOT be back in Voices
+    const members = await db.execute({
+      sql: 'SELECT sensor_key FROM source_group_members WHERE group_id = ?',
+      args: [voicesId],
+    })
+    const keys = members.rows.map(r => r.sensor_key as string)
+    expect(keys).not.toContain('x_accounts')
+  })
+
+  it('should set migration marker in kv table after first run', async () => {
+    const db = await getDb()
+    const result = await db.execute(
+      "SELECT value FROM kv WHERE key = 'migration:group_structure_v2'"
+    )
+    expect(result.rows.length).toBe(1)
+    expect(result.rows[0].value).toBe('"done"')
   })
 })

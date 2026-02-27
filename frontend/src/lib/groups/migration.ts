@@ -67,6 +67,13 @@ export async function migrateOldSensorKeys(): Promise<void> {
 export async function migrateGroupStructure(): Promise<void> {
   const db = await getDb()
 
+  // Only run once — skip if already migrated
+  const marker = await db.execute({
+    sql: "SELECT value FROM kv WHERE key = 'migration:group_structure_v2'",
+    args: [],
+  })
+  if (marker.rows.length > 0) return
+
   // Only run if groups exist (skip on fresh DB — seed handles that)
   const countResult = await db.execute('SELECT COUNT(*) as cnt FROM source_groups')
   if (Number(countResult.rows[0].cnt) === 0) return
@@ -122,4 +129,10 @@ export async function migrateGroupStructure(): Promise<void> {
       }
     }
   }
+
+  // Mark migration as complete so it never runs again
+  await db.execute({
+    sql: "INSERT OR REPLACE INTO kv (key, value, expires_at) VALUES ('migration:group_structure_v2', '\"done\"', NULL)",
+    args: [],
+  })
 }

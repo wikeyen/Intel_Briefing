@@ -38,6 +38,28 @@ export async function initDb(url?: string): Promise<void> {
       PRIMARY KEY (sensor_name, run_id)
     )
   `)
+  await globalForDb.__dbClient.execute(`
+    CREATE TABLE IF NOT EXISTS source_groups (
+      id          TEXT PRIMARY KEY,
+      parent_id   TEXT REFERENCES source_groups(id) ON DELETE CASCADE,
+      name        TEXT NOT NULL,
+      color       TEXT NOT NULL,
+      icon        TEXT,
+      processing  TEXT NOT NULL DEFAULT 'general',
+      sort_order  INTEGER NOT NULL DEFAULT 0,
+      created_at  TEXT NOT NULL,
+      updated_at  TEXT NOT NULL
+    )
+  `)
+  await globalForDb.__dbClient.execute(`
+    CREATE TABLE IF NOT EXISTS source_group_members (
+      group_id    TEXT NOT NULL REFERENCES source_groups(id) ON DELETE CASCADE,
+      sensor_key  TEXT NOT NULL,
+      sort_order  INTEGER NOT NULL DEFAULT 0,
+      added_at    TEXT NOT NULL,
+      PRIMARY KEY (group_id, sensor_key)
+    )
+  `)
 }
 
 /**

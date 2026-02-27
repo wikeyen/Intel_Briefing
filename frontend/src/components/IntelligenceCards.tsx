@@ -476,7 +476,7 @@ export function TopicPulseCard({ data, loading, onClick }: TopicPulseCardProps) 
                     <span style={{
                       fontSize: '0.75rem',
                       fontWeight: 600,
-                      color: 'var(--ink)',
+                      color: SENTIMENT_DOT_COLORS[entry.sentiment ?? 'neutral'] ?? SENTIMENT_DOT_COLORS.neutral,
                     }}>
                       {entry.topic}
                     </span>
@@ -589,7 +589,7 @@ export function PublicFocusDetail({ data }: { data: TrendIntelligence }) {
               <span style={{
                 fontSize: '0.75rem',
                 fontWeight: 600,
-                color: 'var(--ink)',
+                color: SENTIMENT_DOT_COLORS[topic.sentiment ?? 'neutral'] ?? SENTIMENT_DOT_COLORS.neutral,
                 flexShrink: 0,
               }}>
                 {topic.name}
@@ -670,7 +670,7 @@ export function TopicPulseDetail({ data }: { data: TopicIntelligence }) {
               <span style={{
                 fontSize: '0.8125rem',
                 fontWeight: 700,
-                color: 'var(--ink)',
+                color: SENTIMENT_DOT_COLORS[entry.sentiment ?? 'neutral'] ?? SENTIMENT_DOT_COLORS.neutral,
               }}>
                 {entry.topic}
               </span>
@@ -806,44 +806,56 @@ export function VoicesDetail({ data }: { data: AccountsIntelligence }) {
               key={`${acct.platform}-${acct.handle}`}
               style={{
                 display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.3rem 0',
+                flexDirection: 'column',
+                gap: '0.1875rem',
+                padding: '0.375rem 0',
                 borderBottom: '1px solid var(--border-soft)',
-                minHeight: 28,
               }}
             >
-              <SentimentDot sentiment={acct.sentiment} size={6} />
-              <span style={{
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                fontFamily: MONO,
-                color: 'var(--ink)',
-                flexShrink: 0,
-              }}>
-                {acct.handle}
-              </span>
-              <PlatformBadge platform={acct.platform} />
+              {/* Row 1: sentiment dot, handle, platform badge, post count */}
               <div style={{
                 display: 'flex',
-                gap: '0.25rem',
-                flex: 1,
+                alignItems: 'center',
+                gap: '0.375rem',
                 minWidth: 0,
-                overflow: 'hidden',
-                flexWrap: 'wrap',
               }}>
-                {acct.themes.slice(0, 3).map((theme) => (
-                  <ThemeMiniTag key={theme} text={theme} />
-                ))}
+                <SentimentDot sentiment={acct.sentiment} size={6} />
+                <span style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  fontFamily: MONO,
+                  color: 'var(--ink)',
+                  minWidth: 0,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {acct.handle}
+                </span>
+                <PlatformBadge platform={acct.platform} />
+                <span style={{
+                  fontSize: '0.5625rem',
+                  fontFamily: MONO,
+                  color: 'var(--ink-tertiary)',
+                  flexShrink: 0,
+                  marginLeft: 'auto',
+                }}>
+                  {acct.postCount}
+                </span>
               </div>
-              <span style={{
-                fontSize: '0.5625rem',
-                fontFamily: MONO,
-                color: 'var(--ink-tertiary)',
-                flexShrink: 0,
-              }}>
-                {acct.postCount}
-              </span>
+              {/* Row 2: theme tags */}
+              {acct.themes.length > 0 && (
+                <div style={{
+                  display: 'flex',
+                  gap: '0.25rem',
+                  flexWrap: 'wrap',
+                  paddingLeft: 'calc(6px + 0.375rem)',
+                }}>
+                  {acct.themes.slice(0, 3).map((theme) => (
+                    <ThemeMiniTag key={theme} text={theme} />
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>

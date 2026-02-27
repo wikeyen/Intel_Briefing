@@ -392,21 +392,6 @@ describe('SensorProtocolCompliance', () => {
 })
 
 describe('Taxonomy', () => {
-  it('ALL_CATEGORIES has 9 category keys', async () => {
-    const { ALL_CATEGORIES } = await import('./taxonomy')
-    expect(ALL_CATEGORIES).toHaveLength(9)
-    const expected = ['tech', 'research', 'finance', 'products', 'community', 'social', 'trend', 'insights', 'feeds']
-    expect([...ALL_CATEGORIES]).toEqual(expected)
-  })
-
-  it('SENSOR_CATEGORY_MAP maps every sensor to a valid category', async () => {
-    const { SENSOR_CATEGORY_MAP, ALL_CATEGORIES, SENSORS } = await import('./taxonomy')
-    for (const sensor of SENSORS) {
-      expect(SENSOR_CATEGORY_MAP[sensor.key]).toBeDefined()
-      expect(ALL_CATEGORIES).toContain(SENSOR_CATEGORY_MAP[sensor.key])
-    }
-  })
-
   it('SENSOR_LABELS has an entry for every sensor in the registry', async () => {
     const { SENSOR_LABELS } = await import('./taxonomy')
     const { SENSOR_REGISTRY } = await import('./index')
@@ -423,40 +408,10 @@ describe('Taxonomy', () => {
     }
   })
 
-  it('emptyCategoryMap returns an empty array for each category key', async () => {
-    const { emptyCategoryMap, ALL_CATEGORIES } = await import('./taxonomy')
-    const map = emptyCategoryMap()
-    for (const cat of ALL_CATEGORIES) {
-      expect(map[cat]).toEqual([])
-    }
-    expect(Object.keys(map)).toHaveLength(ALL_CATEGORIES.length)
-  })
-
-  it('sensorsByLanguageAndCategory returns 2 groups (row and cn) with categorized sensors', async () => {
-    const { sensorsByLanguageAndCategory } = await import('./taxonomy')
-    const groups = sensorsByLanguageAndCategory()
-    expect(groups).toHaveLength(2)
-
-    // ROW comes first
-    expect(groups[0].language).toBe('row')
-    expect(groups[0].label).toBe('ROW')
-    expect(groups[0].categories.length).toBeGreaterThan(0)
-    for (const cat of groups[0].categories) {
-      expect(cat.sensors.length).toBeGreaterThan(0)
-      for (const sensor of cat.sensors) {
-        expect(sensor.language).toBe('row')
-      }
-    }
-
-    // CN comes second
-    expect(groups[1].language).toBe('cn')
-    expect(groups[1].label).toBe('CN')
-    expect(groups[1].categories.length).toBeGreaterThan(0)
-    for (const cat of groups[1].categories) {
-      expect(cat.sensors.length).toBeGreaterThan(0)
-      for (const sensor of cat.sensors) {
-        expect(sensor.language).toBe('cn')
-      }
+  it('SensorDef no longer has a category field', async () => {
+    const { SENSORS } = await import('./taxonomy')
+    for (const sensor of SENSORS) {
+      expect(sensor).not.toHaveProperty('category')
     }
   })
 })

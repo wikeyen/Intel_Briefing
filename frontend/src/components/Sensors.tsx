@@ -10,7 +10,7 @@ import { TagInput } from '@/components/TagInput'
 import { useTranslation } from '@/lib/i18n'
 import { useToast } from '@/lib/toast-context'
 import { useAutoSave } from '@/lib/hooks/useAutoSave'
-import { SENSORS, type CategoryKey } from '@/lib/sensors/taxonomy'
+import { SENSORS } from '@/lib/sensors/taxonomy'
 import { HIDDEN_SENSORS, SENSOR_LOOKBACK_SUPPORT } from '@/components/sources/sections'
 import { RssFeedList } from '@/components/sources/RssFeedList'
 import { normalizeRssFeeds, type RssFeedEntry } from '@/lib/models'
@@ -33,7 +33,7 @@ const SENSOR_LANGUAGE: Record<string, 'cn' | 'row'> = Object.fromEntries(
 ) as Record<string, 'cn' | 'row'>
 
 /** Sensor key to SensorDef lookup. */
-const SENSOR_MAP: Record<string, { key: string; label: string; desc: string; category: CategoryKey }> = Object.fromEntries(
+const SENSOR_MAP: Record<string, { key: string; label: string; desc: string }> = Object.fromEntries(
   SENSORS.map(s => [s.key, s])
 )
 
@@ -69,7 +69,7 @@ input[type=number]::-webkit-outer-spin-button {
 export function DragPreview({ activeDragId, groups, sensorMap }: {
   activeDragId: string
   groups: SourceGroupTree[]
-  sensorMap: Record<string, { key: string; label: string; desc: string; category: CategoryKey }>
+  sensorMap: Record<string, { key: string; label: string; desc: string }>
 }) {
   // Group drag preview
   if (activeDragId.startsWith('group:')) {
@@ -498,7 +498,6 @@ export function Sensors() {
         sensorLabel={sensor.label}
         sensorDesc={sensor.desc}
         language={SENSOR_LANGUAGE[sensorKey] ?? 'row'}
-        category={sensor.category ?? 'tech'}
         groupId={groupId}
         enabled={enabled[sensorKey] ?? true}
         status={getBadge(sensorKey)}

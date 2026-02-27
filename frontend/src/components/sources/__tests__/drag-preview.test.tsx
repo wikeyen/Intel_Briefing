@@ -5,7 +5,6 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { DragPreview } from '@/components/Sensors'
 import type { SourceGroupTree } from '@/lib/groups/types'
-import type { CategoryKey } from '@/lib/sensors/taxonomy'
 
 // Mock i18n — DragPreview doesn't use it directly but imports may trigger it
 vi.mock('@/lib/i18n', () => ({
@@ -27,9 +26,9 @@ const makeGroup = (overrides: Partial<SourceGroupTree> = {}): SourceGroupTree =>
   ...overrides,
 })
 
-const sensorMap: Record<string, { key: string; label: string; desc: string; category: CategoryKey }> = {
-  hacker_news: { key: 'hacker_news', label: 'Hacker News', desc: 'Top stories from HN', category: 'tech' },
-  github: { key: 'github', label: 'GitHub Trending', desc: 'Daily trending repos', category: 'tech' },
+const sensorMap: Record<string, { key: string; label: string; desc: string }> = {
+  hacker_news: { key: 'hacker_news', label: 'Hacker News', desc: 'Top stories from HN' },
+  github: { key: 'github', label: 'GitHub Trending', desc: 'Daily trending repos' },
 }
 
 describe('DragPreview', () => {

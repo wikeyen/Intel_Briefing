@@ -1,44 +1,9 @@
-// ABOUTME: Status badge, language badge, and category badge for sensor rows.
+// ABOUTME: Status badge and language badge for sensor rows.
 // ABOUTME: Extracted from Sensors.tsx for reuse across GroupCard and SensorDragItem.
 'use client'
 import { useTranslation } from '@/lib/i18n'
-import type { CategoryKey } from '@/lib/sensors/taxonomy'
 
 export type SensorStatus = 'ok' | 'failed' | 'disabled'
-
-/** Color palette for category badges — muted tones to avoid visual noise. */
-const CATEGORY_COLORS: Record<CategoryKey, { bg: string; color: string }> = {
-  tech:      { bg: '#dbeafe', color: '#1e40af' },
-  research:  { bg: '#ede9fe', color: '#5b21b6' },
-  finance:   { bg: '#fef3c7', color: '#92400e' },
-  products:  { bg: '#d1fae5', color: '#065f46' },
-  community: { bg: '#ffedd5', color: '#9a3412' },
-  social:    { bg: '#fce7f3', color: '#9d174d' },
-  trend:     { bg: '#ccfbf1', color: '#115e59' },
-  insights:  { bg: '#e0e7ff', color: '#3730a3' },
-  feeds:     { bg: '#f3f4f6', color: '#4b5563' },
-}
-
-/** Category pill badge — shows sensor category on all sensor rows. */
-export function CategoryBadge({ category }: { category: CategoryKey }) {
-  const colors = CATEGORY_COLORS[category] ?? CATEGORY_COLORS.tech
-  return (
-    <span style={{
-      fontSize: '0.5625rem',
-      fontWeight: 600,
-      letterSpacing: '0.04em',
-      textTransform: 'uppercase',
-      background: colors.bg,
-      color: colors.color,
-      padding: '0.0625rem 0.375rem',
-      borderRadius: 999,
-      marginLeft: '0.375rem',
-      whiteSpace: 'nowrap',
-    }}>
-      {category}
-    </span>
-  )
-}
 
 /** Status badge (ok / failed / disabled) shown on sensor rows. */
 export function Badge({ status }: { status: SensorStatus | undefined }) {

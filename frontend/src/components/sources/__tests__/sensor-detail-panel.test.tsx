@@ -52,11 +52,6 @@ vi.mock('@/components/sources/PillInput', () => ({
   ),
 }))
 
-vi.mock('@/components/sources/SensorBadge', () => ({
-  CategoryBadge: ({ category }: { category: string }) => (
-    <span data-testid="category-badge">{category}</span>
-  ),
-}))
 
 /** Build default props with optional overrides. */
 function makeProps(overrides: Partial<SensorDetailPanelProps> = {}): SensorDetailPanelProps {
@@ -113,13 +108,6 @@ describe('SensorDetailPanel', () => {
 
     expect(screen.getByText('X Accounts')).toBeInTheDocument()
     expect(screen.getByLabelText('Close panel')).toBeInTheDocument()
-  })
-
-  it('renders category badge', () => {
-    const props = makeProps({ sensorKey: 'bluesky_accounts' })
-    render(<SensorDetailPanel {...props} />)
-
-    expect(screen.getByTestId('category-badge')).toHaveTextContent('social')
   })
 
   it('close button calls onClose', () => {

@@ -7,14 +7,13 @@ import { useTranslation } from '@/lib/i18n'
 import { TagInput } from '@/components/TagInput'
 import { RssFeedList } from '@/components/sources/RssFeedList'
 import { PillInput } from '@/components/sources/PillInput'
-import { CategoryBadge } from '@/components/sources/SensorBadge'
-import { SENSORS, type CategoryKey } from '@/lib/sensors/taxonomy'
+import { SENSORS } from '@/lib/sensors/taxonomy'
 import type { RssFeedEntry } from '@/lib/models'
 
 /** Sensor key to SensorDef lookup. */
 const SENSOR_MAP = Object.fromEntries(SENSORS.map(s => [s.key, s])) as Record<
   string,
-  { key: string; label: string; desc: string; category: CategoryKey }
+  { key: string; label: string; desc: string }
 >
 
 export interface SensorDetailPanelProps {
@@ -438,7 +437,6 @@ export function SensorDetailPanel({
             <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--ink)' }}>
               {sensor?.label ?? sensorKey}
             </span>
-            {sensor && <CategoryBadge category={sensor.category} />}
           </div>
           <button
             onClick={onClose}

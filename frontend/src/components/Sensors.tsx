@@ -2,7 +2,7 @@
 // ABOUTME: Groups loaded from API drive the layout; sensors can be dragged between groups and groups can be reordered.
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { DndContext, closestCenter, type DragEndEvent, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { DndContext, DragOverlay, closestCenter, type DragEndEvent, type DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { AnimatePresence } from 'framer-motion'
 import { api } from '@/api/client'
@@ -64,6 +64,75 @@ input[type=number]::-webkit-outer-spin-button {
 // Accounts: x_accounts, bluesky_accounts, mastodon_accounts
 // Topics: bluesky_topics, mastodon_topics
 // RSS: rss_news, rss_blogs
+
+/** Lightweight floating preview shown inside DragOverlay while dragging. */
+export function DragPreview({ activeDragId, groups, sensorMap }: {
+  activeDragId: string
+  groups: SourceGroupTree[]
+  sensorMap: Record<string, { key: string; label: string; desc: string; category: CategoryKey }>
+}) {
+  // Group drag preview
+  if (activeDragId.startsWith('group:')) {
+    const groupId = activeDragId.slice(6)
+    const group = groups.find(g => g.id === groupId)
+    if (!group) return null
+    return (
+      <div style={{
+        padding: '0.5rem 0.875rem',
+        background: 'var(--surface)',
+        border: '2px solid var(--accent)',
+        borderRadius: 8,
+        boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+        fontSize: '0.9375rem',
+        fontWeight: 600,
+        color: 'var(--ink)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        maxWidth: 320,
+        cursor: 'grabbing',
+      }}>
+        <span style={{
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          background: group.color,
+          flexShrink: 0,
+        }} />
+        {group.name}
+        <span style={{
+          fontSize: '0.625rem',
+          color: 'var(--ink-muted)',
+          marginLeft: 'auto',
+        }}>
+          {group.sensors.length} sensors
+        </span>
+      </div>
+    )
+  }
+
+  // Sensor drag preview
+  const parts = activeDragId.split(':', 2)
+  const sensorKey = parts[1]
+  const sensor = sensorKey ? sensorMap[sensorKey] : null
+  if (!sensor) return null
+  return (
+    <div style={{
+      padding: '0.5rem 0.875rem',
+      background: 'var(--surface)',
+      border: '2px solid var(--accent)',
+      borderRadius: 6,
+      boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+      fontSize: '0.8125rem',
+      fontWeight: 500,
+      color: 'var(--ink)',
+      maxWidth: 280,
+      cursor: 'grabbing',
+    }}>
+      {sensor.label}
+    </div>
+  )
+}
 
 export function Sensors() {
   const { t } = useTranslation()
@@ -314,8 +383,20 @@ export function Sensors() {
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
   )
 
+  const [activeDragId, setActiveDragId] = useState<string | null>(null)
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(String(event.active.id))
+  }
+
+  const handleDragCancel = () => {
+    setActiveDragId(null)
+    setOverGroupId(null)
+  }
+
   const handleDragEnd = async (event: DragEndEvent) => {
     setOverGroupId(null)
+    setActiveDragId(null)
     const { active, over } = event
     if (!over || active.id === over.id) return
 
@@ -881,7 +962,9 @@ export function Sensors() {
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
+              onDragCancel={handleDragCancel}
               onDragOver={(event) => {
                 const overId = event.over?.id ? String(event.over.id) : null
                 if (!overId) { setOverGroupId(null); return }
@@ -907,6 +990,17 @@ export function Sensors() {
                   renderSensorRow={(key, isLast) => renderDragItem(key, 'ungrouped', isLast)}
                 />
               </SortableContext>
+
+              {/* Drag overlay — floating preview that follows cursor */}
+              <DragOverlay dropAnimation={null}>
+                {activeDragId ? (
+                  <DragPreview
+                    activeDragId={activeDragId}
+                    groups={groups}
+                    sensorMap={SENSOR_MAP}
+                  />
+                ) : null}
+              </DragOverlay>
             </DndContext>
           </div>
 

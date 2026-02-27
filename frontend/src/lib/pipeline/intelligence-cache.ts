@@ -18,7 +18,11 @@ export async function writeIntelligence(report: IntelligenceReport): Promise<voi
   await kvSet(INTELLIGENCE_KEY, merged, INTELLIGENCE_TTL_SECONDS)
 }
 
-/** Synthesize tags from account themes when the LLM didn't produce any. */
+/**
+ * Synthesize tags from account themes when the LLM didn't produce any.
+ * Legacy backfill: only needed when the NLP sidecar was not used for analysis.
+ * Once the NLP sidecar is stable in production, this function can be removed.
+ */
 function backfillAccountTags(report: IntelligenceReport): IntelligenceReport {
   const accts = report.accounts
   if (!accts || (accts.tags && accts.tags.length > 0)) return report
@@ -53,6 +57,7 @@ export async function readIntelligence(): Promise<IntelligenceReport | null> {
   try {
     const data = await kvGet<IntelligenceReport>(INTELLIGENCE_KEY)
     if (!data) return null
+    // Backfill only needed when NLP sidecar was not used (legacy LLM-only path)
     return backfillAccountTags(data)
   } catch {
     return null

@@ -1,5 +1,5 @@
 // ABOUTME: Tests for intelligence cache — verifies merge-on-write preserves non-null fields.
-// ABOUTME: Ensures transient LLM failures don't wipe out previously cached analysis results.
+// ABOUTME: Ensures transient LLM failures don't wipe out previously cached analysis results, including legacy backfill.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { writeIntelligence, readIntelligence } from '../intelligence-cache'

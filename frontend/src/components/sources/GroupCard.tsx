@@ -1,5 +1,5 @@
 // ABOUTME: Soft UI group card — displays a colored accent bar, group header, and sensor list.
-// ABOUTME: Supports sub-groups, kebab menu actions, social controls slot, and drag-over highlighting.
+// ABOUTME: Supports sub-groups, kebab menu actions, per-sensor inline controls, and drag-over highlighting.
 'use client'
 import { useState, useRef, useEffect, type ReactNode } from 'react'
 import type { SourceGroupTree } from '@/lib/groups/types'
@@ -27,7 +27,7 @@ interface GroupCardProps {
   onAddSubGroup?: () => void
   renderSensorRow: (sensorKey: string, isLast: boolean) => ReactNode
   renderSubGroup?: (child: SourceGroupTree) => ReactNode
-  renderSocialControls?: () => ReactNode
+  renderSensorControls?: (sensorKey: string) => ReactNode
 }
 
 export function GroupCard({
@@ -39,7 +39,7 @@ export function GroupCard({
   onAddSubGroup,
   renderSensorRow,
   renderSubGroup,
-  renderSocialControls,
+  renderSensorControls,
 }: GroupCardProps) {
   const { t } = useTranslation()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -157,13 +157,13 @@ export function GroupCard({
 
       {/* Sensor list */}
       <div style={SENSOR_LIST}>
-        {group.sensors.map((sensorKey, i) =>
-          renderSensorRow(sensorKey, i === group.sensors.length - 1 && group.children.length === 0 && !renderSocialControls)
-        )}
+        {group.sensors.map((sensorKey, i) => (
+          <div key={sensorKey}>
+            {renderSensorRow(sensorKey, i === group.sensors.length - 1 && group.children.length === 0)}
+            {renderSensorControls && renderSensorControls(sensorKey)}
+          </div>
+        ))}
       </div>
-
-      {/* Social controls slot */}
-      {renderSocialControls && renderSocialControls()}
 
       {/* Sub-groups */}
       {group.children.length > 0 && renderSubGroup && (

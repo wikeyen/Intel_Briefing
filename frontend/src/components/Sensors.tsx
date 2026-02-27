@@ -15,7 +15,6 @@ import { RssFeedList } from '@/components/sources/RssFeedList'
 import { normalizeRssFeeds, type RssFeedEntry } from '@/lib/models'
 import { SkeletonCard } from '@/components/Skeleton'
 import { AutoSaveIndicator } from '@/components/form-styles'
-import { Toggle } from '@/components/sources/Toggle'
 import { PillInput } from '@/components/sources/PillInput'
 import { Badge, CnBadge, type SensorStatus } from '@/components/sources/SensorBadge'
 import { GroupCard } from '@/components/sources/GroupCard'
@@ -56,11 +55,10 @@ input[type=number]::-webkit-outer-spin-button {
 }
 `
 
-/** Social sensor keys that get special inline controls. */
-const SOCIAL_SENSOR_KEYS = new Set(['x', 'bluesky', 'mastodon'])
-
-/** RSS sensor keys that get special inline controls. */
-const RSS_SENSOR_KEYS = new Set(['rss_feeds'])
+// Sensor keys that get inline controls are handled directly in renderSensorInlineControls:
+// Accounts: x_accounts, bluesky_accounts, mastodon_accounts
+// Topics: bluesky_topics, mastodon_topics
+// RSS: rss_news, rss_blogs
 
 export function Sensors() {
   const { t } = useTranslation()
@@ -93,9 +91,9 @@ export function Sensors() {
   const [followingMastodon, setFollowingMastodon] = useState(false)
   const [hasBlueskyCredentials, setHasBlueskyCredentials] = useState(false)
   const [hasMastodonCredentials, setHasMastodonCredentials] = useState(false)
-  const [blueskyTopicsEnabled, setBlueskyTopicsEnabled] = useState(true)
-  const [mastodonTopicsEnabled, setMastodonTopicsEnabled] = useState(true)
-  const [mastodonTrendsEnabled, setMastodonTrendsEnabled] = useState(true)
+  // NOTE: blueskyTopicsEnabled, mastodonTopicsEnabled, mastodonTrendsEnabled have been
+  // migrated to per-sensor enabled state (enabled.bluesky_topics, enabled.mastodon_topics,
+  // enabled.mastodon_trends). Kept in auto-save for backward compat during transition.
   const [rssFeeds, setRssFeeds] = useState<RssFeedEntry[]>([])
   const [sensorLimits, setSensorLimits] = useState<Record<string, number>>({})
   const [sensorLookback, setSensorLookback] = useState<Record<string, number>>({})
@@ -126,9 +124,6 @@ export function Sensors() {
       social_topics_keywords: socialTopicsKeywords,
       social_following_bluesky: followingBluesky,
       social_following_mastodon: followingMastodon,
-      bluesky_topics_enabled: blueskyTopicsEnabled,
-      mastodon_topics_enabled: mastodonTopicsEnabled,
-      mastodon_trends_enabled: mastodonTrendsEnabled,
       rss_feed_urls: rssFeeds,
       sensor_limits: sensorLimits,
       sensor_lookback_hours: sensorLookback,
@@ -161,9 +156,6 @@ export function Sensors() {
       setFollowingMastodon(cfg.social_following_mastodon ?? false)
       setHasBlueskyCredentials(!!cfg.bluesky_handle && !!cfg.bluesky_app_password)
       setHasMastodonCredentials(!!cfg.mastodon_token)
-      setBlueskyTopicsEnabled(cfg.bluesky_topics_enabled ?? true)
-      setMastodonTopicsEnabled(cfg.mastodon_topics_enabled ?? true)
-      setMastodonTrendsEnabled(cfg.mastodon_trends_enabled ?? true)
       setRssFeeds(normalizeRssFeeds(cfg.rss_feed_urls ?? []))
       setSensorLimits(cfg.sensor_limits ?? {})
       setSensorLookback(cfg.sensor_lookback_hours ?? {})
@@ -362,20 +354,6 @@ export function Sensors() {
     .filter(s => !groupedSensorKeys.has(s.key))
     .map(s => s.key)
 
-  /** Check if a group or its children contain any social sensors. */
-  const groupHasSocial = (group: SourceGroupTree): boolean =>
-    group.sensors.some(k => SOCIAL_SENSOR_KEYS.has(k)) ||
-    group.children.some(groupHasSocial)
-
-  /** Check if a group or its children contain RSS sensors. */
-  const groupHasRss = (group: SourceGroupTree): boolean =>
-    group.sensors.some(k => RSS_SENSOR_KEYS.has(k)) ||
-    group.children.some(groupHasRss)
-
-  /** Check if topics section should be active. */
-  const topicsOn = (blueskyTopicsEnabled && (enabled.bluesky ?? true)) ||
-    (mastodonTopicsEnabled && (enabled.mastodon ?? true))
-
   /** Find which group IDs a sensor belongs to. */
   const sensorGroupMembership = (sensorKey: string): Set<string> => {
     const result = new Set<string>()
@@ -419,12 +397,140 @@ export function Sensors() {
     )
   }
 
-  /** Renders social controls for a specific social sensor. */
-  const renderSocialControlsForSensor = (sensorKey: string) => {
+  /** Renders the topics keyword list (shared between bluesky_topics and mastodon_topics). */
+  const renderTopicsSection = () => {
+    return (
+      <div style={{
+        padding: '0.5rem 0.875rem',
+        background: 'var(--canvas)',
+        borderBottom: '1px solid var(--border-soft)',
+      }}>
+        {socialTopicsKeywords.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginBottom: '0.625rem' }}>
+            {socialTopicsKeywords.map((keyword) => (
+              <div
+                key={keyword}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.25rem 0',
+                }}
+              >
+                <span style={{
+                  fontSize: '0.8125rem',
+                  fontWeight: 500,
+                  color: 'var(--accent)',
+                  flex: 1,
+                  minWidth: 0,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {keyword}
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
+                  <PillInput
+                    label={t('sources.items')}
+                    value={topicLimits[keyword] ?? defaultTopicLimit}
+                    min={1}
+                    max={100}
+                    onChange={(v) => updateTopicLimit(keyword, v)}
+                  />
+                  <PillInput
+                    label={t('sources.lookback')}
+                    value={topicLookback[keyword] ?? 48}
+                    min={1}
+                    max={336}
+                    suffix="h"
+                    onChange={(v) => updateTopicLookback(keyword, v)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSocialTopicsKeywords(socialTopicsKeywords.filter(k => k !== keyword))
+                      setTopicLimits((prev) => { const next = { ...prev }; delete next[keyword]; return next })
+                      setTopicLookback((prev) => { const next = { ...prev }; delete next[keyword]; return next })
+                      trigger()
+                    }}
+                    style={{
+                      color: 'var(--ink-faint)',
+                      fontSize: '1rem',
+                      lineHeight: 1,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      background: 'none',
+                      border: 'none',
+                      padding: '0.125rem',
+                      transition: 'color 120ms',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--err)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-faint)' }}
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <input
+          type="text"
+          placeholder={t('sources.placeholder_topics')}
+          style={{
+            width: '100%',
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 4,
+            padding: '0.75rem 1rem',
+            fontSize: '0.9375rem',
+            color: 'var(--ink)',
+            outline: 'none',
+            transition: 'border-color 120ms, box-shadow 120ms',
+            fontFamily: 'inherit',
+          }}
+          onFocus={e => {
+            e.currentTarget.style.borderColor = 'var(--accent)'
+            e.currentTarget.style.boxShadow = 'var(--focus-ring)'
+          }}
+          onBlur={e => {
+            e.currentTarget.style.borderColor = 'var(--border)'
+            e.currentTarget.style.boxShadow = 'none'
+            const val = e.currentTarget.value.trim()
+            if (val && !socialTopicsKeywords.includes(val)) {
+              setSocialTopicsKeywords([...socialTopicsKeywords, val])
+              trigger()
+            }
+            e.currentTarget.value = ''
+          }}
+          onKeyDown={e => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              const val = (e.currentTarget as HTMLInputElement).value.trim()
+              if (val && !socialTopicsKeywords.includes(val)) {
+                setSocialTopicsKeywords([...socialTopicsKeywords, val])
+                trigger()
+              }
+              (e.currentTarget as HTMLInputElement).value = ''
+            }
+            if (e.key === 'Backspace' && !(e.currentTarget as HTMLInputElement).value && socialTopicsKeywords.length) {
+              setSocialTopicsKeywords(socialTopicsKeywords.slice(0, -1))
+              trigger()
+            }
+          }}
+        />
+      </div>
+    )
+  }
+
+  /** Renders inline controls below a specific sensor row (accounts, topics, or feeds). */
+  const renderSensorInlineControls = (sensorKey: string) => {
     const isOn = enabled[sensorKey] ?? true
     if (!isOn) return null
 
-    if (sensorKey === 'x') {
+    // X Accounts
+    if (sensorKey === 'x_accounts') {
       return (
         <div style={{
           padding: '0.625rem 0.875rem',
@@ -445,11 +551,35 @@ export function Sensors() {
             onEnableAll={() => enableAllAccounts(socialAccountsX)}
             onDisableAll={() => disableAllAccounts(socialAccountsX)}
           />
+          {/* X scraper provider */}
+          <div style={{ marginTop: '0.375rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+            <span style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>
+              {t('sources.x_scraper_provider')}
+            </span>
+            <select
+              value={xScraperProvider}
+              onChange={(e) => { setXScraperProvider(e.target.value as typeof xScraperProvider); trigger() }}
+              style={{
+                fontSize: '0.6875rem',
+                padding: '0.125rem 0.375rem',
+                border: '1px solid var(--border)',
+                borderRadius: 4,
+                background: 'var(--surface)',
+                color: 'var(--ink)',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="twitter-scraper">twitter-scraper</option>
+              <option value="apify">apify</option>
+              <option value="mixed">mixed</option>
+            </select>
+          </div>
         </div>
       )
     }
 
-    if (sensorKey === 'bluesky') {
+    // Bluesky Accounts
+    if (sensorKey === 'bluesky_accounts') {
       return (
         <div style={{
           padding: '0.625rem 0.875rem',
@@ -471,29 +601,22 @@ export function Sensors() {
             onDisableAll={() => disableAllAccounts(socialAccountsBluesky)}
           />
           <label style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.375rem',
-            marginTop: '0.375rem',
+            display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '0.375rem',
             cursor: hasBlueskyCredentials ? 'pointer' : 'not-allowed',
             opacity: hasBlueskyCredentials ? 1 : 0.4,
           }}>
-            <input
-              type="checkbox"
-              checked={followingBluesky}
+            <input type="checkbox" checked={followingBluesky}
               disabled={!hasBlueskyCredentials}
               onChange={(e) => { setFollowingBluesky(e.target.checked); trigger() }}
-              style={{ accentColor: 'var(--brand-bluesky)', cursor: 'inherit' }}
-            />
-            <span style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>
-              {t('sources.include_following')}
-            </span>
+              style={{ accentColor: 'var(--brand-bluesky)', cursor: 'inherit' }} />
+            <span style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>{t('sources.include_following')}</span>
           </label>
         </div>
       )
     }
 
-    if (sensorKey === 'mastodon') {
+    // Mastodon Accounts
+    if (sensorKey === 'mastodon_accounts') {
       return (
         <div style={{
           padding: '0.625rem 0.875rem',
@@ -515,24 +638,59 @@ export function Sensors() {
             onDisableAll={() => disableAllAccounts(socialAccountsMastodon)}
           />
           <label style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.375rem',
-            marginTop: '0.375rem',
+            display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '0.375rem',
             cursor: hasMastodonCredentials ? 'pointer' : 'not-allowed',
             opacity: hasMastodonCredentials ? 1 : 0.4,
           }}>
-            <input
-              type="checkbox"
-              checked={followingMastodon}
+            <input type="checkbox" checked={followingMastodon}
               disabled={!hasMastodonCredentials}
               onChange={(e) => { setFollowingMastodon(e.target.checked); trigger() }}
-              style={{ accentColor: 'var(--brand-mastodon)', cursor: 'inherit' }}
-            />
-            <span style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>
-              {t('sources.include_following')}
-            </span>
+              style={{ accentColor: 'var(--brand-mastodon)', cursor: 'inherit' }} />
+            <span style={{ fontSize: '0.6875rem', color: 'var(--ink-muted)' }}>{t('sources.include_following')}</span>
           </label>
+        </div>
+      )
+    }
+
+    // Bluesky Topics / Mastodon Topics — shared keyword list
+    if (sensorKey === 'bluesky_topics' || sensorKey === 'mastodon_topics') {
+      return renderTopicsSection()
+    }
+
+    // RSS News / RSS Blogs — filtered feed management
+    if (sensorKey === 'rss_news' || sensorKey === 'rss_blogs') {
+      const feedType = sensorKey === 'rss_news' ? 'news' : 'blog'
+
+      return (
+        <div style={{
+          padding: '0.625rem 0.875rem',
+          background: 'var(--canvas)',
+          borderBottom: '1px solid var(--border-soft)',
+        }}>
+          <div style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.375rem' }}>
+            {t('sources.rss_feeds')}
+          </div>
+          <RssFeedList
+            feeds={rssFeeds}
+            filterType={feedType === 'news' ? ['news'] : ['blog', 'other']}
+            onChange={(feeds) => { setRssFeeds(feeds); trigger() }}
+            onAdd={(url) => {
+              setRssFeeds(prev => [{ url, type: feedType as 'news' | 'blog' }, ...prev])
+              api.discoverRssFeed(url).then((result) => {
+                if (result.type === 'discovered' && result.feedUrl) {
+                  setRssFeeds((prev) => prev.map((f) => f.url === url ? { ...f, url: result.feedUrl! } : f))
+                  showToast(t('sources.feed_discovered', { title: result.feedTitle ?? result.feedUrl ?? '' }))
+                } else if (result.type === 'not_found') {
+                  setRssFeeds((prev) => prev.filter((f) => f.url !== url))
+                  showToast(t('sources.feed_not_found'))
+                } else if (result.type === 'error') {
+                  setRssFeeds((prev) => prev.filter((f) => f.url !== url))
+                  showToast(t('sources.feed_discovery_failed', { error: result.message ?? '' }))
+                }
+                trigger()
+              }).catch(() => { trigger() })
+            }}
+          />
         </div>
       )
     }
@@ -540,289 +698,11 @@ export function Sensors() {
     return null
   }
 
-  /** Renders all social controls (accounts + topics) for sensors in a group. */
-  const renderGroupSocialControls = (group: SourceGroupTree) => {
-    const socialSensorsInGroup = group.sensors.filter(k => SOCIAL_SENSOR_KEYS.has(k))
-    if (socialSensorsInGroup.length === 0) return null
-
-    return (
-      <>
-        {socialSensorsInGroup.map(key => {
-          const ctrl = renderSocialControlsForSensor(key)
-          return ctrl ? <div key={`social-${key}`}>{ctrl}</div> : null
-        })}
-
-        {/* Topics section — only if this group has social sensors */}
-        {renderTopicsSection()}
-      </>
-    )
-  }
-
-  /** Renders the topics section (keyword search across social platforms). */
-  const renderTopicsSection = () => {
-    return (
-      <div style={{
-        borderTop: '1px solid var(--border-soft)',
-      }}>
-        {/* Topics toggle + platform checkboxes */}
-        <div
-          className="sensor-row"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            padding: '0.5rem 0.875rem',
-            borderBottom: topicsOn ? '1px solid var(--border-soft)' : 'none',
-            transition: 'background 120ms',
-            gap: '0.5rem',
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--canvas)' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)' }}
-        >
-          <div className="sensor-row-left" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flex: 1, minWidth: 0 }}>
-            <Toggle on={topicsOn} onClick={() => {
-              if (topicsOn) {
-                setBlueskyTopicsEnabled(false)
-                setMastodonTopicsEnabled(false)
-              } else {
-                if (enabled.bluesky ?? true) setBlueskyTopicsEnabled(true)
-                if (enabled.mastodon ?? true) setMastodonTopicsEnabled(true)
-              }
-              trigger()
-            }} />
-            <div style={{ minWidth: 0 }}>
-              <div style={{
-                fontSize: '0.8125rem',
-                fontWeight: 500,
-                color: topicsOn ? 'var(--ink)' : 'var(--ink-faint)',
-              }}>
-                {t('sources.topics')}
-              </div>
-            </div>
-          </div>
-          <div className="sensor-row-right" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
-            {topicsOn && (
-              <>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.1875rem', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={blueskyTopicsEnabled}
-                    onChange={(e) => { setBlueskyTopicsEnabled(e.target.checked); trigger() }}
-                    style={{ accentColor: 'var(--brand-bluesky)' }} />
-                  <span style={{ fontSize: '0.625rem', color: 'var(--ink-muted)' }}>Bluesky</span>
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.1875rem', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={mastodonTopicsEnabled}
-                    onChange={(e) => { setMastodonTopicsEnabled(e.target.checked); trigger() }}
-                    style={{ accentColor: 'var(--brand-mastodon)' }} />
-                  <span style={{ fontSize: '0.625rem', color: 'var(--ink-muted)' }}>Mastodon</span>
-                </label>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Keywords input with per-topic controls */}
-        {topicsOn && (
-          <div style={{ padding: '0.5rem 0.875rem', background: 'var(--canvas)' }}>
-            {socialTopicsKeywords.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginBottom: '0.625rem' }}>
-                {socialTopicsKeywords.map((keyword) => (
-                  <div
-                    key={keyword}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.25rem 0',
-                    }}
-                  >
-                    <span style={{
-                      fontSize: '0.8125rem',
-                      fontWeight: 500,
-                      color: 'var(--accent)',
-                      flex: 1,
-                      minWidth: 0,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}>
-                      {keyword}
-                    </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
-                      <PillInput
-                        label={t('sources.items')}
-                        value={topicLimits[keyword] ?? defaultTopicLimit}
-                        min={1}
-                        max={100}
-                        onChange={(v) => updateTopicLimit(keyword, v)}
-                      />
-                      <PillInput
-                        label={t('sources.lookback')}
-                        value={topicLookback[keyword] ?? 48}
-                        min={1}
-                        max={336}
-                        suffix="h"
-                        onChange={(v) => updateTopicLookback(keyword, v)}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSocialTopicsKeywords(socialTopicsKeywords.filter(k => k !== keyword))
-                          setTopicLimits((prev) => { const next = { ...prev }; delete next[keyword]; return next })
-                          setTopicLookback((prev) => { const next = { ...prev }; delete next[keyword]; return next })
-                          trigger()
-                        }}
-                        style={{
-                          color: 'var(--ink-faint)',
-                          fontSize: '1rem',
-                          lineHeight: 1,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          background: 'none',
-                          border: 'none',
-                          padding: '0.125rem',
-                          transition: 'color 120ms',
-                        }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--err)' }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--ink-faint)' }}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <input
-              type="text"
-              placeholder={t('sources.placeholder_topics')}
-              style={{
-                width: '100%',
-                background: 'var(--surface)',
-                border: '1px solid var(--border)',
-                borderRadius: 4,
-                padding: '0.75rem 1rem',
-                fontSize: '0.9375rem',
-                color: 'var(--ink)',
-                outline: 'none',
-                transition: 'border-color 120ms, box-shadow 120ms',
-                fontFamily: 'inherit',
-              }}
-              onFocus={e => {
-                e.currentTarget.style.borderColor = 'var(--accent)'
-                e.currentTarget.style.boxShadow = 'var(--focus-ring)'
-              }}
-              onBlur={e => {
-                e.currentTarget.style.borderColor = 'var(--border)'
-                e.currentTarget.style.boxShadow = 'none'
-                const val = e.currentTarget.value.trim()
-                if (val && !socialTopicsKeywords.includes(val)) {
-                  setSocialTopicsKeywords([...socialTopicsKeywords, val])
-                  trigger()
-                }
-                e.currentTarget.value = ''
-              }}
-              onKeyDown={e => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  const val = (e.currentTarget as HTMLInputElement).value.trim()
-                  if (val && !socialTopicsKeywords.includes(val)) {
-                    setSocialTopicsKeywords([...socialTopicsKeywords, val])
-                    trigger()
-                  }
-                  (e.currentTarget as HTMLInputElement).value = ''
-                }
-                if (e.key === 'Backspace' && !(e.currentTarget as HTMLInputElement).value && socialTopicsKeywords.length) {
-                  setSocialTopicsKeywords(socialTopicsKeywords.slice(0, -1))
-                  trigger()
-                }
-              }}
-            />
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  /** Renders the RSS feed controls for a group containing rss_feeds sensor. */
-  const renderGroupRssControls = (group: SourceGroupTree) => {
-    const hasRss = group.sensors.includes('rss_feeds')
-    if (!hasRss) return null
-    const isOn = enabled.rss_feeds ?? true
-    if (!isOn) return null
-
-    return (
-      <div style={{
-        padding: '0.625rem 0.875rem',
-        background: 'var(--canvas)',
-        borderTop: '1px solid var(--border-soft)',
-      }}>
-        <div style={{ fontSize: '0.6875rem', fontWeight: 500, color: 'var(--ink-muted)', marginBottom: '0.375rem' }}>
-          {t('sources.rss_feeds')}
-        </div>
-        <RssFeedList
-          feeds={rssFeeds}
-          onChange={(feeds) => { setRssFeeds(feeds); trigger() }}
-          onAdd={(url) => {
-            setRssFeeds(prev => [{ url, type: 'other' }, ...prev])
-            api.discoverRssFeed(url).then((result) => {
-              if (result.type === 'discovered' && result.feedUrl) {
-                setRssFeeds((prev) => prev.map((f) => f.url === url ? { ...f, url: result.feedUrl! } : f))
-                showToast(t('sources.feed_discovered', { title: result.feedTitle ?? result.feedUrl ?? '' }))
-              } else if (result.type === 'not_found') {
-                setRssFeeds((prev) => prev.filter((f) => f.url !== url))
-                showToast(t('sources.feed_not_found'))
-              } else if (result.type === 'error') {
-                setRssFeeds((prev) => prev.filter((f) => f.url !== url))
-                showToast(t('sources.feed_discovery_failed', { error: result.message ?? '' }))
-              }
-              trigger()
-            }).catch(() => { trigger() })
-          }}
-        />
-      </div>
-    )
-  }
-
-  /** Renders a Mastodon Trends virtual toggle row (not a real sensor). */
-  const renderMastodonTrendsRow = () => {
-    return (
-      <div
-        className="sensor-row"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0.5rem 0.875rem',
-          borderBottom: '1px solid var(--border-soft)',
-          transition: 'background 120ms',
-          gap: '0.5rem',
-        }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--canvas)' }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)' }}
-      >
-        <div className="sensor-row-left" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flex: 1, minWidth: 0 }}>
-          <Toggle on={mastodonTrendsEnabled} onClick={() => { setMastodonTrendsEnabled(!mastodonTrendsEnabled); trigger() }} />
-          <div style={{ minWidth: 0 }}>
-            <div style={{
-              fontSize: '0.8125rem',
-              fontWeight: 500,
-              color: mastodonTrendsEnabled ? 'var(--ink)' : 'var(--ink-faint)',
-            }}>
-              {t('sources.mastodon_trends')}
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   /** Renders a single group card with its DnD context. */
   const renderGroup = (group: SourceGroupTree) => {
     const sortableIds = group.sensors
       .filter(k => !HIDDEN_SENSORS.has(k))
       .map(k => `${group.id}:${k}`)
-
-    const hasSocial = groupHasSocial(group)
-    const hasRss = groupHasRss(group)
 
     return (
       <SortableContext key={group.id} items={sortableIds} strategy={verticalListSortingStrategy}>
@@ -843,11 +723,8 @@ export function Sensors() {
           onAddSubGroup={!group.parent_id ? () => setCreatingSubGroupParentId(group.id) : undefined}
           renderSensorRow={(sensorKey, isLast) => renderDragItem(sensorKey, group.id, isLast)}
           renderSubGroup={(child) => renderGroup(child)}
-          renderSocialControls={hasSocial ? () => renderGroupSocialControls(group) : undefined}
+          renderSensorControls={(key) => renderSensorInlineControls(key)}
         />
-
-        {/* RSS controls below the card sensors if this group has rss_feeds */}
-        {hasRss && renderGroupRssControls(group)}
 
         {/* Sub-group creation form */}
         {creatingSubGroupParentId === group.id && (

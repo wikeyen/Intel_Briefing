@@ -355,6 +355,53 @@ describe('GroupCard', () => {
     expect(screen.getByText('Edit')).toBeDefined()
     expect(screen.getByText('Delete')).toBeDefined()
   })
+
+  it('renders per-sensor inline controls when renderSensorControls is provided', () => {
+    render(
+      <GroupCard
+        group={group}
+        enabled={{ weibo: true, zhihu: true }}
+        statuses={{}}
+        sensorLimits={{}}
+        sensorLookback={{}}
+        defaultLimit={10}
+        defaultLookback={48}
+        onToggle={() => {}}
+        onUpdateLimit={() => {}}
+        onUpdateLookback={() => {}}
+        onEditGroup={() => {}}
+        onDeleteGroup={() => {}}
+        renderSensorRow={(key) => <div key={key}>{key}</div>}
+        renderSensorControls={(key) => <div data-testid={`controls-${key}`}>Controls for {key}</div>}
+      />
+    )
+    expect(screen.getByTestId('controls-weibo')).toBeDefined()
+    expect(screen.getByTestId('controls-zhihu')).toBeDefined()
+    expect(screen.getByText('Controls for weibo')).toBeDefined()
+    expect(screen.getByText('Controls for zhihu')).toBeDefined()
+  })
+
+  it('does not render inline controls when renderSensorControls is omitted', () => {
+    render(
+      <GroupCard
+        group={group}
+        enabled={{ weibo: true, zhihu: true }}
+        statuses={{}}
+        sensorLimits={{}}
+        sensorLookback={{}}
+        defaultLimit={10}
+        defaultLookback={48}
+        onToggle={() => {}}
+        onUpdateLimit={() => {}}
+        onUpdateLookback={() => {}}
+        onEditGroup={() => {}}
+        onDeleteGroup={() => {}}
+        renderSensorRow={(key) => <div key={key}>{key}</div>}
+      />
+    )
+    expect(screen.queryByTestId('controls-weibo')).toBeNull()
+    expect(screen.queryByTestId('controls-zhihu')).toBeNull()
+  })
 })
 
 describe('GroupCard glassmorphism', () => {

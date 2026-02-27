@@ -15,11 +15,13 @@ const TYPE_CYCLE: RssFeedType[] = ['news', 'blog', 'other']
 
 interface RssFeedListProps {
   feeds: RssFeedEntry[]
+  /** When set, only display feeds matching these types. Callbacks still operate on the full array. */
+  filterType?: RssFeedType[]
   onChange: (feeds: RssFeedEntry[]) => void
   onAdd: (url: string) => void
 }
 
-export function RssFeedList({ feeds, onChange, onAdd }: RssFeedListProps) {
+export function RssFeedList({ feeds, filterType, onChange, onAdd }: RssFeedListProps) {
   const { t } = useTranslation()
   const [input, setInput] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -89,6 +91,7 @@ export function RssFeedList({ feeds, onChange, onAdd }: RssFeedListProps) {
 
       {/* Feed list */}
       {feeds.map((feed, i) => {
+        if (filterType && !filterType.includes(feed.type)) return null
         const meta = TYPE_LABELS[feed.type]
         return (
           <div key={feed.url} style={{

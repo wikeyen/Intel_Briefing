@@ -2,7 +2,7 @@
 // ABOUTME: Lightweight constants used by the Sources page and sensor configuration UI.
 
 /** Sensors that should be hidden from the sources page (controlled implicitly). */
-export const HIDDEN_SENSORS = new Set(['rss_news'])
+export const HIDDEN_SENSORS = new Set<string>()
 
 /** Sensors that support lookback hours, with defaults. */
 export const SENSOR_LOOKBACK_SUPPORT: Record<string, number> = {

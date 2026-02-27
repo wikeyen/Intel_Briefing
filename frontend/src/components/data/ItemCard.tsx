@@ -219,6 +219,28 @@ export function ItemCard({ item, index = 0, searchQuery }: { item: IntelItem; in
             <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>{item.topic}</span>
           </>
         )}
+        {/* NLP keyword chips */}
+        {item.nlp_keywords && item.nlp_keywords.length > 0 && (
+          <>
+            <span style={{ color: 'var(--border)', fontSize: '0.75rem' }}>·</span>
+            {item.nlp_keywords.slice(0, 3).map(kw => (
+              <span
+                key={kw.text}
+                style={{
+                  fontSize: '0.5625rem',
+                  fontWeight: 500,
+                  color: 'var(--ink-muted)',
+                  background: 'var(--surface-alt)',
+                  padding: '0.125rem 0.375rem',
+                  borderRadius: 3,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {kw.text}
+              </span>
+            ))}
+          </>
+        )}
         {sourcePostUrl(item) && sourcePostUrl(item) !== item.url && (
           <>
             <span style={{ color: 'var(--border)', fontSize: '0.75rem' }}>·</span>

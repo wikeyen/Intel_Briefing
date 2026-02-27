@@ -64,10 +64,12 @@ async function fetchMastodon(config: ConfigSettings, limit: number, onProgress?:
   if (config.mastodon_topics_enabled) {
     items.push(...await fetchSocialTopics(config, limit, 'mastodon', onSubItemProgress))
   }
-  if (config.mastodon_trends_enabled) {
-    items.push(...await fetchSocialTrends(config, limit, 'mastodon'))
-  }
   return items
+}
+
+async function fetchMastodonTrends(config: ConfigSettings, limit: number): Promise<IntelItem[]> {
+  if (!config.mastodon_trends_enabled) return []
+  return fetchSocialTrends(config, limit, 'mastodon')
 }
 
 export const SENSOR_REGISTRY: Record<string, SensorFetchFn> = {
@@ -80,6 +82,7 @@ export const SENSOR_REGISTRY: Record<string, SensorFetchFn> = {
   x: fetchX,
   bluesky: fetchBluesky,
   mastodon: fetchMastodon,
+  mastodon_trends: fetchMastodonTrends,
   sources_36kr: fetch36kr,
   wallstreetcn: fetchWallStreetCN,
   chrome_radar: fetchChromeRadar,

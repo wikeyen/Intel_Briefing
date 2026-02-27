@@ -22,7 +22,8 @@ export const SENSORS: SensorDef[] = [
   { key: 'hn_blogs',        label: 'HN Blogs',          desc: 'Curated blog posts from Hacker News',            language: 'row', category: 'insights' },
   { key: 'x',         label: 'X',           desc: 'Posts from monitored X accounts',               language: 'row', category: 'social' },
   { key: 'bluesky',   label: 'Bluesky',     desc: 'Accounts, topics, and trends on Bluesky',       language: 'row', category: 'social' },
-  { key: 'mastodon',  label: 'Mastodon',     desc: 'Accounts, topics, and trends on Mastodon',      language: 'row', category: 'social' },
+  { key: 'mastodon',  label: 'Mastodon',    desc: 'Accounts and topics on Mastodon',               language: 'row', category: 'social' },
+  { key: 'mastodon_trends', label: 'Mastodon Trends', desc: 'Trending posts on Mastodon', language: 'row', category: 'trend' },
   { key: 'rss_feeds',       label: 'RSS Feeds',         desc: 'Custom RSS/Atom feed subscriptions',             language: 'row', category: 'feeds' },
   { key: 'rss_news',        label: 'RSS News',          desc: 'News feeds from RSS subscriptions',              language: 'row', category: 'feeds' },
   // CN
@@ -150,6 +151,7 @@ export const SENSOR_DISPLAY_MAP: Record<string, DisplayCategoryKey> = {
   x:             'trend',
   bluesky:       'trend',
   mastodon:      'trend',
+  mastodon_trends: 'trend',
   weibo:         'trend',
   xiaohongshu:   'trend',
   hn_blogs:      'opinions',

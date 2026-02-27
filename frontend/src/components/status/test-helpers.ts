@@ -40,6 +40,7 @@ export function makeConfig(overrides: Partial<ConfigSettings> = {}): ConfigSetti
       x: true,
       bluesky: true,
       mastodon: true,
+      mastodon_trends: true,
       chrome_radar: true,
       rss_feeds: true,
     },

@@ -1,10 +1,15 @@
 // ABOUTME: Unit tests for extracted and new group-based UI components.
-// ABOUTME: Validates Toggle, PillInput, Badge, CnBadge, GroupForm, GroupPicker, UngroupedSection render correctly.
+// ABOUTME: Validates Toggle, PillInput, Badge, CnBadge, SensorDragItem, GroupCard, GroupForm, GroupPicker, UngroupedSection.
 import { describe, it, expect, vi } from 'vitest'
+import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { DndContext } from '@dnd-kit/core'
+import { SortableContext } from '@dnd-kit/sortable'
 import { Toggle } from '../Toggle'
 import { PillInput } from '../PillInput'
 import { Badge, CnBadge } from '../SensorBadge'
+import { SensorDragItem } from '../SensorDragItem'
+import { GroupCard } from '../GroupCard'
 import { GroupForm } from '../GroupForm'
 import { GroupPicker } from '../GroupPicker'
 import { UngroupedSection } from '../UngroupedSection'
@@ -179,6 +184,150 @@ describe('GroupPicker', () => {
     render(<GroupPicker groups={groups} memberOf={new Set()} onToggle={() => {}} onClose={onClose} />)
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(onClose).toHaveBeenCalledOnce()
+  })
+})
+
+describe('SensorDragItem', () => {
+  const defaultProps = {
+    sensorKey: 'hacker_news',
+    sensorLabel: 'Hacker News',
+    sensorDesc: 'Top stories from news.ycombinator.com',
+    language: 'row' as const,
+    groupId: 'g1',
+    enabled: true,
+    status: 'ok' as const,
+    limit: 10,
+    lookbackHours: 24,
+    defaultLimit: 10,
+    onToggle: vi.fn(),
+    onUpdateLimit: vi.fn(),
+    onUpdateLookback: vi.fn(),
+    onAddToGroup: vi.fn(),
+    onRemoveFromGroup: vi.fn(),
+    isLast: false,
+  }
+
+  function renderWithDnd(props = defaultProps) {
+    return render(
+      <DndContext>
+        <SortableContext items={[`${props.groupId}:${props.sensorKey}`]}>
+          <SensorDragItem {...props} />
+        </SortableContext>
+      </DndContext>
+    )
+  }
+
+  it('renders sensor label and toggle', () => {
+    renderWithDnd()
+    expect(screen.getByText('Hacker News')).toBeDefined()
+    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('renders pill inputs when enabled', () => {
+    renderWithDnd()
+    expect(screen.getByText('Items')).toBeDefined()
+    expect(screen.getByText('Lookback')).toBeDefined()
+  })
+
+  it('hides pill inputs when disabled', () => {
+    renderWithDnd({ ...defaultProps, enabled: false })
+    expect(screen.queryByText('Items')).toBeNull()
+  })
+
+  it('calls onToggle when toggle clicked', () => {
+    const onToggle = vi.fn()
+    renderWithDnd({ ...defaultProps, onToggle })
+    fireEvent.click(screen.getByRole('switch'))
+    expect(onToggle).toHaveBeenCalledOnce()
+  })
+
+  it('renders CN badge for Chinese sensors', () => {
+    renderWithDnd({ ...defaultProps, language: 'cn' })
+    expect(screen.getByText('CN')).toBeDefined()
+  })
+})
+
+describe('GroupCard', () => {
+  const group: SourceGroupTree = {
+    id: 'g1',
+    parent_id: null,
+    name: 'Trending',
+    color: '#C4851C',
+    icon: null,
+    processing: 'trend',
+    sort_order: 0,
+    created_at: '',
+    updated_at: '',
+    sensors: ['weibo', 'zhihu'],
+    children: [],
+  }
+
+  it('renders group name and accent bar', () => {
+    render(
+      <GroupCard
+        group={group}
+        enabled={{ weibo: true, zhihu: true }}
+        statuses={{}}
+        sensorLimits={{}}
+        sensorLookback={{}}
+        defaultLimit={10}
+        defaultLookback={48}
+        onToggle={() => {}}
+        onUpdateLimit={() => {}}
+        onUpdateLookback={() => {}}
+        onEditGroup={() => {}}
+        onDeleteGroup={() => {}}
+        renderSensorRow={(key) => <div key={key}>{key}</div>}
+      />
+    )
+    expect(screen.getByText('Trending')).toBeDefined()
+    expect(screen.getByText('trend')).toBeDefined()
+    expect(screen.getByText('weibo')).toBeDefined()
+    expect(screen.getByText('zhihu')).toBeDefined()
+  })
+
+  it('shows enabled count', () => {
+    render(
+      <GroupCard
+        group={group}
+        enabled={{ weibo: true, zhihu: false }}
+        statuses={{}}
+        sensorLimits={{}}
+        sensorLookback={{}}
+        defaultLimit={10}
+        defaultLookback={48}
+        onToggle={() => {}}
+        onUpdateLimit={() => {}}
+        onUpdateLookback={() => {}}
+        onEditGroup={() => {}}
+        onDeleteGroup={() => {}}
+        renderSensorRow={(key) => <div key={key}>{key}</div>}
+      />
+    )
+    expect(screen.getByText('1/2')).toBeDefined()
+  })
+
+  it('opens kebab menu on click', () => {
+    render(
+      <GroupCard
+        group={group}
+        enabled={{}}
+        statuses={{}}
+        sensorLimits={{}}
+        sensorLookback={{}}
+        defaultLimit={10}
+        defaultLookback={48}
+        onToggle={() => {}}
+        onUpdateLimit={() => {}}
+        onUpdateLookback={() => {}}
+        onEditGroup={() => {}}
+        onDeleteGroup={() => {}}
+        renderSensorRow={(key) => <div key={key}>{key}</div>}
+      />
+    )
+    fireEvent.click(screen.getByLabelText('Group options'))
+    expect(screen.getByText('Edit')).toBeDefined()
+    expect(screen.getByText('Delete')).toBeDefined()
   })
 })
 

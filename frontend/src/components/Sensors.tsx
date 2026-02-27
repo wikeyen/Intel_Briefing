@@ -1,7 +1,7 @@
 // ABOUTME: Sources page — sensor configuration grouped into 5 foldable sections.
 // ABOUTME: General, Social Accounts, Trend, Topics, and RSS with inline controls and i18n.
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { api } from '@/api/client'
 import { TagInput } from '@/components/TagInput'
 import { useTranslation } from '@/lib/i18n'
@@ -14,160 +14,14 @@ import { FoldableSection } from '@/components/sources/FoldableSection'
 import { RssFeedList } from '@/components/sources/RssFeedList'
 import { normalizeRssFeeds, type RssFeedEntry } from '@/lib/models'
 import { SkeletonCard } from '@/components/Skeleton'
-
-type SensorStatus = 'ok' | 'failed' | 'disabled'
+import { Toggle } from '@/components/sources/Toggle'
+import { PillInput } from '@/components/sources/PillInput'
+import { Badge, CnBadge, type SensorStatus } from '@/components/sources/SensorBadge'
 
 /** Sensor key → language lookup for CN badges. */
 const SENSOR_LANGUAGE: Record<string, 'cn' | 'row'> = Object.fromEntries(
   SENSORS.map(s => [s.key, s.language])
 ) as Record<string, 'cn' | 'row'>
-
-function CnBadge({ language }: { language: 'cn' | 'row' }) {
-  if (language === 'row') return null
-  return (
-    <span style={{
-      fontSize: '0.5625rem',
-      fontWeight: 700,
-      letterSpacing: '0.08em',
-      textTransform: 'uppercase',
-      background: '#ffe066',
-      color: '#c8102e',
-      padding: '0.0625rem 0.375rem',
-      borderRadius: 999,
-      marginLeft: '0.375rem',
-    }}>
-      CN
-    </span>
-  )
-}
-
-function Badge({ status }: { status: SensorStatus | undefined }) {
-  const { t } = useTranslation()
-  if (!status) return null
-  const map: Record<string, { bg: string; color: string; label: string }> = {
-    ok:       { bg: 'var(--ok-bg)',       color: 'var(--ok)',        label: t('sources.badge_ok') },
-    failed:   { bg: 'var(--err-bg)',      color: 'var(--err)',       label: t('sources.badge_failed') },
-    disabled: { bg: 'var(--surface-alt)', color: 'var(--ink-faint)', label: t('sources.badge_off') },
-  }
-  const s = map[status]
-  return (
-    <span style={{
-      fontSize: '0.625rem',
-      fontWeight: 600,
-      letterSpacing: '0.06em',
-      textTransform: 'uppercase',
-      background: s.bg,
-      color: s.color,
-      padding: '0.125rem 0.5rem',
-      borderRadius: 999,
-    }}>
-      {s.label}
-    </span>
-  )
-}
-
-function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      onClick={onClick}
-      style={{
-        position: 'relative',
-        width: 32,
-        height: 18,
-        borderRadius: 9,
-        border: on ? 'none' : '1.5px solid var(--border)',
-        background: on ? 'var(--accent)' : 'transparent',
-        cursor: 'pointer',
-        transition: 'background 150ms, border-color 150ms',
-        flexShrink: 0,
-      }}
-    >
-      <span style={{
-        position: 'absolute',
-        top: on ? 3 : 2,
-        left: on ? 17 : 2,
-        width: 12,
-        height: 12,
-        borderRadius: '50%',
-        background: on ? 'var(--surface)' : 'var(--ink-faint)',
-        transition: 'left 150ms, background 150ms',
-        boxShadow: on ? 'var(--shadow-sm)' : 'none',
-      }} />
-    </button>
-  )
-}
-
-interface PillInputProps {
-  label: string
-  value: number
-  min: number
-  max: number
-  suffix?: string
-  onChange: (v: number) => void
-}
-
-function PillInput({ label, value, min, max, suffix, onChange }: PillInputProps) {
-  const [draft, setDraft] = useState<string | null>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  const commit = () => {
-    if (draft === null) return
-    const n = Number(draft)
-    if (!isNaN(n) && n >= min) {
-      onChange(Math.max(min, Math.min(max, n)))
-    }
-    setDraft(null)
-  }
-
-  return (
-    <label style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '0.1875rem',
-      borderRadius: 999,
-      border: '1px solid var(--border)',
-      background: 'var(--canvas)',
-      padding: '0.125rem 0.375rem',
-      fontSize: '0.6875rem',
-      lineHeight: 1,
-      cursor: 'text',
-      whiteSpace: 'nowrap',
-      flexShrink: 0,
-    }}>
-      <span style={{ color: 'var(--ink-muted)', fontWeight: 500 }}>{label}</span>
-      <input
-        ref={inputRef}
-        type="number"
-        min={min}
-        max={max}
-        value={draft ?? value}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => { if (e.key === 'Enter') { commit(); inputRef.current?.blur() } }}
-        style={{
-          width: suffix ? 26 : 30,
-          padding: 0,
-          border: 'none',
-          background: 'transparent',
-          color: 'var(--ink)',
-          fontSize: '0.6875rem',
-          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-          fontWeight: 600,
-          textAlign: 'right',
-          outline: 'none',
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          MozAppearance: 'textfield' as any,
-        }}
-      />
-      {suffix && (
-        <span style={{ color: 'var(--ink-muted)', fontWeight: 500 }}>{suffix}</span>
-      )}
-    </label>
-  )
-}
 
 function validateXHandle(value: string): string | null {
   const clean = value.startsWith('@') ? value : `@${value}`

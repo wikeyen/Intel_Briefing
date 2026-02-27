@@ -3,6 +3,7 @@
 'use client'
 import { useState, useRef, useEffect, type ReactNode } from 'react'
 import type { SourceGroupTree } from '@/lib/groups/types'
+import { useTranslation } from '@/lib/i18n'
 import {
   GROUP_CARD, ACCENT_BAR, GROUP_HEADER, SENSOR_LIST,
   PROCESSING_PILL, KEBAB_BTN, KEBAB_MENU, KEBAB_MENU_ITEM,
@@ -40,6 +41,7 @@ export function GroupCard({
   renderSubGroup,
   renderSocialControls,
 }: GroupCardProps) {
+  const { t } = useTranslation()
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 

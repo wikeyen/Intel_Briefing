@@ -4,13 +4,14 @@
 import { useState, useRef, useEffect, type ReactNode } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { SourceGroupTree } from '@/lib/groups/types'
+import type { SourceGroupTree, UpdateGroupPayload } from '@/lib/groups/types'
 import { useTranslation } from '@/lib/i18n'
 import {
   GROUP_CARD, GROUP_HEADER, SENSOR_LIST,
-  PROCESSING_PILL, KEBAB_BTN, KEBAB_MENU, KEBAB_MENU_ITEM,
+  KEBAB_BTN, KEBAB_MENU, KEBAB_MENU_ITEM,
   colorDotStyle,
 } from './group-styles'
+import { WorkflowSection } from './WorkflowSection'
 
 /** 6-dot drag grip icon rendered as CSS dots — matches the sensor row grip. */
 function GroupDragGrip() {
@@ -45,6 +46,9 @@ interface GroupCardProps {
   onToggle: (key: string) => void
   onUpdateLimit: (key: string, value: number) => void
   onUpdateLookback: (key: string, value: number) => void
+  hasTopicSensors: boolean
+  hasAccountSensors: boolean
+  onUpdateGroup: (data: UpdateGroupPayload) => void
   onEditGroup: () => void
   onDeleteGroup: () => void
   onAddSubGroup?: () => void
@@ -57,6 +61,9 @@ export function GroupCard({
   group,
   enabled,
   isOver,
+  hasTopicSensors,
+  hasAccountSensors,
+  onUpdateGroup,
   onEditGroup,
   onDeleteGroup,
   onAddSubGroup,
@@ -176,11 +183,6 @@ export function GroupCard({
           {enabledCount}/{group.sensors.length}
         </span>
 
-        {/* Processing type badge */}
-        <span style={PROCESSING_PILL}>
-          {t('sources.processing_' + group.processing)}
-        </span>
-
         {/* Kebab menu */}
         <div style={{ position: 'relative' }} ref={menuRef}>
           <button
@@ -231,6 +233,14 @@ export function GroupCard({
 
       {!collapsed && (
         <>
+          {/* Workflow configuration */}
+          <WorkflowSection
+            group={group}
+            hasTopicSensors={hasTopicSensors}
+            hasAccountSensors={hasAccountSensors}
+            onUpdate={onUpdateGroup}
+          />
+
           {/* Sensor list */}
           <div style={SENSOR_LIST}>
             {group.sensors.map((sensorKey, i) => (

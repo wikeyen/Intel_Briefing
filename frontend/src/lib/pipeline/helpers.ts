@@ -241,20 +241,28 @@ export async function runIntelligence(
     const socialSensors = new Set<string>()
 
     for (const group of groups) {
-      switch (group.processing) {
-        case 'trend':
-          group.sensors.forEach(s => trendSensors.add(sensorToSource(s)))
-          break
-        case 'topic':
-          group.sensors.forEach(s => topicSensors.add(sensorToSource(s)))
-          break
-        case 'social':
-          group.sensors.forEach(s => socialSensors.add(sensorToSource(s)))
-          break
+      if (group.trend_enabled) {
+        group.sensors.forEach(s => trendSensors.add(sensorToSource(s)))
+      }
+      if (group.topic_enabled) {
+        group.sensors.forEach(s => topicSensors.add(sensorToSource(s)))
+      }
+      if (group.social_enabled) {
+        group.sensors.forEach(s => socialSensors.add(sensorToSource(s)))
       }
     }
 
-    tracker.addEvent('info', 'intelligence', `Groups: ${groups.filter(g => g.processing === 'trend').map(g => g.name).join(', ')} → trend; ${groups.filter(g => g.processing === 'topic').map(g => g.name).join(', ')} → topic; ${groups.filter(g => g.processing === 'social').map(g => g.name).join(', ')} → social`)
+    // Collect prompt overrides (use first non-null found per type)
+    let trendPrompt: string | null = null
+    let topicPrompt: string | null = null
+    let socialPrompt: string | null = null
+    for (const group of groups) {
+      if (group.trend_enabled && group.trend_prompt && !trendPrompt) trendPrompt = group.trend_prompt
+      if (group.topic_enabled && group.topic_prompt && !topicPrompt) topicPrompt = group.topic_prompt
+      if (group.social_enabled && group.social_prompt && !socialPrompt) socialPrompt = group.social_prompt
+    }
+
+    tracker.addEvent('info', 'intelligence', `Groups: ${groups.filter(g => g.trend_enabled).map(g => g.name).join(', ')} → trend; ${groups.filter(g => g.topic_enabled).map(g => g.name).join(', ')} → topic; ${groups.filter(g => g.social_enabled).map(g => g.name).join(', ')} → social`)
 
     // Try NLP sidecar first
     const nlpAvailable = await checkHealth()
@@ -309,7 +317,7 @@ export async function runIntelligence(
 
       // Run NLP intelligence analysis with section-split data
       tracker.addEvent('info', 'intelligence', 'Running LLM narrative synthesis...')
-      const sensorSets: IntelligenceSensorSets = { trendSensors, topicSensors, socialSensors }
+      const sensorSets: IntelligenceSensorSets = { trendSensors, topicSensors, socialSensors, trendPrompt, topicPrompt, socialPrompt }
       const intelligence = await runNlpIntelligenceAnalysis(
         report, { trendClusters, enrichmentMap }, llmConfig, signal, language, sensorSets
       )
@@ -321,7 +329,7 @@ export async function runIntelligence(
     }
 
     // Fallback: legacy LLM-only pipeline
-    const sensorSets: IntelligenceSensorSets = { trendSensors, topicSensors, socialSensors }
+    const sensorSets: IntelligenceSensorSets = { trendSensors, topicSensors, socialSensors, trendPrompt, topicPrompt, socialPrompt }
     const intelligence = await runIntelligenceAnalysis(report, llmConfig, signal, language, sensorSets)
     const hasData = intelligence.trend !== null || intelligence.topics !== null || intelligence.accounts !== null
     if (hasData) {

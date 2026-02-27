@@ -1,8 +1,8 @@
 // ABOUTME: Inline form for creating or editing a source group.
-// ABOUTME: Renders name input, color palette, processing type select, and submit/cancel buttons.
+// ABOUTME: Renders name input, color palette, analysis toggle pills, and submit/cancel buttons.
 'use client'
 import { useState, useRef, useEffect } from 'react'
-import type { GroupProcessing, CreateGroupPayload } from '@/lib/groups/types'
+import type { CreateGroupPayload } from '@/lib/groups/types'
 import { useTranslation } from '@/lib/i18n'
 import { GROUP_CARD } from './group-styles'
 
@@ -18,11 +18,25 @@ const COLOR_PRESETS = [
   '#8B6C5C',
 ] as const
 
-/** Processing type values — labels are resolved via i18n. */
-const PROCESSING_VALUES: GroupProcessing[] = ['general', 'trend', 'topic', 'social', 'research', 'news', 'opinion']
+/** Analysis toggle definitions for the form. */
+const FORM_TOGGLES = [
+  { key: 'trend_enabled' as const, i18nKey: 'sources.workflow_trend' },
+  { key: 'topic_enabled' as const, i18nKey: 'sources.workflow_topic' },
+  { key: 'social_enabled' as const, i18nKey: 'sources.workflow_social' },
+  { key: 'sentiment_enabled' as const, i18nKey: 'sources.workflow_sentiment' },
+] as const
+
+interface GroupFormInitial {
+  name: string
+  color: string
+  trend_enabled: boolean
+  topic_enabled: boolean
+  social_enabled: boolean
+  sentiment_enabled: boolean
+}
 
 interface GroupFormProps {
-  initial?: { name: string; color: string; processing: GroupProcessing }
+  initial?: GroupFormInitial
   parentId?: string | null
   onSubmit: (data: CreateGroupPayload) => void
   onCancel: () => void
@@ -32,7 +46,10 @@ export function GroupForm({ initial, parentId, onSubmit, onCancel }: GroupFormPr
   const { t } = useTranslation()
   const [name, setName] = useState(initial?.name ?? '')
   const [color, setColor] = useState(initial?.color ?? COLOR_PRESETS[0])
-  const [processing, setProcessing] = useState<GroupProcessing>(initial?.processing ?? 'general')
+  const [trendEnabled, setTrendEnabled] = useState(initial?.trend_enabled ?? false)
+  const [topicEnabled, setTopicEnabled] = useState(initial?.topic_enabled ?? false)
+  const [socialEnabled, setSocialEnabled] = useState(initial?.social_enabled ?? false)
+  const [sentimentEnabled, setSentimentEnabled] = useState(initial?.sentiment_enabled ?? true)
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -40,6 +57,21 @@ export function GroupForm({ initial, parentId, onSubmit, onCancel }: GroupFormPr
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
+
+  /** Toggle state setters by key. */
+  const toggleSetters: Record<string, (fn: (prev: boolean) => boolean) => void> = {
+    trend_enabled: setTrendEnabled,
+    topic_enabled: setTopicEnabled,
+    social_enabled: setSocialEnabled,
+    sentiment_enabled: setSentimentEnabled,
+  }
+
+  const toggleValues: Record<string, boolean> = {
+    trend_enabled: trendEnabled,
+    topic_enabled: topicEnabled,
+    social_enabled: socialEnabled,
+    sentiment_enabled: sentimentEnabled,
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -56,8 +88,11 @@ export function GroupForm({ initial, parentId, onSubmit, onCancel }: GroupFormPr
     onSubmit({
       name: trimmed,
       color,
-      processing,
       parent_id: parentId ?? null,
+      trend_enabled: trendEnabled,
+      topic_enabled: topicEnabled,
+      social_enabled: socialEnabled,
+      sentiment_enabled: sentimentEnabled,
     })
   }
 
@@ -141,7 +176,7 @@ export function GroupForm({ initial, parentId, onSubmit, onCancel }: GroupFormPr
         </div>
       </div>
 
-      {/* Processing type */}
+      {/* Analysis toggles */}
       <div style={{ marginBottom: '1rem' }}>
         <div style={{
           fontSize: '0.6875rem',
@@ -151,29 +186,44 @@ export function GroupForm({ initial, parentId, onSubmit, onCancel }: GroupFormPr
           color: 'var(--ink-muted)',
           marginBottom: '0.375rem',
         }}>
-          {t('sources.processing_type')}
+          {t('sources.workflow_analysis')}
         </div>
-        <select
-          value={processing}
-          onChange={e => setProcessing(e.target.value as GroupProcessing)}
-          style={{
-            padding: '0.375rem 0.625rem',
-            fontSize: '0.8125rem',
-            color: 'var(--ink)',
-            background: 'var(--canvas)',
-            border: '1px solid var(--border)',
-            borderRadius: 6,
-            outline: 'none',
-            fontFamily: 'inherit',
-            cursor: 'pointer',
-          }}
-        >
-          {PROCESSING_VALUES.map(val => (
-            <option key={val} value={val}>
-              {t('sources.processing_' + val)}
-            </option>
-          ))}
-        </select>
+        <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+          {FORM_TOGGLES.map(toggle => {
+            const isEnabled = toggleValues[toggle.key]
+            return (
+              <button
+                key={toggle.key}
+                type="button"
+                onClick={() => toggleSetters[toggle.key](prev => !prev)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  padding: '0.25rem 0.625rem',
+                  borderRadius: 999,
+                  fontSize: '0.6875rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'background 120ms, color 120ms',
+                  ...(isEnabled
+                    ? {
+                        background: 'var(--accent)',
+                        color: 'white',
+                        border: '1px solid var(--accent)',
+                      }
+                    : {
+                        background: 'none',
+                        color: 'var(--ink-muted)',
+                        border: '1px solid var(--border)',
+                      }),
+                }}
+              >
+                {t(toggle.i18nKey)}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Action buttons */}

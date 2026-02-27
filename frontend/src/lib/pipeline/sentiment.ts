@@ -1,11 +1,9 @@
-// ABOUTME: LLM-based sentiment classifier for social posts — classifies in batches via chatCompletion.
-// ABOUTME: Replaces local Transformers.js model for better accuracy across languages and post lengths.
+// ABOUTME: LLM-based sentiment classifier — classifies items in batches via chatCompletion.
+// ABOUTME: Caller pre-filters which items need sentiment; this module handles batching and LLM calls.
 import type { IntelItem } from '../models'
 import type { LlmConfig } from '../summary/llm'
 import { chatCompletion } from '../summary/llm'
 import { jsonrepair } from 'jsonrepair'
-
-const SOCIAL_SOURCES = new Set(['x', 'bluesky', 'mastodon', 'weibo', 'xiaohongshu'])
 
 type SentimentLabel = 'positive' | 'negative' | 'neutral'
 
@@ -105,8 +103,9 @@ function parseResponse(raw: string, expectedCount: number): Array<{ i: number; l
 }
 
 /**
- * Enrich social items with sentiment labels in-place using LLM classification.
+ * Enrich items with sentiment labels in-place using LLM classification.
  * Items are batched to keep prompt sizes manageable and maintain per-item accuracy.
+ * The caller decides which items need sentiment — no source filtering here.
  * Skips silently if no LLM config is provided.
  */
 export async function enrichSentiment(
@@ -115,15 +114,13 @@ export async function enrichSentiment(
   signal?: AbortSignal,
 ): Promise<void> {
   if (!llmConfig) return
-
-  const socialItems = items.filter(item => SOCIAL_SOURCES.has(item.source))
-  if (socialItems.length === 0) return
+  if (items.length === 0) return
 
   // Process in batches to keep prompts focused
-  for (let start = 0; start < socialItems.length; start += BATCH_SIZE) {
+  for (let start = 0; start < items.length; start += BATCH_SIZE) {
     if (signal?.aborted) return
 
-    const batch = socialItems.slice(start, start + BATCH_SIZE)
+    const batch = items.slice(start, start + BATCH_SIZE)
     const texts = batch.map(item => item.title || '')
 
     const results = await classifyBatch(texts, llmConfig, signal)
@@ -145,7 +142,7 @@ export function aggregateSentiment(items: IntelItem[]): string {
   const bySource: Record<string, Record<SentimentLabel, number>> = {}
 
   for (const item of items) {
-    if (!item.sentiment || !SOCIAL_SOURCES.has(item.source)) continue
+    if (!item.sentiment) continue
     if (!bySource[item.source]) {
       bySource[item.source] = { positive: 0, negative: 0, neutral: 0 }
     }

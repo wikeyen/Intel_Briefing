@@ -16,6 +16,20 @@ import { GroupPicker } from '../GroupPicker'
 import { UngroupedSection } from '../UngroupedSection'
 import type { SourceGroupTree } from '@/lib/groups/types'
 
+/** Workflow field defaults for test fixtures (all analysis off). */
+const WORKFLOW_DEFAULTS = {
+  trend_enabled: false,
+  topic_enabled: false,
+  social_enabled: false,
+  sentiment_enabled: false,
+  summary_prompt: null,
+  trend_prompt: null,
+  topic_prompt: null,
+  social_prompt: null,
+  suppress_keywords: [] as string[],
+  boost_keywords: [] as string[],
+} as const
+
 // Mock i18n — components use useTranslation for labels
 vi.mock('@/lib/i18n', () => ({
   useTranslation: () => ({
@@ -33,14 +47,26 @@ vi.mock('@/lib/i18n', () => ({
         'sources.ungrouped_desc': 'Drag sensors to a group to include them in analysis',
         'sources.group_name': 'Group name',
         'sources.group_color': 'Color',
-        'sources.processing_type': 'Processing type',
-        'sources.processing_general': 'General',
-        'sources.processing_trend': 'Trend',
-        'sources.processing_topic': 'Topic',
-        'sources.processing_social': 'Social',
-        'sources.processing_research': 'Research',
-        'sources.processing_news': 'News',
-        'sources.processing_opinion': 'Opinion',
+        'sources.workflow': 'Workflow',
+        'sources.workflow_analysis': 'Analysis',
+        'sources.workflow_trend': 'Trend',
+        'sources.workflow_topic': 'Topic',
+        'sources.workflow_social': 'Social',
+        'sources.workflow_sentiment': 'Sentiment',
+        'sources.workflow_keywords': 'Keywords',
+        'sources.workflow_suppress': 'Suppress',
+        'sources.workflow_boost': 'Boost',
+        'sources.workflow_prompts': 'Prompts',
+        'sources.workflow_summary_prompt': 'Summary prompt',
+        'sources.workflow_trend_prompt': 'Trend prompt',
+        'sources.workflow_topic_prompt': 'Topic prompt',
+        'sources.workflow_social_prompt': 'Social prompt',
+        'sources.workflow_custom_prompt': 'Custom',
+        'sources.workflow_using_default': 'Default',
+        'sources.workflow_customize': 'Customize',
+        'sources.workflow_reset': 'Reset',
+        'sources.workflow_no_topic_sensors': 'No topic sensors in this group',
+        'sources.workflow_no_account_sensors': 'No account sensors in this group',
         'sensor.desc.hacker_news': 'Top stories from HN',
         'sensor.desc.github': 'Daily trending repos',
         'sensor.desc.arxiv': 'AI/ML preprints',
@@ -138,7 +164,7 @@ describe('GroupForm', () => {
   it('renders edit form with pre-filled values', () => {
     render(
       <GroupForm
-        initial={{ name: 'My Reports', color: '#2E7D9A', processing: 'research' }}
+        initial={{ name: 'My Reports', color: '#2E7D9A', trend_enabled: false, topic_enabled: false, social_enabled: false, sentiment_enabled: true }}
         onSubmit={() => {}}
         onCancel={() => {}}
       />
@@ -163,8 +189,11 @@ describe('GroupForm', () => {
     expect(onSubmit).toHaveBeenCalledWith({
       name: 'My Group',
       color: '#1A7A6D',
-      processing: 'general',
       parent_id: null,
+      trend_enabled: false,
+      topic_enabled: false,
+      social_enabled: false,
+      sentiment_enabled: true,
     })
   })
 
@@ -178,8 +207,8 @@ describe('GroupForm', () => {
 
 describe('GroupPicker', () => {
   const groups: SourceGroupTree[] = [
-    { id: 'g1', parent_id: null, name: 'News', color: '#2E7D9A', icon: null, processing: 'news', sort_order: 0, created_at: '', updated_at: '', sensors: [], children: [] },
-    { id: 'g2', parent_id: null, name: 'Trending', color: '#C4851C', icon: null, processing: 'trend', sort_order: 1, created_at: '', updated_at: '', sensors: [], children: [] },
+    { id: 'g1', parent_id: null, name: 'News', color: '#2E7D9A', icon: null, trend_enabled: false, topic_enabled: false, social_enabled: false, sentiment_enabled: false, summary_prompt: null, trend_prompt: null, topic_prompt: null, social_prompt: null, suppress_keywords: [], boost_keywords: [], sort_order: 0, created_at: '', updated_at: '', sensors: [], children: [] },
+    { id: 'g2', parent_id: null, name: 'Trending', color: '#C4851C', icon: null, trend_enabled: true, topic_enabled: false, social_enabled: false, sentiment_enabled: false, summary_prompt: null, trend_prompt: null, topic_prompt: null, social_prompt: null, suppress_keywords: [], boost_keywords: [], sort_order: 1, created_at: '', updated_at: '', sensors: [], children: [] },
   ]
 
   it('renders all groups', () => {
@@ -281,12 +310,20 @@ describe('GroupCard', () => {
     name: 'Trending',
     color: '#C4851C',
     icon: null,
-    processing: 'trend',
+    ...WORKFLOW_DEFAULTS,
+    trend_enabled: true,
     sort_order: 0,
     created_at: '',
     updated_at: '',
     sensors: ['weibo', 'zhihu'],
     children: [],
+  }
+
+  /** Shared props for GroupCard that all tests need. */
+  const sharedProps = {
+    hasTopicSensors: false,
+    hasAccountSensors: false,
+    onUpdateGroup: () => {},
   }
 
   it('renders group name and sensors', () => {
@@ -305,10 +342,11 @@ describe('GroupCard', () => {
         onEditGroup={() => {}}
         onDeleteGroup={() => {}}
         renderSensorRow={(key) => <div key={key}>{key}</div>}
+        {...sharedProps}
       />
     )
     expect(screen.getByText('Trending')).toBeDefined()
-    expect(screen.getByText('Trend')).toBeDefined()
+    expect(screen.getByText('Workflow')).toBeDefined()
     expect(screen.getByText('weibo')).toBeDefined()
     expect(screen.getByText('zhihu')).toBeDefined()
   })
@@ -329,6 +367,7 @@ describe('GroupCard', () => {
         onEditGroup={() => {}}
         onDeleteGroup={() => {}}
         renderSensorRow={(key) => <div key={key}>{key}</div>}
+        {...sharedProps}
       />
     )
     // Sensors visible by default
@@ -362,6 +401,7 @@ describe('GroupCard', () => {
         onEditGroup={() => {}}
         onDeleteGroup={() => {}}
         renderSensorRow={(key) => <div key={key}>{key}</div>}
+        {...sharedProps}
       />
     )
     // Collapse
@@ -383,7 +423,8 @@ describe('GroupCard', () => {
         name: 'Sub Trending',
         color: '#FF0000',
         icon: null,
-        processing: 'trend',
+        ...WORKFLOW_DEFAULTS,
+        trend_enabled: true,
         sort_order: 0,
         created_at: '',
         updated_at: '',
@@ -407,6 +448,7 @@ describe('GroupCard', () => {
         onDeleteGroup={() => {}}
         renderSensorRow={(key) => <div key={key}>{key}</div>}
         renderSubGroup={(child) => <div data-testid={`sub-${child.id}`}>{child.name}</div>}
+        {...sharedProps}
       />
     )
     // Sub-group visible by default
@@ -433,6 +475,7 @@ describe('GroupCard', () => {
         onEditGroup={() => {}}
         onDeleteGroup={() => {}}
         renderSensorRow={(key) => <div key={key}>{key}</div>}
+        {...sharedProps}
       />
     )
     expect(screen.getByText('1/2')).toBeDefined()

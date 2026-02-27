@@ -43,6 +43,12 @@ const VISIBLE_SENSORS = SENSORS.filter(s => !HIDDEN_SENSORS.has(s.key))
 /** Sensors with complex settings that open a detail panel instead of inline controls. */
 const COMPLEX_SENSORS = new Set(['x_accounts', 'bluesky_accounts', 'mastodon_accounts', 'bluesky_topics', 'mastodon_topics', 'rss_news', 'rss_blogs'])
 
+/** Sensor keys that produce topic data. */
+const TOPIC_SENSORS = new Set(['bluesky_topics', 'mastodon_topics'])
+
+/** Sensor keys that produce account data. */
+const ACCOUNT_SENSORS = new Set(['x_accounts', 'bluesky_accounts', 'mastodon_accounts'])
+
 function normalizeXHandle(value: string): string {
   return value.startsWith('@') ? value : `@${value}`
 }
@@ -335,9 +341,26 @@ export function Sensors() {
   const handleUpdateGroup = async (data: CreateGroupPayload) => {
     if (!editingGroup) return
     try {
-      const update: UpdateGroupPayload = { name: data.name, color: data.color, processing: data.processing }
+      const update: UpdateGroupPayload = {
+        name: data.name,
+        color: data.color,
+        trend_enabled: data.trend_enabled,
+        topic_enabled: data.topic_enabled,
+        social_enabled: data.social_enabled,
+        sentiment_enabled: data.sentiment_enabled,
+      }
       await api.updateGroup(editingGroup.id, update)
       setEditingGroup(null)
+      refreshGroups()
+    } catch (e) {
+      showToast(t('sources.save_failed', { error: (e as Error).message }))
+    }
+  }
+
+  /** Inline update for a group's workflow settings (from WorkflowSection). */
+  const handleInlineGroupUpdate = async (groupId: string, data: UpdateGroupPayload) => {
+    try {
+      await api.updateGroup(groupId, data)
       refreshGroups()
     } catch (e) {
       showToast(t('sources.save_failed', { error: (e as Error).message }))
@@ -828,6 +851,9 @@ export function Sensors() {
       .filter(k => !HIDDEN_SENSORS.has(k))
       .map(k => `${group.id}:${k}`)
 
+    const hasTopicSensors = group.sensors.some(k => TOPIC_SENSORS.has(k))
+    const hasAccountSensors = group.sensors.some(k => ACCOUNT_SENSORS.has(k))
+
     return (
       <SortableContext key={group.id} items={sortableIds} strategy={verticalListSortingStrategy}>
         <GroupCard
@@ -839,6 +865,9 @@ export function Sensors() {
           defaultLimit={defaultLimit}
           defaultLookback={defaultLookback}
           isOver={overGroupId === group.id}
+          hasTopicSensors={hasTopicSensors}
+          hasAccountSensors={hasAccountSensors}
+          onUpdateGroup={(data) => handleInlineGroupUpdate(group.id, data)}
           onToggle={toggle}
           onUpdateLimit={updateSensorLimit}
           onUpdateLookback={updateSensorLookback}
@@ -955,7 +984,10 @@ export function Sensors() {
                 initial={{
                   name: editingGroup.name,
                   color: editingGroup.color,
-                  processing: editingGroup.processing,
+                  trend_enabled: editingGroup.trend_enabled,
+                  topic_enabled: editingGroup.topic_enabled,
+                  social_enabled: editingGroup.social_enabled,
+                  sentiment_enabled: editingGroup.sentiment_enabled,
                 }}
                 parentId={editingGroup.parent_id}
                 onSubmit={handleUpdateGroup}

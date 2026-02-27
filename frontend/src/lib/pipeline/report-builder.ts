@@ -91,16 +91,32 @@ export async function assembleReport(
     }
   }
 
-  // Sentiment enrichment: classify social items via LLM
-  const allItems = Object.values(dedupedSections).flat()
+  // Sentiment enrichment: classify items in groups where sentiment is enabled
+  const sentimentGroupIds = new Set(groups.filter(g => g.sentiment_enabled).map(g => g.id))
+  const sentimentItems: IntelItem[] = []
+  for (const [key, items] of Object.entries(dedupedSections)) {
+    if (sentimentGroupIds.has(key)) {
+      sentimentItems.push(...items)
+    }
+  }
   try {
-    await enrichSentiment(allItems, opts?.llmConfig, opts?.signal)
+    await enrichSentiment(sentimentItems, opts?.llmConfig, opts?.signal)
   } catch (err) {
     console.error('Sentiment enrichment failed (non-fatal):', err)
   }
 
-  // Keyword filtering: suppress matching items, boost matching items to the top
+  // Build group lookup for per-group keyword filtering
+  const groupById = new Map(groups.map(g => [g.id, g]))
+
+  // Keyword filtering: per-group keywords first, then global keywords
   for (const key of Object.keys(dedupedSections)) {
+    const group = groupById.get(key)
+    // Per-group suppress/boost
+    if (group) {
+      dedupedSections[key] = suppressItems(dedupedSections[key], group.suppress_keywords)
+      dedupedSections[key] = boostItems(dedupedSections[key], group.boost_keywords)
+    }
+    // Global suppress/boost on top
     dedupedSections[key] = suppressItems(dedupedSections[key], config.suppress_keywords ?? [])
     dedupedSections[key] = boostItems(dedupedSections[key], config.boost_keywords ?? [])
   }

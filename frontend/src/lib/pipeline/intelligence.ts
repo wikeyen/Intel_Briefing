@@ -253,6 +253,7 @@ export async function analyzeTrendIntelligence(
   llmConfig: LlmConfig,
   signal?: AbortSignal,
   language?: SummaryLanguage,
+  promptOverride?: string | null,
 ): Promise<TrendIntelligence | null> {
   if (items.length === 0) return null
 
@@ -264,7 +265,7 @@ export async function analyzeTrendIntelligence(
     }).join('\n')
 
     const messages: ChatMessage[] = [
-      { role: 'system', content: trendSystemPrompt(language) },
+      { role: 'system', content: promptOverride ?? trendSystemPrompt(language) },
       { role: 'user', content: numbered },
     ]
 
@@ -333,6 +334,7 @@ export async function analyzeTopicIntelligence(
   llmConfig: LlmConfig,
   signal?: AbortSignal,
   language?: SummaryLanguage,
+  promptOverride?: string | null,
 ): Promise<TopicIntelligence | null> {
   if (items.length === 0) return null
 
@@ -353,7 +355,7 @@ export async function analyzeTopicIntelligence(
     })
 
     const messages: ChatMessage[] = [
-      { role: 'system', content: topicSystemPrompt(language) },
+      { role: 'system', content: promptOverride ?? topicSystemPrompt(language) },
       { role: 'user', content: sections.join('\n\n') },
     ]
 
@@ -429,6 +431,7 @@ export async function analyzeAccountsIntelligence(
   llmConfig: LlmConfig,
   signal?: AbortSignal,
   language?: SummaryLanguage,
+  promptOverride?: string | null,
 ): Promise<AccountsIntelligence | null> {
   if (items.length === 0) return null
 
@@ -451,7 +454,7 @@ export async function analyzeAccountsIntelligence(
     })
 
     const messages: ChatMessage[] = [
-      { role: 'system', content: accountsSystemPrompt(language) },
+      { role: 'system', content: promptOverride ?? accountsSystemPrompt(language) },
       { role: 'user', content: sections.join('\n\n') },
     ]
 
@@ -541,6 +544,9 @@ export interface IntelligenceSensorSets {
   trendSensors: Set<string>
   topicSensors: Set<string>
   socialSensors: Set<string>
+  trendPrompt?: string | null
+  topicPrompt?: string | null
+  socialPrompt?: string | null
 }
 
 /**
@@ -574,9 +580,9 @@ export async function runIntelligenceAnalysis(
 
   // Run all three analyses in parallel — each catches its own errors
   const [trend, topics, accounts] = await Promise.all([
-    analyzeTrendIntelligence(trendItems, llmConfig, signal, language),
-    analyzeTopicIntelligence(topicItems, llmConfig, signal, language),
-    analyzeAccountsIntelligence(accountItems, llmConfig, signal, language),
+    analyzeTrendIntelligence(trendItems, llmConfig, signal, language, effectiveSets.trendPrompt),
+    analyzeTopicIntelligence(topicItems, llmConfig, signal, language, effectiveSets.topicPrompt),
+    analyzeAccountsIntelligence(accountItems, llmConfig, signal, language, effectiveSets.socialPrompt),
   ])
 
   return { trend, topics, accounts }
@@ -628,7 +634,7 @@ export async function runNlpIntelligenceAnalysis(
         .slice(0, 5)
 
       const messages: ChatMessage[] = [
-        { role: 'system', content: clusterSummaryPrompt(language) },
+        { role: 'system', content: effectiveSets.trendPrompt ?? clusterSummaryPrompt(language) },
         { role: 'user', content: `Cluster: "${cluster.label}"
 Keywords: ${cluster.top_keywords.map(k => k.text).join(', ')}
 Sentiment: ${Object.entries(cluster.sentiment_distribution).map(([k, v]) => `${k}: ${Math.round(v * 100)}%`).join(', ')}
@@ -672,16 +678,17 @@ ${repTitles.map((t, i) => `  [${i}] ${t}`).join('\n')}` },
       sections.push(`## Topic: ${topic} (${items.length} posts)\n${posts}`)
     })
 
+    const topicPromptText = effectiveSets.topicPrompt ?? topicSystemPrompt(language)
     try {
       const raw = await chatCompletion([
-        { role: 'system', content: topicSystemPrompt(language) },
+        { role: 'system', content: topicPromptText },
         { role: 'user', content: sections.join('\n\n') },
       ], llmConfig, signal)
 
       let parsed = robustJsonParse(raw)
       if (!parsed) {
         const retryRaw = await chatCompletion([
-          { role: 'system', content: topicSystemPrompt(language) },
+          { role: 'system', content: topicPromptText },
           { role: 'user', content: sections.join('\n\n') },
           { role: 'assistant', content: raw },
           { role: 'user', content: 'Your response was not valid JSON. Please respond with ONLY the JSON object, no explanation or markdown fences.' },
@@ -759,7 +766,7 @@ ${repTitles.map((t, i) => `  [${i}] ${t}`).join('\n')}` },
 
     try {
       const raw = await chatCompletion([
-        { role: 'system', content: accountsSummaryPrompt(language) },
+        { role: 'system', content: effectiveSets.socialPrompt ?? accountsSummaryPrompt(language) },
         { role: 'user', content: `${accountsFocusMap.size} tracked accounts:\n${acctLines}` },
       ], llmConfig, signal)
       const parsed = robustJsonParse(raw)

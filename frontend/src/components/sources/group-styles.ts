@@ -64,19 +64,6 @@ export function colorDotStyle(color: string, size = 10): React.CSSProperties {
   }
 }
 
-/** Processing-type pill badge shown in group headers. */
-export const PROCESSING_PILL: React.CSSProperties = {
-  fontSize: '0.625rem',
-  fontWeight: 600,
-  letterSpacing: '0.06em',
-  textTransform: 'uppercase',
-  background: 'var(--surface-alt)',
-  color: 'var(--ink-muted)',
-  padding: '0.125rem 0.5rem',
-  borderRadius: 999,
-  border: '1px solid var(--border-subtle)',
-}
-
 /** Kebab menu button (three dots). */
 export const KEBAB_BTN: React.CSSProperties = {
   display: 'inline-flex',

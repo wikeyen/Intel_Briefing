@@ -1068,7 +1068,7 @@ function collectTrendsBySource(report: IntelReport, groups: SourceGroupTree[]): 
   for (const items of Object.values(report.items)) {
     for (const item of items) {
       const g = sensorMap.get(item.source)
-      if (g?.processing === 'trend' && item.velocity) {
+      if (g?.trend_enabled && item.velocity) {
         const list = bySource.get(item.source) ?? []
         list.push(item)
         bySource.set(item.source, list)

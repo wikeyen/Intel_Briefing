@@ -474,14 +474,14 @@ describe('pipeline auto-retry', () => {
       summary_model: 'model',
     })
 
-    // Pipeline pauses due to config error failure — trigger generate to unblock
-    const pipelinePromise = runPipeline(config, 'fetch_summarize')
-    await waitForPauseAndGenerate()
-    const result = await pipelinePromise
+    // Config errors are skipped, not failures — pipeline runs through without pausing
+    const result = await runPipeline(config, 'fetch_summarize')
 
     // Config errors are not retryable — only called once
     expect(mockSensorFns['misconfigured']).toHaveBeenCalledTimes(1)
-    expect(result.report!.sources_failed).toContain('misconfigured')
+    // Config errors are skipped, not failed — they don't appear in sources_failed
+    expect(result.report!.sources_failed).not.toContain('misconfigured')
+    expect(result.report!.sources_ok).toContain('good')
     expect(result.summary).toBeDefined()
   })
 

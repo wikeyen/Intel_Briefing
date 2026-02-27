@@ -196,7 +196,7 @@ export function SensorGrid({
         const isFailed = report?.sources_failed.includes(sensorKey) ?? false
         const isOk = !isDisabled && (report?.sources_ok.includes(sensorKey) ?? false)
         const lastSp = pipelineStatus?.sensors.find(s => s.name === sensorKey)
-        const isConfigErr = isFailed && lastSp?.fetch_error_kind === 'config'
+        const isConfigErr = lastSp?.fetch_error_kind === 'config'
         const isApiErr = isFailed && lastSp?.fetch_error_kind === 'api'
         const count = sensorCounts[sensorKey] ?? 0
         const sensorFetchedAt = perSensorTs[sensorKey]

@@ -73,8 +73,8 @@ export async function handleFetching(ctx: PipelineContext): Promise<PipelineStat
         }
 
         const result = outcome
-        resultMap.set(name, result)
         if (sensorResultSucceeded(result)) {
+          resultMap.set(name, result)
           tracker.setFetchState(name, 'ok', result.items.length)
           if (result.items.length === 0) {
             tracker.addEvent('warn', 'fetch', 'Fetched 0 items', name)
@@ -88,7 +88,13 @@ export async function handleFetching(ctx: PipelineContext): Promise<PipelineStat
           writePipelineItem(name, runId, result.items, nowIso).catch(err =>
             console.warn(`[pipeline] Failed to write pipeline_item for ${name}:`, err),
           )
+        } else if (result.error_kind === 'config') {
+          // Config errors are intentional — sensor is not configured, not broken
+          tracker.setFetchState(name, 'skipped', 0, result.error, 'config')
+          tracker.addEvent('info', 'fetch', result.error ?? 'Not configured', name)
+          ctx.skippedSensors.add(name)
         } else {
+          resultMap.set(name, result)
           tracker.setFetchState(name, 'failed', 0, result.error, result.error_kind ?? 'api')
           tracker.addEvent('error', 'fetch', result.error ?? 'Unknown error', name)
           ctx.failures.add(name)

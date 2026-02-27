@@ -282,7 +282,7 @@ export async function updateGroup(id: string, payload: UpdateGroupPayload): Prom
   }
 
   const updates: string[] = []
-  const args: unknown[] = []
+  const args: Array<string | number | boolean | null> = []
 
   if (payload.name !== undefined) {
     const name = validateName(payload.name)

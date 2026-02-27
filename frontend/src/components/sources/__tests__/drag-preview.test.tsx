@@ -11,13 +11,27 @@ vi.mock('@/lib/i18n', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }))
 
+/** Workflow field defaults for test fixtures (all analysis off). */
+const WORKFLOW_DEFAULTS = {
+  trend_enabled: false,
+  topic_enabled: false,
+  social_enabled: false,
+  sentiment_enabled: false,
+  summary_prompt: null,
+  trend_prompt: null,
+  topic_prompt: null,
+  social_prompt: null,
+  suppress_keywords: [] as string[],
+  boost_keywords: [] as string[],
+} as const
+
 const makeGroup = (overrides: Partial<SourceGroupTree> = {}): SourceGroupTree => ({
   id: 'g1',
   parent_id: null,
   name: 'Test Group',
   color: '#ff6600',
   icon: null,
-  processing: 'general',
+  ...WORKFLOW_DEFAULTS,
   sort_order: 0,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',

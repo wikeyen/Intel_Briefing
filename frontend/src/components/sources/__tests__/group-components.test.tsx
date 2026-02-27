@@ -242,7 +242,7 @@ describe('SensorDragItem', () => {
     sensorKey: 'hacker_news',
     sensorLabel: 'Hacker News',
     sensorDesc: 'Top stories from news.ycombinator.com',
-    language: 'row' as const,
+    language: 'row' as 'cn' | 'row',
     groupId: 'g1',
     enabled: true,
     status: 'ok' as const,

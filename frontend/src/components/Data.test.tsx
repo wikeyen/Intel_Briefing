@@ -64,6 +64,20 @@ vi.mock('./Pagination', () => ({
   Pagination: () => null,
 }))
 
+/** Workflow field defaults for test fixtures (all analysis off). */
+const WORKFLOW_DEFAULTS = {
+  trend_enabled: false,
+  topic_enabled: false,
+  social_enabled: false,
+  sentiment_enabled: false,
+  summary_prompt: null,
+  trend_prompt: null,
+  topic_prompt: null,
+  social_prompt: null,
+  suppress_keywords: [] as string[],
+  boost_keywords: [] as string[],
+} as const
+
 const mockGroups: SourceGroupTree[] = [
   {
     id: 'research',
@@ -71,7 +85,8 @@ const mockGroups: SourceGroupTree[] = [
     name: 'Research & Reports',
     color: '#2E7D9A',
     icon: null,
-    processing: 'research',
+    ...WORKFLOW_DEFAULTS,
+    sentiment_enabled: true,
     sort_order: 0,
     created_at: '',
     updated_at: '',
@@ -84,7 +99,8 @@ const mockGroups: SourceGroupTree[] = [
     name: 'News',
     color: '#C4851C',
     icon: null,
-    processing: 'news',
+    ...WORKFLOW_DEFAULTS,
+    trend_enabled: true,
     sort_order: 1,
     created_at: '',
     updated_at: '',
@@ -97,7 +113,8 @@ const mockGroups: SourceGroupTree[] = [
     name: 'Opinions',
     color: '#8B5CF6',
     icon: null,
-    processing: 'opinion',
+    ...WORKFLOW_DEFAULTS,
+    social_enabled: true,
     sort_order: 2,
     created_at: '',
     updated_at: '',
@@ -233,7 +250,7 @@ describe('Data - group-based tabs', () => {
           name: 'Child',
           color: '#000',
           icon: null,
-          processing: 'general',
+          ...WORKFLOW_DEFAULTS,
           sort_order: 0,
           created_at: '',
           updated_at: '',

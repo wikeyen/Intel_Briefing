@@ -1052,7 +1052,7 @@ export function Sensors() {
                 color: 'var(--ink-muted)',
                 marginBottom: '0.875rem',
               }}>
-                {t('sources.defaults_heading', 'Defaults')}
+                {t('sources.defaults_heading')}
               </div>
 
               {/* Default items slider */}

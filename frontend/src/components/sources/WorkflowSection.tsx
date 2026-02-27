@@ -55,15 +55,15 @@ export function WorkflowSection({ group, hasTopicSensors, hasAccountSensors, onU
 
   /** Check if a toggle is greyed out due to missing sensor types. */
   const isGreyedOut = (toggle: typeof ANALYSIS_TOGGLES[number]): boolean => {
-    if (toggle.requiresTopicSensors && !hasTopicSensors) return true
-    if (toggle.requiresAccountSensors && !hasAccountSensors) return true
+    if ('requiresTopicSensors' in toggle && toggle.requiresTopicSensors && !hasTopicSensors) return true
+    if ('requiresAccountSensors' in toggle && toggle.requiresAccountSensors && !hasAccountSensors) return true
     return false
   }
 
   /** Get the tooltip for a greyed-out toggle. */
   const greyedOutTooltip = (toggle: typeof ANALYSIS_TOGGLES[number]): string | undefined => {
-    if (toggle.requiresTopicSensors && !hasTopicSensors) return t('sources.workflow_no_topic_sensors')
-    if (toggle.requiresAccountSensors && !hasAccountSensors) return t('sources.workflow_no_account_sensors')
+    if ('requiresTopicSensors' in toggle && toggle.requiresTopicSensors && !hasTopicSensors) return t('sources.workflow_no_topic_sensors')
+    if ('requiresAccountSensors' in toggle && toggle.requiresAccountSensors && !hasAccountSensors) return t('sources.workflow_no_account_sensors')
     return undefined
   }
 
@@ -229,9 +229,9 @@ export function WorkflowSection({ group, hasTopicSensors, hasAccountSensors, onU
 
           {PROMPT_FIELDS.map(field => {
             // Only show prompt row if alwaysShow or its toggle is enabled
-            if (!field.alwaysShow) {
-              const toggleKey = field.toggleKey
-              if (!group[toggleKey]) return null
+            if (!('alwaysShow' in field && field.alwaysShow)) {
+              const toggleKey = 'toggleKey' in field ? field.toggleKey : undefined
+              if (toggleKey && !group[toggleKey]) return null
             }
 
             const currentValue = group[field.key]

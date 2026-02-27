@@ -60,6 +60,10 @@ export async function initDb(url?: string): Promise<void> {
       PRIMARY KEY (group_id, sensor_key)
     )
   `)
+
+  // Seed default groups on first startup
+  const { seedDefaultGroups } = await import('./groups/seed')
+  await seedDefaultGroups()
 }
 
 /**

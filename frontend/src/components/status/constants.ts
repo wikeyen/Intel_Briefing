@@ -1,12 +1,42 @@
 // ABOUTME: Shared constants for the Status dashboard — derived from taxonomy.
 // ABOUTME: Centralizes sensor/section groupings, status metadata, and error truncation config.
 import { SENSORS, SENSOR_LABELS } from '@/lib/sensors/taxonomy'
-import { SENSOR_TO_SECTION, type SourceSection } from '../sources/sections'
 
 export const ALL_SENSORS = SENSORS.map(s => ({ key: s.key, label: s.label }))
 
-// Section order and labels matching the Sources page 5-section grouping
-const STATUS_SECTIONS: Array<{ key: SourceSection; label: string }> = [
+/** Legacy section key for status page sensor grouping. */
+type StatusSection = 'general' | 'social' | 'trend' | 'topics' | 'rss'
+
+/** Maps each sensor to its status page section. */
+const SENSOR_TO_STATUS_SECTION: Record<string, StatusSection> = {
+  hacker_news: 'general',
+  github: 'trend',
+  arxiv: 'general',
+  product_hunt: 'general',
+  chrome_radar: 'general',
+  hn_blogs: 'general',
+  sources_36kr: 'general',
+  wallstreetcn: 'general',
+  v2ex: 'trend',
+  zhihu: 'trend',
+  x: 'social',
+  bluesky: 'social',
+  mastodon: 'social',
+  weibo: 'trend',
+  xiaohongshu: 'trend',
+  baidu_tieba: 'trend',
+  douyin: 'trend',
+  toutiao: 'trend',
+  netease: 'trend',
+  '36kr_trending': 'trend',
+  juejin: 'trend',
+  baidu: 'trend',
+  rss_feeds: 'rss',
+  rss_news: 'rss',
+}
+
+// Section order and labels for the status page sensor grouping
+const STATUS_SECTIONS: Array<{ key: StatusSection; label: string }> = [
   { key: 'general', label: 'General' },
   { key: 'social', label: 'Social' },
   { key: 'trend', label: 'Trend' },
@@ -17,7 +47,7 @@ const STATUS_SECTIONS: Array<{ key: SourceSection; label: string }> = [
 export const SECTION_SENSORS = STATUS_SECTIONS.map(section => ({
   key: section.key,
   label: section.label,
-  sensors: SENSORS.filter(s => SENSOR_TO_SECTION[s.key] === section.key).map(s => s.key),
+  sensors: SENSORS.filter(s => SENSOR_TO_STATUS_SECTION[s.key] === section.key).map(s => s.key),
 }))
 
 export const STATUS_META: Record<string, { color: string; bg: string; labelKey: string }> = {

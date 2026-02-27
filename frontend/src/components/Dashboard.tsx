@@ -7,8 +7,8 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { api } from '@/api/client'
 import type { IntelReport, IntelItem, BriefingSummary, PipelineStatus, SummaryProgress, OverallBriefing, BriefingSource, SentimentEntry, IntelligenceReport } from '@/api/client'
 import { PublicFocusCard, TopicPulseCard, VoicesCard, PublicFocusDetail, TopicPulseDetail, VoicesDetail } from './IntelligenceCards'
-import { SENSOR_LABELS, SENSOR_DISPLAY_MAP, CATEGORY_TO_DISPLAY } from '@/lib/sensors/taxonomy'
-import type { CategoryKey, DisplayCategoryKey } from '@/lib/sensors/taxonomy'
+import { SENSOR_LABELS } from '@/lib/sensors/taxonomy'
+import type { SourceGroupTree } from '@/lib/groups/types'
 import { useTranslation } from '@/lib/i18n'
 import { EmptyState } from './EmptyState'
 
@@ -60,9 +60,16 @@ function isStructuredOverall(overall: OverallBriefing | string): overall is Over
   return typeof overall === 'object' && overall !== null && 'executive_summary' in overall
 }
 
-/** Resolve an item's display category using per-sensor map with category fallback. */
-function displayCategoryOf(item: IntelItem, sectionKey: string): DisplayCategoryKey {
-  return SENSOR_DISPLAY_MAP[item.source] ?? CATEGORY_TO_DISPLAY[sectionKey as CategoryKey] ?? 'news'
+/** Build a sensor-to-group lookup from loaded groups (traverses children). */
+function buildSensorGroupMap(groups: SourceGroupTree[]): Map<string, SourceGroupTree> {
+  const map = new Map<string, SourceGroupTree>()
+  for (const g of groups) {
+    for (const s of g.sensors) map.set(s, g)
+    for (const child of g.children) {
+      for (const s of child.sensors) map.set(s, child)
+    }
+  }
+  return map
 }
 
 /** Render text with inline [N] citation markers as superscript links. */
@@ -824,24 +831,25 @@ function SentimentWidget({ summary, report }: { summary: BriefingSummary; report
 // Widget: Category Distribution Bar
 // ---------------------------------------------------------------------------
 
-function CategoryDistributionContent({ report }: { report: IntelReport }) {
+function CategoryDistributionContent({ report, groups }: { report: IntelReport; groups: SourceGroupTree[] }) {
   const { t } = useTranslation()
-  const counts: Record<string, number> = { 'high-trust': 0, news: 0, trend: 0, opinions: 0 }
-  for (const [cat, items] of Object.entries(report.items)) {
+  const sensorMap = buildSensorGroupMap(groups)
+  const counts = new Map<string, { name: string; color: string; count: number }>()
+  for (const items of Object.values(report.items)) {
     for (const item of items) {
-      const dc = displayCategoryOf(item, cat)
-      counts[dc] = (counts[dc] || 0) + 1
+      const g = sensorMap.get(item.source)
+      const key = g?.id ?? '_ungrouped'
+      const entry = counts.get(key) ?? { name: g?.name ?? t('dash.other'), color: g?.color ?? 'var(--ink-faint)', count: 0 }
+      entry.count++
+      counts.set(key, entry)
     }
   }
-  const total = Object.values(counts).reduce((a, b) => a + b, 0)
+  const total = Array.from(counts.values()).reduce((a, b) => a + b.count, 0)
   if (total === 0) return null
 
-  const segments: { key: string; label: string; count: number; color: string }[] = [
-    { key: 'high-trust', label: t('cat.research'), count: counts['high-trust'], color: 'var(--cat-research)' },
-    { key: 'news', label: t('cat.news'), count: counts.news, color: 'var(--cat-news)' },
-    { key: 'trend', label: t('cat.trend'), count: counts.trend, color: 'var(--cat-trend)' },
-    { key: 'opinions', label: t('cat.opinion'), count: counts.opinions, color: 'var(--cat-opinion)' },
-  ]
+  const segments = Array.from(counts.entries())
+    .map(([key, v]) => ({ key, label: v.name, count: v.count, color: v.color }))
+    .sort((a, b) => b.count - a.count)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -879,10 +887,10 @@ function CategoryDistributionContent({ report }: { report: IntelReport }) {
   )
 }
 
-function CategoryDistributionWidget({ report }: { report: IntelReport }) {
+function CategoryDistributionWidget({ report, groups }: { report: IntelReport; groups: SourceGroupTree[] }) {
   return (
     <DashCard>
-      <CategoryDistributionContent report={report} />
+      <CategoryDistributionContent report={report} groups={groups} />
     </DashCard>
   )
 }
@@ -1054,11 +1062,13 @@ function DomainCardCompact({ domain, summary, onClick }: {
 // ---------------------------------------------------------------------------
 
 /** Collect all trend items from a report, grouped by source and sorted by velocity. */
-function collectTrendsBySource(report: IntelReport): Map<string, IntelItem[]> {
+function collectTrendsBySource(report: IntelReport, groups: SourceGroupTree[]): Map<string, IntelItem[]> {
+  const sensorMap = buildSensorGroupMap(groups)
   const bySource = new Map<string, IntelItem[]>()
-  for (const [cat, items] of Object.entries(report.items)) {
+  for (const items of Object.values(report.items)) {
     for (const item of items) {
-      if (displayCategoryOf(item, cat) === 'trend' && item.velocity) {
+      const g = sensorMap.get(item.source)
+      if (g?.processing === 'trend' && item.velocity) {
         const list = bySource.get(item.source) ?? []
         list.push(item)
         bySource.set(item.source, list)
@@ -1147,8 +1157,8 @@ function TrendRow({ item, rank, brief, isLast }: {
   )
 }
 
-function TrendingWidget({ report, summary, onViewAll }: {
-  report: IntelReport; summary?: BriefingSummary | null; onViewAll: () => void
+function TrendingWidget({ report, summary, groups, onViewAll }: {
+  report: IntelReport; summary?: BriefingSummary | null; groups: SourceGroupTree[]; onViewAll: () => void
 }) {
   const { t } = useTranslation()
   const briefMap = new Map<string, string>()
@@ -1160,7 +1170,7 @@ function TrendingWidget({ report, summary, onViewAll }: {
     }
   }
 
-  const bySource = collectTrendsBySource(report)
+  const bySource = collectTrendsBySource(report, groups)
   if (bySource.size === 0) return null
 
   const TOP_N = 3
@@ -1222,8 +1232,8 @@ function TrendingWidget({ report, summary, onViewAll }: {
 // Trend Detail Panel — slide-out showing all trends grouped by source
 // ---------------------------------------------------------------------------
 
-function TrendDetailPanel({ report, summary, onClose }: {
-  report: IntelReport; summary?: BriefingSummary | null; onClose: () => void
+function TrendDetailPanel({ report, summary, groups, onClose }: {
+  report: IntelReport; summary?: BriefingSummary | null; groups: SourceGroupTree[]; onClose: () => void
 }) {
   const { t } = useTranslation()
   const briefMap = new Map<string, string>()
@@ -1235,7 +1245,7 @@ function TrendDetailPanel({ report, summary, onClose }: {
     }
   }
 
-  const bySource = collectTrendsBySource(report)
+  const bySource = collectTrendsBySource(report, groups)
 
   // Close on Escape
   useEffect(() => {
@@ -1937,24 +1947,25 @@ function SummaryPendingCard({ isActive }: { isActive: boolean }) {
 // Infographic: Collection Distribution — horizontal bar chart
 // ---------------------------------------------------------------------------
 
-function CollectionPanel({ report }: { report: IntelReport }) {
+function CollectionPanel({ report, groups }: { report: IntelReport; groups: SourceGroupTree[] }) {
   const { t } = useTranslation()
-  const counts: Record<string, number> = { 'high-trust': 0, news: 0, trend: 0, opinions: 0 }
-  for (const [cat, items] of Object.entries(report.items)) {
+  const sensorMap = buildSensorGroupMap(groups)
+  const counts = new Map<string, { name: string; color: string; count: number }>()
+  for (const items of Object.values(report.items)) {
     for (const item of items) {
-      const dc = displayCategoryOf(item, cat)
-      counts[dc] = (counts[dc] || 0) + 1
+      const g = sensorMap.get(item.source)
+      const key = g?.id ?? '_ungrouped'
+      const entry = counts.get(key) ?? { name: g?.name ?? t('dash.other'), color: g?.color ?? 'var(--ink-faint)', count: 0 }
+      entry.count++
+      counts.set(key, entry)
     }
   }
-  const total = Object.values(counts).reduce((a, b) => a + b, 0)
+  const total = Array.from(counts.values()).reduce((a, b) => a + b.count, 0)
   if (total === 0) return null
 
-  const segments = [
-    { key: 'trend', label: t('cat.trend'), count: counts.trend, color: 'var(--cat-trend)' },
-    { key: 'news', label: t('cat.news'), count: counts.news, color: 'var(--cat-news)' },
-    { key: 'opinions', label: t('cat.opinion'), count: counts.opinions, color: 'var(--cat-opinion)' },
-    { key: 'high-trust', label: t('cat.research'), count: counts['high-trust'], color: 'var(--cat-research)' },
-  ].sort((a, b) => b.count - a.count)
+  const segments = Array.from(counts.entries())
+    .map(([key, v]) => ({ key, label: v.name, count: v.count, color: v.color }))
+    .sort((a, b) => b.count - a.count)
 
   const maxCount = Math.max(...segments.map(s => s.count))
 
@@ -2000,8 +2011,12 @@ function CollectionPanel({ report }: { report: IntelReport }) {
                 fontSize: '0.625rem',
                 fontWeight: 500,
                 color: 'var(--ink-secondary)',
-                width: 52,
+                minWidth: 52,
                 flexShrink: 0,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                maxWidth: 80,
               }}>
                 {seg.label}
               </span>
@@ -2161,6 +2176,7 @@ export function Dashboard() {
   const [summary, setSummary] = useState<BriefingSummary | null>(null)
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null)
   const [summaryProgress, setSummaryProgress] = useState<SummaryProgress | null>(null)
+  const [groups, setGroups] = useState<SourceGroupTree[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDomain, setSelectedDomain] = useState<DomainDef | null>(null)
   const [showTrendPanel, setShowTrendPanel] = useState(false)
@@ -2195,6 +2211,7 @@ export function Dashboard() {
       api.getLatest().then(setReport).catch(() => {}),
       api.getSummary().then(r => setSummary(r.summary)).catch(() => {}),
       api.getIntelligence().then(res => setIntelligence(res.intelligence)).catch(() => {}),
+      api.getGroups().then(setGroups).catch(() => {}),
     ]).finally(() => setLoading(false))
   }, [])
 
@@ -2350,7 +2367,7 @@ export function Dashboard() {
                     <SummaryPendingCard isActive={isActive} />
                     {report && (
                       <div className="dashboard-pending-widgets">
-                        <CollectionPanel report={report} />
+                        <CollectionPanel report={report} groups={groups} />
                         <SourcesPanel report={report} />
                       </div>
                     )}
@@ -2381,10 +2398,10 @@ export function Dashboard() {
                   {report && (
                     <>
                       <StaggerChild index={12}>
-                        <TrendingWidget report={report} summary={summary} onViewAll={() => setShowTrendPanel(true)} />
+                        <TrendingWidget report={report} summary={summary} groups={groups} onViewAll={() => setShowTrendPanel(true)} />
                       </StaggerChild>
                       <StaggerChild index={13}>
-                        <CategoryDistributionWidget report={report} />
+                        <CategoryDistributionWidget report={report} groups={groups} />
                       </StaggerChild>
                       <StaggerChild index={14}>
                         <SourceHealthWidget report={report} />
@@ -2409,6 +2426,7 @@ export function Dashboard() {
                 <TrendDetailPanel
                   report={report}
                   summary={summary}
+                  groups={groups}
                   onClose={() => setShowTrendPanel(false)}
                 />
               )}

@@ -422,6 +422,25 @@ describe('Taxonomy', () => {
     }
   })
 
+  it('emptyCategoryMap returns an empty array for each category key', async () => {
+    const { emptyCategoryMap, ALL_CATEGORIES } = await import('./taxonomy')
+    const map = emptyCategoryMap()
+    for (const cat of ALL_CATEGORIES) {
+      expect(map[cat]).toEqual([])
+    }
+    expect(Object.keys(map)).toHaveLength(ALL_CATEGORIES.length)
+  })
+
+  it('does not export removed display category symbols', async () => {
+    const taxonomy = await import('./taxonomy')
+    expect('DISPLAY_CATEGORIES' in taxonomy).toBe(false)
+    expect('DISPLAY_CATEGORY_META' in taxonomy).toBe(false)
+    expect('SENSOR_DISPLAY_MAP' in taxonomy).toBe(false)
+    expect('CATEGORY_TO_DISPLAY' in taxonomy).toBe(false)
+    expect('emptyDisplayCategoryMap' in taxonomy).toBe(false)
+    expect('itemsByDisplayCategory' in taxonomy).toBe(false)
+  })
+
   it('sensorsByLanguageAndCategory returns 2 groups (row and cn) with categorized sensors', async () => {
     const { sensorsByLanguageAndCategory } = await import('./taxonomy')
     const groups = sensorsByLanguageAndCategory()

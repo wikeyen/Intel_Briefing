@@ -128,6 +128,21 @@ describe('SensorGrid', () => {
     expect(screen.getByText('Connection refused')).toBeInTheDocument()
   })
 
+  it('renders section headers with accent dot and monospace label', () => {
+    const props = buildProps({
+      report: makeReport(),
+      config: makeConfig(),
+      pipelineStatus: makePipelineStatus(),
+    })
+    const { container } = renderWithI18n(<SensorGrid {...props} />)
+    // Section headers use monospace font family
+    const monoLabels = container.querySelectorAll('[style*="monospace"]')
+    expect(monoLabels.length).toBeGreaterThan(0)
+    // Each section header has a 6px colored dot
+    const dots = container.querySelectorAll('[style*="border-radius: 50%"][style*="width: 6px"]')
+    expect(dots.length).toBeGreaterThan(0)
+  })
+
   it('shows live sensor state during a run', () => {
     const liveSensors = {
       hacker_news: makeSensorJob('hacker_news', {

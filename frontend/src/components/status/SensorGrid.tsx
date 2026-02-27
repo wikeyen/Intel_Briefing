@@ -9,6 +9,15 @@ import { SECTION_SENSORS, SENSOR_LABEL_MAP } from './constants'
 import { SensorRow, CARD_CSS } from './SensorCard'
 import { timeAgo } from './time-helpers'
 
+/** Category accent colors — matches Dashboard section labelling palette. */
+const SECTION_ACCENT: Record<string, string> = {
+  general: '#1A7A6D',  // teal (accent)
+  social:  '#E05A8D',  // pink
+  trend:   '#F59E0B',  // amber
+  topics:  '#3B82F6',  // blue
+  rss:     '#E97B20',  // orange (RSS brand)
+}
+
 export interface SensorGridProps {
   isRunning: boolean
   isPaused: boolean
@@ -145,10 +154,11 @@ export function collectTopicKeywords(
 }
 
 const headerLabelStyle: React.CSSProperties = {
-  fontSize: '0.625rem',
-  fontWeight: 500,
-  letterSpacing: '0.04em',
+  fontSize: '0.6875rem',
+  fontWeight: 700,
+  letterSpacing: '0.08em',
   textTransform: 'uppercase',
+  fontFamily: 'ui-monospace, monospace',
   color: 'var(--ink-faint)',
 }
 
@@ -265,9 +275,9 @@ export function SensorGrid({
         gap: '0 0.5rem',
         padding: '0 1rem',
         background: 'var(--surface)',
-        borderRadius: 10,
+        borderRadius: 8,
         boxShadow: 'var(--shadow-card)',
-        border: '1px solid var(--border-subtle)',
+        border: '1px solid var(--border)',
         overflow: 'hidden',
       }}>
         {/* Toolbar + column labels */}
@@ -309,24 +319,35 @@ export function SensorGrid({
           const sectionSensors = visibleSensors.filter(s => s.category === section.label)
           // Skip empty non-topic sections; Topics always visible
           if (!isTopics && sectionSensors.length === 0) return null
+          const sectionAccent = SECTION_ACCENT[section.key] ?? 'var(--ink-faint)'
           return (
             <React.Fragment key={section.key}>
               {/* Section header */}
               <div style={{
                 gridColumn: '1 / -1',
-                padding: '0.5rem 1rem 0.25rem',
+                padding: '0.625rem 1rem',
                 margin: sIdx > 0 ? '0.25rem -1rem 0' : '0 -1rem',
                 borderTop: sIdx > 0 ? '1px solid var(--border-soft)' : 'none',
               }}>
-                <span style={{
-                  fontSize: '0.5625rem',
-                  fontWeight: 600,
-                  letterSpacing: '0.06em',
-                  textTransform: 'uppercase',
-                  color: 'var(--ink-faint)',
-                }}>
-                  {section.label}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                  <span style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    background: sectionAccent,
+                    flexShrink: 0,
+                  }} />
+                  <span style={{
+                    fontSize: '0.6875rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    fontFamily: 'ui-monospace, monospace',
+                    color: sectionAccent,
+                  }}>
+                    {section.label}
+                  </span>
+                </div>
               </div>
               {/* Topics section: empty state */}
               {isTopics && topicKeywords.length === 0 && (

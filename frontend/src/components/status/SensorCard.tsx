@@ -698,12 +698,12 @@ function rowContainerStyle(state: CardState, hovered: boolean): React.CSSPropert
     gridTemplateColumns: 'subgrid',
     alignItems: 'center',
     margin: '0 -1rem',
-    padding: '0.6875rem 1rem',
+    padding: '0.8125rem 1rem',
     background: 'var(--surface)',
     borderBottom: '1px solid color-mix(in srgb, var(--border) 40%, transparent)',
     transition: 'background 200ms ease',
     cursor: 'pointer',
-    minHeight: 42,
+    minHeight: 44,
   }
 
   if (state === 'disabled') return { ...base, opacity: 0.4, cursor: 'default' }

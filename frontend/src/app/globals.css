@@ -838,7 +838,7 @@ input[type="range"]::-moz-range-thumb {
     padding: 0.625rem 0.75rem !important;
     gap: 0.25rem 0.5rem !important;
   }
-  .sensor-row .drag-grip {
+  .drag-grip {
     display: none !important;
   }
   .sensor-row-left {

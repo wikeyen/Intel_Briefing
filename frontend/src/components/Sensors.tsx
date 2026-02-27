@@ -1,9 +1,9 @@
 // ABOUTME: Sources page — group-driven sensor configuration with drag-and-drop layout.
-// ABOUTME: Groups loaded from API drive the layout; sensors can be dragged between groups.
+// ABOUTME: Groups loaded from API drive the layout; sensors can be dragged between groups and groups can be reordered.
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { DndContext, closestCenter, type DragEndEvent, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { api } from '@/api/client'
 import { TagInput } from '@/components/TagInput'
 import { useTranslation } from '@/lib/i18n'
@@ -313,10 +313,40 @@ export function Sensors() {
     const { active, over } = event
     if (!over || active.id === over.id) return
 
+    const activeData = active.data.current
     const activeId = String(active.id)
     const overId = String(over.id)
 
-    // Parse "groupId:sensorKey" format
+    // Group-level reorder: both active and over are groups
+    if (activeData?.type === 'group') {
+      const activeGroupId = activeData.groupId as string
+      const overData = over.data.current
+      // Determine the target group ID — could be a group sortable or a sensor within a group
+      let targetGroupId: string | null = null
+      if (overData?.type === 'group') {
+        targetGroupId = overData.groupId as string
+      } else if (overData?.type === 'sensor') {
+        targetGroupId = overData.groupId as string
+      }
+      if (!targetGroupId || activeGroupId === targetGroupId) return
+
+      const oldIndex = groups.findIndex(g => g.id === activeGroupId)
+      const newIndex = groups.findIndex(g => g.id === targetGroupId)
+      if (oldIndex === -1 || newIndex === -1) return
+
+      const reordered = arrayMove(groups, oldIndex, newIndex)
+      setGroups(reordered)
+
+      try {
+        await api.reorderGroups(reordered.map(g => g.id))
+      } catch (e) {
+        showToast(t('sources.save_failed', { error: (e as Error).message }))
+        refreshGroups()
+      }
+      return
+    }
+
+    // Sensor-level drag: parse "groupId:sensorKey" format
     const [sourceGroupId, sourceSensorKey] = activeId.includes(':') ? activeId.split(':', 2) : [null, null]
     const [targetGroupId] = overId.includes(':') ? overId.split(':', 2) : [overId, null]
 
@@ -833,14 +863,21 @@ export function Sensors() {
               onDragEnd={handleDragEnd}
               onDragOver={(event) => {
                 const overId = event.over?.id ? String(event.over.id) : null
-                if (overId?.includes(':')) {
+                if (!overId) { setOverGroupId(null); return }
+                // Group sortable IDs use "group:<id>" prefix
+                if (overId.startsWith('group:')) {
+                  setOverGroupId(overId.slice(6))
+                } else if (overId.includes(':')) {
+                  // Sensor sortable IDs use "<groupId>:<sensorKey>" format
                   setOverGroupId(overId.split(':')[0])
                 } else {
                   setOverGroupId(overId)
                 }
               }}
             >
-              {groups.map(group => renderGroup(group))}
+              <SortableContext items={groups.map(g => `group:${g.id}`)} strategy={verticalListSortingStrategy}>
+                {groups.map(group => renderGroup(group))}
+              </SortableContext>
 
               {/* ── Ungrouped section ──────────────────────────────── */}
               <SortableContext items={ungroupedSortableIds} strategy={verticalListSortingStrategy}>

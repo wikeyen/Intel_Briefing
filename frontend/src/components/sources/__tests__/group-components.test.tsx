@@ -526,6 +526,57 @@ describe('GroupCard', () => {
   })
 })
 
+describe('GroupCard drag handle', () => {
+  const group: SourceGroupTree = {
+    id: 'g1',
+    parent_id: null,
+    name: 'Trending',
+    color: '#C4851C',
+    icon: null,
+    processing: 'trend',
+    sort_order: 0,
+    created_at: '',
+    updated_at: '',
+    sensors: ['weibo'],
+    children: [],
+  }
+
+  function renderWithDnd() {
+    return render(
+      <DndContext>
+        <SortableContext items={[`group:${group.id}`]}>
+          <GroupCard
+            group={group}
+            enabled={{ weibo: true }}
+            statuses={{}}
+            sensorLimits={{}}
+            sensorLookback={{}}
+            defaultLimit={10}
+            defaultLookback={48}
+            onToggle={() => {}}
+            onUpdateLimit={() => {}}
+            onUpdateLookback={() => {}}
+            onEditGroup={() => {}}
+            onDeleteGroup={() => {}}
+            renderSensorRow={(key) => <div key={key}>{key}</div>}
+          />
+        </SortableContext>
+      </DndContext>
+    )
+  }
+
+  it('renders a drag grip in the header', () => {
+    const { container } = renderWithDnd()
+    const grip = container.querySelector('.drag-grip')
+    expect(grip).not.toBeNull()
+  })
+
+  it('renders group name alongside the drag grip', () => {
+    renderWithDnd()
+    expect(screen.getByText('Trending')).toBeDefined()
+  })
+})
+
 describe('GroupCard glassmorphism', () => {
   const group: SourceGroupTree = {
     id: 'g1',

@@ -1,7 +1,9 @@
 // ABOUTME: Soft UI group card — displays a tinted header, collapsible sensor list, and sub-groups.
-// ABOUTME: Supports sub-groups, kebab menu actions, per-sensor inline controls, and drag-over highlighting.
+// ABOUTME: Supports sub-groups, kebab menu actions, per-sensor inline controls, drag-over highlighting, and group-level drag-to-reorder.
 'use client'
 import { useState, useRef, useEffect, type ReactNode } from 'react'
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import type { SourceGroupTree } from '@/lib/groups/types'
 import { useTranslation } from '@/lib/i18n'
 import {
@@ -9,6 +11,27 @@ import {
   PROCESSING_PILL, KEBAB_BTN, KEBAB_MENU, KEBAB_MENU_ITEM,
   colorDotStyle,
 } from './group-styles'
+
+/** 6-dot drag grip icon rendered as CSS dots — matches the sensor row grip. */
+function GroupDragGrip() {
+  return (
+    <span style={{
+      display: 'inline-flex',
+      flexDirection: 'column',
+      gap: 2,
+      cursor: 'grab',
+      padding: '0.25rem 0.125rem',
+      flexShrink: 0,
+    }}>
+      {[0, 1, 2].map(row => (
+        <span key={row} style={{ display: 'flex', gap: 2 }}>
+          <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--ink-faint)' }} />
+          <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--ink-faint)' }} />
+        </span>
+      ))}
+    </span>
+  )
+}
 
 interface GroupCardProps {
   group: SourceGroupTree
@@ -46,6 +69,20 @@ export function GroupCard({
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: `group:${group.id}`,
+    data: { type: 'group', groupId: group.id },
+  })
+
+  const transformStyle = CSS.Transform.toString(transform)
+
   // Close kebab menu on outside click
   useEffect(() => {
     if (!menuOpen) return
@@ -61,16 +98,33 @@ export function GroupCard({
   const enabledCount = group.sensors.filter(k => enabled[k] ?? true).length
 
   return (
-    <div style={{
-      ...GROUP_CARD,
-      ...(isOver ? { boxShadow: 'var(--shadow-md), inset 0 0 0 2px var(--accent-muted)', background: 'var(--accent-subtle)' } : {}),
-      transition: 'box-shadow 150ms, background 150ms',
-    }}>
+    <div
+      ref={setNodeRef}
+      style={{
+        ...GROUP_CARD,
+        ...(isOver ? { boxShadow: 'var(--shadow-md), inset 0 0 0 2px var(--accent-muted)', background: 'var(--accent-subtle)' } : {}),
+        ...(isDragging ? { opacity: 0.5, background: 'var(--accent-subtle)' } : {}),
+        transition: transition ?? 'box-shadow 150ms, background 150ms, opacity 150ms',
+        transform: transformStyle ?? undefined,
+        zIndex: isDragging ? 10 : 'auto',
+        position: 'relative',
+      }}
+    >
       {/* Header */}
       <div style={{
         ...GROUP_HEADER,
         background: `${group.color}14`,
       }}>
+        {/* Group drag handle */}
+        <span
+          className="drag-grip"
+          {...attributes}
+          {...listeners}
+          style={{ display: 'inline-flex', flexShrink: 0 }}
+        >
+          <GroupDragGrip />
+        </span>
+
         <button
           type="button"
           onClick={() => setCollapsed(c => !c)}

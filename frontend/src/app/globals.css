@@ -940,6 +940,7 @@ input[type="range"]::-moz-range-thumb {
     right: 0 !important;
     padding-top: calc(56px + env(safe-area-inset-top, 0) + 0.75rem) !important;
     border-left: none !important;
+    z-index: 9999 !important;
   }
 }
 

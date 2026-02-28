@@ -175,6 +175,26 @@ describe('GroupDetailPanel', () => {
     expect(panel).toBeTruthy()
   })
 
+  it('separates header from scrollable content so close button stays visible', () => {
+    const { container } = render(createElement(GroupDetailPanel, {
+      group: makeGroup(),
+      items: [makeItem(), makeItem()],
+      summary: null,
+      intelligence: null,
+      onClose,
+    }))
+
+    const panel = container.querySelector('.slide-panel') as HTMLElement
+    // Outer panel must not scroll — only inner content area scrolls
+    expect(panel.style.overflow).toBe('hidden')
+    // The close button's parent header should not be inside the scrollable area
+    const closeBtn = screen.getByText('\u00D7')
+    const header = closeBtn.closest('div')!
+    const scrollableArea = panel.querySelector('[style*="overflow-y: auto"]') || panel.querySelector('[style*="overflow-y:auto"]')
+    expect(scrollableArea).toBeTruthy()
+    expect(scrollableArea!.contains(closeBtn)).toBe(false)
+  })
+
   it('renders group name and close button', () => {
     render(createElement(GroupDetailPanel, {
       group: makeGroup(),

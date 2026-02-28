@@ -1159,12 +1159,11 @@ function TrendDetailPanel({ report, summary, groups, onClose }: {
           background: 'var(--surface)',
           borderLeft: '1px solid var(--border)',
           boxShadow: 'var(--shadow-lg)',
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          overscrollBehavior: 'contain',
+          overflow: 'hidden',
           zIndex: 101,
           padding: '1.5rem',
-          display: 'flex', flexDirection: 'column', gap: '0.75rem',
+          paddingBottom: 0,
+          display: 'flex', flexDirection: 'column',
         }}
       >
         {/* Header */}
@@ -1185,6 +1184,14 @@ function TrendDetailPanel({ report, summary, groups, onClose }: {
             &times;
           </button>
         </div>
+
+        {/* Scrollable content */}
+        <div style={{
+          flex: 1, overflowY: 'auto', overflowX: 'hidden',
+          overscrollBehavior: 'contain',
+          display: 'flex', flexDirection: 'column', gap: '0.75rem',
+          paddingBottom: '1.5rem',
+        }}>
 
         {/* Source groups */}
         {[...bySource.entries()].map(([source, items], gIdx) => (
@@ -1225,6 +1232,7 @@ function TrendDetailPanel({ report, summary, groups, onClose }: {
             {t('dash.no_domain_data')}
           </div>
         )}
+        </div>{/* end scrollable content */}
       </motion.div>
     </>
   )
@@ -1289,12 +1297,11 @@ function IntelligenceDetailPanel({ cardType, intelligence, onClose }: {
           background: 'var(--surface)',
           borderLeft: '1px solid var(--border)',
           boxShadow: 'var(--shadow-lg)',
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          overscrollBehavior: 'contain',
+          overflow: 'hidden',
           zIndex: 101,
           padding: '1.5rem',
-          display: 'flex', flexDirection: 'column', gap: '0.75rem',
+          paddingBottom: 0,
+          display: 'flex', flexDirection: 'column',
         }}
       >
         {/* Header */}
@@ -1317,6 +1324,14 @@ function IntelligenceDetailPanel({ cardType, intelligence, onClose }: {
           </button>
         </div>
 
+        {/* Scrollable content */}
+        <div style={{
+          flex: 1, overflowY: 'auto', overflowX: 'hidden',
+          overscrollBehavior: 'contain',
+          display: 'flex', flexDirection: 'column', gap: '0.75rem',
+          paddingBottom: '1.5rem',
+        }}>
+
         {/* Content */}
         {cardType === 'trend' && intelligence.trend && (
           <PublicFocusDetail data={intelligence.trend} />
@@ -1327,6 +1342,7 @@ function IntelligenceDetailPanel({ cardType, intelligence, onClose }: {
         {cardType === 'accounts' && intelligence.accounts && (
           <VoicesDetail data={intelligence.accounts} />
         )}
+        </div>{/* end scrollable content */}
       </motion.div>
     </>
   )

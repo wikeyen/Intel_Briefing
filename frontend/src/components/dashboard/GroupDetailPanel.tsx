@@ -104,12 +104,11 @@ export function GroupDetailPanel({ group, items, summary, intelligence, onClose 
           background: 'var(--surface)',
           borderLeft: '1px solid var(--border)',
           boxShadow: 'var(--shadow-lg)',
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          overscrollBehavior: 'contain',
+          overflow: 'hidden',
           zIndex: 101,
           padding: '1.5rem',
-          display: 'flex', flexDirection: 'column', gap: '0.75rem',
+          paddingBottom: 0,
+          display: 'flex', flexDirection: 'column',
         }}
       >
         {/* Header */}
@@ -149,6 +148,14 @@ export function GroupDetailPanel({ group, items, summary, intelligence, onClose 
             &times;
           </button>
         </div>
+
+        {/* Scrollable content — header stays fixed above */}
+        <div style={{
+          flex: 1, overflowY: 'auto', overflowX: 'hidden',
+          overscrollBehavior: 'contain',
+          display: 'flex', flexDirection: 'column', gap: '0.75rem',
+          paddingBottom: '1.5rem',
+        }}>
 
         {/* Group summary */}
         {fullSummary && (
@@ -412,6 +419,7 @@ export function GroupDetailPanel({ group, items, summary, intelligence, onClose 
             {t('dash.no_domain_data')}
           </div>
         )}
+        </div>{/* end scrollable content */}
       </motion.div>
     </>
   )

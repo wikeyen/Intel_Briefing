@@ -623,7 +623,7 @@ export async function runNlpIntelligenceAnalysis(
 
   // Split items by section using group-driven sensor sets
   const effectiveSets = sensorSets ?? { trendSensors: new Set<string>(), topicSensors: new Set<string>(), socialSensors: new Set<string>() }
-  const topicItems = allItems.filter(i => effectiveSets.topicSensors.has(i.source) && i.topic != null && i.topic.length > 0)
+  const topicItems = allItems.filter(i => i.topic != null && i.topic.length > 0)
   const accountItems = allItems.filter(i => effectiveSets.socialSensors.has(i.source) && i.account != null && i.account.length > 0)
 
   // --- Trend / Public Focus: cluster summaries (parallel LLM calls) ---

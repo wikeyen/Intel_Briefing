@@ -259,6 +259,32 @@ describe('runNlpIntelligenceAnalysis', () => {
     expect(callCount).toBe(4)
   })
 
+  it('includes topic items from any sensor, not just topicSensors', async () => {
+    // Add a topic item from a sensor NOT in topicSensors (e.g. weibo)
+    const extraTopicItem: IntelItem = { id: 'item-extra', title: 'Weibo AI topic', url: 'https://example.com/extra', source: 'weibo', topic: 'AI' }
+    const reportWithExtra: IntelReport = {
+      ...fakeReport,
+      items: { ...fakeReport.items, social: [...socialItems, ...topicItems, extraTopicItem] },
+    }
+
+    // cluster summaries
+    mockChat.mockResolvedValueOnce(JSON.stringify({ summary: 'test', tags: [] }))
+    mockChat.mockResolvedValueOnce(JSON.stringify({ summary: 'test', tags: [] }))
+    // topic intelligence — capture the input to verify weibo item is included
+    mockChat.mockResolvedValueOnce(JSON.stringify({
+      summary: 'Topics from all sensors.', topics: [], tags: [],
+    }))
+    // remaining calls
+    mockChat.mockResolvedValue(JSON.stringify({ summary: 'test' }))
+
+    await runNlpIntelligenceAnalysis(reportWithExtra, fakeNlpSectionData, fakeLlmConfig, undefined, undefined, fakeSensorSets)
+
+    // The topic call (3rd call) should include the weibo item
+    const topicCall = mockChat.mock.calls[2]
+    const userContent = topicCall[0][1].content as string
+    expect(userContent).toContain('Weibo AI topic')
+  })
+
   it('assigns dominant sentiment correctly', async () => {
     mockChat.mockResolvedValue(JSON.stringify({ summary: 'test', topics: [], tags: [] }))
 

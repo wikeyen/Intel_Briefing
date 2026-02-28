@@ -92,12 +92,13 @@ function trendSystemPrompt(language?: SummaryLanguage): string {
   return `You analyze trending topics from Chinese and international platforms to identify what the public is focused on.
 
 Given a numbered list of trending items with source platforms and heat scores, you must:
-1. Identify the top canonical topics (group related items)
-2. For each topic: name, one-sentence summary, sentiment (positive/negative/neutral/mixed), which sources cover it, heat score (1-100)
-3. Extract the top 20 tags (keywords/themes) with importance weights (0.0-1.0) and sentiment. If a tag was translated from a different source language, include an "original" field with the source-language text.
+1. Write a "summary" paragraph (2-4 sentences) describing the overall public focus and mood. This field is REQUIRED and must NOT be empty.
+2. Identify the top 5-10 canonical topics (group related items). Each topic name must be a single short phrase (e.g. "Artificial Intelligence", NOT comma-separated lists).
+3. For each topic: name, one-sentence summary, sentiment (positive/negative/neutral/mixed), which sources cover it, heat score (1-100)
+4. Extract the top 20 tags (keywords/themes) with importance weights (0.0-1.0) and sentiment. If a tag was translated from a different source language, include an "original" field with the source-language text.
 
 Respond with ONLY a JSON object, no markdown fences:
-{"summary":"Overall paragraph about what people are focused on","topics":[{"name":"...","summary":"...","sentiment":"mixed","sources":["weibo","douyin"],"itemCount":5,"heat":85}],"tags":[{"text":"Artificial Intelligence","original":"人工智能","weight":0.9,"sentiment":"neutral"}]}` + langInstruction(language)
+{"summary":"REQUIRED: Overall paragraph about what people are focused on","topics":[{"name":"Artificial Intelligence","summary":"...","sentiment":"mixed","sources":["weibo","douyin"],"itemCount":5,"heat":85}],"tags":[{"text":"Artificial Intelligence","original":"人工智能","weight":0.9,"sentiment":"neutral"}]}` + langInstruction(language)
 }
 
 function topicSystemPrompt(language?: SummaryLanguage): string {

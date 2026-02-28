@@ -137,6 +137,14 @@ describe('TopicPulseCard', () => {
     expect(screen.getByText('42 posts')).toBeTruthy()
     expect(screen.getByText('17 posts')).toBeTruthy()
   })
+
+  it('prevents topic name word-break with nowrap', () => {
+    render(createElement(TopicPulseCard, { data: TOPIC_DATA }))
+    const gpuSpan = screen.getByText('GPU Shortage')
+    expect(gpuSpan.style.whiteSpace).toBe('nowrap')
+    expect(gpuSpan.style.overflow).toBe('hidden')
+    expect(gpuSpan.style.textOverflow).toBe('ellipsis')
+  })
 })
 
 // ---------------------------------------------------------------------------

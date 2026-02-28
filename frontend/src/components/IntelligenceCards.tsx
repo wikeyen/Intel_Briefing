@@ -476,6 +476,9 @@ export function TopicPulseCard({ data, loading, onClick }: TopicPulseCardProps) 
                     <span style={{
                       fontSize: '0.75rem',
                       fontWeight: 600,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
                       color: SENTIMENT_DOT_COLORS[entry.sentiment ?? 'neutral'] ?? SENTIMENT_DOT_COLORS.neutral,
                     }}>
                       {entry.topic}

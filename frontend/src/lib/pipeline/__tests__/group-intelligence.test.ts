@@ -1,5 +1,5 @@
 // ABOUTME: Tests that the intelligence pipeline uses group-driven sensor sets for item splitting.
-// ABOUTME: Validates trend/topic/social filtering respects group membership, not hardcoded categories.
+// ABOUTME: Validates trend/social filtering respects group membership; topic filtering is global.
 
 import { describe, it, expect } from 'vitest'
 import type { IntelItem } from '../../models'
@@ -20,7 +20,7 @@ function collectAllItems(report: { items: Record<string, IntelItem[]> }): IntelI
 
 function splitWithGroups(allItems: IntelItem[], sensorSets: IntelligenceSensorSets) {
   const trendItems = allItems.filter(i => sensorSets.trendSensors.has(i.source))
-  const topicItems = allItems.filter(i => sensorSets.topicSensors.has(i.source) && i.topic != null && i.topic.length > 0)
+  const topicItems = allItems.filter(i => i.topic != null && i.topic.length > 0)
   const accountItems = allItems.filter(i => sensorSets.socialSensors.has(i.source) && i.account != null && i.account.length > 0)
   return { trendItems, topicItems, accountItems }
 }
@@ -87,22 +87,21 @@ describe('group-driven intelligence splitting', () => {
     expect(trendItems.some(i => i.source === 'rss_news')).toBe(false)
   })
 
-  it('topic items only come from sensors in topic-processing groups AND have item.topic set', () => {
+  it('topic items include any item with a non-empty topic regardless of sensor group', () => {
     const itemsWithoutTopic: IntelItem[] = [
-      makeItem({ id: 'nt1', source: 'x', title: 'No topic post' }),         // x in topicSensors, no topic field
-      makeItem({ id: 'nt2', source: 'hacker_news', title: 'HN topic', topic: 'tech' }),  // has topic, wrong sensor
+      makeItem({ id: 'nt1', source: 'x', title: 'No topic post' }),         // no topic field
+      makeItem({ id: 'nt2', source: 'hacker_news', title: 'HN topic', topic: 'tech' }),  // has topic, any sensor
     ]
     const allItems = collectAllItems(buildReport([...TOPIC_ITEMS, ...itemsWithoutTopic]))
     const { topicItems } = splitWithGroups(allItems, sensorSets)
 
-    // Only the 3 TOPIC_ITEMS should match
-    expect(topicItems).toHaveLength(3)
-    expect(topicItems.every(i => sensorSets.topicSensors.has(i.source))).toBe(true)
+    // 3 TOPIC_ITEMS + nt2 (has topic) = 4; nt1 excluded (no topic)
+    expect(topicItems).toHaveLength(4)
     expect(topicItems.every(i => i.topic != null && i.topic.length > 0)).toBe(true)
-    // Item from x without topic excluded
+    // Item without topic excluded
     expect(topicItems.some(i => i.id === 'nt1')).toBe(false)
-    // Item from hacker_news with topic excluded (wrong sensor group)
-    expect(topicItems.some(i => i.id === 'nt2')).toBe(false)
+    // Item from any sensor with topic included
+    expect(topicItems.some(i => i.id === 'nt2')).toBe(true)
   })
 
   it('account items only come from sensors in social-processing groups AND have item.account set', () => {
@@ -148,7 +147,7 @@ describe('group-driven intelligence splitting', () => {
     expect(accountItems[0].id).toBe('dual1')
   })
 
-  it('empty sensor sets produce empty item arrays for all analyses', () => {
+  it('empty sensor sets produce empty trend/account arrays; topic items still included', () => {
     const emptySets: IntelligenceSensorSets = {
       trendSensors: new Set(),
       topicSensors: new Set(),
@@ -158,7 +157,8 @@ describe('group-driven intelligence splitting', () => {
     const { trendItems, topicItems, accountItems } = splitWithGroups(allItems, emptySets)
 
     expect(trendItems).toHaveLength(0)
-    expect(topicItems).toHaveLength(0)
+    // Topic items are global — 3 TOPIC_ITEMS have topic set
+    expect(topicItems).toHaveLength(3)
     expect(accountItems).toHaveLength(0)
   })
 
@@ -167,12 +167,13 @@ describe('group-driven intelligence splitting', () => {
       ...TREND_ITEMS,      // weibo, zhihu, douyin → trend
       ...TOPIC_ITEMS,      // x, bluesky, mastodon with topic → topic
       ...SOCIAL_ITEMS,     // x, bluesky with account → social
-      ...NEWS_ITEMS,       // hacker_news, rss_news → none of the three
-      ...UNGROUPED_ITEMS,  // unknown → excluded
+      ...NEWS_ITEMS,       // hacker_news, rss_news → news excluded from trend/social
+      ...UNGROUPED_ITEMS,  // unknown → excluded from trend/social
     ]))
     const { trendItems, topicItems, accountItems } = splitWithGroups(allItems, sensorSets)
 
     expect(trendItems).toHaveLength(3)
+    // Topic items are global: 3 TOPIC_ITEMS (all have topic set)
     expect(topicItems).toHaveLength(3)
     expect(accountItems).toHaveLength(2)
   })

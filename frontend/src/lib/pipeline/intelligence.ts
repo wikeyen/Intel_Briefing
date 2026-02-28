@@ -576,7 +576,7 @@ export async function runIntelligenceAnalysis(
   // Split items using group-driven sensor sets
   const effectiveSets = sensorSets ?? { trendSensors: new Set<string>(), topicSensors: new Set<string>(), socialSensors: new Set<string>() }
   const trendItems = allItems.filter(item => effectiveSets.trendSensors.has(item.source))
-  const topicItems = allItems.filter(item => effectiveSets.topicSensors.has(item.source) && item.topic != null && item.topic.length > 0)
+  const topicItems = allItems.filter(item => item.topic != null && item.topic.length > 0)
   const accountItems = allItems.filter(item => effectiveSets.socialSensors.has(item.source) && item.account != null && item.account.length > 0)
 
   // Run all three analyses in parallel — each catches its own errors

@@ -109,13 +109,21 @@ describe('runNlpIntelligenceAnalysis', () => {
       summary: 'Regulation looms.',
       tags: [{ text: 'Regulation', weight: 0.85, sentiment: 'mixed' }, { text: 'AI', weight: 0.7, sentiment: 'neutral' }],
     }))
-    // topic intelligence
+    // per-topic call for AI
+    mockChat.mockResolvedValueOnce(JSON.stringify({
+      sentiment: 'mixed', summary: 'GPT-5 and OpenAI drama',
+      items: [{ title: 'GPT-5 discussion thread', url: 'https://bsky.app/2', brief: 'Active discussion' }],
+      tags: [{ text: 'GPT-5', weight: 0.9, sentiment: 'positive' }],
+    }))
+    // per-topic call for programming
+    mockChat.mockResolvedValueOnce(JSON.stringify({
+      sentiment: 'neutral', summary: 'Language wars continue',
+      items: [{ title: 'Rust vs Go debate', url: 'https://bsky.app/3', brief: 'Classic debate' }],
+      tags: [{ text: 'Rust', weight: 0.8, sentiment: 'neutral' }],
+    }))
+    // topics merge call
     mockChat.mockResolvedValueOnce(JSON.stringify({
       summary: 'AI discourse is heated.',
-      topics: [
-        { topic: 'AI', sentiment: 'mixed', summary: 'GPT-5 and OpenAI drama', items: [{ title: 'GPT-5 discussion thread', url: 'https://bsky.app/2', brief: 'Active discussion' }], postCount: 2 },
-        { topic: 'programming', sentiment: 'neutral', summary: 'Language wars continue', items: [{ title: 'Rust vs Go debate', url: 'https://bsky.app/3', brief: 'Classic debate' }], postCount: 1 },
-      ],
       tags: [{ text: 'GPT-5', weight: 0.9, sentiment: 'positive' }],
     }))
     // accounts summary
@@ -139,10 +147,10 @@ describe('runNlpIntelligenceAnalysis', () => {
     expect(result.trend!.summary).toBe('The AI landscape is evolving rapidly.')
     expect(result.trend!.tags.length).toBeGreaterThan(0)
 
-    // Topics (now populated via NLP enrichment!)
+    // Topics (per-topic parallel calls + merge)
     expect(result.topics).not.toBeNull()
     expect(result.topics!.topics).toHaveLength(2)
-    expect(result.topics!.topics[0].topic).toBe('AI')
+    expect(result.topics!.topics.map(t => t.topic).sort()).toEqual(['AI', 'programming'])
     expect(result.topics!.summary).toBe('AI discourse is heated.')
 
     // Accounts
@@ -253,10 +261,10 @@ describe('runNlpIntelligenceAnalysis', () => {
     const result = await runNlpIntelligenceAnalysis(fakeReport, noNegativeData, fakeLlmConfig, undefined, undefined, fakeSensorSets)
     expect(result.trend).not.toBeNull()
 
-    // Should have called: 1 cluster summary + 1 topic + 1 accounts summary + 1 executive summary = 4
+    // Should have called: 1 cluster summary + 2 per-topic + 1 topic merge + 1 accounts summary + 1 executive summary = 6
     // No risk scan call
     const callCount = mockChat.mock.calls.length
-    expect(callCount).toBe(4)
+    expect(callCount).toBe(6)
   })
 
   it('includes topic items from any sensor, not just topicSensors', async () => {
@@ -300,21 +308,23 @@ describe('runNlpIntelligenceAnalysis', () => {
     // cluster summaries
     mockChat.mockResolvedValueOnce(JSON.stringify({ summary: 'test', tags: [] }))
     mockChat.mockResolvedValueOnce(JSON.stringify({ summary: 'test', tags: [] }))
-    // topic intelligence — capture the input
-    mockChat.mockResolvedValueOnce(JSON.stringify({
-      summary: 'test', topics: [], tags: [],
-    }))
-    // remaining calls
+    // per-topic calls (AI + programming)
+    mockChat.mockResolvedValueOnce(JSON.stringify({ sentiment: 'positive', summary: 'AI stuff', items: [], tags: [] }))
+    mockChat.mockResolvedValueOnce(JSON.stringify({ sentiment: 'neutral', summary: 'code stuff', items: [], tags: [] }))
+    // topic merge call
+    mockChat.mockResolvedValueOnce(JSON.stringify({ summary: 'test', tags: [] }))
+    // remaining calls (accounts, exec summary)
     mockChat.mockResolvedValue(JSON.stringify({ summary: 'test' }))
 
     await runNlpIntelligenceAnalysis(fakeReport, fakeNlpSectionData, fakeLlmConfig, undefined, undefined, fakeSensorSets)
 
-    // The third call should be for topics — check the user content includes sentiment labels
-    const topicCall = mockChat.mock.calls[2]
-    const userContent = topicCall[0][1].content as string
-    expect(userContent).toContain('(positive)')  // item-7 has positive sentiment
-    expect(userContent).toContain('(negative)')  // item-8 has negative sentiment
-    expect(userContent).toContain('## Topic: AI')
-    expect(userContent).toContain('## Topic: programming')
+    // Per-topic calls (calls 2 and 3) should include sentiment labels from NLP enrichment
+    const allTopicContent = mockChat.mock.calls.slice(2, 4)
+      .map(call => call[0][1].content as string)
+      .join('\n')
+    expect(allTopicContent).toContain('(positive)')  // item-7 has positive sentiment
+    expect(allTopicContent).toContain('(negative)')  // item-8 has negative sentiment
+    expect(allTopicContent).toContain('Topic: AI')
+    expect(allTopicContent).toContain('Topic: programming')
   })
 })

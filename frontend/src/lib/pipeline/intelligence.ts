@@ -117,6 +117,32 @@ Respond with ONLY JSON:
 {"summary":"Overall paragraph","topics":[{"topic":"AI","sentiment":"positive","summary":"People are optimistic about...","items":[{"title":"Post title","url":"https://...","brief":"Why this post matters"}],"postCount":15}],"tags":[{"text":"Artificial Intelligence","original":"人工智能","weight":0.8,"sentiment":"positive"}]}` + langInstruction(language)
 }
 
+function singleTopicPrompt(language?: SummaryLanguage): string {
+  return `You analyze social media posts about a single topic to assess public sentiment and surface noteworthy content.
+
+Given a list of posts for one topic (each with a title and URL), you must:
+1. Write a 1-3 sentence summary of the discourse and sentiment around this topic
+2. Assess the overall sentiment: positive, negative, neutral, or mixed
+3. Curate the 3-8 most noteworthy posts — pick posts with the highest informational value, unique insights, or significant developments
+4. Extract 3-5 tags relevant to this topic with importance weights and sentiment
+
+IMPORTANT: Posts are ordered by recency, NOT popularity. Curate based on content quality and significance.
+
+If a tag was translated from a different source language, include an "original" field with the source-language text.
+
+Respond with ONLY JSON:
+{"sentiment":"mixed","summary":"People are debating...","items":[{"title":"Post title","url":"https://...","brief":"Why this post matters"}],"tags":[{"text":"Regulation","weight":0.8,"sentiment":"mixed"}]}` + langInstruction(language)
+}
+
+function topicsMergePrompt(language?: SummaryLanguage): string {
+  return `You are given pre-analyzed topic summaries. Write a concise overall paragraph synthesizing the key themes across all topics and the general public mood. Also extract 10-20 cross-topic tags with importance weights and sentiment.
+
+Tags should be high-level concepts, NOT account handles, platform names, or generic terms. If a tag was translated from a different source language, include an "original" field with the source-language text.
+
+Respond with ONLY JSON:
+{"summary":"Overall paragraph about public discourse across topics","tags":[{"text":"Artificial Intelligence","weight":0.9,"sentiment":"neutral"}]}` + langInstruction(language)
+}
+
 function accountsSystemPrompt(language?: SummaryLanguage): string {
   return `You analyze posts from social media accounts to identify their focus areas and opinions.
 
@@ -326,9 +352,32 @@ export async function analyzeTrendIntelligence(
 // Topic intelligence
 // ---------------------------------------------------------------------------
 
+/** Parse a single-topic LLM response into a TopicSentimentEntry. */
+function parseSingleTopicResponse(topicName: string, postCount: number, parsed: Record<string, unknown>): TopicSentimentEntry {
+  const rawItems = Array.isArray(parsed.items) ? parsed.items : []
+  return {
+    topic: topicName,
+    sentiment: normalizeSentiment(parsed.sentiment),
+    summary: String(parsed.summary ?? ''),
+    items: rawItems
+      .filter((it: unknown) => it && typeof it === 'object' && 'title' in it)
+      .map((it: unknown) => {
+        const item = it as Record<string, unknown>
+        return {
+          title: String(item.title ?? ''),
+          url: String(item.url ?? ''),
+          brief: String(item.brief ?? ''),
+        }
+      }),
+    postCount,
+  }
+}
+
 /**
  * Analyze items grouped by topic keyword to assess public sentiment per topic.
- * Returns null if no items have a topic field or the LLM call fails.
+ * Uses parallel per-topic LLM calls so all items are analyzed regardless of volume,
+ * then a merge call to synthesize an overall summary and cross-topic tags.
+ * Returns null if no items have a topic field or all LLM calls fail.
  */
 export async function analyzeTopicIntelligence(
   items: IntelItem[],
@@ -348,71 +397,89 @@ export async function analyzeTopicIntelligence(
       byTopic.get(topic)!.push(item)
     }
 
-    // Build grouped text block
-    const sections: string[] = []
-    byTopic.forEach((topicItems, topic) => {
-      const posts = topicItems.map((item, i) => `  [${i}] ${item.title} | ${item.url}`).join('\n')
-      sections.push(`## Topic: ${topic} (${topicItems.length} posts)\n${posts}`)
-    })
+    // Parallel per-topic LLM calls — each topic gets its own call with all its items
+    const perTopicPrompt = promptOverride ?? singleTopicPrompt(language)
+    const topicEntries = [...byTopic.entries()]
+    const perTopicResults = await Promise.all(
+      topicEntries.map(async ([topicName, topicItems]) => {
+        const posts = topicItems.map((item, i) => `  [${i}] ${item.title} | ${item.url}`).join('\n')
+        const userContent = `Topic: ${topicName} (${topicItems.length} posts)\n${posts}`
 
-    const messages: ChatMessage[] = [
-      { role: 'system', content: promptOverride ?? topicSystemPrompt(language) },
-      { role: 'user', content: sections.join('\n\n') },
-    ]
+        try {
+          const raw = await chatCompletion([
+            { role: 'system', content: perTopicPrompt },
+            { role: 'user', content: userContent },
+          ], llmConfig, signal)
 
-    const raw = await chatCompletion(messages, llmConfig, signal)
+          let parsed = robustJsonParse(raw)
+          if (!parsed) {
+            console.warn(`[intelligence] topic "${topicName}": JSON parse failed, retrying`)
+            const retryRaw = await chatCompletion([
+              { role: 'system', content: perTopicPrompt },
+              { role: 'user', content: userContent },
+              { role: 'assistant', content: raw },
+              { role: 'user', content: 'Your response was not valid JSON. Please respond with ONLY the JSON object, no explanation or markdown fences.' },
+            ], llmConfig, signal)
+            parsed = robustJsonParse(retryRaw)
+          }
 
-    let parsed = robustJsonParse(raw)
-    if (!parsed) {
-      // Retry once with JSON-fix nudge
-      console.warn('[intelligence] topic: JSON parse failed, retrying. First 200 chars:', raw.slice(0, 200))
-      const retryRaw = await chatCompletion(
-        [
-          ...messages,
-          { role: 'assistant', content: raw },
-          { role: 'user', content: 'Your response was not valid JSON. Please respond with ONLY the JSON object, no explanation or markdown fences.' },
-        ],
-        llmConfig,
-        signal,
-      )
-      parsed = robustJsonParse(retryRaw)
-      if (!parsed) {
-        console.error('[intelligence] topic: failed to parse LLM JSON after retry. First 200 chars:', retryRaw.slice(0, 200))
-        return null
-      }
-    }
-
-    const topics: TopicSentimentEntry[] = Array.isArray(parsed.topics)
-      ? parsed.topics
-          .filter((t: unknown) => t && typeof t === 'object' && 'topic' in t)
-          .map((t: unknown) => {
-            const entry = t as Record<string, unknown>
-            const rawItems = Array.isArray(entry.items) ? entry.items : []
+          if (parsed) {
             return {
-              topic: String(entry.topic ?? ''),
-              sentiment: normalizeSentiment(entry.sentiment),
-              summary: String(entry.summary ?? ''),
-              items: rawItems
-                .filter((it: unknown) => it && typeof it === 'object' && 'title' in it)
-                .map((it: unknown) => {
-                  const item = it as Record<string, unknown>
-                  return {
-                    title: String(item.title ?? ''),
-                    url: String(item.url ?? ''),
-                    brief: String(item.brief ?? ''),
-                  }
-                }),
-              postCount: typeof entry.postCount === 'number' ? entry.postCount : 0,
+              entry: parseSingleTopicResponse(topicName, topicItems.length, parsed),
+              tags: parseTags(parsed.tags),
             }
-          })
-      : []
+          }
+        } catch (err) {
+          console.error(`[intelligence] topic "${topicName}" failed:`, err)
+        }
+        return null
+      }),
+    )
 
-    return {
-      topics,
-      tags: parseTags(parsed.tags),
-      summary: typeof parsed.summary === 'string' ? parsed.summary : '',
-      generated_at: new Date().toISOString(),
+    const successfulTopics = perTopicResults.filter((r): r is NonNullable<typeof r> => r !== null)
+    if (successfulTopics.length === 0) return null
+
+    const topics = successfulTopics.map(r => r.entry)
+
+    // Merge pass — synthesize overall summary and cross-topic tags
+    let summary = ''
+    let tags: IntelTag[] = []
+    try {
+      const mergeInput = topics.map(t =>
+        `Topic: ${t.topic} (${t.postCount} posts, ${t.sentiment}): ${t.summary}`
+      ).join('\n')
+
+      const mergeRaw = await chatCompletion([
+        { role: 'system', content: topicsMergePrompt(language) },
+        { role: 'user', content: mergeInput },
+      ], llmConfig, signal)
+
+      const mergeParsed = robustJsonParse(mergeRaw)
+      if (mergeParsed) {
+        summary = typeof mergeParsed.summary === 'string' ? mergeParsed.summary : ''
+        tags = parseTags(mergeParsed.tags)
+      }
+    } catch { /* merge failure is non-fatal — per-topic results are still valid */ }
+
+    // Fall back to aggregating per-topic tags if merge produced none
+    if (tags.length === 0) {
+      const tagFreq = new Map<string, { weight: number; sentiment: string }>()
+      for (const r of successfulTopics) {
+        for (const tag of r.tags) {
+          const key = tag.text.toLowerCase()
+          const existing = tagFreq.get(key)
+          if (!existing || tag.weight > existing.weight) {
+            tagFreq.set(key, { weight: tag.weight, sentiment: tag.sentiment ?? 'neutral' })
+          }
+        }
+      }
+      tags = [...tagFreq.entries()]
+        .sort((a, b) => b[1].weight - a[1].weight)
+        .slice(0, 20)
+        .map(([text, { weight, sentiment }]) => ({ text, weight, sentiment: normalizeSentiment(sentiment) }))
     }
+
+    return { topics, tags, summary, generated_at: new Date().toISOString() }
   } catch (err) {
     console.error('[intelligence] topic analysis failed:', err)
     return null
@@ -657,7 +724,7 @@ ${repTitles.map((t, i) => `  [${i}] ${t}`).join('\n')}` },
     })
   )
 
-  // --- Topic intelligence (1 LLM call) ---
+  // --- Topic intelligence (parallel per-topic LLM calls + merge) ---
   let topicResult: TopicIntelligence | null = null
   if (topicItems.length > 0) {
     // Group items by topic keyword
@@ -668,70 +735,91 @@ ${repTitles.map((t, i) => `  [${i}] ${t}`).join('\n')}` },
       byTopic.get(topic)!.push(item)
     }
 
-    // Build grouped text block with NLP enrichment
-    const sections: string[] = []
-    byTopic.forEach((items, topic) => {
-      const posts = items.map((item, i) => {
-        const enriched = enrichmentMap.get(item.id)
-        const sentiment = enriched?.sentiment.label ?? 'unknown'
-        return `  [${i}] ${item.title} (${sentiment}) | ${item.url}`
-      }).join('\n')
-      sections.push(`## Topic: ${topic} (${items.length} posts)\n${posts}`)
-    })
+    // Parallel per-topic LLM calls with NLP enrichment
+    const perTopicPrompt = effectiveSets.topicPrompt ?? singleTopicPrompt(language)
+    const topicEntries = [...byTopic.entries()]
+    const perTopicResults = await Promise.all(
+      topicEntries.map(async ([topicName, items]) => {
+        const posts = items.map((item, i) => {
+          const enriched = enrichmentMap.get(item.id)
+          const sentiment = enriched?.sentiment.label ?? 'unknown'
+          return `  [${i}] ${item.title} (${sentiment}) | ${item.url}`
+        }).join('\n')
+        const userContent = `Topic: ${topicName} (${items.length} posts)\n${posts}`
 
-    const topicPromptText = effectiveSets.topicPrompt ?? topicSystemPrompt(language)
-    try {
-      const raw = await chatCompletion([
-        { role: 'system', content: topicPromptText },
-        { role: 'user', content: sections.join('\n\n') },
-      ], llmConfig, signal)
+        try {
+          const raw = await chatCompletion([
+            { role: 'system', content: perTopicPrompt },
+            { role: 'user', content: userContent },
+          ], llmConfig, signal)
 
-      let parsed = robustJsonParse(raw)
-      if (!parsed) {
-        const retryRaw = await chatCompletion([
-          { role: 'system', content: topicPromptText },
-          { role: 'user', content: sections.join('\n\n') },
-          { role: 'assistant', content: raw },
-          { role: 'user', content: 'Your response was not valid JSON. Please respond with ONLY the JSON object, no explanation or markdown fences.' },
-        ], llmConfig, signal)
-        parsed = robustJsonParse(retryRaw)
-      }
+          let parsed = robustJsonParse(raw)
+          if (!parsed) {
+            const retryRaw = await chatCompletion([
+              { role: 'system', content: perTopicPrompt },
+              { role: 'user', content: userContent },
+              { role: 'assistant', content: raw },
+              { role: 'user', content: 'Your response was not valid JSON. Please respond with ONLY the JSON object, no explanation or markdown fences.' },
+            ], llmConfig, signal)
+            parsed = robustJsonParse(retryRaw)
+          }
 
-      if (parsed) {
-        const topics: TopicSentimentEntry[] = Array.isArray(parsed.topics)
-          ? parsed.topics
-              .filter((t: unknown) => t && typeof t === 'object' && 'topic' in t)
-              .map((t: unknown) => {
-                const entry = t as Record<string, unknown>
-                const rawItems = Array.isArray(entry.items) ? entry.items : []
-                return {
-                  topic: String(entry.topic ?? ''),
-                  sentiment: normalizeSentiment(entry.sentiment),
-                  summary: String(entry.summary ?? ''),
-                  items: rawItems
-                    .filter((it: unknown) => it && typeof it === 'object' && 'title' in it)
-                    .map((it: unknown) => {
-                      const item = it as Record<string, unknown>
-                      return {
-                        title: String(item.title ?? ''),
-                        url: String(item.url ?? ''),
-                        brief: String(item.brief ?? ''),
-                      }
-                    }),
-                  postCount: typeof entry.postCount === 'number' ? entry.postCount : 0,
-                }
-              })
-          : []
-
-        topicResult = {
-          topics,
-          tags: parseTags(parsed.tags),
-          summary: typeof parsed.summary === 'string' ? parsed.summary : '',
-          generated_at: new Date().toISOString(),
+          if (parsed) {
+            return {
+              entry: parseSingleTopicResponse(topicName, items.length, parsed),
+              tags: parseTags(parsed.tags),
+            }
+          }
+        } catch (err) {
+          console.error(`[intelligence] NLP topic "${topicName}" failed:`, err)
         }
+        return null
+      }),
+    )
+
+    const successfulTopics = perTopicResults.filter((r): r is NonNullable<typeof r> => r !== null)
+    if (successfulTopics.length > 0) {
+      const topics = successfulTopics.map(r => r.entry)
+
+      // Merge pass — synthesize overall summary and cross-topic tags
+      let summary = ''
+      let topicTags: IntelTag[] = []
+      try {
+        const mergeInput = topics.map(t =>
+          `Topic: ${t.topic} (${t.postCount} posts, ${t.sentiment}): ${t.summary}`
+        ).join('\n')
+
+        const mergeRaw = await chatCompletion([
+          { role: 'system', content: topicsMergePrompt(language) },
+          { role: 'user', content: mergeInput },
+        ], llmConfig, signal)
+
+        const mergeParsed = robustJsonParse(mergeRaw)
+        if (mergeParsed) {
+          summary = typeof mergeParsed.summary === 'string' ? mergeParsed.summary : ''
+          topicTags = parseTags(mergeParsed.tags)
+        }
+      } catch { /* merge failure is non-fatal */ }
+
+      // Fall back to aggregating per-topic tags if merge produced none
+      if (topicTags.length === 0) {
+        const tagFreq = new Map<string, { weight: number; sentiment: string }>()
+        for (const r of successfulTopics) {
+          for (const tag of r.tags) {
+            const key = tag.text.toLowerCase()
+            const existing = tagFreq.get(key)
+            if (!existing || tag.weight > existing.weight) {
+              tagFreq.set(key, { weight: tag.weight, sentiment: tag.sentiment ?? 'neutral' })
+            }
+          }
+        }
+        topicTags = [...tagFreq.entries()]
+          .sort((a, b) => b[1].weight - a[1].weight)
+          .slice(0, 20)
+          .map(([text, { weight, sentiment }]) => ({ text, weight, sentiment: normalizeSentiment(sentiment) }))
       }
-    } catch (err) {
-      console.error('[intelligence] NLP topic analysis failed:', err)
+
+      topicResult = { topics, tags: topicTags, summary, generated_at: new Date().toISOString() }
     }
   }
 

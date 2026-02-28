@@ -106,60 +106,93 @@ describe('analyzeTopicIntelligence', () => {
     expect(mockChat).not.toHaveBeenCalled()
   })
 
-  it('returns items as TopicCuratedItem[] instead of samplePosts', async () => {
+  it('uses per-topic LLM calls then a merge call', async () => {
+    // Per-topic call for "AI Regulation"
+    mockChat.mockResolvedValueOnce(JSON.stringify({
+      sentiment: 'mixed',
+      summary: 'Debate ongoing',
+      items: [
+        { title: 'New EU AI Act provisions', url: 'https://example.com/1', brief: 'EU tightens AI rules' },
+        { title: 'US proposes AI guidelines', url: 'https://example.com/2', brief: 'Lighter touch from US' },
+      ],
+      tags: [{ text: 'AI Regulation', weight: 0.9, sentiment: 'mixed' }],
+    }))
+    // Merge call
     mockChat.mockResolvedValueOnce(JSON.stringify({
       summary: 'AI regulation is a hot topic',
-      topics: [{
-        topic: 'AI Regulation',
-        sentiment: 'mixed',
-        summary: 'Debate ongoing',
-        items: [
-          { title: 'New EU AI Act provisions', url: 'https://example.com/1', brief: 'EU tightens AI rules' },
-          { title: 'US proposes AI guidelines', url: 'https://example.com/2', brief: 'Lighter touch from US' },
-        ],
-        postCount: 10,
-      }],
       tags: [{ text: 'AI Regulation', weight: 0.9, sentiment: 'mixed' }],
     }))
 
     const result = await analyzeTopicIntelligence([fakeTopicItem], fakeLlmConfig)
     expect(result).not.toBeNull()
     expect(result!.topics).toHaveLength(1)
+    expect(result!.topics[0].topic).toBe('AI Regulation')
     expect(result!.topics[0].items).toHaveLength(2)
     expect(result!.topics[0].items[0]).toEqual({
       title: 'New EU AI Act provisions',
       url: 'https://example.com/1',
       brief: 'EU tightens AI rules',
     })
-    // Verify samplePosts is NOT present on the result
-    expect((result!.topics[0] as Record<string, unknown>).samplePosts).toBeUndefined()
+    expect(result!.summary).toBe('AI regulation is a hot topic')
+    // 1 per-topic call + 1 merge call = 2
+    expect(mockChat).toHaveBeenCalledTimes(2)
   })
 
-  it('includes item URLs in the LLM prompt', async () => {
+  it('includes item URLs in the per-topic LLM prompt', async () => {
+    // Per-topic call
     mockChat.mockResolvedValueOnce(JSON.stringify({
-      summary: 'Test',
-      topics: [{ topic: 'AI Regulation', sentiment: 'neutral', summary: 'Test', items: [], postCount: 1 }],
-      tags: [],
+      sentiment: 'neutral', summary: 'Test', items: [], tags: [],
     }))
+    // Merge call
+    mockChat.mockResolvedValueOnce(JSON.stringify({ summary: 'Test', tags: [] }))
 
     await analyzeTopicIntelligence([fakeTopicItem], fakeLlmConfig)
 
-    // The user message sent to the LLM should contain the item URL
     const userMessage = mockChat.mock.calls[0][0].find((m: { role: string }) => m.role === 'user')
     expect(userMessage?.content).toContain('https://bsky.app/post/123')
     expect(userMessage?.content).toContain('AI regulation debate heats up')
   })
 
   it('handles missing items array gracefully', async () => {
+    // Per-topic call — no items array
     mockChat.mockResolvedValueOnce(JSON.stringify({
-      summary: 'Test',
-      topics: [{ topic: 'AI', sentiment: 'neutral', summary: 'Test', postCount: 5 }],
-      tags: [],
+      sentiment: 'neutral', summary: 'Test', tags: [],
     }))
+    // Merge call
+    mockChat.mockResolvedValueOnce(JSON.stringify({ summary: 'Test', tags: [] }))
 
     const result = await analyzeTopicIntelligence([fakeTopicItem], fakeLlmConfig)
     expect(result).not.toBeNull()
     expect(result!.topics[0].items).toEqual([])
+  })
+
+  it('processes multiple topics in parallel and merges results', async () => {
+    const items: IntelItem[] = [
+      { id: 'a1', title: 'AI post 1', url: 'https://example.com/a1', source: 'bluesky', topic: 'AI' },
+      { id: 'a2', title: 'AI post 2', url: 'https://example.com/a2', source: 'bluesky', topic: 'AI' },
+      { id: 'c1', title: 'Crypto post 1', url: 'https://example.com/c1', source: 'x', topic: 'crypto' },
+    ]
+
+    // Per-topic call for AI
+    mockChat.mockResolvedValueOnce(JSON.stringify({
+      sentiment: 'positive', summary: 'AI hype', items: [], tags: [{ text: 'LLM', weight: 0.8, sentiment: 'positive' }],
+    }))
+    // Per-topic call for crypto
+    mockChat.mockResolvedValueOnce(JSON.stringify({
+      sentiment: 'neutral', summary: 'Crypto steady', items: [], tags: [{ text: 'Bitcoin', weight: 0.7, sentiment: 'neutral' }],
+    }))
+    // Merge call
+    mockChat.mockResolvedValueOnce(JSON.stringify({
+      summary: 'AI and crypto both active', tags: [{ text: 'Technology', weight: 0.9, sentiment: 'neutral' }],
+    }))
+
+    const result = await analyzeTopicIntelligence(items, fakeLlmConfig)
+    expect(result).not.toBeNull()
+    expect(result!.topics).toHaveLength(2)
+    expect(result!.topics.map(t => t.topic).sort()).toEqual(['AI', 'crypto'])
+    expect(result!.summary).toBe('AI and crypto both active')
+    // 2 per-topic + 1 merge = 3
+    expect(mockChat).toHaveBeenCalledTimes(3)
   })
 })
 

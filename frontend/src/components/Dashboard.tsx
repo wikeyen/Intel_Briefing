@@ -1167,7 +1167,7 @@ function TrendDetailPanel({ report, summary, groups, onClose }: {
         }}
       >
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <SectionLabel color="var(--cat-trend)">{t('dash.trending')}</SectionLabel>
           <button
             onClick={onClose}
@@ -1187,10 +1187,11 @@ function TrendDetailPanel({ report, summary, groups, onClose }: {
 
         {/* Scrollable content */}
         <div style={{
-          flex: 1, overflowY: 'auto', overflowX: 'hidden',
+          flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden',
+          WebkitOverflowScrolling: 'touch' as never,
           overscrollBehavior: 'contain',
           display: 'flex', flexDirection: 'column', gap: '0.75rem',
-          paddingBottom: '1.5rem',
+          paddingBottom: '1.5rem', marginTop: '0.75rem',
         }}>
 
         {/* Source groups */}
@@ -1305,7 +1306,7 @@ function IntelligenceDetailPanel({ cardType, intelligence, onClose }: {
         }}
       >
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <SectionLabel color={config.accent}>{config.label}</SectionLabel>
           <button
             onClick={onClose}
@@ -1326,10 +1327,11 @@ function IntelligenceDetailPanel({ cardType, intelligence, onClose }: {
 
         {/* Scrollable content */}
         <div style={{
-          flex: 1, overflowY: 'auto', overflowX: 'hidden',
+          flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden',
+          WebkitOverflowScrolling: 'touch' as never,
           overscrollBehavior: 'contain',
           display: 'flex', flexDirection: 'column', gap: '0.75rem',
-          paddingBottom: '1.5rem',
+          paddingBottom: '1.5rem', marginTop: '0.75rem',
         }}>
 
         {/* Content */}

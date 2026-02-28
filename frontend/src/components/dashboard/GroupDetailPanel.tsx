@@ -112,7 +112,7 @@ export function GroupDetailPanel({ group, items, summary, intelligence, onClose 
         }}
       >
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
             <span style={{
               width: 10, height: 10, borderRadius: '50%', flexShrink: 0,
@@ -151,10 +151,11 @@ export function GroupDetailPanel({ group, items, summary, intelligence, onClose 
 
         {/* Scrollable content — header stays fixed above */}
         <div style={{
-          flex: 1, overflowY: 'auto', overflowX: 'hidden',
+          flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden',
+          WebkitOverflowScrolling: 'touch' as never,
           overscrollBehavior: 'contain',
           display: 'flex', flexDirection: 'column', gap: '0.75rem',
-          paddingBottom: '1.5rem',
+          paddingBottom: '1.5rem', marginTop: '0.75rem',
         }}>
 
         {/* Group summary */}

@@ -193,6 +193,8 @@ describe('GroupDetailPanel', () => {
     const scrollableArea = panel.querySelector('[style*="overflow-y: auto"]') || panel.querySelector('[style*="overflow-y:auto"]')
     expect(scrollableArea).toBeTruthy()
     expect(scrollableArea!.contains(closeBtn)).toBe(false)
+    // minHeight: 0 required for Safari/WebKit flex overflow
+    expect((scrollableArea as HTMLElement).style.minHeight).toBe('0')
   })
 
   it('renders group name and close button', () => {

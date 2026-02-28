@@ -162,6 +162,19 @@ describe('GroupDetailPanel', () => {
     onClose = vi.fn()
   })
 
+  it('applies group-detail-panel class for mobile CSS overrides', () => {
+    const { container } = render(createElement(GroupDetailPanel, {
+      group: makeGroup(),
+      items: [],
+      summary: null,
+      intelligence: null,
+      onClose,
+    }))
+
+    const panel = container.querySelector('.group-detail-panel')
+    expect(panel).toBeTruthy()
+  })
+
   it('renders group name and close button', () => {
     render(createElement(GroupDetailPanel, {
       group: makeGroup(),

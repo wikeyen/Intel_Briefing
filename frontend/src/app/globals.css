@@ -932,6 +932,15 @@ input[type="range"]::-moz-range-thumb {
   input[type="range"] {
     height: 4px;
   }
+
+  /* ── Group detail panel — full-width on mobile ── */
+  .group-detail-panel {
+    width: 100vw !important;
+    left: 0 !important;
+    right: 0 !important;
+    padding-top: calc(56px + env(safe-area-inset-top, 0) + 0.75rem) !important;
+    border-left: none !important;
+  }
 }
 
 /* ── Tablet: narrower sidebar to smooth the desktop → mobile transition ── */

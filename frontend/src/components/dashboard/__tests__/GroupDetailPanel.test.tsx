@@ -162,7 +162,7 @@ describe('GroupDetailPanel', () => {
     onClose = vi.fn()
   })
 
-  it('applies group-detail-panel class for mobile CSS overrides', () => {
+  it('applies slide-panel class for mobile CSS overrides', () => {
     const { container } = render(createElement(GroupDetailPanel, {
       group: makeGroup(),
       items: [],
@@ -171,7 +171,7 @@ describe('GroupDetailPanel', () => {
       onClose,
     }))
 
-    const panel = container.querySelector('.group-detail-panel')
+    const panel = container.querySelector('.slide-panel')
     expect(panel).toBeTruthy()
   })
 

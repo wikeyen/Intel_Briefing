@@ -933,8 +933,8 @@ input[type="range"]::-moz-range-thumb {
     height: 4px;
   }
 
-  /* ── Group detail panel — full-width on mobile ── */
-  .group-detail-panel {
+  /* ── Slide-out panels — full-width on mobile ── */
+  .slide-panel {
     width: 100vw !important;
     left: 0 !important;
     right: 0 !important;

@@ -92,7 +92,7 @@ export function GroupDetailPanel({ group, items, summary, intelligence, onClose 
       />
       {/* Panel */}
       <motion.div
-        className="group-detail-panel"
+        className="slide-panel"
         initial={{ x: '100%' }}
         animate={{ x: 0 }}
         exit={{ x: '100%' }}

@@ -1147,6 +1147,7 @@ function TrendDetailPanel({ report, summary, groups, onClose }: {
       />
       {/* Panel */}
       <motion.div
+        className="slide-panel"
         initial={{ x: '100%' }}
         animate={{ x: 0 }}
         exit={{ x: '100%' }}
@@ -1154,7 +1155,7 @@ function TrendDetailPanel({ report, summary, groups, onClose }: {
         onClick={e => e.stopPropagation()}
         style={{
           position: 'fixed', top: 0, right: 0, bottom: 0,
-          width: 560, maxWidth: '90vw',
+          width: 560, maxWidth: '100vw',
           background: 'var(--surface)',
           borderLeft: '1px solid var(--border)',
           boxShadow: 'var(--shadow-lg)',
@@ -1276,6 +1277,7 @@ function IntelligenceDetailPanel({ cardType, intelligence, onClose }: {
       />
       {/* Panel */}
       <motion.div
+        className="slide-panel"
         initial={{ x: '100%' }}
         animate={{ x: 0 }}
         exit={{ x: '100%' }}
@@ -1283,7 +1285,7 @@ function IntelligenceDetailPanel({ cardType, intelligence, onClose }: {
         onClick={e => e.stopPropagation()}
         style={{
           position: 'fixed', top: 0, right: 0, bottom: 0,
-          width: 560, maxWidth: '90vw',
+          width: 560, maxWidth: '100vw',
           background: 'var(--surface)',
           borderLeft: '1px solid var(--border)',
           boxShadow: 'var(--shadow-lg)',

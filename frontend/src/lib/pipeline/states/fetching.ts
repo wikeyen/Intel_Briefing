@@ -1,4 +1,4 @@
-// ABOUTME: Fetching state handler — runs concurrent sensor fetches with skip-race support.
+// ABOUTME: Fetching state handler — runs concurrent sensor fetches with inline retry.
 // ABOUTME: Assembles the report from results, marks failed summaries, invalidates caches.
 
 import type { IntelItem, SensorResult, StageState } from '../../models'
@@ -7,20 +7,32 @@ import { Semaphore } from '../semaphore'
 import { assembleReport } from '../report-builder'
 import { invalidateAllSensorSummaries, invalidateAllSummaries } from '../../summary/cache'
 import { writePipelineItem } from '../../db'
-import { fetchSensor } from '../helpers'
+import { fetchSensor, MAX_AUTO_RETRIES, retryDelayMs } from '../helpers'
 import type { PipelineContext, PipelineState, FailureKind } from '../types'
+
+/** Sleep that resolves early if the abort signal fires. */
+function abortableSleep(ms: number, signal: AbortSignal): Promise<void> {
+  if (ms <= 0) return Promise.resolve()
+  return new Promise(resolve => {
+    if (signal.aborted) { resolve(); return }
+    const timer = setTimeout(resolve, ms)
+    const onAbort = () => { clearTimeout(timer); resolve() }
+    signal.addEventListener('abort', onAbort, { once: true })
+  })
+}
 
 /**
  * Fetching state: run all sensor fetches concurrently (with Semaphore), assemble report,
  * and mark failed/skipped sensor summaries. Invalidates summary caches before summarization.
+ *
+ * Each sensor retries inline (up to MAX_AUTO_RETRIES) on retryable failures before moving on.
  *
  * Populates ctx: report, failures, failureKinds
  *
  * Returns:
  *  - 'cancelled'    if signal aborted during fetch
  *  - 'complete'     if fetch-only mode
- *  - 'fetch_retry'  if there are failures and we should summarize
- *  - 'summarizing'  if no failures (or no summarize stage)
+ *  - 'summarizing'  if we should summarize (even with failures — summarizing defers to paused)
  */
 export async function handleFetching(ctx: PipelineContext): Promise<PipelineState> {
   const { config, signal, tracker, sensorsToFetch, cachedSensorItems, sensorFilter } = ctx
@@ -72,33 +84,69 @@ export async function handleFetching(ctx: PipelineContext): Promise<PipelineStat
           return
         }
 
-        const result = outcome
-        if (sensorResultSucceeded(result)) {
-          resultMap.set(name, result)
-          tracker.setFetchState(name, 'ok', result.items.length)
-          if (result.items.length === 0) {
+        // Inline retry for retryable failures — retry immediately within the semaphore slot.
+        // Only retry when the pipeline will summarize (fetch-only mode skips retries).
+        let finalResult = outcome
+        if (shouldSummarize && !sensorResultSucceeded(finalResult) && finalResult.error_kind !== 'config') {
+          tracker.addEvent('error', 'fetch', finalResult.error ?? 'Unknown error', name)
+          for (let attempt = 1; attempt <= MAX_AUTO_RETRIES && !signal.aborted && !ctx.skipRetries; attempt++) {
+            const delayMs = retryDelayMs(attempt)
+            tracker.setFetchState(name, 'queued')
+            tracker.addEvent('info', 'retry', `Retry ${attempt}/${MAX_AUTO_RETRIES} in ${Math.round(delayMs / 1000)}s`, name)
+
+            await abortableSleep(delayMs, signal)
+            if (signal.aborted) break
+
+            tracker.setFetchState(name, 'running')
+            const retryResult = await fetchSensor(name, config, (detail, itemCount) => {
+              tracker.setFetchDetail(name, detail, itemCount)
+            }, (key, state, itemCount, error) => {
+              tracker.setSubItemState(name, key, state as StageState, itemCount, error)
+            })
+
+            if (signal.aborted) break
+
+            finalResult = retryResult
+            if (sensorResultSucceeded(finalResult)) {
+              tracker.addEvent('ok', 'retry', `Retry ${attempt} succeeded — ${finalResult.items.length} items`, name)
+              break
+            }
+            tracker.addEvent('warn', 'retry', `Retry ${attempt} failed: ${finalResult.error}`, name)
+          }
+        }
+
+        if (signal.aborted) return
+
+        if (sensorResultSucceeded(finalResult)) {
+          resultMap.set(name, finalResult)
+          tracker.setFetchState(name, 'ok', finalResult.items.length)
+          if (finalResult.items.length === 0) {
             tracker.addEvent('warn', 'fetch', 'Fetched 0 items', name)
-          } else {
-            tracker.addEvent('ok', 'fetch', `Fetched ${result.items.length} items`, name)
+          } else if (finalResult === outcome) {
+            // Only log if this is the original success (retry success already logged)
+            tracker.addEvent('ok', 'fetch', `Fetched ${finalResult.items.length} items`, name)
           }
           ctx.failures.delete(name)
           // Write to temp DB for crash-safe incremental recovery
           const runId = tracker.snapshot().run_id!
           const nowIso = new Date().toISOString().replace(/\.\d+Z$/, 'Z')
-          writePipelineItem(name, runId, result.items, nowIso).catch(err =>
+          writePipelineItem(name, runId, finalResult.items, nowIso).catch(err =>
             console.warn(`[pipeline] Failed to write pipeline_item for ${name}:`, err),
           )
-        } else if (result.error_kind === 'config') {
+        } else if (finalResult.error_kind === 'config') {
           // Config errors are intentional — sensor is not configured, not broken
-          tracker.setFetchState(name, 'skipped', 0, result.error, 'config')
-          tracker.addEvent('info', 'fetch', result.error ?? 'Not configured', name)
+          tracker.setFetchState(name, 'skipped', 0, finalResult.error, 'config')
+          tracker.addEvent('info', 'fetch', finalResult.error ?? 'Not configured', name)
           ctx.skippedSensors.add(name)
         } else {
-          resultMap.set(name, result)
-          tracker.setFetchState(name, 'failed', 0, result.error, result.error_kind ?? 'api')
-          tracker.addEvent('error', 'fetch', result.error ?? 'Unknown error', name)
+          resultMap.set(name, finalResult)
+          tracker.setFetchState(name, 'failed', 0, finalResult.error, finalResult.error_kind ?? 'api')
+          if (finalResult === outcome) {
+            // Log failure only if no retries were attempted (retry failures already logged)
+            tracker.addEvent('error', 'fetch', finalResult.error ?? 'Unknown error', name)
+          }
           ctx.failures.add(name)
-          ctx.failureKinds.set(name, (result.error_kind ?? 'api') as FailureKind)
+          ctx.failureKinds.set(name, (finalResult.error_kind ?? 'api') as FailureKind)
         }
       }),
     )
@@ -107,9 +155,6 @@ export async function handleFetching(ctx: PipelineContext): Promise<PipelineStat
 
   // Initial fetch — skip sensors already cached from a previous run
   await fetchBatch(sensorsToFetch)
-
-  // Auto-retry: delegate to fetch_retry state if there are failures and we're summarizing
-  // First check for cancellation
   if (signal.aborted) {
     tracker.addEvent('warn', 'system', 'Pipeline cancelled during fetch')
     return 'cancelled'
@@ -177,8 +222,7 @@ export async function handleFetching(ctx: PipelineContext): Promise<PipelineStat
     }
   }
 
-  // Decide next state
+  // Decide next state — retries are done inline, go straight to summarizing
   if (!shouldSummarize) return 'complete'
-  if (ctx.failures.size > 0 && shouldSummarize) return 'fetch_retry'
   return 'summarizing'
 }

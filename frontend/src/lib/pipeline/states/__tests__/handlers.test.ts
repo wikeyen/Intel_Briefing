@@ -1,4 +1,4 @@
-// ABOUTME: Unit tests for pipeline state machine handlers — paused, fetch-retry, summary-retry, intelligence, briefing.
+// ABOUTME: Unit tests for pipeline state machine handlers — paused, summary-retry, intelligence, briefing.
 // ABOUTME: Tests each handler in isolation with a mock PipelineContext and real PipelineProgressTracker.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -102,7 +102,6 @@ vi.mock('../../../sensors/taxonomy', () => ({
 // ── Imports under test (after mocks) ──────────────────────────────────────────
 
 const { handlePaused } = await import('../paused')
-const { handleFetchRetry } = await import('../fetch-retry')
 const { handleSummaryRetry } = await import('../summary-retry')
 const { handleIntelligence } = await import('../intelligence')
 const { handleBriefing } = await import('../briefing')
@@ -269,65 +268,6 @@ describe('handlePaused', () => {
     const result = await resultPromise
     expect(result).toBe('briefing')
     expect(ctx.failures.size).toBe(0)
-  })
-})
-
-// ── handleFetchRetry ───────────────────────────────────────────────────────────
-
-describe('handleFetchRetry', () => {
-  it('returns summarizing when no failures exist (nothing to retry)', async () => {
-    const ctx = createMockContext({
-      failures: new Set(),
-      failureKinds: new Map(),
-    })
-
-    const result = await handleFetchRetry(ctx)
-    expect(result).toBe('summarizing')
-    // fetchSensor should never be called when there are no failures
-    expect(mockFetchSensor).not.toHaveBeenCalled()
-  })
-
-  it('retries failed sensors and returns summarizing when all recover', async () => {
-    const ctx = createMockContext({
-      failures: new Set(['sensor_a']),
-      failureKinds: new Map([['sensor_a', 'api']]),
-      report: makeReport({ sources_ok: ['sensor_b'], sources_failed: ['sensor_a'] }),
-    })
-
-    // First retry succeeds
-    mockFetchSensor.mockResolvedValueOnce({
-      sensor_name: 'sensor_a',
-      items: [{ id: 'a1', source: 'sensor_a', title: 'Item A1', url: 'https://example.com/a1' }],
-      error: null,
-      error_kind: null,
-    })
-
-    const result = await handleFetchRetry(ctx)
-    expect(result).toBe('summarizing')
-    expect(ctx.failures.has('sensor_a')).toBe(false)
-    expect(mockFetchSensor).toHaveBeenCalledTimes(1)
-  })
-
-  it('returns summarizing even with remaining failures', async () => {
-    const ctx = createMockContext({
-      failures: new Set(['sensor_a']),
-      failureKinds: new Map([['sensor_a', 'api']]),
-      report: makeReport({ sources_ok: ['sensor_b'], sources_failed: ['sensor_a'] }),
-    })
-
-    // All retries fail
-    mockFetchSensor.mockResolvedValue({
-      sensor_name: 'sensor_a',
-      items: [],
-      error: 'still failing',
-      error_kind: 'api',
-    })
-
-    const result = await handleFetchRetry(ctx)
-    expect(result).toBe('summarizing')
-    // 3 retries (MAX_AUTO_RETRIES)
-    expect(mockFetchSensor).toHaveBeenCalledTimes(3)
-    expect(ctx.failures.has('sensor_a')).toBe(true)
   })
 })
 

@@ -58,6 +58,12 @@ vi.mock('../db', () => ({
   clearRunItems: (...args: unknown[]) => mockClearRunItems(...args),
 }))
 
+// Zero out retry delays for fast tests
+vi.mock('./helpers', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('./helpers')>()
+  return { ...mod, retryDelayMs: () => 0 }
+})
+
 // Mock groups module — report-builder and helpers call listGroupsFlat to route items by group
 const mockListGroupsFlat = vi.fn().mockResolvedValue([])
 vi.mock('../groups', () => ({

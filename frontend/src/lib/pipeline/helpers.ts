@@ -19,6 +19,12 @@ import type { PipelineContext, FailureKind } from './types'
 
 export const MAX_AUTO_RETRIES = 3
 
+/** Retry delay in ms for the given attempt (1-indexed). Exponential backoff: 2s, 4s, 8s. */
+export function retryDelayMs(attempt: number): number {
+  const delays = [2000, 4000, 8000]
+  return delays[attempt - 1] ?? delays[delays.length - 1]
+}
+
 /**
  * Run a single sensor's fetch function and return a SensorResult.
  * Catches all errors so one failing sensor never blocks the pipeline.

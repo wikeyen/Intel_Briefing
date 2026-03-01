@@ -12,7 +12,6 @@ import { buildLlmConfig } from './helpers'
 import type { PipelineContext, PipelineState, StateHandler } from './types'
 import { handleSetup } from './states/setup'
 import { handleFetching } from './states/fetching'
-import { handleFetchRetry } from './states/fetch-retry'
 import { handleSummarizing } from './states/summarizing'
 import { handleSummaryRetry } from './states/summary-retry'
 import { handlePaused } from './states/paused'
@@ -123,7 +122,6 @@ export function skipFetchingSensor(sensorName: string): boolean {
 const STATE_HANDLERS: Record<PipelineState, StateHandler> = {
   setup: handleSetup,
   fetching: handleFetching,
-  fetch_retry: handleFetchRetry,
   summarizing: handleSummarizing,
   summary_retry: handleSummaryRetry,
   paused: handlePaused,

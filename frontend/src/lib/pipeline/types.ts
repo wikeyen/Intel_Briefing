@@ -8,7 +8,7 @@ import type { SummaryProgressCallback, SummarizeOptions } from '../summary/summa
 import type { createBus } from '../summary/events'
 
 export type PipelineState =
-  | 'setup' | 'fetching' | 'fetch_retry'
+  | 'setup' | 'fetching'
   | 'summarizing' | 'summary_retry' | 'paused'
   | 'briefing' | 'intelligence'
   | 'complete' | 'cancelled'

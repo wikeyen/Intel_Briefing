@@ -9,7 +9,7 @@ import { ControlBar, CONTROL_BAR_CSS } from './status/ControlBar'
 import type { Phase } from './status/ControlBar'
 import { SensorGrid } from './status/SensorGrid'
 import { SECTION_SENSORS } from './status/constants'
-import { StaleProcessBanner, detectStale } from './StaleProcessBanner'
+import { StaleProcessBanner, detectStale, getIncompleteSensors } from './StaleProcessBanner'
 import { StatusSkeleton } from './Skeleton'
 import { PhaseStepper } from './status/PhaseStepper'
 import { ActivityLogDrawer } from './status/ActivityLog'
@@ -236,8 +236,17 @@ export function Status() {
 
   const handleResumeStale = async () => {
     await handleAbortStale()
-    const mode = staleInfo?.fetchComplete ? 'summarize' as const : (pipelineStatus?.mode ?? 'fetch_summarize')
-    await handleRun(mode)
+    if (staleInfo?.fetchComplete) {
+      // All sensors finished fetching — just re-run summarisation
+      await handleRun('summarize')
+    } else {
+      const mode = pipelineStatus?.mode ?? 'fetch_summarize'
+      // Incremental: only retry sensors that didn't complete in the stale run
+      const incomplete = pipelineStatus?.sensors
+        ? getIncompleteSensors(pipelineStatus.sensors)
+        : []
+      await handleRun(mode, incomplete.length ? incomplete : undefined)
+    }
     api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
   }
 

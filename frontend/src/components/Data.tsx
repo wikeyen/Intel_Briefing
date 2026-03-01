@@ -11,7 +11,7 @@ import type { SourceGroupTree } from '@/lib/groups/types'
 import { useToast } from '@/lib/toast-context'
 import { useTranslation } from '@/lib/i18n'
 import { Pagination } from './Pagination'
-import { StaleProcessBanner, detectStale } from './StaleProcessBanner'
+import { StaleProcessBanner, detectStale, getIncompleteSensors } from './StaleProcessBanner'
 import { EmptyState } from './EmptyState'
 import { ItemCard, LINE_CLAMP_CSS } from './data/ItemCard'
 import { FeedSkeleton } from './Skeleton'
@@ -201,10 +201,21 @@ export function Data() {
   const handleResumeStale = async () => {
     await handleAbortStale()
     if (staleInfo?.type === 'pipeline') {
-      const mode = staleInfo.fetchComplete ? 'summarize' as const : (pipelineStatus?.mode ?? 'fetch_summarize')
       try {
-        await api.triggerFetch(mode)
-        showToast(mode === 'summarize' ? 'Resuming summaries' : 'Pipeline resumed')
+        if (staleInfo.fetchComplete) {
+          // All sensors finished fetching — just re-run summarisation
+          await api.triggerFetch('summarize')
+          showToast('Resuming summaries')
+        } else {
+          const mode = pipelineStatus?.mode ?? 'fetch_summarize'
+          // Incremental: only retry sensors that didn't complete in the stale run
+          const incomplete = pipelineStatus?.sensors
+            ? getIncompleteSensors(pipelineStatus.sensors)
+            : []
+          await api.triggerFetch(mode, incomplete.length ? incomplete : undefined)
+          const count = incomplete.length
+          showToast(count ? `Pipeline resumed (${count} sensor${count > 1 ? 's' : ''})` : 'Pipeline resumed')
+        }
         api.getPipelineStatus().then(setPipelineStatus).catch(() => {})
       } catch (e) {
         showToast('Failed: ' + (e as Error).message)

@@ -85,6 +85,16 @@ export function detectStale(
   return null
 }
 
+/**
+ * Extract sensor names that did not complete fetching in a stale pipeline run.
+ * Used by resume handlers to trigger an incremental run for only the missing sensors.
+ */
+export function getIncompleteSensors(sensors: PipelineStatus['sensors']): string[] {
+  return sensors
+    .filter(s => s.fetch !== 'ok' && s.fetch !== 'skipped' && !s.fetch_cached)
+    .map(s => s.name)
+}
+
 function timeAgo(isoString: string, t: (key: string, params?: Record<string, string>) => string): string {
   if (!isoString) return ''
   const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000)

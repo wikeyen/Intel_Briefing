@@ -3,7 +3,7 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { I18nProvider } from '@/lib/i18n/context'
-import { StaleProcessBanner, detectStale } from './StaleProcessBanner'
+import { StaleProcessBanner, detectStale, getIncompleteSensors } from './StaleProcessBanner'
 import type { SummaryProgress, PipelineStatus } from '@/api/client'
 
 /* ------------------------------------------------------------------ */
@@ -64,6 +64,47 @@ function makeSensor(overrides: Partial<PipelineStatus['sensors'][number]> = {}):
     ...overrides,
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* getIncompleteSensors() unit tests                                    */
+/* ------------------------------------------------------------------ */
+
+describe('getIncompleteSensors', () => {
+  it('returns sensors that are still queued or running', () => {
+    const sensors = [
+      makeSensor({ name: 'hacker_news', fetch: 'ok' }),
+      makeSensor({ name: 'github', fetch: 'running' }),
+      makeSensor({ name: 'arxiv', fetch: 'queued' }),
+    ]
+    expect(getIncompleteSensors(sensors)).toEqual(['github', 'arxiv'])
+  })
+
+  it('excludes sensors with fetch=ok, fetch=skipped, or fetch_cached=true', () => {
+    const sensors = [
+      makeSensor({ name: 'ok_sensor', fetch: 'ok' }),
+      makeSensor({ name: 'skipped_sensor', fetch: 'skipped' }),
+      makeSensor({ name: 'cached_sensor', fetch: 'ok', fetch_cached: true }),
+      makeSensor({ name: 'failed_sensor', fetch: 'failed' }),
+    ]
+    expect(getIncompleteSensors(sensors)).toEqual(['failed_sensor'])
+  })
+
+  it('returns empty array when all sensors completed', () => {
+    const sensors = [
+      makeSensor({ name: 'a', fetch: 'ok' }),
+      makeSensor({ name: 'b', fetch: 'skipped' }),
+    ]
+    expect(getIncompleteSensors(sensors)).toEqual([])
+  })
+
+  it('returns all sensors when none completed', () => {
+    const sensors = [
+      makeSensor({ name: 'a', fetch: 'queued' }),
+      makeSensor({ name: 'b', fetch: 'running' }),
+    ]
+    expect(getIncompleteSensors(sensors)).toEqual(['a', 'b'])
+  })
+})
 
 describe('detectStale', () => {
   it('returns null when nothing is running', () => {

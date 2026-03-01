@@ -136,10 +136,11 @@ const STATE_HANDLERS: Record<PipelineState, StateHandler> = {
 /**
  * Run the full pipeline: fetch sensors, optionally summarize, and persist results.
  *
- * Supports three run modes:
+ * Supports four run modes:
  *   - `fetch`: Fetch from all enabled sensors, build report, skip summaries.
  *   - `summarize`: Skip fetching, load cached report, generate summaries only.
  *   - `fetch_summarize`: Fetch first, then summarize the fresh report.
+ *   - `intelligence`: Skip fetching and summarizing, load cached report, run intelligence analysis only.
  *
  * The dispatch loop drives execution through discrete state handlers until
  * a terminal state (`complete` or `cancelled`) is reached.

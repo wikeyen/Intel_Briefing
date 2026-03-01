@@ -31,6 +31,7 @@ export async function handleSetup(ctx: PipelineContext): Promise<PipelineState> 
 
   const shouldFetch = mode === 'fetch' || mode === 'fetch_summarize'
   const shouldSummarize = mode === 'summarize' || mode === 'fetch_summarize'
+  const shouldIntel = mode === 'intelligence'
 
   // Identify sensors to run (optionally filtered to a subset)
   const registrySensorNames = sensorFilter?.length
@@ -39,7 +40,7 @@ export async function handleSetup(ctx: PipelineContext): Promise<PipelineState> 
 
   // For summarize-only mode, load the cached report up front so we can derive
   // sensor names for the tracker from the report's actual contents.
-  if (mode === 'summarize') {
+  if (mode === 'summarize' || mode === 'intelligence') {
     ctx.cachedReport = await readReport()
     if (!ctx.cachedReport) {
       // No cached report — create a minimal tracker, mark complete, return empty
@@ -173,5 +174,6 @@ export async function handleSetup(ctx: PipelineContext): Promise<PipelineState> 
   // Decide next state
   if (shouldFetch) return 'fetching'
   if (shouldSummarize) return 'summarizing'
+  if (shouldIntel) return 'intelligence'
   return 'complete'
 }

@@ -201,6 +201,7 @@ const en: TranslationDict = {
   'status.mode_fetch': 'Fetch',
   'status.mode_fetch_summarize': 'Fetch + Summarize',
   'status.mode_summarize': 'Summarize',
+  'status.mode_intelligence': 'Intelligence',
 
   // ── Status page — SensorGrid ──────────────────────────────────────────────
   'status.select_all': 'Select all',

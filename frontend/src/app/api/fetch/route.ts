@@ -5,7 +5,7 @@ import { loadConfig } from '@/lib/config'
 import { runPipeline, isPipelineRunning } from '@/lib/pipeline/orchestrator'
 import type { RunMode } from '@/lib/models'
 
-const VALID_MODES: RunMode[] = ['fetch', 'summarize', 'fetch_summarize']
+const VALID_MODES: RunMode[] = ['fetch', 'summarize', 'fetch_summarize', 'intelligence']
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   let mode: RunMode = 'fetch_summarize'

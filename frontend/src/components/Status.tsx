@@ -135,7 +135,7 @@ export function Status() {
       setRunning(true)
       setSelectedSensors(new Set())
       setDismissed(new Set())
-      const labels = { fetch: 'Fetch', summarize: 'Summarize', fetch_summarize: 'Fetch + Summarize' }
+      const labels: Record<string, string> = { fetch: 'Fetch', summarize: 'Summarize', fetch_summarize: 'Fetch + Summarize', intelligence: 'Intelligence' }
       const suffix = sensors?.length ? ` (${sensors.length} sensor${sensors.length > 1 ? 's' : ''})` : ''
       showToast(`${labels[mode]}${suffix} triggered`)
     } catch (e) {

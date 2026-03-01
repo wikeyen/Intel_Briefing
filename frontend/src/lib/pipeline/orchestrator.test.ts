@@ -1,5 +1,5 @@
 // ABOUTME: Tests for the pipeline orchestrator — validates run modes, concurrency, and progress.
-// ABOUTME: Uses mocked sensors and LLM to test fetch-only, summarize-only, and combined modes.
+// ABOUTME: Uses mocked sensors and LLM to test fetch-only, summarize-only, intelligence-only, and combined modes.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { ConfigSettings, IntelItem, IntelReport } from '../models'
 import { defaultConfig } from '../models'
@@ -175,6 +175,58 @@ describe('runPipeline', () => {
     expect(result.summary).toBeDefined()
     // With onToken wired, the orchestrator uses chatCompletionStream via summarizeWithVerification
     expect(mockChatCompletionStream).toHaveBeenCalled()
+  })
+
+  it('intelligence mode: skips fetching and summarizing, runs intelligence on cached report', async () => {
+    const cachedReport: IntelReport = {
+      date: '2026-02-20',
+      fetched_at: '2026-02-20T08:00:00Z',
+      stale: false,
+      sources_ok: ['hacker_news'],
+      sources_failed: [],
+      items: {
+        ungrouped: [makeItem('hn1', 'hacker_news')],
+      },
+    }
+    mockReadReport.mockResolvedValueOnce(cachedReport)
+
+    // Register sensor so it's "enabled" — but it should NOT be called
+    mockSensorFns['hacker_news'] = vi.fn().mockResolvedValue([])
+
+    const config = makeConfig({
+      sensors_enabled: { hacker_news: true },
+      default_concurrency: 2,
+      local_summary_concurrency: 2,
+    })
+
+    const result = await runPipeline(config, 'intelligence')
+
+    // Should NOT fetch any sensors
+    expect(mockSensorFns['hacker_news']).not.toHaveBeenCalled()
+    // Should NOT summarize
+    expect(mockChatCompletion).not.toHaveBeenCalled()
+    expect(mockChatCompletionStream).not.toHaveBeenCalled()
+    // Report comes from cache, summary is null (intelligence doesn't summarize)
+    expect(result.report).toBeNull()
+    expect(result.summary).toBeNull()
+  })
+
+  it('intelligence mode: returns early with no cached report', async () => {
+    mockReadReport.mockResolvedValueOnce(null)
+    mockSensorFns['hacker_news'] = vi.fn().mockResolvedValue([])
+
+    const config = makeConfig({
+      sensors_enabled: { hacker_news: true },
+      default_concurrency: 2,
+      local_summary_concurrency: 2,
+    })
+
+    const result = await runPipeline(config, 'intelligence')
+
+    // No cached report → early exit with empty result
+    expect(mockSensorFns['hacker_news']).not.toHaveBeenCalled()
+    expect(result.report).toBeNull()
+    expect(result.summary).toBeNull()
   })
 
   it('respects concurrency limit', async () => {

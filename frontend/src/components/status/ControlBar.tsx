@@ -55,6 +55,7 @@ const MODE_OPTIONS: { value: RunMode }[] = [
   { value: 'fetch' },
   { value: 'fetch_summarize' },
   { value: 'summarize' },
+  { value: 'intelligence' },
 ]
 
 const MONO: React.CSSProperties = {

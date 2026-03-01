@@ -201,6 +201,7 @@ const zh: TranslationDict = {
   'status.mode_fetch': '获取',
   'status.mode_fetch_summarize': '获取 + 摘要',
   'status.mode_summarize': '摘要',
+  'status.mode_intelligence': '情报分析',
 
   // ── Status page — SensorGrid ──────────────────────────────────────────────
   'status.select_all': '全选',

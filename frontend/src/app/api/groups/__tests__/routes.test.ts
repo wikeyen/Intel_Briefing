@@ -38,12 +38,12 @@ beforeEach(async () => {
 // ── GET /api/groups ──────────────────────────────────────────────────────
 
 describe('GET /api/groups', () => {
-  it('returns seeded default groups (6 top-level)', async () => {
+  it('returns seeded default groups (7 top-level)', async () => {
     const res = await listRoute()
     expect(res.status).toBe(200)
 
     const groups = await res.json()
-    expect(groups).toHaveLength(6)
+    expect(groups).toHaveLength(7)
 
     const names = groups.map((g: { name: string }) => g.name)
     expect(names).toContain('Research & Reports')
@@ -52,6 +52,7 @@ describe('GET /api/groups', () => {
     expect(names).toContain('Opinions')
     expect(names).toContain('Voices')
     expect(names).toContain('Topics')
+    expect(names).toContain('Product')
   })
 
   it('returns groups with sensor arrays', async () => {

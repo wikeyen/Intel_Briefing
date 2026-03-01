@@ -1,5 +1,5 @@
-// ABOUTME: Integration tests for Dashboard group-based layout refactor.
-// ABOUTME: Verifies that hardcoded DOMAINS are replaced by dynamic source groups and new components are wired in.
+// ABOUTME: Integration tests for Dashboard tab-based sections layout.
+// ABOUTME: Verifies that old group-card components are removed and new section components are wired in.
 import { describe, it, expect } from 'vitest'
 import * as fs from 'fs'
 import * as path from 'path'
@@ -13,124 +13,187 @@ const dashboardSource = fs.readFileSync(
   'utf-8',
 )
 
-describe('Dashboard group-based layout refactor', () => {
-  describe('removed hardcoded domain definitions', () => {
-    it('no longer defines a DOMAINS array', () => {
-      expect(dashboardSource).not.toMatch(/const DOMAINS\s*[:=]/)
+describe('Dashboard tab-based sections refactor', () => {
+  describe('removed old group-card components', () => {
+    it('no longer imports WhatsHappeningStrip', () => {
+      expect(dashboardSource).not.toMatch(/import\s+WhatsHappeningStrip\s+from/)
     })
 
-    it('no longer defines DomainDef type', () => {
-      expect(dashboardSource).not.toMatch(/type DomainDef\s*=/)
+    it('no longer imports GroupIntelCard', () => {
+      expect(dashboardSource).not.toMatch(/import\s+\{[^}]*GroupIntelCard[^}]*\}\s+from/)
     })
 
-    it('no longer defines SubGroup type', () => {
-      expect(dashboardSource).not.toMatch(/type SubGroup\s*=/)
+    it('no longer imports GroupDetailPanelAnimated', () => {
+      expect(dashboardSource).not.toMatch(/import\s+\{[^}]*GroupDetailPanelAnimated[^}]*\}\s+from/)
     })
 
-    it('no longer contains DomainCardCompact component', () => {
-      expect(dashboardSource).not.toMatch(/function DomainCardCompact/)
+    it('no longer renders WhatsHappeningStrip', () => {
+      expect(dashboardSource).not.toMatch(/<WhatsHappeningStrip\b/)
     })
 
-    it('no longer contains DetailSectionContent component', () => {
-      expect(dashboardSource).not.toMatch(/function DetailSectionContent/)
+    it('no longer renders GroupIntelCard', () => {
+      expect(dashboardSource).not.toMatch(/<GroupIntelCard\b/)
     })
 
-    it('no longer contains old DetailPanel component', () => {
-      // The old DetailPanel was domain-based; GroupDetailPanel is imported
-      expect(dashboardSource).not.toMatch(/function DetailPanel\b/)
+    it('no longer renders GroupDetailPanelAnimated', () => {
+      expect(dashboardSource).not.toMatch(/<GroupDetailPanelAnimated\b/)
+    })
+  })
+
+  describe('removed old inline components', () => {
+    it('no longer defines StatusTicker', () => {
+      expect(dashboardSource).not.toMatch(/function StatusTicker/)
     })
 
-    it('no longer has selectedDomain state', () => {
+    it('no longer defines ExecSummaryWidget', () => {
+      expect(dashboardSource).not.toMatch(/function ExecSummaryWidget/)
+    })
+
+    it('no longer defines RiskIntelPanel', () => {
+      expect(dashboardSource).not.toMatch(/function RiskIntelPanel/)
+    })
+
+    it('no longer defines SentimentWidget', () => {
+      expect(dashboardSource).not.toMatch(/function SentimentWidget/)
+    })
+
+    it('no longer defines TrendingWidget', () => {
+      expect(dashboardSource).not.toMatch(/function TrendingWidget/)
+    })
+
+    it('no longer defines SourceHealthWidget', () => {
+      expect(dashboardSource).not.toMatch(/function SourceHealthWidget/)
+    })
+
+    it('no longer defines IntelligenceDetailPanel', () => {
+      expect(dashboardSource).not.toMatch(/function IntelligenceDetailPanel/)
+    })
+
+    it('no longer defines TrendDetailPanel', () => {
+      expect(dashboardSource).not.toMatch(/function TrendDetailPanel/)
+    })
+
+    it('no longer defines GroupDistributionWidget', () => {
+      expect(dashboardSource).not.toMatch(/function GroupDistributionWidget/)
+    })
+  })
+
+  describe('imports new section-based components', () => {
+    it('imports SectionTabBar', () => {
+      expect(dashboardSource).toMatch(/import\s+\{[^}]*SectionTabBar[^}]*\}\s+from/)
+    })
+
+    it('imports SectionFilterBar and related exports', () => {
+      expect(dashboardSource).toMatch(/import\s+\{[^}]*SectionFilterBar[^}]*\}\s+from/)
+      expect(dashboardSource).toMatch(/import\s+\{[^}]*DEFAULT_FILTERS[^}]*\}\s+from/)
+      expect(dashboardSource).toMatch(/import\s+\{[^}]*applyFilters[^}]*\}\s+from/)
+    })
+
+    it('imports VisualDataStrip', () => {
+      expect(dashboardSource).toMatch(/import\s+\{[^}]*VisualDataStrip[^}]*\}\s+from/)
+    })
+
+    it('imports SectionIntelligencePanel', () => {
+      expect(dashboardSource).toMatch(/import\s+\{[^}]*SectionIntelligencePanel[^}]*\}\s+from/)
+    })
+
+    it('imports RichItemCard and itemSignalScore', () => {
+      expect(dashboardSource).toMatch(/import\s+RichItemCard/)
+      expect(dashboardSource).toMatch(/itemSignalScore/)
+    })
+
+    it('imports ItemDetailPanelAnimated', () => {
+      expect(dashboardSource).toMatch(/import\s+\{[^}]*ItemDetailPanelAnimated[^}]*\}\s+from/)
+    })
+  })
+
+  describe('uses tab-driven state management', () => {
+    it('has activeGroupId state', () => {
+      expect(dashboardSource).toMatch(/useState<string \| null>/)
+      expect(dashboardSource).toMatch(/activeGroupId/)
+      expect(dashboardSource).toMatch(/setActiveGroupId/)
+    })
+
+    it('has filtersByGroup state', () => {
+      expect(dashboardSource).toMatch(/filtersByGroup/)
+      expect(dashboardSource).toMatch(/setFiltersByGroup/)
+      expect(dashboardSource).toMatch(/Record<string, FilterState>/)
+    })
+
+    it('has selectedItem state', () => {
+      expect(dashboardSource).toMatch(/selectedItem/)
+      expect(dashboardSource).toMatch(/setSelectedItem/)
+      expect(dashboardSource).toMatch(/useState<IntelItem \| null>/)
+    })
+
+    it('has sortMode state', () => {
+      expect(dashboardSource).toMatch(/sortMode/)
+      expect(dashboardSource).toMatch(/setSortMode/)
+      expect(dashboardSource).toMatch(/useState<SortMode>/)
+    })
+
+    it('no longer uses selectedDomain state', () => {
       expect(dashboardSource).not.toMatch(/selectedDomain/)
     })
   })
 
-  describe('imports new group-based components', () => {
-    it('imports WhatsHappeningStrip', () => {
-      expect(dashboardSource).toMatch(/import\s+WhatsHappeningStrip\s+from/)
+  describe('renders new section-based components', () => {
+    it('renders SectionTabBar', () => {
+      expect(dashboardSource).toMatch(/<SectionTabBar\b/)
     })
 
-    it('imports GroupIntelCard', () => {
-      expect(dashboardSource).toMatch(/import\s+\{[^}]*GroupIntelCard[^}]*\}\s+from/)
+    it('renders SectionFilterBar', () => {
+      expect(dashboardSource).toMatch(/<SectionFilterBar\b/)
     })
 
-    it('imports GroupDetailPanelAnimated', () => {
-      expect(dashboardSource).toMatch(/import\s+\{[^}]*GroupDetailPanelAnimated[^}]*\}\s+from/)
-    })
-  })
-
-  describe('uses group-based state and rendering', () => {
-    it('has activeGroup state', () => {
-      expect(dashboardSource).toMatch(/useState<SourceGroupTree \| null>/)
-      expect(dashboardSource).toMatch(/setActiveGroup/)
+    it('renders VisualDataStrip', () => {
+      expect(dashboardSource).toMatch(/<VisualDataStrip\b/)
     })
 
-    it('renders WhatsHappeningStrip component', () => {
-      expect(dashboardSource).toMatch(/<WhatsHappeningStrip\b/)
+    it('renders SectionIntelligencePanel', () => {
+      expect(dashboardSource).toMatch(/<SectionIntelligencePanel\b/)
     })
 
-    it('renders GroupIntelCard components', () => {
-      expect(dashboardSource).toMatch(/<GroupIntelCard\b/)
+    it('renders RichItemCard', () => {
+      expect(dashboardSource).toMatch(/<RichItemCard\b/)
     })
 
-    it('renders GroupDetailPanelAnimated', () => {
-      expect(dashboardSource).toMatch(/<GroupDetailPanelAnimated\b/)
-    })
-
-    it('renamed CategoryDistributionWidget to GroupDistributionWidget', () => {
-      expect(dashboardSource).not.toMatch(/function CategoryDistributionWidget/)
-      expect(dashboardSource).toMatch(/function GroupDistributionWidget/)
-    })
-
-    it('renamed CategoryDistributionContent to GroupDistributionContent', () => {
-      expect(dashboardSource).not.toMatch(/function CategoryDistributionContent/)
-      expect(dashboardSource).toMatch(/function GroupDistributionContent/)
+    it('renders ItemDetailPanelAnimated', () => {
+      expect(dashboardSource).toMatch(/<ItemDetailPanelAnimated\b/)
     })
   })
 
-  describe('preserved essential components', () => {
-    it('still has StatusTicker', () => {
-      expect(dashboardSource).toMatch(/function StatusTicker/)
+  describe('key functions and logic', () => {
+    it('uses applyFilters for item filtering', () => {
+      expect(dashboardSource).toMatch(/applyFilters\(/)
     })
 
-    it('still has ExecSummaryWidget', () => {
-      expect(dashboardSource).toMatch(/function ExecSummaryWidget/)
+    it('uses itemSignalScore in sorting logic', () => {
+      expect(dashboardSource).toMatch(/itemSignalScore\(/)
     })
 
-    it('still has RiskIntelPanel', () => {
-      expect(dashboardSource).toMatch(/function RiskIntelPanel/)
+    it('defines sortItems function with all four sort modes', () => {
+      expect(dashboardSource).toMatch(/function sortItems/)
+      expect(dashboardSource).toMatch(/case 'signal'/)
+      expect(dashboardSource).toMatch(/case 'newest'/)
+      expect(dashboardSource).toMatch(/case 'discussed'/)
+      expect(dashboardSource).toMatch(/case 'velocity'/)
     })
 
-    it('still has SentimentWidget', () => {
-      expect(dashboardSource).toMatch(/function SentimentWidget/)
-    })
-
-    it('still has TrendingWidget', () => {
-      expect(dashboardSource).toMatch(/function TrendingWidget/)
-    })
-
-    it('still has SourceHealthWidget', () => {
-      expect(dashboardSource).toMatch(/function SourceHealthWidget/)
+    it('builds group-to-items mapping', () => {
+      expect(dashboardSource).toMatch(/function buildGroupItemMap/)
     })
 
     it('still has DashboardSkeleton', () => {
       expect(dashboardSource).toMatch(/function DashboardSkeleton/)
     })
-
-    it('still has IntelligenceDetailPanel', () => {
-      expect(dashboardSource).toMatch(/function IntelligenceDetailPanel/)
-    })
-
-    it('still has TrendDetailPanel', () => {
-      expect(dashboardSource).toMatch(/function TrendDetailPanel/)
-    })
   })
 
   describe('ABOUTME header updated', () => {
-    it('references source groups (not domains)', () => {
+    it('references tab-based sectioned dashboard', () => {
       const firstTwoLines = dashboardSource.split('\n').slice(0, 2).join('\n')
-      expect(firstTwoLines).toMatch(/source groups/)
-      expect(firstTwoLines).toMatch(/What's Happening strip|WhatsHappening/)
+      expect(firstTwoLines).toMatch(/tab/)
+      expect(firstTwoLines).toMatch(/section/)
     })
   })
 })

@@ -42,10 +42,10 @@ describe('listGroups', () => {
     expect(groups).toEqual([])
   })
 
-  it('returns seeded defaults after seeding (6 top-level groups)', async () => {
+  it('returns seeded defaults after seeding (7 top-level groups)', async () => {
     await seedDefaultGroups()
     const groups = await listGroups()
-    expect(groups).toHaveLength(6)
+    expect(groups).toHaveLength(7)
     expect(groups.map(g => g.name)).toEqual([
       'Research & Reports',
       'News',
@@ -53,6 +53,7 @@ describe('listGroups', () => {
       'Opinions',
       'Voices',
       'Topics',
+      'Product',
     ])
   })
 
@@ -518,10 +519,10 @@ describe('sensorGroupMap', () => {
 describe('seedDefaultGroups', () => {
   beforeEach(initCleanDb)
 
-  it('creates 6 default groups with correct sensors and workflow config', async () => {
+  it('creates 7 default groups with correct sensors and workflow config', async () => {
     await seedDefaultGroups()
     const groups = await listGroupsFlat()
-    expect(groups).toHaveLength(6)
+    expect(groups).toHaveLength(7)
 
     const research = groups.find(g => g.name === 'Research & Reports')!
     expect(research.color).toBe('#1A7A6D')
@@ -535,7 +536,7 @@ describe('seedDefaultGroups', () => {
     expect(news.color).toBe('#2E7D9A')
     expect(news.trend_enabled).toBe(false)
     expect(news.sensors).toEqual([
-      'hacker_news', 'product_hunt', 'sources_36kr',
+      'hacker_news', 'sources_36kr',
       'wallstreetcn', 'rss_news', 'github',
     ])
 
@@ -559,6 +560,10 @@ describe('seedDefaultGroups', () => {
     expect(topics.color).toBe('#3B82F6')
     expect(topics.topic_enabled).toBe(true)
     expect(topics.sensors).toEqual(['bluesky_topics', 'mastodon_topics'])
+
+    const product = groups.find(g => g.name === 'Product')!
+    expect(product.color).toBe('#F59E0B')
+    expect(product.sensors).toEqual(['product_hunt', 'chrome_radar'])
   })
 
   it('assigns correct sort_order to seeded groups', async () => {
@@ -567,15 +572,15 @@ describe('seedDefaultGroups', () => {
     const sorted = groups.sort((a, b) => a.sort_order - b.sort_order)
     expect(sorted[0].name).toBe('Research & Reports')
     expect(sorted[0].sort_order).toBe(0)
-    expect(sorted[5].name).toBe('Topics')
-    expect(sorted[5].sort_order).toBe(5)
+    expect(sorted[6].name).toBe('Product')
+    expect(sorted[6].sort_order).toBe(6)
   })
 
   it('is idempotent — second call is a no-op', async () => {
     await seedDefaultGroups()
     await seedDefaultGroups()
     const groups = await listGroupsFlat()
-    expect(groups).toHaveLength(6)
+    expect(groups).toHaveLength(7)
   })
 
   it('does not seed if custom groups already exist', async () => {

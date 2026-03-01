@@ -1,4 +1,4 @@
-// ABOUTME: Seeds 6 default source groups on first startup.
+// ABOUTME: Seeds 7 default source groups on first startup.
 // ABOUTME: Called from initDb() when source_groups table is empty.
 
 import { getDb } from '../db'
@@ -23,7 +23,7 @@ const DEFAULT_GROUPS: DefaultGroup[] = [
   {
     name: 'News',
     color: '#2E7D9A',
-    sensors: ['hacker_news', 'product_hunt', 'sources_36kr', 'wallstreetcn', 'rss_news', 'github'],
+    sensors: ['hacker_news', 'sources_36kr', 'wallstreetcn', 'rss_news', 'github'],
   },
   {
     name: 'Trending',
@@ -48,6 +48,11 @@ const DEFAULT_GROUPS: DefaultGroup[] = [
     color: '#3B82F6',
     topic_enabled: true,
     sensors: ['bluesky_topics', 'mastodon_topics'],
+  },
+  {
+    name: 'Product',
+    color: '#F59E0B',
+    sensors: ['product_hunt', 'chrome_radar'],
   },
 ]
 

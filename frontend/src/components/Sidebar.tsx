@@ -7,7 +7,6 @@ import { useState, useEffect, useMemo, type ReactNode } from 'react'
 import {
   LayoutDashboard,
   Activity,
-  Rss,
   Database,
   Workflow,
   Sparkles,
@@ -450,10 +449,6 @@ export function Sidebar({ onNavigate, collapsed, peeking, pinned, onPinToggle }:
               {t('nav.errors')}
             </span>
           )}
-        </NavLink>
-        <NavLink href="/data" active={pathname === '/data'} onClick={onNavigate} collapsed={collapsed} title={t('nav.feed')}>
-          <Rss size={22} strokeWidth={1.5} style={{ flexShrink: 0 }} />
-          <span style={txtStyle}>{t('nav.feed')}</span>
         </NavLink>
 
         <SideDivider collapsed={collapsed} />

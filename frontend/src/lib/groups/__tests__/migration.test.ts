@@ -45,10 +45,10 @@ describe('migrateOldSensorKeys', () => {
     expect(keys).toContain('mastodon_topics')
   })
 
-  it('should have 6 default groups total', async () => {
+  it('should have 7 default groups total', async () => {
     const db = await getDb()
     const result = await db.execute("SELECT COUNT(*) as cnt FROM source_groups")
-    expect(Number(result.rows[0].cnt)).toBe(6)
+    expect(Number(result.rows[0].cnt)).toBe(7)
   })
 })
 

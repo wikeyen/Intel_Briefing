@@ -46,10 +46,9 @@ export function SectionTabBar({ groups, activeGroupId, onSelect, itemCounts, fet
       }}
       className="hide-scrollbar"
     >
-      {/* Mobile-only Overview tab */}
+      {/* Overview tab — shows executive summary content when selected */}
       {showOverviewTab && (
         <button
-          className="show-on-mobile-only"
           onClick={() => onSelect(OVERVIEW_TAB_ID)}
           style={{
             display: 'flex',

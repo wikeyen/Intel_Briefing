@@ -116,12 +116,6 @@ describe('SectionTabBar', () => {
       expect(overviewBtn.style.borderBottom).not.toContain('transparent')
     })
 
-    it('has show-on-mobile-only class', () => {
-      render(createElement(SectionTabBar, defaultProps({ showOverviewTab: true })))
-      const overviewBtn = screen.getByText('Overview').closest('button') as HTMLElement
-      expect(overviewBtn.className).toContain('show-on-mobile-only')
-    })
-
     it('renders Overview tab before group tabs', () => {
       render(createElement(SectionTabBar, defaultProps({ showOverviewTab: true })))
       const buttons = screen.getAllByRole('button')

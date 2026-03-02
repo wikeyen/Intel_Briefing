@@ -166,13 +166,13 @@ describe('Dashboard tab-based sections refactor', () => {
       expect(dashboardSource).toMatch(/<ItemDetailPanelAnimated\b/)
     })
 
-    it('renders ExecutiveSummaryCard above tabs', () => {
+    it('renders ExecutiveSummaryCard in overview tab content', () => {
       expect(dashboardSource).toMatch(/<ExecutiveSummaryCard\b/)
-      // Verify it appears before SectionTabBar in the source
+      // Verify it appears after SectionTabBar (inside Overview tab content area)
       const summaryIdx = dashboardSource.indexOf('<ExecutiveSummaryCard')
       const tabBarIdx = dashboardSource.indexOf('<SectionTabBar')
       expect(summaryIdx).toBeGreaterThan(-1)
-      expect(summaryIdx).toBeLessThan(tabBarIdx)
+      expect(summaryIdx).toBeGreaterThan(tabBarIdx)
     })
   })
 

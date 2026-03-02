@@ -63,6 +63,8 @@ export interface SummarizeOptions {
   language?: SummaryLanguage
   /** When true, skip the overall briefing generation and return only per-sensor summaries. */
   skipOverall?: boolean
+  /** Maps sensor_name to group info for source credibility tagging in overall briefing. */
+  sensorGroupMap?: Record<string, { groupName: string; credibility: 'FACTUAL' | 'CONTEXTUAL' }>
 }
 
 /**
@@ -352,7 +354,7 @@ export async function generateOverallBriefing(
   sections: SensorSummary[],
   options: SummarizeOptions,
 ): Promise<ReturnType<typeof parseOverallJson> & { sources?: BriefingSource[] }> {
-  const { llmConfig, overallPromptOverride, signal, onProgress, onToken, language } = options
+  const { llmConfig, overallPromptOverride, signal, onProgress, onToken, language, sensorGroupMap } = options
   const m = msg(language)
 
   await onProgress?.('__overall__', 'Overall', 'running', null)
@@ -378,16 +380,30 @@ export async function generateOverallBriefing(
   // observations rather than item-specific descriptions, causing the overall
   // LLM to misinterpret and miscategorize items. The overall LLM already has
   // titles + sensor names + per-sensor trend summaries, which is sufficient.
+  // Build label → credibility lookup for source list tagging
+  const labelCredibilityMap = new Map<string, string>()
+  if (sensorGroupMap) {
+    for (const sec of sections) {
+      const info = sensorGroupMap[sec.sensor_name]
+      if (info) labelCredibilityMap.set(sec.label, info.credibility)
+    }
+  }
+
   const sourceList = globalSources.length > 0
-    ? m.sourceListHeader + globalSources.map(s =>
-        `[${s.id}] "${s.title}" — ${s.sensor}`
-      ).join('\n')
+    ? m.sourceListHeader + globalSources.map(s => {
+        const credTag = labelCredibilityMap.get(s.sensor) ?? 'CONTEXTUAL'
+        return `[${s.id}] "${s.title}" — ${s.sensor} [${credTag}]`
+      }).join('\n')
     : ''
 
   const sensorSummaries = sections.length > 0
-    ? m.sensorSummariesHeader + sections.map(s =>
-        `### ${s.label} (${s.item_count} items)\n${s.summary}`
-      ).join('\n\n')
+    ? m.sensorSummariesHeader + sections.map(s => {
+        const groupInfo = sensorGroupMap?.[s.sensor_name]
+        const tag = groupInfo
+          ? `${groupInfo.groupName} — ${groupInfo.credibility}`
+          : 'CONTEXTUAL'
+        return `### ${s.label} (${tag}, ${s.item_count} items)\n${s.summary}`
+      }).join('\n\n')
     : ''
 
   // Aggregate per-item sentiment stats from local classifier to ground briefing analysis

@@ -1,11 +1,10 @@
 // ABOUTME: Compact executive overview card displayed above the dashboard tab bar.
-// ABOUTME: Shows mood badge, executive summary with citations, per-group breakdowns, quick scan bullets, and collapsible risk flags.
+// ABOUTME: Shows mood badge, executive summary with formatted text and citations, quick scan bullets, and collapsible risk flags.
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import type { BriefingSummary } from '@/api/client'
-import type { SourceGroupTree } from '@/lib/groups/types'
-import { CitationText } from './CitationText'
+import { FormattedSummaryText } from './FormattedSummaryText'
 
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 
@@ -31,7 +30,6 @@ const MOOD_COLORS: Record<string, string> = {
 
 export interface ExecutiveSummaryCardProps {
   summary: BriefingSummary | null
-  groups?: SourceGroupTree[]
 }
 
 // ---------------------------------------------------------------------------
@@ -115,164 +113,12 @@ function RiskFlagsList({ flags }: { flags: Array<{ topic: string; analysis: stri
 }
 
 // ---------------------------------------------------------------------------
-// Per-group section breakdowns
-// ---------------------------------------------------------------------------
-
-/** A single sensor's summary matched to a group. */
-interface MatchedSensor {
-  sensor_name: string
-  text: string
-  items: { title: string; url: string }[]
-}
-
-/** Grouped sensor summaries for one source group. */
-interface GroupBreakdown {
-  group: SourceGroupTree
-  sensors: MatchedSensor[]
-}
-
-/** Build per-group breakdowns by matching summary sections to group sensor lists. */
-function buildGroupBreakdowns(
-  groups: SourceGroupTree[],
-  sections: BriefingSummary['sections'],
-): GroupBreakdown[] {
-  const sectionMap = new Map(sections.map(s => [s.sensor_name, s]))
-
-  return groups
-    .slice()
-    .sort((a, b) => a.sort_order - b.sort_order)
-    .reduce<GroupBreakdown[]>((acc, group) => {
-      const matched = group.sensors
-        .map(sensorKey => {
-          const section = sectionMap.get(sensorKey)
-          if (!section) return null
-          return {
-            sensor_name: section.sensor_name,
-            text: section.brief_summary ?? section.summary,
-            items: section.items.map(item => ({ title: item.title, url: item.url })),
-          }
-        })
-        .filter((s): s is MatchedSensor => s !== null)
-
-      if (matched.length > 0) {
-        acc.push({ group, sensors: matched })
-      }
-      return acc
-    }, [])
-}
-
-function GroupSectionBreakdowns({ breakdowns }: { breakdowns: GroupBreakdown[] }) {
-  if (breakdowns.length === 0) return null
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
-      {breakdowns.map(({ group, sensors }) => (
-        <div key={group.id}>
-          {/* Group header with colored dot and horizontal rule */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              marginBottom: '0.5rem',
-            }}
-          >
-            <span style={{
-              ...HEADER_STYLE,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.375rem',
-              whiteSpace: 'nowrap',
-            }}>
-              <span
-                data-testid={`group-dot-${group.id}`}
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: '50%',
-                  background: group.color,
-                  display: 'inline-block',
-                  flexShrink: 0,
-                }}
-              />
-              {group.name}
-            </span>
-            <span style={{
-              flex: 1,
-              height: 1,
-              background: 'var(--border)',
-            }} />
-          </div>
-
-          {/* Sensor summaries under this group */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {sensors.map(sensor => (
-              <div key={sensor.sensor_name}>
-                <p style={{
-                  fontSize: '0.8125rem',
-                  lineHeight: 1.6,
-                  color: 'var(--ink-secondary)',
-                  margin: 0,
-                }}>
-                  {sensor.text}
-                </p>
-                {sensor.items.length > 0 && (
-                  <div style={{
-                    marginTop: '0.25rem',
-                    fontSize: '0.6875rem',
-                    lineHeight: 1.5,
-                  }}>
-                    <span style={{
-                      ...HEADER_STYLE,
-                      fontSize: '0.5rem',
-                    }}>
-                      Sources:{' '}
-                    </span>
-                    {sensor.items.map((item, idx) => (
-                      <span key={`${sensor.sensor_name}-${idx}`}>
-                        {idx > 0 && (
-                          <span style={{ color: 'var(--ink-tertiary)', margin: '0 0.25rem' }}>{'\u00B7'}</span>
-                        )}
-                        <a
-                          href={item.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title={item.title}
-                          style={{
-                            color: 'var(--accent)',
-                            textDecoration: 'none',
-                            fontSize: '0.6875rem',
-                          }}
-                          onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline' }}
-                          onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none' }}
-                        >
-                          {item.title}
-                        </a>
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
 
-export function ExecutiveSummaryCard({ summary, groups }: ExecutiveSummaryCardProps) {
+export function ExecutiveSummaryCard({ summary }: ExecutiveSummaryCardProps) {
   const [riskExpanded, setRiskExpanded] = useState(
     () => typeof window !== 'undefined' ? window.innerWidth > 768 : true
-  )
-
-  const groupBreakdowns = useMemo(
-    () => (groups && summary) ? buildGroupBreakdowns(groups, summary.sections) : [],
-    [groups, summary],
   )
 
   if (!summary) return null
@@ -306,18 +152,8 @@ export function ExecutiveSummaryCard({ summary, groups }: ExecutiveSummaryCardPr
         <MoodBadge mood={mood} />
       </div>
 
-      {/* Executive summary text with citation links */}
-      <p style={{
-        fontSize: '0.875rem',
-        lineHeight: 1.75,
-        color: 'var(--ink)',
-        margin: 0,
-      }}>
-        <CitationText text={execSummary} sources={sources} />
-      </p>
-
-      {/* Per-group section breakdowns */}
-      <GroupSectionBreakdowns breakdowns={groupBreakdowns} />
+      {/* Executive summary text with formatted paragraphs, bullets, and citation links */}
+      <FormattedSummaryText text={execSummary} sources={sources} />
 
       {/* Quick scan bullets */}
       {quickScan && quickScan.length > 0 && (

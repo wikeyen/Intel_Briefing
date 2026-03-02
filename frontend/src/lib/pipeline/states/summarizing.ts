@@ -3,6 +3,7 @@
 
 import type { SummarySensorProgress, SummaryProgress } from '../../models'
 import { SENSOR_LABELS } from '../../sensors/taxonomy'
+import { listGroupsFlat } from '../../groups/queries'
 import { createBus } from '../../summary/events'
 import { writeSummaryProgress } from '../../summary/cache'
 import { summarizeReport } from '../../summary/summarizer'
@@ -115,6 +116,21 @@ export async function handleSummarizing(ctx: PipelineContext): Promise<PipelineS
   }
   ctx.onProgress = onProgress
 
+  // Build sensor → group credibility map for source credibility tagging
+  const FACTUAL_GROUP_NAMES = new Set(['News', 'Research & Reports'])
+  let sensorCredibilityMap: Record<string, { groupName: string; credibility: 'FACTUAL' | 'CONTEXTUAL' }> = {}
+  try {
+    const groups = await listGroupsFlat()
+    for (const group of groups) {
+      const credibility = FACTUAL_GROUP_NAMES.has(group.name) ? 'FACTUAL' as const : 'CONTEXTUAL' as const
+      for (const sensor of group.sensors) {
+        sensorCredibilityMap[sensor] = { groupName: group.name, credibility }
+      }
+    }
+  } catch {
+    // Graceful degradation — all sensors treated as CONTEXTUAL if groups query fails
+  }
+
   // Build shared summarize options for reuse in pause loop and retry
   const baseSummarizeOpts = {
     llmConfig,
@@ -127,6 +143,7 @@ export async function handleSummarizing(ctx: PipelineContext): Promise<PipelineS
     language: config.summary_language,
     onToken: (sensorName: string, token: string) => summaryBus.emitToken(sensorName, token),
     attributionLlmConfig: buildAttributionLlmConfig(config) ?? undefined,
+    sensorGroupMap: sensorCredibilityMap,
   }
   ctx.baseSummarizeOpts = baseSummarizeOpts
 

@@ -58,7 +58,7 @@ export function OverviewTab({
       <style>{OVERVIEW_LAYOUT_CSS}</style>
       <div className="overview-layout">
         <div className="overview-main">
-          <ExecutiveSummaryCard summary={summary} groups={sortedGroups} />
+          <ExecutiveSummaryCard summary={summary} />
         </div>
         <aside className="overview-sidebar">
           <OverviewSidebar items={allItems} groups={sortedGroups} groupItemMap={groupItemMap} />

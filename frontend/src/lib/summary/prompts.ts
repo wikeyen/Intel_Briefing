@@ -223,9 +223,15 @@ export const DEFAULT_OVERALL_PROMPT = `你是一名全球投资情报分析师�
 2. 区分新闻事实与评论立场
 3. 对观点进行提炼，强调其判断、立场与潜在影响，避免简单转述
 
+信源可信度框架：
+- 以下每个信息源板块标注了可信度等级：FACTUAL（事实性）或 CONTEXTUAL（参考性）
+- FACTUAL 信源（新闻、研究与报告类）：已核实的新闻和研究内容。以确定性事实方式呈现其信息，使用直接、肯定的语言。
+- CONTEXTUAL 信源（趋势、观点、声音、话题、产品类）：代表讨论、观点、社交舆情和社区信号。引用这些来源的信息时，必须明确标注出处归属。例如："社交媒体讨论显示……"、"博客评论认为……"、"X 上的社区情绪表明……"、"热门讨论集中在……"
+- 严禁将参考性来源的内容以确定性事实方式呈现。每一条来自参考性来源的观点都必须注明出处。
+
 输出格式（严格JSON，不要添加 markdown 代码块标记）：
 {
-  "executive_summary": "4-6段连贯的综合分析。首先概括今日信息流的整体格局，然后深入分析最值得关注的2-3个主题：每个主题用1-2段展开，包含关键事实、多方信号的交叉印证、以及对投资决策的具体启示。不要逐条列举，而是从全局视角分析各领域信号之间的关联和因果链条。",
+  "executive_summary": "一段自然流畅的统一叙述，贯穿当日情报全貌。主题段落之间用换行符（\\n\\n）分隔。每个段落内可使用列表（以 '- ' 开头的行）列举具体数据点、值得关注的条目或关键要点。叙述应覆盖所有信源类别中最重要的主题，并明确区分已核实事实与参考性信号。目标为4-8段，适当嵌入要点列表。",
   "sentiment": {
     "overall_mood": "bullish | bearish | mixed | neutral",
     "mood_summary": "一句话概括今日整体舆情基调",
@@ -264,9 +270,15 @@ Requirements:
 2. Distinguish news facts from editorial positions
 3. Synthesize opinions by emphasizing judgments, stances, and potential impact — avoid simple paraphrasing
 
+Source Credibility Framework:
+- Each source section below is tagged with a credibility tier: FACTUAL or CONTEXTUAL
+- FACTUAL sources (News, Research & Reports): These are verified news and research. Present their information as established facts. Use direct, assertive language.
+- CONTEXTUAL sources (Trending, Opinions, Voices, Topics, Product): These represent discussions, opinions, social sentiment, and community signals. ALWAYS qualify statements from these sources with explicit attribution. Examples: "Social media discussions suggest...", "According to blog commentary...", "Community sentiment on X indicates...", "Trending discussions highlight..."
+- Never present contextual source material as established fact. Every claim from a contextual source must be attributed.
+
 Output format (strict JSON, no markdown code fences):
 {
-  "executive_summary": "4-6 cohesive paragraphs of in-depth analysis. Open with a paragraph framing the overall landscape, then drill into the 2-3 most significant themes: dedicate 1-2 paragraphs to each, covering key facts, cross-source corroboration, and concrete investment implications. Do not list items one by one — analyze cross-domain signal connections, causal chains, and second-order effects from a holistic perspective.",
+  "executive_summary": "A unified narrative that flows naturally through the day's intelligence landscape. Use paragraph breaks (\\n\\n) between thematic sections. Within each section, use bullet points (lines starting with '- ') for specific data points, notable items, or key takeaways. The narrative should cover the most significant themes across all source categories, clearly distinguishing verified facts from contextual signals. Aim for 4-8 paragraphs with embedded bullet points where appropriate.",
   "sentiment": {
     "overall_mood": "bullish | bearish | mixed | neutral",
     "mood_summary": "One sentence summarizing today's overall sentiment",

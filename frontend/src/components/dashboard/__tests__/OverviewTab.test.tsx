@@ -193,9 +193,8 @@ describe('OverviewTab — two-column layout', () => {
     expect(screen.getByTestId('sources-section')).toBeInTheDocument()
   })
 
-  it('passes sorted groups to ExecutiveSummaryCard for per-group breakdowns', () => {
+  it('does not pass groups to ExecutiveSummaryCard (no per-group breakdowns)', () => {
     const groups = [
-      makeGroup({ id: 'g2', name: 'Finance', sort_order: 1, sensors: ['rss_news'], color: '#cc4444' }),
       makeGroup({ id: 'g1', name: 'Tech News', sort_order: 0, sensors: ['hn'] }),
     ]
     const summary = makeSummary({
@@ -208,20 +207,9 @@ describe('OverviewTab — two-column layout', () => {
           item_count: 3,
           items: [],
         },
-        {
-          sensor_name: 'rss_news',
-          label: 'RSS News',
-          source_url: 'https://rss.example.com',
-          summary: 'Finance headlines are mixed.',
-          item_count: 2,
-          items: [],
-        },
       ],
     })
-    const groupItemMap = {
-      g1: [makeItem()],
-      g2: [makeItem({ source: 'rss_news' })],
-    }
+    const groupItemMap = { g1: [makeItem()] }
 
     const { container } = render(
       <OverviewTab
@@ -231,11 +219,9 @@ describe('OverviewTab — two-column layout', () => {
       />,
     )
 
-    // Per-group breakdowns should render group dots in sort order (Tech News first)
+    // Per-group breakdown dots should not exist
     const dots = container.querySelectorAll('[data-testid^="group-dot-"]')
-    expect(dots.length).toBe(2)
-    expect(dots[0].getAttribute('data-testid')).toBe('group-dot-g1')
-    expect(dots[1].getAttribute('data-testid')).toBe('group-dot-g2')
+    expect(dots).toHaveLength(0)
   })
 
   it('handles null summary gracefully without crashing', () => {

@@ -100,21 +100,6 @@ export function extractRelevantTags(
   return relevant.slice(0, 12)
 }
 
-/** Filter risk flags to only those referencing items in this group (by URL or topic relevance). */
-export function filterRiskFlags(
-  riskFlags: Array<{ topic: string; analysis: string; refs: Array<{ url: string }> }>,
-  items: IntelItem[],
-): Array<{ topic: string; analysis: string }> {
-  const itemUrls = new Set(items.map(i => i.url).filter(Boolean))
-  const corpus = buildItemCorpus(items)
-
-  return riskFlags.filter(rf => {
-    // Direct match: any ref URL belongs to an item in this group
-    if (rf.refs.some(ref => ref.url && itemUrls.has(ref.url))) return true
-    // Fallback: topic keywords appear in this group's item content
-    return isRelevantToCorpus(rf.topic, corpus)
-  })
-}
 
 /** Find items with the largest absolute velocity change. */
 function findNotableShifts(items: IntelItem[]): Array<{
@@ -405,8 +390,11 @@ export function SectionIntelligencePanel({
 
   const riskFlags = useMemo(() => {
     if (!summary?.overall?.sentiment?.risk_flags) return []
-    return filterRiskFlags(summary.overall.sentiment.risk_flags, items)
-  }, [summary, items])
+    return summary.overall.sentiment.risk_flags.map(rf => ({
+      topic: rf.topic,
+      analysis: rf.analysis,
+    }))
+  }, [summary])
 
   const crossRefs = useMemo(
     () => findCrossReferences(items, group.id, allGroupItems, allGroups),

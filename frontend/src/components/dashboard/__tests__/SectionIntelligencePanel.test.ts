@@ -1,12 +1,11 @@
 // ABOUTME: Tests for intelligence filtering helpers in SectionIntelligencePanel.
-// ABOUTME: Verifies that key themes and risk flags are filtered by item content relevance.
+// ABOUTME: Verifies that key themes are filtered by item content relevance.
 
 import { describe, it, expect } from 'vitest'
 import {
   buildItemCorpus,
   isRelevantToCorpus,
   extractRelevantTags,
-  filterRiskFlags,
 } from '../SectionIntelligencePanel'
 import type { IntelItem, IntelligenceReport, IntelTag } from '@/api/client'
 
@@ -170,60 +169,3 @@ describe('extractRelevantTags', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// filterRiskFlags
-// ---------------------------------------------------------------------------
-
-describe('filterRiskFlags', () => {
-  const items = [
-    makeItem({ title: 'Oil prices surge amid Iran tensions', url: 'https://news.com/oil' }),
-    makeItem({ title: 'OPEC output decision delayed', url: 'https://news.com/opec' }),
-  ]
-
-  const riskFlags = [
-    {
-      topic: 'Iran Oil Supply',
-      analysis: 'Risk of supply disruption',
-      refs: [{ url: 'https://news.com/oil' }],
-    },
-    {
-      topic: 'Semiconductor Shortage',
-      analysis: 'Chip supply constraints',
-      refs: [{ url: 'https://other.com/chips' }],
-    },
-    {
-      topic: 'OPEC Output Cuts',
-      analysis: 'Production limits risk',
-      refs: [{ url: 'https://other.com/opec-analysis' }],
-    },
-  ]
-
-  it('includes risk flags matching by URL ref', () => {
-    const filtered = filterRiskFlags(riskFlags, items)
-    const topics = filtered.map(f => f.topic)
-    expect(topics).toContain('Iran Oil Supply')
-  })
-
-  it('includes risk flags matching by topic relevance to item content', () => {
-    const filtered = filterRiskFlags(riskFlags, items)
-    const topics = filtered.map(f => f.topic)
-    // "OPEC Output Cuts" — "opec" and "output" appear in item content
-    expect(topics).toContain('OPEC Output Cuts')
-  })
-
-  it('excludes risk flags with no URL match and no topic relevance', () => {
-    const filtered = filterRiskFlags(riskFlags, items)
-    const topics = filtered.map(f => f.topic)
-    expect(topics).not.toContain('Semiconductor Shortage')
-  })
-
-  it('returns empty when no items', () => {
-    const filtered = filterRiskFlags(riskFlags, [])
-    expect(filtered).toHaveLength(0)
-  })
-
-  it('returns empty when no risk flags', () => {
-    const filtered = filterRiskFlags([], items)
-    expect(filtered).toHaveLength(0)
-  })
-})

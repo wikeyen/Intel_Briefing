@@ -425,7 +425,7 @@ describe('ExecutiveSummaryCard — per-group breakdowns', () => {
     const summary = makeSummaryWithSections(
       {
         executive_summary: 'Global overview [1] text.',
-        sources: [{ id: 1, title: 'Source One', url: 'https://example.com/1' }],
+        sources: [{ id: 1, title: 'Source One', url: 'https://example.com/1', sensor: 'hacker_news' }],
       },
       [
         {

@@ -229,7 +229,7 @@ function GroupSectionBreakdowns({ breakdowns }: { breakdowns: GroupBreakdown[] }
                       Sources:{' '}
                     </span>
                     {sensor.items.map((item, idx) => (
-                      <span key={item.url}>
+                      <span key={`${sensor.sensor_name}-${idx}`}>
                         {idx > 0 && (
                           <span style={{ color: 'var(--ink-tertiary)', margin: '0 0.25rem' }}>{'\u00B7'}</span>
                         )}

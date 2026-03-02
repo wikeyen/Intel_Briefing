@@ -992,6 +992,14 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
+/* ─── Responsive Show/Hide Utilities ──────────────────────────────────── */
+@media (max-width: 768px) {
+  .hide-on-mobile { display: none !important; }
+}
+@media (min-width: 769px) {
+  .show-on-mobile-only { display: none !important; }
+}
+
 /* ─── Dashboard Layout ─────────────────────────────────────────────────── */
 
 /* Two-column: main content + sidebar on desktop, stacked on mobile.

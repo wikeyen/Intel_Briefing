@@ -6,12 +6,17 @@ import type { SourceGroupTree } from '@/lib/groups/types'
 
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 
+/** Sentinel ID for the mobile-only overview tab. */
+export const OVERVIEW_TAB_ID = '__overview__'
+
 export interface SectionTabBarProps {
   groups: SourceGroupTree[]
   activeGroupId: string | null
   onSelect: (groupId: string) => void
   itemCounts: Record<string, number>
   fetchedAt: string | null
+  /** When true, shows a mobile-only "Overview" tab at the start. */
+  showOverviewTab?: boolean
 }
 
 /** Determine freshness color based on how long ago the data was fetched. */
@@ -24,9 +29,10 @@ function freshnessColor(fetchedAt: string | null): string {
   return 'var(--err)'
 }
 
-export function SectionTabBar({ groups, activeGroupId, onSelect, itemCounts, fetchedAt }: SectionTabBarProps) {
+export function SectionTabBar({ groups, activeGroupId, onSelect, itemCounts, fetchedAt, showOverviewTab }: SectionTabBarProps) {
   const sorted = [...groups].sort((a, b) => a.sort_order - b.sort_order)
   const dotColor = freshnessColor(fetchedAt)
+  const overviewActive = activeGroupId === OVERVIEW_TAB_ID
 
   return (
     <div
@@ -40,6 +46,64 @@ export function SectionTabBar({ groups, activeGroupId, onSelect, itemCounts, fet
       }}
       className="hide-scrollbar"
     >
+      {/* Mobile-only Overview tab */}
+      {showOverviewTab && (
+        <button
+          className="show-on-mobile-only"
+          onClick={() => onSelect(OVERVIEW_TAB_ID)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.375rem',
+            minHeight: 40,
+            padding: '0.5rem 1rem',
+            borderRadius: 'var(--radius-badge) var(--radius-badge) 0 0',
+            border: 'none',
+            borderBottom: overviewActive ? '3px solid var(--accent)' : '3px solid transparent',
+            background: overviewActive
+              ? 'color-mix(in srgb, var(--accent) 8%, transparent)'
+              : 'transparent',
+            color: overviewActive ? 'var(--ink)' : 'var(--ink-secondary)',
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
+            transition: 'background 150ms, border-color 150ms, color 150ms',
+          }}
+          onMouseEnter={e => {
+            if (!overviewActive) {
+              (e.currentTarget as HTMLElement).style.background =
+                'color-mix(in srgb, var(--accent) 8%, transparent)'
+            }
+          }}
+          onMouseLeave={e => {
+            if (!overviewActive) {
+              (e.currentTarget as HTMLElement).style.background = 'transparent'
+            }
+          }}
+        >
+          <span
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: dotColor,
+              flexShrink: 0,
+            }}
+          />
+          <span
+            style={{
+              fontFamily: MONO,
+              fontSize: '0.6875rem',
+              fontWeight: 700,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase' as const,
+            }}
+          >
+            Overview
+          </span>
+        </button>
+      )}
+
       {sorted.map(group => {
         const isActive = group.id === activeGroupId
         const count = itemCounts[group.id] ?? 0

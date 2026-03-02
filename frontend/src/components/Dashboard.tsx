@@ -15,7 +15,7 @@ import type {
 } from '@/api/client'
 import type { SourceGroupTree } from '@/lib/groups/types'
 import { useTranslation } from '@/lib/i18n'
-import { SectionTabBar } from './dashboard/SectionTabBar'
+import { SectionTabBar, OVERVIEW_TAB_ID } from './dashboard/SectionTabBar'
 import { SectionFilterBar, DEFAULT_FILTERS, applyFilters } from './dashboard/SectionFilterBar'
 import type { FilterState } from './dashboard/SectionFilterBar'
 import { VisualDataStrip } from './dashboard/VisualDataStrip'
@@ -120,6 +120,24 @@ function ShimmerBlock({ width, height, style }: {
 function DashboardSkeleton() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      {/* Executive summary card skeleton — desktop only */}
+      <div className="hide-on-mobile" style={{
+        boxShadow: 'var(--shadow-card)',
+        borderRadius: 'var(--radius-card)',
+        padding: '1.25rem',
+        background: 'color-mix(in srgb, var(--accent) 6%, var(--surface))',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+          <ShimmerBlock width={120} height={10} />
+          <ShimmerBlock width={60} height={16} style={{ borderRadius: 'var(--radius-badge)' }} />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <ShimmerBlock width="100%" height={10} />
+          <ShimmerBlock width="92%" height={10} />
+          <ShimmerBlock width="78%" height={10} />
+        </div>
+      </div>
+
       {/* Tab bar skeleton */}
       <div style={{
         display: 'flex',
@@ -557,8 +575,10 @@ export function Dashboard() {
             {showUpdatedBanner && <UpdatedBanner />}
           </AnimatePresence>
 
-          {/* Executive summary card — global overview above tabs */}
-          <ExecutiveSummaryCard summary={summary} />
+          {/* Executive summary card — desktop only (mobile uses Overview tab) */}
+          <div className="hide-on-mobile">
+            <ExecutiveSummaryCard summary={summary} />
+          </div>
 
           {/* Tab bar */}
           <SectionTabBar
@@ -567,10 +587,18 @@ export function Dashboard() {
             onSelect={setActiveGroupId}
             itemCounts={itemCounts}
             fetchedAt={report?.fetched_at ?? null}
+            showOverviewTab={!!summary?.overall?.executive_summary}
           />
 
+          {/* Overview tab content — mobile only */}
+          {activeGroupId === OVERVIEW_TAB_ID && (
+            <div style={{ marginTop: '0.75rem' }}>
+              <ExecutiveSummaryCard summary={summary} />
+            </div>
+          )}
+
           {/* Active section content */}
-          {activeGroup && (
+          {activeGroup && activeGroupId !== OVERVIEW_TAB_ID && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
               {/* Intelligence panel */}
               <SectionIntelligencePanel

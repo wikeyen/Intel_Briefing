@@ -50,13 +50,33 @@ function buildNarrative(summary: BriefingSummary, sensorKeys: string[]): string 
   return briefs.join(' ')
 }
 
-/** Extract relevant tags from intelligence data, filtered by group sensors. */
-function extractRelevantTags(
+/**
+ * Build a single lowercase text corpus from item titles and content.
+ * Used for relevance-matching tags and risk flags against a group's items.
+ */
+export function buildItemCorpus(items: IntelItem[]): string {
+  return items.map(i => `${i.title} ${i.content ?? ''}`).join(' ').toLowerCase()
+}
+
+/** Check if a phrase is relevant to a corpus — direct substring match or majority word overlap. */
+export function isRelevantToCorpus(text: string, corpus: string): boolean {
+  const lower = text.toLowerCase()
+  if (corpus.includes(lower)) return true
+  const words = lower.split(/\s+/).filter(w => w.length >= 3)
+  if (words.length >= 2) {
+    const matched = words.filter(w => corpus.includes(w))
+    return matched.length >= Math.ceil(words.length * 0.5)
+  }
+  return false
+}
+
+/** Extract tags from intelligence data, filtered to only those relevant to the group's items. */
+export function extractRelevantTags(
   intelligence: IntelligenceReport,
-  sensorKeys: string[],
+  items: IntelItem[],
 ): IntelTag[] {
   const seen = new Set<string>()
-  const result: IntelTag[] = []
+  const all: IntelTag[] = []
 
   const collectTags = (tags: IntelTag[] | undefined) => {
     if (!tags) return
@@ -64,27 +84,36 @@ function extractRelevantTags(
       const key = tag.text.toLowerCase()
       if (!seen.has(key)) {
         seen.add(key)
-        result.push(tag)
+        all.push(tag)
       }
     }
   }
 
-  // Collect from trend intelligence — filter topics by source overlap with group sensors
-  if (intelligence.trend) {
-    const relevantTopicTags = intelligence.trend.topics
-      .filter(t => t.sources.some(s => sensorKeys.includes(s)))
-    if (relevantTopicTags.length > 0 || intelligence.trend.tags.length > 0) {
-      collectTags(intelligence.trend.tags)
-    }
-  }
+  if (intelligence.trend) collectTags(intelligence.trend.tags)
+  if (intelligence.topics) collectTags(intelligence.topics.tags)
+  if (intelligence.accounts) collectTags(intelligence.accounts.tags)
 
-  // Collect from topic intelligence
-  if (intelligence.topics) {
-    collectTags(intelligence.topics.tags)
-  }
+  const corpus = buildItemCorpus(items)
+  const relevant = all.filter(tag => isRelevantToCorpus(tag.text, corpus))
 
-  result.sort((a, b) => b.weight - a.weight)
-  return result.slice(0, 12)
+  relevant.sort((a, b) => b.weight - a.weight)
+  return relevant.slice(0, 12)
+}
+
+/** Filter risk flags to only those referencing items in this group (by URL or topic relevance). */
+export function filterRiskFlags(
+  riskFlags: Array<{ topic: string; analysis: string; refs: Array<{ url: string }> }>,
+  items: IntelItem[],
+): Array<{ topic: string; analysis: string }> {
+  const itemUrls = new Set(items.map(i => i.url).filter(Boolean))
+  const corpus = buildItemCorpus(items)
+
+  return riskFlags.filter(rf => {
+    // Direct match: any ref URL belongs to an item in this group
+    if (rf.refs.some(ref => ref.url && itemUrls.has(ref.url))) return true
+    // Fallback: topic keywords appear in this group's item content
+    return isRelevantToCorpus(rf.topic, corpus)
+  })
 }
 
 /** Find items with the largest absolute velocity change. */
@@ -369,18 +398,15 @@ export function SectionIntelligencePanel({
 
   const tags = useMemo(() => {
     if (!intelligence) return []
-    return extractRelevantTags(intelligence, sensorKeys)
-  }, [intelligence, sensorKeys])
+    return extractRelevantTags(intelligence, items)
+  }, [intelligence, items])
 
   const shifts = useMemo(() => findNotableShifts(items), [items])
 
   const riskFlags = useMemo(() => {
     if (!summary?.overall?.sentiment?.risk_flags) return []
-    return summary.overall.sentiment.risk_flags.map(rf => ({
-      topic: rf.topic,
-      analysis: rf.analysis,
-    }))
-  }, [summary])
+    return filterRiskFlags(summary.overall.sentiment.risk_flags, items)
+  }, [summary, items])
 
   const crossRefs = useMemo(
     () => findCrossReferences(items, group.id, allGroupItems, allGroups),

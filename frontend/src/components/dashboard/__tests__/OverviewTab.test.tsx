@@ -94,7 +94,6 @@ describe('OverviewTab — two-column layout', () => {
         summary={makeSummary()}
         groups={groups}
         groupItemMap={groupItemMap}
-
       />,
     )
 
@@ -111,7 +110,6 @@ describe('OverviewTab — two-column layout', () => {
         summary={makeSummary()}
         groups={groups}
         groupItemMap={groupItemMap}
-
       />,
     )
 
@@ -128,7 +126,6 @@ describe('OverviewTab — two-column layout', () => {
         summary={makeSummary()}
         groups={groups}
         groupItemMap={groupItemMap}
-
       />,
     )
 
@@ -152,7 +149,6 @@ describe('OverviewTab — two-column layout', () => {
         summary={makeSummary()}
         groups={groups}
         groupItemMap={groupItemMap}
-
       />,
     )
 
@@ -173,7 +169,6 @@ describe('OverviewTab — two-column layout', () => {
         summary={makeSummary()}
         groups={groups}
         groupItemMap={groupItemMap}
-
       />,
     )
 
@@ -190,7 +185,6 @@ describe('OverviewTab — two-column layout', () => {
         summary={makeSummary()}
         groups={groups}
         groupItemMap={groupItemMap}
-
       />,
     )
 
@@ -234,7 +228,6 @@ describe('OverviewTab — two-column layout', () => {
         summary={summary}
         groups={groups}
         groupItemMap={groupItemMap}
-
       />,
     )
 
@@ -254,7 +247,6 @@ describe('OverviewTab — two-column layout', () => {
         summary={null}
         groups={groups}
         groupItemMap={groupItemMap}
-
       />,
     )
 

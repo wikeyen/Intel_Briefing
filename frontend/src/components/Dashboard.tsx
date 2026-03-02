@@ -479,14 +479,6 @@ export function Dashboard() {
     [groups, report],
   )
 
-  const allSensorKeys = useMemo(() => {
-    const keys = new Set<string>()
-    for (const g of groups) {
-      for (const s of g.sensors) keys.add(s)
-    }
-    return [...keys]
-  }, [groups])
-
   const itemCounts = useMemo(() => {
     const counts: Record<string, number> = {}
     for (const [gid, items] of Object.entries(groupItemMap)) {

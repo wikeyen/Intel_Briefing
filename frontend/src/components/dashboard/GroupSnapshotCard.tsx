@@ -20,17 +20,24 @@ const SENT_NEU = '#8D95A0'
 // Responsive grid CSS for the parent container
 // ---------------------------------------------------------------------------
 
-export const SNAPSHOT_GRID_CSS = `
-.group-snapshot-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+export const SNAPSHOT_ROW_CSS = `
+.group-snapshot-row {
+  display: flex;
   gap: 0.75rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 0.25rem;
 }
-@media (max-width: 1024px) {
-  .group-snapshot-grid { grid-template-columns: repeat(2, 1fr); }
+.group-snapshot-row::-webkit-scrollbar { display: none; }
+.group-snapshot-row > * {
+  min-width: 220px;
+  max-width: 280px;
+  flex-shrink: 0;
 }
 @media (max-width: 768px) {
-  .group-snapshot-grid { grid-template-columns: 1fr; }
+  .group-snapshot-row > * { min-width: 200px; max-width: 240px; }
 }
 `
 
@@ -133,7 +140,6 @@ export function GroupSnapshotCard({ group, items, narrative, tags, onClick }: Gr
       style={{
         background: 'var(--surface)',
         borderRadius: 'var(--radius-card)',
-        borderLeft: `3px solid ${group.color}`,
         padding: '1rem',
         boxShadow: 'var(--shadow-card)',
         cursor: 'pointer',

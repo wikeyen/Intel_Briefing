@@ -7,7 +7,7 @@ import type { BriefingSummary, IntelligenceReport, IntelItem, IntelTag } from '@
 import type { SourceGroupTree } from '@/lib/groups/types'
 import { VisualDataStrip } from './VisualDataStrip'
 import { ExecutiveSummaryCard } from './ExecutiveSummaryCard'
-import { GroupSnapshotCard, SNAPSHOT_GRID_CSS } from './GroupSnapshotCard'
+import { GroupSnapshotCard, SNAPSHOT_ROW_CSS } from './GroupSnapshotCard'
 import { extractRelevantTags } from './SectionIntelligencePanel'
 
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
@@ -87,7 +87,7 @@ export function OverviewTab({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-      <style>{SNAPSHOT_GRID_CSS}</style>
+      <style>{SNAPSHOT_ROW_CSS}</style>
 
       {/* Aggregate analytics strip */}
       {allItems.length > 0 && (
@@ -114,7 +114,7 @@ export function OverviewTab({
           }}>
             Sections
           </span>
-          <div className="group-snapshot-grid">
+          <div className="group-snapshot-row">
             {nonEmptyGroups.map(group => {
               const meta = groupMeta[group.id]
               return (

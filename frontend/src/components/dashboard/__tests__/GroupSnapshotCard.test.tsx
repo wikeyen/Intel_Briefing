@@ -77,6 +77,12 @@ describe('GroupSnapshotCard', () => {
     expect(screen.getByText('3')).toBeTruthy()
   })
 
+  it('renders card without colored left border', () => {
+    const { container } = renderCard()
+    const card = container.firstElementChild as HTMLElement
+    expect(card.style.borderLeft).toBeFalsy()
+  })
+
   it('shows tag pills when tags are provided', () => {
     renderCard({ tags: makeTags(['AI', 'LLM', 'Robotics']) })
 

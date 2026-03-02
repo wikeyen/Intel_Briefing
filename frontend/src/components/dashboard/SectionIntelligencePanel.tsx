@@ -1,5 +1,5 @@
 // ABOUTME: AI insights panel showing intelligence for the active dashboard section.
-// ABOUTME: Renders narrative summary, key themes, notable shifts, risk flags, and cross-references.
+// ABOUTME: Renders narrative summary, key themes, notable shifts, and cross-references.
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
@@ -303,47 +303,6 @@ function NotableShifts({ shifts }: {
   )
 }
 
-function RiskFlags({ riskFlags }: { riskFlags: Array<{ topic: string; analysis: string }> }) {
-  if (riskFlags.length === 0) return null
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-      <span style={{
-        fontFamily: MONO,
-        fontSize: '0.5625rem',
-        fontWeight: 700,
-        letterSpacing: '0.08em',
-        textTransform: 'uppercase' as const,
-        color: 'var(--ink-tertiary)',
-      }}>
-        Risk Flags
-      </span>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-        {riskFlags.map((flag, i) => (
-          <div
-            key={i}
-            style={{
-              background: 'color-mix(in srgb, var(--warn) 6%, transparent)',
-              borderLeft: '2px solid var(--warn)',
-              borderRadius: '0 4px 4px 0',
-              padding: '0.375rem 0.5rem',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: 2 }}>
-              <span style={{ fontSize: '0.6875rem', lineHeight: 1 }}>{'\u26A0'}</span>
-              <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--ink)' }}>
-                {flag.topic}
-              </span>
-            </div>
-            <p style={{ fontSize: '0.625rem', color: 'var(--ink-secondary)', margin: 0, lineHeight: 1.5 }}>
-              {flag.analysis}
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 function CrossReferences({ count, groupNames }: { count: number; groupNames: string[] }) {
   if (count === 0 || groupNames.length === 0) return null
   return (
@@ -388,20 +347,12 @@ export function SectionIntelligencePanel({
 
   const shifts = useMemo(() => findNotableShifts(items), [items])
 
-  const riskFlags = useMemo(() => {
-    if (!summary?.overall?.sentiment?.risk_flags) return []
-    return summary.overall.sentiment.risk_flags.map(rf => ({
-      topic: rf.topic,
-      analysis: rf.analysis,
-    }))
-  }, [summary])
-
   const crossRefs = useMemo(
     () => findCrossReferences(items, group.id, allGroupItems, allGroups),
     [items, group.id, allGroupItems, allGroups],
   )
 
-  const hasContent = narrative || tags.length > 0 || shifts.length > 0 || riskFlags.length > 0 || crossRefs.count > 0
+  const hasContent = narrative || tags.length > 0 || shifts.length > 0 || crossRefs.count > 0
   const isEmpty = !intelligence && !summary
 
   // Estimate max-height for collapse animation — generous upper bound
@@ -491,7 +442,6 @@ export function SectionIntelligencePanel({
                 {narrative && <NarrativeSummary text={narrative} groupColor={groupColor} />}
                 {tags.length > 0 && <KeyThemes tags={tags} groupColor={groupColor} />}
                 {shifts.length > 0 && <NotableShifts shifts={shifts} />}
-                {riskFlags.length > 0 && <RiskFlags riskFlags={riskFlags} />}
                 {crossRefs.count > 0 && (
                   <CrossReferences count={crossRefs.count} groupNames={crossRefs.groupNames} />
                 )}

@@ -20,6 +20,7 @@ import { SectionFilterBar, DEFAULT_FILTERS, applyFilters } from './dashboard/Sec
 import type { FilterState } from './dashboard/SectionFilterBar'
 import { VisualDataStrip } from './dashboard/VisualDataStrip'
 import { SectionIntelligencePanel } from './dashboard/SectionIntelligencePanel'
+import { ExecutiveSummaryCard } from './dashboard/ExecutiveSummaryCard'
 import RichItemCard, { itemSignalScore } from './dashboard/RichItemCard'
 import { ItemDetailPanelAnimated } from './dashboard/ItemDetailPanel'
 
@@ -554,6 +555,9 @@ export function Dashboard() {
           <AnimatePresence>
             {showUpdatedBanner && <UpdatedBanner />}
           </AnimatePresence>
+
+          {/* Executive summary card — global overview above tabs */}
+          <ExecutiveSummaryCard summary={summary} />
 
           {/* Tab bar */}
           <SectionTabBar

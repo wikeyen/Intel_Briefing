@@ -97,6 +97,10 @@ describe('Dashboard tab-based sections refactor', () => {
       expect(dashboardSource).toMatch(/import\s+\{[^}]*SectionIntelligencePanel[^}]*\}\s+from/)
     })
 
+    it('imports ExecutiveSummaryCard', () => {
+      expect(dashboardSource).toMatch(/import\s+\{[^}]*ExecutiveSummaryCard[^}]*\}\s+from/)
+    })
+
     it('imports RichItemCard and itemSignalScore', () => {
       expect(dashboardSource).toMatch(/import\s+RichItemCard/)
       expect(dashboardSource).toMatch(/itemSignalScore/)
@@ -160,6 +164,15 @@ describe('Dashboard tab-based sections refactor', () => {
 
     it('renders ItemDetailPanelAnimated', () => {
       expect(dashboardSource).toMatch(/<ItemDetailPanelAnimated\b/)
+    })
+
+    it('renders ExecutiveSummaryCard above tabs', () => {
+      expect(dashboardSource).toMatch(/<ExecutiveSummaryCard\b/)
+      // Verify it appears before SectionTabBar in the source
+      const summaryIdx = dashboardSource.indexOf('<ExecutiveSummaryCard')
+      const tabBarIdx = dashboardSource.indexOf('<SectionTabBar')
+      expect(summaryIdx).toBeGreaterThan(-1)
+      expect(summaryIdx).toBeLessThan(tabBarIdx)
     })
   })
 

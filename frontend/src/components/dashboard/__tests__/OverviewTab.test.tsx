@@ -2,7 +2,7 @@
 // ABOUTME: Verifies grid layout rendering, removal of old components, and composition of ExecutiveSummaryCard + OverviewSidebar.
 
 import { render, screen } from '@testing-library/react'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { OverviewTab } from '../OverviewTab'
 import type { BriefingSummary, IntelItem } from '@/api/client'
 import type { SourceGroupTree } from '@/lib/groups/types'
@@ -94,7 +94,7 @@ describe('OverviewTab — two-column layout', () => {
         summary={makeSummary()}
         groups={groups}
         groupItemMap={groupItemMap}
-        onSelectGroup={vi.fn()}
+
       />,
     )
 
@@ -111,7 +111,7 @@ describe('OverviewTab — two-column layout', () => {
         summary={makeSummary()}
         groups={groups}
         groupItemMap={groupItemMap}
-        onSelectGroup={vi.fn()}
+
       />,
     )
 
@@ -128,7 +128,7 @@ describe('OverviewTab — two-column layout', () => {
         summary={makeSummary()}
         groups={groups}
         groupItemMap={groupItemMap}
-        onSelectGroup={vi.fn()}
+
       />,
     )
 
@@ -152,7 +152,7 @@ describe('OverviewTab — two-column layout', () => {
         summary={makeSummary()}
         groups={groups}
         groupItemMap={groupItemMap}
-        onSelectGroup={vi.fn()}
+
       />,
     )
 
@@ -173,7 +173,7 @@ describe('OverviewTab — two-column layout', () => {
         summary={makeSummary()}
         groups={groups}
         groupItemMap={groupItemMap}
-        onSelectGroup={vi.fn()}
+
       />,
     )
 
@@ -190,7 +190,7 @@ describe('OverviewTab — two-column layout', () => {
         summary={makeSummary()}
         groups={groups}
         groupItemMap={groupItemMap}
-        onSelectGroup={vi.fn()}
+
       />,
     )
 
@@ -234,7 +234,7 @@ describe('OverviewTab — two-column layout', () => {
         summary={summary}
         groups={groups}
         groupItemMap={groupItemMap}
-        onSelectGroup={vi.fn()}
+
       />,
     )
 
@@ -254,7 +254,7 @@ describe('OverviewTab — two-column layout', () => {
         summary={null}
         groups={groups}
         groupItemMap={groupItemMap}
-        onSelectGroup={vi.fn()}
+
       />,
     )
 

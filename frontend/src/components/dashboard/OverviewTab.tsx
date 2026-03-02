@@ -16,7 +16,6 @@ export interface OverviewTabProps {
   summary: BriefingSummary | null
   groups: SourceGroupTree[]
   groupItemMap: Record<string, IntelItem[]>
-  onSelectGroup: (groupId: string) => void
 }
 
 // ---------------------------------------------------------------------------

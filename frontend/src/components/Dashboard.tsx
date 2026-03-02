@@ -587,7 +587,6 @@ export function Dashboard() {
                 summary={summary}
                 groups={groups}
                 groupItemMap={groupItemMap}
-                onSelectGroup={setActiveGroupId}
               />
             </div>
           )}

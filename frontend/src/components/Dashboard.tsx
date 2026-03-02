@@ -459,8 +459,9 @@ export function Dashboard() {
     return () => { clearTimeout(timeout); clearInterval(iv) }
   }, [isActive])
 
-  // ---- Auto-select overview or first group tab when groups load ----
+  // ---- Auto-select overview or first group tab after initial load ----
   useEffect(() => {
+    if (loading) return // wait for all parallel fetches to complete
     if (groups.length > 0 && activeGroupId === null) {
       if (summary?.overall?.executive_summary) {
         setActiveGroupId(OVERVIEW_TAB_ID)
@@ -469,7 +470,7 @@ export function Dashboard() {
         setActiveGroupId(sorted[0].id)
       }
     }
-  }, [groups, activeGroupId, summary])
+  }, [loading, groups, activeGroupId, summary])
 
   // ---- Computed values ----
 

@@ -117,7 +117,9 @@ function RiskFlagsList({ flags }: { flags: Array<{ topic: string; analysis: stri
 // ---------------------------------------------------------------------------
 
 export function ExecutiveSummaryCard({ summary }: ExecutiveSummaryCardProps) {
-  const [riskExpanded, setRiskExpanded] = useState(true)
+  const [riskExpanded, setRiskExpanded] = useState(
+    () => typeof window !== 'undefined' ? window.innerWidth > 768 : true
+  )
 
   if (!summary) return null
 

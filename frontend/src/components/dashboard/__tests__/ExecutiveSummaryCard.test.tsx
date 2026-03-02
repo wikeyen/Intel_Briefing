@@ -1,6 +1,6 @@
 // ABOUTME: Tests for ExecutiveSummaryCard — verifies rendering of executive overview card.
 // ABOUTME: Covers null/empty states, mood badge, citations, quick scan, collapsible risk flags.
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { createElement } from 'react'
 import { ExecutiveSummaryCard } from '../ExecutiveSummaryCard'
@@ -230,5 +230,28 @@ describe('ExecutiveSummaryCard', () => {
     // Press Space to expand
     fireEvent.keyDown(toggle, { key: ' ' })
     expect(toggle.getAttribute('aria-expanded')).toBe('true')
+  })
+
+  it('defaults risk flags to collapsed on mobile viewport', () => {
+    const original = window.innerWidth
+    Object.defineProperty(window, 'innerWidth', { value: 390, writable: true })
+    try {
+      const summary = makeSummary({
+        sentiment: {
+          overall_mood: 'bearish',
+          mood_summary: 'Bearish outlook',
+          controversies: [],
+          opinion_shifts: [],
+          risk_flags: [
+            { topic: 'Risk', analysis: 'Analysis.', refs: [] },
+          ],
+        },
+      })
+      render(createElement(ExecutiveSummaryCard, { summary }))
+      const toggle = screen.getByRole('button', { name: /risk flags/i })
+      expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    } finally {
+      Object.defineProperty(window, 'innerWidth', { value: original, writable: true })
+    }
   })
 })

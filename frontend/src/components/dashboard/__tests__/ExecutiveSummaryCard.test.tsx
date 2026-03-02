@@ -1,7 +1,7 @@
 // ABOUTME: Tests for ExecutiveSummaryCard — verifies rendering of executive overview card.
-// ABOUTME: Covers null/empty states, mood badge, full text rendering, quick scan, and risk flags.
+// ABOUTME: Covers null/empty states, mood badge, citations, quick scan, collapsible risk flags.
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { createElement } from 'react'
 import { ExecutiveSummaryCard } from '../ExecutiveSummaryCard'
 import type { BriefingSummary } from '@/api/client'
@@ -143,5 +143,92 @@ describe('ExecutiveSummaryCard', () => {
     render(createElement(ExecutiveSummaryCard, { summary }))
     const badge = screen.getByText('bullish')
     expect(badge).toBeTruthy()
+  })
+
+  it('renders citation links when sources are provided', () => {
+    const summary = makeSummary({
+      executive_summary: 'Markets rallied [1] after the Fed announcement [2].',
+      sources: [
+        { id: 1, title: 'Bloomberg Report', url: 'https://bloomberg.com/1' },
+        { id: 2, title: 'Reuters Update', url: 'https://reuters.com/2' },
+      ],
+    })
+    const { container } = render(createElement(ExecutiveSummaryCard, { summary }))
+    const supElements = container.querySelectorAll('sup')
+    expect(supElements.length).toBe(2)
+    const links = container.querySelectorAll('sup a')
+    expect(links.length).toBe(2)
+    expect((links[0] as HTMLAnchorElement).href).toBe('https://bloomberg.com/1')
+    expect((links[1] as HTMLAnchorElement).href).toBe('https://reuters.com/2')
+  })
+
+  it('renders summary text without citation markup when no sources', () => {
+    const summary = makeSummary({
+      executive_summary: 'Plain text without citations.',
+    })
+    const { container } = render(createElement(ExecutiveSummaryCard, { summary }))
+    const supElements = container.querySelectorAll('sup')
+    expect(supElements.length).toBe(0)
+    expect(screen.getByText('Plain text without citations.')).toBeTruthy()
+  })
+
+  it('collapses risk flags when toggle is clicked', () => {
+    const summary = makeSummary({
+      sentiment: {
+        overall_mood: 'bearish',
+        mood_summary: 'Bearish outlook',
+        controversies: [],
+        opinion_shifts: [],
+        risk_flags: [
+          { topic: 'Liquidity crunch', analysis: 'Trading volumes dropped sharply.', refs: [] },
+        ],
+      },
+    })
+    const { container } = render(createElement(ExecutiveSummaryCard, { summary }))
+
+    // Risk flags are visible by default (expanded)
+    const toggle = screen.getByRole('button', { name: /risk flags/i })
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+
+    // The content wrapper should have maxHeight > 0 when expanded
+    const contentWrapper = container.querySelector('[style*="overflow: hidden"]') as HTMLElement
+    expect(contentWrapper).toBeTruthy()
+    expect(contentWrapper.style.maxHeight).toBe('2000px')
+
+    // Click to collapse
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(contentWrapper.style.maxHeight).toBe('0')
+
+    // Click again to expand
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    expect(contentWrapper.style.maxHeight).toBe('2000px')
+  })
+
+  it('supports keyboard toggle for risk flags', () => {
+    const summary = makeSummary({
+      sentiment: {
+        overall_mood: 'bearish',
+        mood_summary: 'Bearish outlook',
+        controversies: [],
+        opinion_shifts: [],
+        risk_flags: [
+          { topic: 'Systemic risk', analysis: 'Contagion spreading.', refs: [] },
+        ],
+      },
+    })
+    render(createElement(ExecutiveSummaryCard, { summary }))
+
+    const toggle = screen.getByRole('button', { name: /risk flags/i })
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+
+    // Press Enter to collapse
+    fireEvent.keyDown(toggle, { key: 'Enter' })
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+
+    // Press Space to expand
+    fireEvent.keyDown(toggle, { key: ' ' })
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
   })
 })

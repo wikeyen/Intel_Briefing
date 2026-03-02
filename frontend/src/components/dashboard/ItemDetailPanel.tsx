@@ -133,7 +133,7 @@ function KeywordTags({ keywords, groupColor }: {
           fontFamily: MONO,
           fontSize: '0.5625rem',
           padding: '2px 6px',
-          borderRadius: 4,
+          borderRadius: 'var(--radius-badge)',
           background: `color-mix(in srgb, ${groupColor} 8%, var(--surface))`,
           color: 'var(--ink-secondary)',
           fontWeight: 500,
@@ -230,7 +230,7 @@ function VelocityStats({ velocity }: { velocity: NonNullable<IntelItem['velocity
       {stats.map(s => (
         <div key={s.label} style={{
           padding: '0.5rem 0.625rem',
-          borderRadius: 6,
+          borderRadius: 'var(--radius-badge)',
           background: 'var(--surface-alt)',
         }}>
           <div style={{
@@ -264,7 +264,7 @@ function RelatedItemRow({ item, onSelect }: { item: IntelItem; onSelect: () => v
         display: 'flex', flexDirection: 'column', gap: 2,
         padding: '0.375rem 0.5rem',
         margin: '0 -0.5rem',
-        borderRadius: 6,
+        borderRadius: 'var(--radius-badge)',
         cursor: 'pointer',
         transition: 'background 150ms ease',
       }}
@@ -281,7 +281,7 @@ function RelatedItemRow({ item, onSelect }: { item: IntelItem; onSelect: () => v
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
         <span style={{
           fontFamily: MONO, fontSize: '0.5rem', fontWeight: 600,
-          padding: '1px 4px', borderRadius: 3,
+          padding: '1px 4px', borderRadius: 'var(--radius-badge)',
           background: 'var(--surface-inset)', color: 'var(--ink-disabled)',
           letterSpacing: '0.04em',
         }}>
@@ -332,7 +332,7 @@ function RawDataSection({ item }: { item: IntelItem }) {
           fontSize: '0.625rem',
           lineHeight: 1.5,
           background: 'var(--surface-alt)',
-          borderRadius: 6,
+          borderRadius: 'var(--radius-badge)',
           padding: '0.75rem',
           overflowX: 'auto',
           marginTop: '0.5rem',
@@ -415,7 +415,6 @@ function ItemDetailPanel({
           position: 'fixed', top: 0, right: 0, bottom: 0,
           width: 440, maxWidth: '100vw',
           background: 'var(--surface)',
-          borderLeft: '1px solid var(--border)',
           boxShadow: 'var(--shadow-lg)',
           overflow: 'hidden',
           zIndex: 1000,
@@ -455,7 +454,7 @@ function ItemDetailPanel({
             <button
               onClick={onClose}
               style={{
-                width: 32, height: 32, borderRadius: 6,
+                width: 32, height: 32, borderRadius: 'var(--radius-badge)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: 'transparent', color: 'var(--ink-tertiary)',
                 fontSize: '1.125rem', lineHeight: 1, border: 'none', cursor: 'pointer',

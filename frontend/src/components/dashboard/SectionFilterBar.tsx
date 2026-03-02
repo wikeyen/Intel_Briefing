@@ -68,8 +68,8 @@ export interface SectionFilterBarProps {
 }
 
 const selectStyle: React.CSSProperties = {
-  border: '1px solid var(--border)',
-  borderRadius: 6,
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-badge)',
   padding: '0.375rem 0.625rem',
   fontSize: '0.75rem',
   fontWeight: 500,
@@ -270,9 +270,9 @@ export function SectionFilterBar({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.25rem',
-                background: 'color-mix(in srgb, var(--accent) 10%, transparent)',
+                background: 'color-mix(in srgb, var(--accent) 8%, transparent)',
                 color: 'var(--accent)',
-                borderRadius: 4,
+                borderRadius: 'var(--radius-badge)',
                 padding: '2px 8px',
                 fontSize: '0.625rem',
                 fontWeight: 500,

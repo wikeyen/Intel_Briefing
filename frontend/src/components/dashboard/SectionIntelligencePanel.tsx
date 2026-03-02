@@ -230,7 +230,7 @@ function KeyThemes({ tags, groupColor }: { tags: IntelTag[]; groupColor: string 
             style={{
               background: `color-mix(in srgb, ${groupColor} 8%, transparent)`,
               color: 'var(--ink)',
-              borderRadius: 4,
+              borderRadius: 'var(--radius-badge)',
               padding: '2px 8px',
               fontSize: '0.625rem',
               fontWeight: 600,
@@ -288,8 +288,8 @@ function NotableShifts({ shifts }: {
                 fontSize: '0.5rem',
                 fontWeight: 700,
                 padding: '1px 5px',
-                borderRadius: 3,
-                background: `color-mix(in srgb, ${colorMap[shift.direction]} 12%, transparent)`,
+                borderRadius: 'var(--radius-badge)',
+                background: `color-mix(in srgb, ${colorMap[shift.direction]} 8%, transparent)`,
                 color: colorMap[shift.direction],
                 flexShrink: 0,
               }}>
@@ -362,9 +362,9 @@ export function SectionIntelligencePanel({
     <>
       <style>{COLLAPSE_CSS}</style>
       <div style={{
-        border: '1px solid var(--border)',
-        borderRadius: 8,
-        borderLeft: `3px solid ${groupColor}`,
+        boxShadow: 'var(--shadow-card)',
+        borderRadius: 'var(--radius-card)',
+        borderLeft: `2px solid ${groupColor}`,
         padding: '1.25rem',
         background: 'var(--surface)',
       }}>
@@ -397,9 +397,9 @@ export function SectionIntelligencePanel({
               fontFamily: MONO,
               fontSize: '0.5625rem',
               fontWeight: 600,
-              background: `color-mix(in srgb, ${groupColor} 12%, transparent)`,
+              background: `color-mix(in srgb, ${groupColor} 8%, transparent)`,
               color: groupColor,
-              borderRadius: 4,
+              borderRadius: 'var(--radius-badge)',
               padding: '1px 6px',
             }}>
               {items.length}

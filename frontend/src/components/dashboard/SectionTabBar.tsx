@@ -54,7 +54,7 @@ export function SectionTabBar({ groups, activeGroupId, onSelect, itemCounts, fet
               gap: '0.375rem',
               minHeight: 40,
               padding: '0.5rem 1rem',
-              borderRadius: '6px 6px 0 0',
+              borderRadius: 'var(--radius-badge) var(--radius-badge) 0 0',
               border: 'none',
               borderBottom: isActive ? `3px solid ${group.color}` : '3px solid transparent',
               background: isActive
@@ -109,10 +109,10 @@ export function SectionTabBar({ groups, activeGroupId, onSelect, itemCounts, fet
                 fontSize: '0.5625rem',
                 fontWeight: 600,
                 background: isActive
-                  ? `color-mix(in srgb, ${group.color} 15%, transparent)`
+                  ? `color-mix(in srgb, ${group.color} 10%, transparent)`
                   : 'var(--surface-alt)',
                 color: isActive ? group.color : 'var(--ink-faint)',
-                borderRadius: 4,
+                borderRadius: 'var(--radius-badge)',
                 padding: '1px 5px',
                 lineHeight: 1.4,
               }}

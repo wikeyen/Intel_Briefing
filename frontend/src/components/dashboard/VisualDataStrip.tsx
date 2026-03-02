@@ -20,8 +20,8 @@ const CHART_HEADER: React.CSSProperties = {
 }
 
 const CARD_STYLE: React.CSSProperties = {
-  border: '1px solid var(--border)',
-  borderRadius: 8,
+  boxShadow: 'var(--shadow-card)',
+  borderRadius: 'var(--radius-card)',
   padding: '0.75rem',
   background: 'var(--surface)',
   height: 120,

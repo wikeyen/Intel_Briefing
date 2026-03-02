@@ -68,16 +68,16 @@ function VelocityBadge({ velocity }: { velocity: NonNullable<IntelItem['velocity
 
   if (change != null && change > 0) {
     text = `\u25B2 +${Math.round(change)}%`
-    bg = 'rgba(61,158,133,0.12)'
+    bg = 'rgba(61,158,133,0.08)'
     fg = '#3D9E85'
   } else if (change != null && change < 0) {
     text = `\u25BC ${Math.round(change)}%`
-    bg = 'rgba(196,96,110,0.12)'
+    bg = 'rgba(196,96,110,0.08)'
     fg = '#C4606E'
   } else {
     // changePercent is null — brand-new item
     text = '\u25CF NEW'
-    bg = 'rgba(142,142,147,0.12)'
+    bg = 'rgba(142,142,147,0.08)'
     fg = 'var(--ink-tertiary)'
   }
 
@@ -86,7 +86,7 @@ function VelocityBadge({ velocity }: { velocity: NonNullable<IntelItem['velocity
       fontFamily: MONO,
       fontSize: '0.625rem',
       fontWeight: 700,
-      borderRadius: 4,
+      borderRadius: 'var(--radius-badge)',
       padding: '2px 6px',
       background: bg,
       color: fg,
@@ -147,26 +147,22 @@ export default function RichItemCard({ item, groupColor, onClick }: RichItemCard
       onClick={onClick}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
       style={{
-        border: '1px solid var(--border)',
-        borderLeft: `3px solid ${groupColor}`,
-        borderRadius: 8,
+        boxShadow: 'var(--shadow-card)',
+        borderLeft: `2px solid ${groupColor}`,
+        borderRadius: 'var(--radius-card)',
         padding: '1rem',
         background: 'var(--surface)',
         cursor: 'pointer',
-        transition: 'box-shadow 200ms, border-color 200ms',
+        transition: 'box-shadow 200ms',
         display: 'flex',
         flexDirection: 'column',
         minWidth: 0,
       }}
       onMouseEnter={e => {
         (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-card-hover)'
-        ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'
-        ;(e.currentTarget as HTMLElement).style.borderLeftColor = groupColor
       }}
       onMouseLeave={e => {
-        (e.currentTarget as HTMLElement).style.boxShadow = ''
-        ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'
-        ;(e.currentTarget as HTMLElement).style.borderLeftColor = groupColor
+        (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-card)'
       }}
     >
       {/* Title — max 2 lines */}

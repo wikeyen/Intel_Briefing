@@ -1,7 +1,7 @@
 // ABOUTME: Tests for ExecutiveSummaryCard — verifies rendering of executive overview card.
-// ABOUTME: Covers null/empty states, mood badge, truncation, quick scan, and risk flags.
+// ABOUTME: Covers null/empty states, mood badge, full text rendering, quick scan, and risk flags.
 import { describe, it, expect } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { createElement } from 'react'
 import { ExecutiveSummaryCard } from '../ExecutiveSummaryCard'
 import type { BriefingSummary } from '@/api/client'
@@ -52,12 +52,12 @@ describe('ExecutiveSummaryCard', () => {
     expect(screen.getByText('Test summary text.')).toBeTruthy()
   })
 
-  it('renders card container with background styling', () => {
+  it('renders card container with shadow styling', () => {
     const summary = makeSummary()
     const { container } = render(createElement(ExecutiveSummaryCard, { summary }))
     const card = container.firstElementChild as HTMLElement
     expect(card).toBeTruthy()
-    expect(card.style.background).toContain('color-mix')
+    expect(card.style.boxShadow).toBeTruthy()
   })
 
   it('renders mood badge with correct text', () => {
@@ -72,28 +72,11 @@ describe('ExecutiveSummaryCard', () => {
     expect(screen.getByText('Executive Summary')).toBeTruthy()
   })
 
-  it('truncates long text and shows expand toggle', () => {
+  it('renders full text without truncation', () => {
     const longText = 'A'.repeat(300)
     const summary = makeSummary({ executive_summary: longText })
     render(createElement(ExecutiveSummaryCard, { summary }))
-    expect(screen.getByText('Show more')).toBeTruthy()
-    // Text should be truncated
-    const displayed = screen.getByText(/^A+\u2026$/)
-    expect(displayed).toBeTruthy()
-  })
-
-  it('expands text when toggle is clicked', () => {
-    const longText = 'B'.repeat(300)
-    const summary = makeSummary({ executive_summary: longText })
-    render(createElement(ExecutiveSummaryCard, { summary }))
-    fireEvent.click(screen.getByText('Show more'))
-    expect(screen.getByText('Show less')).toBeTruthy()
     expect(screen.getByText(longText)).toBeTruthy()
-  })
-
-  it('does not show toggle for short text', () => {
-    const summary = makeSummary({ executive_summary: 'Short text.' })
-    render(createElement(ExecutiveSummaryCard, { summary }))
     expect(screen.queryByText('Show more')).toBeNull()
   })
 

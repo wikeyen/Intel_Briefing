@@ -1,13 +1,10 @@
 // ABOUTME: Compact executive overview card displayed above the dashboard tab bar.
-// ABOUTME: Shows mood badge, executive summary with expand/collapse, quick scan bullets, and risk flags.
+// ABOUTME: Shows mood badge, executive summary, quick scan bullets, and risk flags.
 'use client'
 
-import { useState } from 'react'
 import type { BriefingSummary } from '@/api/client'
 
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
-
-const TRUNCATE_LENGTH = 280
 
 const MOOD_COLORS: Record<string, string> = {
   bullish: '#3D9E85',
@@ -34,7 +31,7 @@ function MoodBadge({ mood }: { mood: string }) {
     <span style={{
       background: `color-mix(in srgb, ${color} 12%, transparent)`,
       color,
-      borderRadius: 4,
+      borderRadius: 'var(--radius-badge)',
       padding: '1px 8px',
       fontFamily: MONO,
       fontSize: '0.5625rem',
@@ -128,8 +125,6 @@ function RiskFlagsList({ flags }: { flags: Array<{ topic: string; analysis: stri
 // ---------------------------------------------------------------------------
 
 export function ExecutiveSummaryCard({ summary }: ExecutiveSummaryCardProps) {
-  const [expanded, setExpanded] = useState(false)
-
   if (!summary) return null
 
   const execSummary = summary.overall?.executive_summary
@@ -138,15 +133,11 @@ export function ExecutiveSummaryCard({ summary }: ExecutiveSummaryCardProps) {
   const mood = summary.overall.sentiment?.overall_mood ?? 'neutral'
   const quickScan = summary.overall.quick_scan
   const riskFlags = summary.overall.sentiment?.risk_flags
-  const needsTruncation = execSummary.length > TRUNCATE_LENGTH
-  const displayText = needsTruncation && !expanded
-    ? execSummary.slice(0, TRUNCATE_LENGTH).trimEnd() + '\u2026'
-    : execSummary
 
   return (
     <div style={{
-      border: '1px solid var(--border)',
-      borderRadius: 8,
+      boxShadow: 'var(--shadow-card)',
+      borderRadius: 'var(--radius-card)',
       padding: '1.25rem',
       background: 'color-mix(in srgb, var(--accent) 6%, var(--surface))',
       marginBottom: '0.75rem',
@@ -178,26 +169,8 @@ export function ExecutiveSummaryCard({ summary }: ExecutiveSummaryCardProps) {
         color: 'var(--ink-secondary)',
         margin: 0,
       }}>
-        {displayText}
+        {execSummary}
       </p>
-
-      {/* Expand/collapse toggle */}
-      {needsTruncation && (
-        <span
-          onClick={() => setExpanded(prev => !prev)}
-          style={{
-            fontFamily: MONO,
-            fontSize: '0.625rem',
-            color: 'var(--accent)',
-            cursor: 'pointer',
-            userSelect: 'none',
-            marginTop: '0.25rem',
-            display: 'inline-block',
-          }}
-        >
-          {expanded ? 'Show less' : 'Show more'}
-        </span>
-      )}
 
       {/* Quick scan bullets */}
       {quickScan && quickScan.length > 0 && (

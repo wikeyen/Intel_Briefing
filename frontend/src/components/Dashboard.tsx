@@ -106,7 +106,7 @@ function ShimmerBlock({ width, height, style }: {
       style={{
         width,
         height,
-        borderRadius: 4,
+        borderRadius: 'var(--radius-badge)',
         background: 'linear-gradient(90deg, var(--surface-alt) 25%, var(--border-subtle) 50%, var(--surface-alt) 75%)',
         backgroundSize: '200% 100%',
         animation: 'shimmer 1.5s ease-in-out infinite',
@@ -133,8 +133,8 @@ function DashboardSkeleton() {
 
       {/* Intelligence panel skeleton */}
       <div style={{
-        border: '1px solid var(--border)',
-        borderRadius: 8,
+        boxShadow: 'var(--shadow-card)',
+        borderRadius: 'var(--radius-card)',
         padding: '1.25rem',
         background: 'var(--surface)',
       }}>
@@ -154,8 +154,8 @@ function DashboardSkeleton() {
       }}>
         {[0, 1, 2, 3].map(i => (
           <div key={i} style={{
-            border: '1px solid var(--border)',
-            borderRadius: 8,
+            boxShadow: 'var(--shadow-card)',
+            borderRadius: 'var(--radius-card)',
             padding: '0.75rem',
             background: 'var(--surface)',
             height: 120,
@@ -168,18 +168,18 @@ function DashboardSkeleton() {
 
       {/* Filter bar skeleton */}
       <div style={{ display: 'flex', gap: '0.5rem', padding: '0.5rem 0' }}>
-        <ShimmerBlock width={100} height={28} style={{ borderRadius: 6 }} />
-        <ShimmerBlock width={100} height={28} style={{ borderRadius: 6 }} />
-        <ShimmerBlock width={80} height={28} style={{ borderRadius: 6 }} />
-        <ShimmerBlock width={140} height={28} style={{ borderRadius: 6 }} />
+        <ShimmerBlock width={100} height={28} style={{ borderRadius: 'var(--radius-badge)' }} />
+        <ShimmerBlock width={100} height={28} style={{ borderRadius: 'var(--radius-badge)' }} />
+        <ShimmerBlock width={80} height={28} style={{ borderRadius: 'var(--radius-badge)' }} />
+        <ShimmerBlock width={140} height={28} style={{ borderRadius: 'var(--radius-badge)' }} />
       </div>
 
       {/* Items grid skeleton */}
       <div className="dashboard-items-grid">
         {[0, 1, 2, 3, 4, 5].map(i => (
           <div key={i} style={{
-            border: '1px solid var(--border)',
-            borderRadius: 8,
+            boxShadow: 'var(--shadow-card)',
+            borderRadius: 'var(--radius-card)',
             padding: '1rem',
             background: 'var(--surface)',
           }}>
@@ -215,7 +215,7 @@ function UpdatedBanner() {
         justifyContent: 'center',
         gap: '0.5rem',
         padding: '0.375rem 0.875rem',
-        borderRadius: 6,
+        borderRadius: 'var(--radius-badge)',
         background: 'var(--accent-subtle)',
         border: '1px solid var(--accent-muted)',
         marginBottom: 8,
@@ -265,8 +265,9 @@ function SortControls({ sortMode, onSortChange }: {
               fontSize: '0.625rem',
               fontWeight: isActive ? 700 : 500,
               padding: '0.25rem 0.5rem',
-              borderRadius: 4,
-              border: isActive ? '1px solid var(--accent)' : '1px solid var(--border)',
+              borderRadius: 'var(--radius-badge)',
+              border: isActive ? 'none' : '1px solid var(--border)',
+              boxShadow: isActive ? '0 0 0 1px var(--accent)' : 'none',
               background: isActive
                 ? 'color-mix(in srgb, var(--accent) 10%, transparent)'
                 : 'transparent',

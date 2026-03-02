@@ -1,10 +1,10 @@
-// ABOUTME: Tests for OverviewTab orchestrator component.
-// ABOUTME: Verifies aggregate analytics, executive summary, and group snapshot rendering.
+// ABOUTME: Tests for OverviewTab two-column layout orchestrator.
+// ABOUTME: Verifies grid layout rendering, removal of old components, and composition of ExecutiveSummaryCard + OverviewSidebar.
 
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { OverviewTab } from '../OverviewTab'
-import type { BriefingSummary, IntelligenceReport, IntelItem } from '@/api/client'
+import type { BriefingSummary, IntelItem } from '@/api/client'
 import type { SourceGroupTree } from '@/lib/groups/types'
 
 // ---------------------------------------------------------------------------
@@ -39,7 +39,7 @@ function makeGroup(overrides: Partial<SourceGroupTree> = {}): SourceGroupTree {
 
 function makeItem(overrides: Partial<IntelItem> = {}): IntelItem {
   return {
-    id: 'item-1',
+    id: 'item-' + Math.random().toString(36).slice(2, 8),
     source: 'hn',
     title: 'Test Item',
     url: 'https://example.com',
@@ -80,73 +80,64 @@ function makeSummary(overrides: Partial<BriefingSummary> = {}): BriefingSummary 
   }
 }
 
-function makeIntelligence(): IntelligenceReport {
-  return {
-    trend: {
-      topics: [],
-      tags: [
-        { text: 'AI', weight: 10 },
-        { text: 'Rust', weight: 8 },
-        { text: 'WebAssembly', weight: 6 },
-        { text: 'Kubernetes', weight: 4 },
-      ],
-      summary: 'AI dominates.',
-      generated_at: '2026-01-01T12:00:00Z',
-    },
-    topics: null,
-    accounts: null,
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('OverviewTab', () => {
-  it('renders VisualDataStrip when items exist across groups', () => {
+describe('OverviewTab — two-column layout', () => {
+  it('renders the overview-layout grid container', () => {
     const groups = [makeGroup()]
-    const items = [
-      makeItem({ id: 'i1', title: 'AI breakthrough', content: 'AI is big' }),
-      makeItem({ id: 'i2', source: 'lobste_rs', title: 'Rust update' }),
-    ]
-    const groupItemMap = { g1: items }
+    const groupItemMap = { g1: [makeItem()] }
 
     const { container } = render(
       <OverviewTab
         summary={makeSummary()}
-        intelligence={null}
         groups={groups}
         groupItemMap={groupItemMap}
-        allSensorKeys={['hn', 'lobste_rs']}
+        onSelectGroup={vi.fn()}
+      />,
+    )
+
+    const layout = container.querySelector('.overview-layout')
+    expect(layout).toBeInTheDocument()
+  })
+
+  it('renders overview-main and overview-sidebar columns', () => {
+    const groups = [makeGroup()]
+    const groupItemMap = { g1: [makeItem()] }
+
+    const { container } = render(
+      <OverviewTab
+        summary={makeSummary()}
+        groups={groups}
+        groupItemMap={groupItemMap}
+        onSelectGroup={vi.fn()}
+      />,
+    )
+
+    expect(container.querySelector('.overview-main')).toBeInTheDocument()
+    expect(container.querySelector('.overview-sidebar')).toBeInTheDocument()
+  })
+
+  it('does NOT render VisualDataStrip', () => {
+    const groups = [makeGroup()]
+    const groupItemMap = { g1: [makeItem(), makeItem()] }
+
+    const { container } = render(
+      <OverviewTab
+        summary={makeSummary()}
+        groups={groups}
+        groupItemMap={groupItemMap}
         onSelectGroup={vi.fn()}
       />,
     )
 
     // VisualDataStrip renders a div with class "visual-data-strip"
     const strip = container.querySelector('.visual-data-strip')
-    expect(strip).toBeInTheDocument()
+    expect(strip).not.toBeInTheDocument()
   })
 
-  it('renders ExecutiveSummaryCard when summary has executive_summary', () => {
-    const groups = [makeGroup()]
-    const groupItemMap = { g1: [makeItem()] }
-
-    render(
-      <OverviewTab
-        summary={makeSummary()}
-        intelligence={null}
-        groups={groups}
-        groupItemMap={groupItemMap}
-        allSensorKeys={['hn']}
-        onSelectGroup={vi.fn()}
-      />,
-    )
-
-    expect(screen.getByText('Executive Summary')).toBeInTheDocument()
-    expect(screen.getByText(/Markets are looking steady/)).toBeInTheDocument()
-  })
-
-  it('renders GroupSnapshotCards for non-empty groups with group names', () => {
+  it('does NOT render GroupSnapshotCard or "Sections" header', () => {
     const groups = [
       makeGroup({ id: 'g1', name: 'Tech News', sort_order: 0 }),
       makeGroup({ id: 'g2', name: 'Finance', sort_order: 1, sensors: ['rss_news'], color: '#cc4444' }),
@@ -156,61 +147,121 @@ describe('OverviewTab', () => {
       g2: [makeItem({ id: 'i2', source: 'rss_news' })],
     }
 
-    render(
+    const { container } = render(
       <OverviewTab
         summary={makeSummary()}
-        intelligence={null}
         groups={groups}
         groupItemMap={groupItemMap}
-        allSensorKeys={['hn', 'rss_news']}
         onSelectGroup={vi.fn()}
       />,
     )
 
-    expect(screen.getByText('Tech News')).toBeInTheDocument()
-    expect(screen.getByText('Finance')).toBeInTheDocument()
+    // GroupSnapshotCard renders within a "group-snapshot-row" container
+    const snapshotRow = container.querySelector('.group-snapshot-row')
+    expect(snapshotRow).not.toBeInTheDocument()
+
+    // The old "Sections" header label should be gone
+    expect(screen.queryByText('Sections')).not.toBeInTheDocument()
   })
 
-  it('does not render GroupSnapshotCard for groups with 0 items', () => {
-    const groups = [
-      makeGroup({ id: 'g1', name: 'Tech News', sort_order: 0 }),
-      makeGroup({ id: 'g2', name: 'Empty Group', sort_order: 1, sensors: ['rss_news'], color: '#cc4444' }),
-    ]
-    const groupItemMap = {
-      g1: [makeItem({ id: 'i1' })],
-      g2: [],
-    }
-
-    render(
-      <OverviewTab
-        summary={makeSummary()}
-        intelligence={null}
-        groups={groups}
-        groupItemMap={groupItemMap}
-        allSensorKeys={['hn', 'rss_news']}
-        onSelectGroup={vi.fn()}
-      />,
-    )
-
-    expect(screen.getByText('Tech News')).toBeInTheDocument()
-    expect(screen.queryByText('Empty Group')).not.toBeInTheDocument()
-  })
-
-  it('renders SECTIONS header when groups with items exist', () => {
+  it('renders ExecutiveSummaryCard with summary content', () => {
     const groups = [makeGroup()]
     const groupItemMap = { g1: [makeItem()] }
 
     render(
       <OverviewTab
         summary={makeSummary()}
-        intelligence={null}
         groups={groups}
         groupItemMap={groupItemMap}
-        allSensorKeys={['hn']}
         onSelectGroup={vi.fn()}
       />,
     )
 
-    expect(screen.getByText('Sections')).toBeInTheDocument()
+    expect(screen.getByText('Executive Summary')).toBeInTheDocument()
+    expect(screen.getByText(/Markets are looking steady/)).toBeInTheDocument()
+  })
+
+  it('renders OverviewSidebar with sentiment and sources sections', () => {
+    const groups = [makeGroup()]
+    const groupItemMap = { g1: [makeItem({ sentiment: { label: 'positive', score: 0.9 } })] }
+
+    render(
+      <OverviewTab
+        summary={makeSummary()}
+        groups={groups}
+        groupItemMap={groupItemMap}
+        onSelectGroup={vi.fn()}
+      />,
+    )
+
+    // Sidebar renders sentiment and sources section headers
+    expect(screen.getByTestId('sentiment-section')).toBeInTheDocument()
+    expect(screen.getByTestId('sources-section')).toBeInTheDocument()
+  })
+
+  it('passes sorted groups to ExecutiveSummaryCard for per-group breakdowns', () => {
+    const groups = [
+      makeGroup({ id: 'g2', name: 'Finance', sort_order: 1, sensors: ['rss_news'], color: '#cc4444' }),
+      makeGroup({ id: 'g1', name: 'Tech News', sort_order: 0, sensors: ['hn'] }),
+    ]
+    const summary = makeSummary({
+      sections: [
+        {
+          sensor_name: 'hn',
+          label: 'Hacker News',
+          source_url: 'https://news.ycombinator.com',
+          summary: 'HN shows strong activity.',
+          item_count: 3,
+          items: [],
+        },
+        {
+          sensor_name: 'rss_news',
+          label: 'RSS News',
+          source_url: 'https://rss.example.com',
+          summary: 'Finance headlines are mixed.',
+          item_count: 2,
+          items: [],
+        },
+      ],
+    })
+    const groupItemMap = {
+      g1: [makeItem()],
+      g2: [makeItem({ source: 'rss_news' })],
+    }
+
+    const { container } = render(
+      <OverviewTab
+        summary={summary}
+        groups={groups}
+        groupItemMap={groupItemMap}
+        onSelectGroup={vi.fn()}
+      />,
+    )
+
+    // Per-group breakdowns should render group dots in sort order (Tech News first)
+    const dots = container.querySelectorAll('[data-testid^="group-dot-"]')
+    expect(dots.length).toBe(2)
+    expect(dots[0].getAttribute('data-testid')).toBe('group-dot-g1')
+    expect(dots[1].getAttribute('data-testid')).toBe('group-dot-g2')
+  })
+
+  it('handles null summary gracefully without crashing', () => {
+    const groups = [makeGroup()]
+    const groupItemMap = { g1: [makeItem()] }
+
+    const { container } = render(
+      <OverviewTab
+        summary={null}
+        groups={groups}
+        groupItemMap={groupItemMap}
+        onSelectGroup={vi.fn()}
+      />,
+    )
+
+    // Layout should still render even without a summary
+    expect(container.querySelector('.overview-layout')).toBeInTheDocument()
+    expect(container.querySelector('.overview-sidebar')).toBeInTheDocument()
+    // ExecutiveSummaryCard returns null when summary is null, so no exec summary text
+    expect(screen.queryByText('Executive Summary')).not.toBeInTheDocument()
   })
 })

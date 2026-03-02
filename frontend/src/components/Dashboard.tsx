@@ -585,10 +585,8 @@ export function Dashboard() {
             <div style={{ marginTop: '0.75rem' }}>
               <OverviewTab
                 summary={summary}
-                intelligence={intelligence}
                 groups={groups}
                 groupItemMap={groupItemMap}
-                allSensorKeys={allSensorKeys}
                 onSelectGroup={setActiveGroupId}
               />
             </div>

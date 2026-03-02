@@ -29,7 +29,7 @@ function MoodBadge({ mood }: { mood: string }) {
   const color = MOOD_COLORS[mood] ?? MOOD_COLORS.neutral
   return (
     <span style={{
-      background: `color-mix(in srgb, ${color} 12%, transparent)`,
+      background: `color-mix(in srgb, ${color} 20%, transparent)`,
       color,
       borderRadius: 'var(--radius-badge)',
       padding: '1px 8px',
@@ -98,7 +98,7 @@ function RiskFlagsList({ flags }: { flags: Array<{ topic: string; analysis: stri
           <div
             key={i}
             style={{
-              background: 'color-mix(in srgb, var(--warn) 6%, transparent)',
+              background: 'color-mix(in srgb, var(--warn) 12%, transparent)',
               borderLeft: '2px solid var(--warn)',
               borderRadius: '0 4px 4px 0',
               padding: '0.375rem 0.5rem',

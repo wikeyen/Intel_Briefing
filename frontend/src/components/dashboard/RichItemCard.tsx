@@ -68,16 +68,16 @@ function VelocityBadge({ velocity }: { velocity: NonNullable<IntelItem['velocity
 
   if (change != null && change > 0) {
     text = `\u25B2 +${Math.round(change)}%`
-    bg = 'rgba(61,158,133,0.08)'
+    bg = 'rgba(61,158,133,0.14)'
     fg = '#3D9E85'
   } else if (change != null && change < 0) {
     text = `\u25BC ${Math.round(change)}%`
-    bg = 'rgba(196,96,110,0.08)'
+    bg = 'rgba(196,96,110,0.14)'
     fg = '#C4606E'
   } else {
     // changePercent is null — brand-new item
     text = '\u25CF NEW'
-    bg = 'rgba(142,142,147,0.08)'
+    bg = 'rgba(142,142,147,0.14)'
     fg = 'var(--ink-tertiary)'
   }
 
@@ -148,7 +148,6 @@ export default function RichItemCard({ item, groupColor, onClick }: RichItemCard
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
       style={{
         boxShadow: 'var(--shadow-card)',
-        borderLeft: `2px solid ${groupColor}`,
         borderRadius: 'var(--radius-card)',
         padding: '1rem',
         background: 'var(--surface)',

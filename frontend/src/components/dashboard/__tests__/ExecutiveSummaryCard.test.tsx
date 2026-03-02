@@ -123,6 +123,13 @@ describe('ExecutiveSummaryCard', () => {
     expect(screen.queryByText('Risk Flags')).toBeNull()
   })
 
+  it('renders card without left border', () => {
+    const summary = makeSummary()
+    const { container } = render(createElement(ExecutiveSummaryCard, { summary }))
+    const card = container.firstElementChild as HTMLElement
+    expect(card.style.borderLeft).toBeFalsy()
+  })
+
   it('renders bullish mood badge', () => {
     const summary = makeSummary({
       sentiment: {

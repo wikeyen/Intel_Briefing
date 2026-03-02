@@ -90,9 +90,7 @@ export function GroupIntelCard({ group, items, summary, onClick }: GroupIntelCar
       onClick={onClick}
       style={{
         background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: 8,
-        borderLeft: `3px solid ${group.color}`,
+        borderRadius: 'var(--radius-card)',
         padding: '0.75rem 1rem',
         boxShadow: 'var(--shadow-card)',
         transition: 'box-shadow 200ms, border-color 200ms',

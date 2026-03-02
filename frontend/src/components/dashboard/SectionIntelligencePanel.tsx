@@ -228,7 +228,7 @@ function KeyThemes({ tags, groupColor }: { tags: IntelTag[]; groupColor: string 
           <span
             key={tag.text}
             style={{
-              background: `color-mix(in srgb, ${groupColor} 8%, transparent)`,
+              background: `color-mix(in srgb, ${groupColor} 14%, transparent)`,
               color: 'var(--ink)',
               borderRadius: 'var(--radius-badge)',
               padding: '2px 8px',
@@ -289,7 +289,7 @@ function NotableShifts({ shifts }: {
                 fontWeight: 700,
                 padding: '1px 5px',
                 borderRadius: 'var(--radius-badge)',
-                background: `color-mix(in srgb, ${colorMap[shift.direction]} 8%, transparent)`,
+                background: `color-mix(in srgb, ${colorMap[shift.direction]} 14%, transparent)`,
                 color: colorMap[shift.direction],
                 flexShrink: 0,
               }}>
@@ -364,7 +364,6 @@ export function SectionIntelligencePanel({
       <div style={{
         boxShadow: 'var(--shadow-card)',
         borderRadius: 'var(--radius-card)',
-        borderLeft: `2px solid ${groupColor}`,
         padding: '1.25rem',
         background: 'var(--surface)',
       }}>
@@ -397,7 +396,7 @@ export function SectionIntelligencePanel({
               fontFamily: MONO,
               fontSize: '0.5625rem',
               fontWeight: 600,
-              background: `color-mix(in srgb, ${groupColor} 8%, transparent)`,
+              background: `color-mix(in srgb, ${groupColor} 14%, transparent)`,
               color: groupColor,
               borderRadius: 'var(--radius-badge)',
               padding: '1px 6px',

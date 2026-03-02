@@ -109,7 +109,7 @@ export function SectionTabBar({ groups, activeGroupId, onSelect, itemCounts, fet
                 fontSize: '0.5625rem',
                 fontWeight: 600,
                 background: isActive
-                  ? `color-mix(in srgb, ${group.color} 10%, transparent)`
+                  ? `color-mix(in srgb, ${group.color} 16%, transparent)`
                   : 'var(--surface-alt)',
                 color: isActive ? group.color : 'var(--ink-faint)',
                 borderRadius: 'var(--radius-badge)',

@@ -3,7 +3,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { createElement } from 'react'
-import { GroupSnapshotCard } from '../GroupSnapshotCard'
+import { GroupSnapshotCard, SNAPSHOT_ROW_CSS } from '../GroupSnapshotCard'
 import type { GroupSnapshotCardProps } from '../GroupSnapshotCard'
 import type { SourceGroupTree } from '@/lib/groups/types'
 import type { IntelItem, IntelTag } from '@/api/client'
@@ -81,6 +81,10 @@ describe('GroupSnapshotCard', () => {
     const { container } = renderCard()
     const card = container.firstElementChild as HTMLElement
     expect(card.style.borderLeft).toBeFalsy()
+  })
+
+  it('exports row CSS with fixed-width cards', () => {
+    expect(SNAPSHOT_ROW_CSS).toContain('flex: 0 0 220px')
   })
 
   it('shows tag pills when tags are provided', () => {

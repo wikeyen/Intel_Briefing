@@ -32,12 +32,10 @@ export const SNAPSHOT_ROW_CSS = `
 }
 .group-snapshot-row::-webkit-scrollbar { display: none; }
 .group-snapshot-row > * {
-  min-width: 220px;
-  max-width: 280px;
-  flex-shrink: 0;
+  flex: 0 0 220px;
 }
 @media (max-width: 768px) {
-  .group-snapshot-row > * { min-width: 200px; max-width: 240px; }
+  .group-snapshot-row > * { flex: 0 0 200px; }
 }
 `
 

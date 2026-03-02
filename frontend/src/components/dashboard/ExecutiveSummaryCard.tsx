@@ -147,9 +147,8 @@ export function ExecutiveSummaryCard({ summary }: ExecutiveSummaryCardProps) {
     <div style={{
       border: '1px solid var(--border)',
       borderRadius: 8,
-      borderLeft: '3px solid var(--accent)',
       padding: '1.25rem',
-      background: 'var(--surface)',
+      background: 'color-mix(in srgb, var(--accent) 6%, var(--surface))',
       marginBottom: '0.75rem',
     }}>
       {/* Header row */}

@@ -52,6 +52,14 @@ describe('ExecutiveSummaryCard', () => {
     expect(screen.getByText('Test summary text.')).toBeTruthy()
   })
 
+  it('renders card container with background styling', () => {
+    const summary = makeSummary()
+    const { container } = render(createElement(ExecutiveSummaryCard, { summary }))
+    const card = container.firstElementChild as HTMLElement
+    expect(card).toBeTruthy()
+    expect(card.style.background).toContain('color-mix')
+  })
+
   it('renders mood badge with correct text', () => {
     const summary = makeSummary()
     render(createElement(ExecutiveSummaryCard, { summary }))

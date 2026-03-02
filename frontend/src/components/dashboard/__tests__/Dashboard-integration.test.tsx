@@ -97,8 +97,8 @@ describe('Dashboard tab-based sections refactor', () => {
       expect(dashboardSource).toMatch(/import\s+\{[^}]*SectionIntelligencePanel[^}]*\}\s+from/)
     })
 
-    it('imports ExecutiveSummaryCard', () => {
-      expect(dashboardSource).toMatch(/import\s+\{[^}]*ExecutiveSummaryCard[^}]*\}\s+from/)
+    it('imports OverviewTab', () => {
+      expect(dashboardSource).toMatch(/import\s+\{[^}]*OverviewTab[^}]*\}\s+from/)
     })
 
     it('imports RichItemCard and itemSignalScore', () => {
@@ -166,13 +166,13 @@ describe('Dashboard tab-based sections refactor', () => {
       expect(dashboardSource).toMatch(/<ItemDetailPanelAnimated\b/)
     })
 
-    it('renders ExecutiveSummaryCard in overview tab content', () => {
-      expect(dashboardSource).toMatch(/<ExecutiveSummaryCard\b/)
+    it('renders OverviewTab in overview tab content', () => {
+      expect(dashboardSource).toMatch(/<OverviewTab\b/)
       // Verify it appears after SectionTabBar (inside Overview tab content area)
-      const summaryIdx = dashboardSource.indexOf('<ExecutiveSummaryCard')
+      const overviewIdx = dashboardSource.indexOf('<OverviewTab')
       const tabBarIdx = dashboardSource.indexOf('<SectionTabBar')
-      expect(summaryIdx).toBeGreaterThan(-1)
-      expect(summaryIdx).toBeGreaterThan(tabBarIdx)
+      expect(overviewIdx).toBeGreaterThan(-1)
+      expect(overviewIdx).toBeGreaterThan(tabBarIdx)
     })
   })
 

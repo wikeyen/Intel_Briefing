@@ -20,7 +20,7 @@ import { SectionFilterBar, DEFAULT_FILTERS, applyFilters } from './dashboard/Sec
 import type { FilterState } from './dashboard/SectionFilterBar'
 import { VisualDataStrip } from './dashboard/VisualDataStrip'
 import { SectionIntelligencePanel } from './dashboard/SectionIntelligencePanel'
-import { ExecutiveSummaryCard } from './dashboard/ExecutiveSummaryCard'
+import { OverviewTab } from './dashboard/OverviewTab'
 import RichItemCard, { itemSignalScore } from './dashboard/RichItemCard'
 import { ItemDetailPanelAnimated } from './dashboard/ItemDetailPanel'
 
@@ -459,13 +459,17 @@ export function Dashboard() {
     return () => { clearTimeout(timeout); clearInterval(iv) }
   }, [isActive])
 
-  // ---- Auto-select first group tab when groups load ----
+  // ---- Auto-select overview or first group tab when groups load ----
   useEffect(() => {
     if (groups.length > 0 && activeGroupId === null) {
-      const sorted = [...groups].sort((a, b) => a.sort_order - b.sort_order)
-      setActiveGroupId(sorted[0].id)
+      if (summary?.overall?.executive_summary) {
+        setActiveGroupId(OVERVIEW_TAB_ID)
+      } else {
+        const sorted = [...groups].sort((a, b) => a.sort_order - b.sort_order)
+        setActiveGroupId(sorted[0].id)
+      }
     }
-  }, [groups, activeGroupId])
+  }, [groups, activeGroupId, summary])
 
   // ---- Computed values ----
 
@@ -473,6 +477,14 @@ export function Dashboard() {
     () => buildGroupItemMap(groups, report),
     [groups, report],
   )
+
+  const allSensorKeys = useMemo(() => {
+    const keys = new Set<string>()
+    for (const g of groups) {
+      for (const s of g.sensors) keys.add(s)
+    }
+    return [...keys]
+  }, [groups])
 
   const itemCounts = useMemo(() => {
     const counts: Record<string, number> = {}
@@ -570,7 +582,14 @@ export function Dashboard() {
           {/* Overview tab content */}
           {activeGroupId === OVERVIEW_TAB_ID && (
             <div style={{ marginTop: '0.75rem' }}>
-              <ExecutiveSummaryCard summary={summary} />
+              <OverviewTab
+                summary={summary}
+                intelligence={intelligence}
+                groups={groups}
+                groupItemMap={groupItemMap}
+                allSensorKeys={allSensorKeys}
+                onSelectGroup={setActiveGroupId}
+              />
             </div>
           )}
 

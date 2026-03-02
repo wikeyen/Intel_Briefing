@@ -355,6 +355,8 @@ export function SectionIntelligencePanel({
   const hasContent = narrative || tags.length > 0 || shifts.length > 0 || crossRefs.count > 0
   const isEmpty = !intelligence && !summary
 
+  if (isEmpty) return null
+
   // Estimate max-height for collapse animation — generous upper bound
   const maxHeight = expanded ? 2000 : 0
 
@@ -427,7 +429,13 @@ export function SectionIntelligencePanel({
             gap: '0.75rem',
             paddingTop: '0.75rem',
           }}>
-            {isEmpty ? (
+            {narrative && <NarrativeSummary text={narrative} groupColor={groupColor} />}
+            {tags.length > 0 && <KeyThemes tags={tags} groupColor={groupColor} />}
+            {shifts.length > 0 && <NotableShifts shifts={shifts} />}
+            {crossRefs.count > 0 && (
+              <CrossReferences count={crossRefs.count} groupNames={crossRefs.groupNames} />
+            )}
+            {hasContent ? null : (
               <p style={{
                 fontSize: '0.75rem',
                 color: 'var(--ink-disabled)',
@@ -436,25 +444,6 @@ export function SectionIntelligencePanel({
               }}>
                 Intelligence data will appear after the next pipeline run
               </p>
-            ) : (
-              <>
-                {narrative && <NarrativeSummary text={narrative} groupColor={groupColor} />}
-                {tags.length > 0 && <KeyThemes tags={tags} groupColor={groupColor} />}
-                {shifts.length > 0 && <NotableShifts shifts={shifts} />}
-                {crossRefs.count > 0 && (
-                  <CrossReferences count={crossRefs.count} groupNames={crossRefs.groupNames} />
-                )}
-                {hasContent ? null : (
-                  <p style={{
-                    fontSize: '0.75rem',
-                    color: 'var(--ink-disabled)',
-                    margin: 0,
-                    fontStyle: 'italic',
-                  }}>
-                    Intelligence data will appear after the next pipeline run
-                  </p>
-                )}
-              </>
             )}
           </div>
         </div>

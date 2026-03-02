@@ -1,5 +1,5 @@
-// ABOUTME: Horizontal row of 4 compact SVG-based chart cards showing section analytics.
-// ABOUTME: Renders sentiment ring, source distribution, activity timeline, and velocity indicators.
+// ABOUTME: Horizontal row of compact SVG-based chart cards showing section analytics.
+// ABOUTME: Conditionally renders only cards with underlying data; dynamic grid adapts to visible count.
 'use client'
 
 import { useMemo } from 'react'
@@ -442,12 +442,15 @@ function VelocityRow({ icon, iconColor, count, label, detail, detailColor }: {
 const STRIP_CSS = `
 .visual-data-strip {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(var(--strip-cols, 4), 1fr);
   gap: 0.75rem;
 }
 @media (max-width: 768px) {
   .visual-data-strip {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .visual-data-strip[data-cols="1"] {
+    grid-template-columns: 1fr !important;
   }
 }
 `
@@ -463,14 +466,26 @@ export interface VisualDataStripProps {
 }
 
 export function VisualDataStrip({ items, groupColor, sensorKeys }: VisualDataStripProps) {
+  const hasSentiment = items.some(i => !!i.sentiment)
+  const hasSources = items.length > 0
+  const hasActivity = items.some(i => !!i.published_at)
+  const hasVelocity = items.some(i => !!i.velocity)
+
+  const visibleCount = [hasSentiment, hasSources, hasActivity, hasVelocity].filter(Boolean).length
+  if (visibleCount === 0) return null
+
   return (
     <>
       <style>{STRIP_CSS}</style>
-      <div className="visual-data-strip">
-        <SentimentRing items={items} />
-        <SourceDistribution items={items} sensorKeys={sensorKeys} groupColor={groupColor} />
-        <ActivityTimeline items={items} groupColor={groupColor} />
-        <VelocityIndicators items={items} groupColor={groupColor} />
+      <div
+        className="visual-data-strip"
+        data-cols={visibleCount}
+        style={{ '--strip-cols': visibleCount } as React.CSSProperties}
+      >
+        {hasSentiment && <SentimentRing items={items} />}
+        {hasSources && <SourceDistribution items={items} sensorKeys={sensorKeys} groupColor={groupColor} />}
+        {hasActivity && <ActivityTimeline items={items} groupColor={groupColor} />}
+        {hasVelocity && <VelocityIndicators items={items} groupColor={groupColor} />}
       </div>
     </>
   )

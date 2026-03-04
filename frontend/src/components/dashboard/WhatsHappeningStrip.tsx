@@ -154,7 +154,7 @@ export default function WhatsHappeningStrip({ report, groups }: WhatsHappeningSt
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(2, 1fr)',
-          gap: '0.5rem',
+          gap: '0.625rem',
         }}
       >
         {topItems.map(({ item, source }) => {
@@ -203,7 +203,8 @@ function HappeningCard({ item, source, groupColor, t }: {
         color: 'inherit',
         background: 'var(--surface)',
         borderRadius: 'var(--radius-card)',
-        padding: '0.5rem 0.625rem',
+        padding: '0.625rem 0.75rem',
+        border: '1px solid var(--border)',
         transition: 'box-shadow 200ms, border-color 200ms',
         overflow: 'hidden',
         minWidth: 0,

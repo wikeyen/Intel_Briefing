@@ -1,3 +1,5 @@
+// ABOUTME: Badge UI primitive for status labels and tags with pill-shaped (rounded-full) styling.
+// Supports variant styles: default, secondary, destructive, outline, ghost, link.
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui"

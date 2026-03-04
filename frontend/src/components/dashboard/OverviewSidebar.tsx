@@ -26,11 +26,12 @@ const SECTION_HEADER: React.CSSProperties = {
 const CARD_STYLE: React.CSSProperties = {
   boxShadow: 'var(--shadow-card)',
   borderRadius: 'var(--radius-card)',
-  padding: '0.75rem',
+  padding: '1rem',
+  border: '1px solid var(--border)',
   background: 'var(--surface)',
   display: 'flex',
   flexDirection: 'column',
-  gap: '0.5rem',
+  gap: '0.625rem',
 }
 
 // ---------------------------------------------------------------------------
@@ -272,7 +273,7 @@ export interface OverviewSidebarProps {
 
 export function OverviewSidebar({ items, groups, groupItemMap }: OverviewSidebarProps) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       <SentimentSection items={items} />
       <SourcesByGroupSection groups={groups} groupItemMap={groupItemMap} />
     </div>

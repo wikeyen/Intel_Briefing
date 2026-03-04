@@ -101,8 +101,10 @@ export function GroupDetailPanel({ group, items, summary, intelligence, onClose 
         style={{
           position: 'fixed', top: 0, right: 0, bottom: 0,
           width: 560, maxWidth: '100vw',
-          background: 'var(--surface)',
-          borderLeft: '1px solid var(--border)',
+          background: 'var(--glass-bg)',
+          backdropFilter: 'blur(20px) saturate(1.8)',
+          WebkitBackdropFilter: 'blur(20px) saturate(1.8)',
+          border: '1px solid var(--glass-border)',
           boxShadow: 'var(--shadow-lg)',
           overflow: 'hidden',
           zIndex: 101,

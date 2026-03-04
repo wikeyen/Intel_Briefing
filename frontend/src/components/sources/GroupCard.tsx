@@ -158,7 +158,7 @@ export function GroupCard({
         </button>
         <span style={colorDotStyle(group.color)} />
         <span style={{
-          fontSize: '0.9375rem',
+          fontSize: '1rem',
           fontWeight: 600,
           color: 'var(--ink)',
           flex: 1,
@@ -253,9 +253,9 @@ export function GroupCard({
 
           {/* Sub-groups */}
           {group.children.length > 0 && renderSubGroup && (
-            <div style={{ paddingLeft: '1rem', background: 'var(--canvas)' }}>
+            <div style={{ paddingLeft: '1.25rem', background: 'var(--canvas)' }}>
               {group.children.map(child => (
-                <div key={child.id} style={{ paddingTop: '0.5rem', paddingBottom: '0.5rem' }}>
+                <div key={child.id} style={{ paddingTop: '0.625rem', paddingBottom: '0.625rem' }}>
                   {renderSubGroup(child)}
                 </div>
               ))}

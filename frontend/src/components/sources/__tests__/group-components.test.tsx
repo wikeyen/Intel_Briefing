@@ -683,8 +683,8 @@ describe('GroupCard card style', () => {
 describe('GROUP_CARD style', () => {
   it('uses flat Dashboard-matching card style', () => {
     // The sidebar defaults card spreads GROUP_CARD — verify the style
-    // matches Dashboard DashCard: solid background, subtle shadow, 8px radius.
-    expect(GROUP_CARD.borderRadius).toBe(8)
+    // matches Dashboard DashCard: solid background, subtle shadow, 16px radius.
+    expect(GROUP_CARD.borderRadius).toBe(16)
     expect(GROUP_CARD.background).toBe('var(--surface)')
     expect(GROUP_CARD.border).toBe('1px solid var(--border)')
     expect(GROUP_CARD.boxShadow).toBe('var(--shadow-card)')

@@ -138,7 +138,8 @@ export function GroupSnapshotCard({ group, items, narrative, tags, onClick }: Gr
       style={{
         background: 'var(--surface)',
         borderRadius: 'var(--radius-card)',
-        padding: '1rem',
+        padding: '1.25rem',
+        border: '1px solid var(--border)',
         boxShadow: 'var(--shadow-card)',
         cursor: 'pointer',
         userSelect: 'none',
@@ -157,7 +158,7 @@ export function GroupSnapshotCard({ group, items, narrative, tags, onClick }: Gr
       {/* Top row: group name + item count badge */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{
-          fontSize: '0.8125rem',
+          fontSize: '0.875rem',
           fontWeight: 700,
           color: 'var(--ink)',
           overflow: 'hidden',
@@ -173,7 +174,7 @@ export function GroupSnapshotCard({ group, items, narrative, tags, onClick }: Gr
           fontWeight: 600,
           background: `color-mix(in srgb, ${group.color} 16%, transparent)`,
           color: group.color,
-          borderRadius: 4,
+          borderRadius: 'var(--radius-card)',
           padding: '1px 6px',
           flexShrink: 0,
           marginLeft: '0.5rem',

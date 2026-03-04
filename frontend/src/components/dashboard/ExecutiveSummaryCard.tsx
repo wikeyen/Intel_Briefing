@@ -10,7 +10,7 @@ const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 
 const HEADER_STYLE: React.CSSProperties = {
   fontFamily: MONO,
-  fontSize: '0.5625rem',
+  fontSize: '0.6875rem',
   fontWeight: 700,
   letterSpacing: '0.08em',
   textTransform: 'uppercase' as const,
@@ -71,7 +71,7 @@ function QuickScanList({ entries }: { entries: Array<{ text: string; source: str
       }}>
         {entries.map((entry, i) => (
           <li key={i} style={{
-            fontSize: '0.75rem',
+            fontSize: '0.8125rem',
             lineHeight: 1.5,
             color: 'var(--ink-secondary)',
           }}>
@@ -99,11 +99,11 @@ function RiskFlagsList({ flags }: { flags: Array<{ topic: string; analysis: stri
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: 2 }}>
             <span style={{ fontSize: '0.6875rem', lineHeight: 1 }}>{'\u26A0'}</span>
-            <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--ink)' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--ink)' }}>
               {flag.topic}
             </span>
           </div>
-          <p style={{ fontSize: '0.625rem', color: 'var(--ink-secondary)', margin: 0, lineHeight: 1.5 }}>
+          <p style={{ fontSize: '0.6875rem', color: 'var(--ink-secondary)', margin: 0, lineHeight: 1.5 }}>
             {flag.analysis}
           </p>
         </div>
@@ -135,7 +135,8 @@ export function ExecutiveSummaryCard({ summary }: ExecutiveSummaryCardProps) {
     <div style={{
       boxShadow: 'var(--shadow-card)',
       borderRadius: 'var(--radius-card)',
-      padding: '1.25rem',
+      padding: '1.75rem',
+      border: '1px solid var(--border)',
       background: 'color-mix(in srgb, var(--accent) 6%, var(--surface))',
       marginBottom: '0.75rem',
     }}>

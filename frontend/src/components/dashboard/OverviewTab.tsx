@@ -25,8 +25,8 @@ export interface OverviewTabProps {
 const OVERVIEW_LAYOUT_CSS = `
 .overview-layout {
   display: grid;
-  grid-template-columns: 1fr 280px;
-  gap: 0.75rem;
+  grid-template-columns: 1fr 300px;
+  gap: 1rem;
   align-items: start;
 }
 @media (max-width: 768px) {

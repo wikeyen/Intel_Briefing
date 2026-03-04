@@ -155,9 +155,9 @@ function cardContainerStyle(state: CardState, hovered: boolean): React.CSSProper
   const base: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: '0.375rem',
+    gap: '0.5rem',
     minHeight: 100,
-    padding: '0.75rem 0.875rem',
+    padding: '1rem 1.125rem',
     background: 'var(--surface)',
     borderTopWidth: 1,
     borderRightWidth: 1,
@@ -168,7 +168,7 @@ function cardContainerStyle(state: CardState, hovered: boolean): React.CSSProper
     borderRightColor: 'var(--border)',
     borderBottomColor: 'var(--border)',
     borderLeftColor: 'var(--border)',
-    borderRadius: 8,
+    borderRadius: 16,
     boxShadow: 'var(--shadow-card)',
     transition: 'all 200ms ease',
     cursor: 'pointer',
@@ -246,7 +246,7 @@ const headerRowStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  gap: '0.375rem',
+  gap: '0.5rem',
 }
 
 const nameStyle: React.CSSProperties = {
@@ -671,7 +671,7 @@ export const SensorCard = memo(function SensorCard(props: SensorCardProps) {
     >
       {/* Row 1: name + category badge */}
       <div className="sensor-card-header" style={headerRowStyle}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
           <Dot state={state} />
           <span style={nameStyle}>{label}</span>
         </div>
@@ -697,8 +697,8 @@ function rowContainerStyle(state: CardState, hovered: boolean): React.CSSPropert
     display: 'grid',
     gridTemplateColumns: 'subgrid',
     alignItems: 'center',
-    margin: '0 -1rem',
-    padding: '0.8125rem 1rem',
+    margin: '0 -1.25rem',
+    padding: '1rem 1.25rem',
     background: 'var(--surface)',
     borderBottom: '1px solid color-mix(in srgb, var(--border) 40%, transparent)',
     transition: 'background 200ms ease',

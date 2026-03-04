@@ -4,7 +4,7 @@ import type React from 'react'
 
 /** Card container — flat solid style matching Dashboard DashCard. */
 export const GROUP_CARD: React.CSSProperties = {
-  borderRadius: 8,
+  borderRadius: 16,
   boxShadow: 'var(--shadow-card)',
   background: 'var(--surface)',
   border: '1px solid var(--border)',
@@ -17,8 +17,8 @@ export const GROUP_CARD: React.CSSProperties = {
 export const GROUP_HEADER: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: '0.5rem',
-  padding: '0.75rem 1rem 0.75rem 1.25rem',
+  gap: '0.625rem',
+  padding: '1rem 1.25rem 1rem 1.5rem',
 }
 
 /** Vertical sensor list inside a group card — no gap, borders handle separation. */

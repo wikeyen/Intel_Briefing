@@ -59,7 +59,7 @@ function NavLink({ href, active, onClick, collapsed, title, children }: {
         display: 'flex',
         alignItems: 'center',
         gap: '0.75rem',
-        padding: collapsed ? '0.5rem 0 0.5rem 1rem' : '0.5rem 1.75rem 0.5rem 1rem',
+        padding: collapsed ? '0.625rem 0 0.625rem 1rem' : '0.625rem 1.75rem 0.625rem 1rem',
         justifyContent: 'flex-start',
         minHeight: 44,
         width: '100%',
@@ -81,8 +81,8 @@ function NavLink({ href, active, onClick, collapsed, title, children }: {
 function SideLabel({ children, collapsed }: { children: ReactNode; collapsed?: boolean }) {
   return (
     <div className="sidebar-label" style={{
-      padding: '0 1.75rem 0.375rem',
-      fontSize: '0.5625rem',
+      padding: '0 1.75rem 0.5rem',
+      fontSize: '0.625rem',
       fontWeight: 700,
       letterSpacing: '0.12em',
       textTransform: 'uppercase',
@@ -104,7 +104,7 @@ function SideDivider({ collapsed }: { collapsed?: boolean }) {
       style={{
         height: 1,
         background: 'var(--sb-border)',
-        margin: collapsed ? '0.625rem 0.75rem 0.875rem' : '0.625rem 1.75rem 0.875rem',
+        margin: collapsed ? '0.75rem 0.75rem 1rem' : '0.75rem 1.75rem 1rem',
         transition: `margin ${SB_EASE}`,
       }}
     />
@@ -308,8 +308,8 @@ export function Sidebar({ onNavigate, collapsed, peeking, pinned, onPinToggle }:
     }}>
       {/* Brand — status row links to /status */}
       <div className="sidebar-brand" style={{
-        padding: collapsed ? '1rem 0.75rem 0.75rem' : '2rem 1.75rem 1.5rem',
-        height: 102,
+        padding: collapsed ? '1rem 0.75rem 0.75rem' : '2rem 1.75rem 1.75rem',
+        height: 110,
         display: 'flex',
         flexDirection: 'column',
         alignItems: collapsed ? 'center' : 'stretch',
@@ -417,7 +417,7 @@ export function Sidebar({ onNavigate, collapsed, peeking, pinned, onPinToggle }:
       <div className="sidebar-brand-divider" style={{ height: 1, background: 'var(--sb-border)', margin: collapsed ? '0 0.75rem' : '0 1.75rem', transition: `margin ${SB_EASE}` }} />
 
       {/* Nav */}
-      <div style={{ flex: 1, padding: '1rem 0' }}>
+      <div style={{ flex: 1, padding: '1.25rem 0' }}>
         <SideLabel collapsed={collapsed}>{t('nav.overview')}</SideLabel>
         <NavLink href="/dashboard" active={pathname === '/dashboard'} onClick={onNavigate} collapsed={collapsed} title={t('nav.dashboard')}>
           <LayoutDashboard size={22} strokeWidth={1.5} style={{ flexShrink: 0 }} />

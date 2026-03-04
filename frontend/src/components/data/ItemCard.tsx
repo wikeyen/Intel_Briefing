@@ -89,17 +89,19 @@ export function ItemCard({ item, index = 0, searchQuery, groupColor }: { item: I
         background: 'var(--surface)',
         border: '1px solid var(--border)',
         borderLeft: groupColor ? `3px solid ${groupColor}` : undefined,
-        borderRadius: 8,
-        padding: '1.25rem',
-        transition: 'box-shadow 150ms, border-color 150ms',
+        borderRadius: 'var(--radius-card)',
+        padding: '1.5rem',
+        transition: 'box-shadow 150ms, border-color 150ms, transform 150ms',
       }}
       onMouseEnter={e => {
         (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent-dim)'
         ;(e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-sm)'
+        ;(e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'
       }}
       onMouseLeave={e => {
         (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'
         ;(e.currentTarget as HTMLElement).style.boxShadow = 'none'
+        ;(e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
       }}
     >
       {/* Title */}
@@ -109,11 +111,11 @@ export function ItemCard({ item, index = 0, searchQuery, groupColor }: { item: I
         rel="noopener noreferrer"
         style={{
           display: 'block',
-          fontSize: '0.9375rem',
+          fontSize: '1rem',
           fontWeight: 500,
           color: 'var(--ink)',
           lineHeight: 1.5,
-          marginBottom: '0.5rem',
+          marginBottom: '0.625rem',
           textDecoration: 'none',
         }}
         onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'var(--accent)' }}
@@ -123,7 +125,7 @@ export function ItemCard({ item, index = 0, searchQuery, groupColor }: { item: I
       </a>
 
       {/* Meta row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
         <SourceChip source={item.source} label={item.source === 'rss_feeds' ? (item.account ?? undefined) : undefined} />
         {item.sentiment && (() => {
           const label = item.sentiment.label
@@ -340,11 +342,11 @@ export function ItemCard({ item, index = 0, searchQuery, groupColor }: { item: I
 
       {/* Abstract preview — arxiv items get a collapse/expand toggle */}
       {item.abstract && (
-        <div style={{ marginTop: '0.625rem' }}>
+        <div style={{ marginTop: '0.8125rem' }}>
           <p
             className={isArxiv && !abstractExpanded ? 'line-clamp-2' : undefined}
             style={{
-              fontSize: '0.8125rem',
+              fontSize: '0.875rem',
               color: 'var(--ink-muted)',
               lineHeight: 1.65,
               margin: 0,
@@ -376,11 +378,11 @@ export function ItemCard({ item, index = 0, searchQuery, groupColor }: { item: I
 
       {/* Content preview (HN comments, blog content) */}
       {item.content && !item.abstract && (
-        <div style={{ marginTop: '0.625rem' }}>
+        <div style={{ marginTop: '0.8125rem' }}>
           <p
             className={contentExpanded ? undefined : 'line-clamp-2'}
             style={{
-              fontSize: '0.8125rem',
+              fontSize: '0.875rem',
               color: 'var(--ink-muted)',
               lineHeight: 1.65,
               margin: 0,

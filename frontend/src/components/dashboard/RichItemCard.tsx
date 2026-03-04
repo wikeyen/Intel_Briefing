@@ -149,24 +149,29 @@ export default function RichItemCard({ item, groupColor, onClick }: RichItemCard
       style={{
         boxShadow: 'var(--shadow-card)',
         borderRadius: 'var(--radius-card)',
-        padding: '1rem',
+        padding: '1.25rem',
+        border: '1px solid var(--border)',
         background: 'var(--surface)',
         cursor: 'pointer',
-        transition: 'box-shadow 200ms',
+        transition: 'box-shadow 200ms ease, border-color 200ms ease, transform 200ms ease',
         display: 'flex',
         flexDirection: 'column',
         minWidth: 0,
       }}
       onMouseEnter={e => {
         (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-card-hover)'
+        ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'
+        ;(e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'
       }}
       onMouseLeave={e => {
         (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-card)'
+        ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'
+        ;(e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
       }}
     >
       {/* Title — max 2 lines */}
       <div style={{
-        fontSize: '0.875rem',
+        fontSize: '1rem',
         fontWeight: 600,
         color: 'var(--ink)',
         lineHeight: 1.4,
@@ -180,10 +185,10 @@ export default function RichItemCard({ item, groupColor, onClick }: RichItemCard
 
       {/* Excerpt — max 3 lines */}
       <div style={{
-        fontSize: '0.75rem',
+        fontSize: '0.8125rem',
         color: 'var(--ink-secondary)',
         lineHeight: 1.5,
-        marginTop: '0.375rem',
+        marginTop: '0.5rem',
         display: '-webkit-box',
         WebkitLineClamp: 3,
         WebkitBoxOrient: 'vertical' as never,
@@ -200,7 +205,7 @@ export default function RichItemCard({ item, groupColor, onClick }: RichItemCard
         display: 'flex',
         alignItems: 'center',
         gap: '0.5rem',
-        marginTop: '0.5rem',
+        marginTop: '0.625rem',
         flexWrap: 'wrap',
       }}>
         <span style={{

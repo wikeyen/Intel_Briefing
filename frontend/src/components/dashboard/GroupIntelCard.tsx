@@ -91,23 +91,26 @@ export function GroupIntelCard({ group, items, summary, onClick }: GroupIntelCar
       style={{
         background: 'var(--surface)',
         borderRadius: 'var(--radius-card)',
-        padding: '0.75rem 1rem',
+        padding: '1rem 1.25rem',
         boxShadow: 'var(--shadow-card)',
-        transition: 'box-shadow 200ms, border-color 200ms',
+        border: '1px solid var(--border)',
+        transition: 'box-shadow 200ms ease, border-color 200ms ease, transform 200ms ease',
         overflow: 'hidden',
         cursor: 'pointer',
         userSelect: 'none',
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.375rem',
+        gap: '0.5rem',
       }}
       onMouseEnter={e => {
         (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-card-hover)'
         ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'
+        ;(e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'
       }}
       onMouseLeave={e => {
         (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-card)'
         ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'
+        ;(e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
       }}
     >
       {/* Header row: color dot, group name, sensor count pill, sentiment mood */}

@@ -79,7 +79,7 @@ describe('SectionTabBar', () => {
   it('applies active styling to selected tab', () => {
     render(createElement(SectionTabBar, defaultProps({ activeGroupId: 'g1' })))
     const buttons = screen.getAllByRole('button')
-    expect(buttons[0].style.borderBottom).toContain('3px solid')
+    expect(buttons[0].style.borderBottom).toContain('2px solid')
     expect(buttons[0].style.borderBottom).not.toContain('transparent')
   })
 
@@ -112,7 +112,7 @@ describe('SectionTabBar', () => {
         activeGroupId: OVERVIEW_TAB_ID,
       })))
       const overviewBtn = screen.getByText('Overview').closest('button') as HTMLElement
-      expect(overviewBtn.style.borderBottom).toContain('3px solid')
+      expect(overviewBtn.style.borderBottom).toContain('2px solid')
       expect(overviewBtn.style.borderBottom).not.toContain('transparent')
     })
 

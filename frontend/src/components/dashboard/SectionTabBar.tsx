@@ -56,11 +56,11 @@ export function SectionTabBar({ groups, activeGroupId, onSelect, itemCounts, fet
             gap: '0.375rem',
             minHeight: 40,
             padding: '0.5rem 1rem',
-            borderRadius: 'var(--radius-badge) var(--radius-badge) 0 0',
+            borderRadius: '6px 6px 0 0',
             border: 'none',
-            borderBottom: overviewActive ? '3px solid var(--accent)' : '3px solid transparent',
+            borderBottom: overviewActive ? '2px solid var(--accent)' : '2px solid transparent',
             background: overviewActive
-              ? 'color-mix(in srgb, var(--accent) 8%, transparent)'
+              ? 'color-mix(in srgb, var(--accent) 6%, transparent)'
               : 'transparent',
             color: overviewActive ? 'var(--ink)' : 'var(--ink-secondary)',
             cursor: 'pointer',
@@ -117,11 +117,11 @@ export function SectionTabBar({ groups, activeGroupId, onSelect, itemCounts, fet
               gap: '0.375rem',
               minHeight: 40,
               padding: '0.5rem 1rem',
-              borderRadius: 'var(--radius-badge) var(--radius-badge) 0 0',
+              borderRadius: '6px 6px 0 0',
               border: 'none',
-              borderBottom: isActive ? `3px solid ${group.color}` : '3px solid transparent',
+              borderBottom: isActive ? `2px solid ${group.color}` : '2px solid transparent',
               background: isActive
-                ? `color-mix(in srgb, ${group.color} 8%, transparent)`
+                ? `color-mix(in srgb, ${group.color} 6%, transparent)`
                 : 'transparent',
               color: isActive ? 'var(--ink)' : 'var(--ink-secondary)',
               cursor: 'pointer',

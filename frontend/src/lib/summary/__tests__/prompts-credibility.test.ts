@@ -1,5 +1,5 @@
-// ABOUTME: Tests for source credibility framework additions to overall summary prompts.
-// ABOUTME: Validates both English and Chinese prompts contain credibility tiers and updated format instructions.
+// ABOUTME: Tests for source credibility framework and tone calibration in overall summary prompts.
+// ABOUTME: Validates both EN and CN prompts contain credibility tiers, tone rules, and format instructions.
 import { describe, it, expect } from 'vitest'
 import { DEFAULT_OVERALL_PROMPT, DEFAULT_OVERALL_PROMPT_EN } from '../prompts'
 
@@ -46,6 +46,36 @@ describe('Source Credibility Framework — English prompt', () => {
   })
 })
 
+describe('Tone Calibration — English prompt', () => {
+  it('contains the Tone & Language section', () => {
+    expect(DEFAULT_OVERALL_PROMPT_EN).toContain('Tone & Language')
+  })
+
+  it('requires neutral objective perspective', () => {
+    expect(DEFAULT_OVERALL_PROMPT_EN).toContain('neutral, objective, measured')
+  })
+
+  it('bans sensationalist language with examples', () => {
+    expect(DEFAULT_OVERALL_PROMPT_EN).toContain('skyrocketing')
+    expect(DEFAULT_OVERALL_PROMPT_EN).toContain('plummeting')
+    expect(DEFAULT_OVERALL_PROMPT_EN).toContain('tipping point')
+  })
+
+  it('instructs downgrading social media emotional rhetoric', () => {
+    expect(DEFAULT_OVERALL_PROMPT_EN).toContain('Emotional rhetoric and hyperbole on social platforms is the norm')
+    expect(DEFAULT_OVERALL_PROMPT_EN).toContain('downgrade')
+  })
+
+  it('requires qualifiers for unverified claims', () => {
+    expect(DEFAULT_OVERALL_PROMPT_EN).toContain('reportedly')
+    expect(DEFAULT_OVERALL_PROMPT_EN).toContain('pending verification')
+  })
+
+  it('requires proportional weighting of contextual sources', () => {
+    expect(DEFAULT_OVERALL_PROMPT_EN).toContain('significantly less weight than FACTUAL')
+  })
+})
+
 describe('Source Credibility Framework — Chinese prompt', () => {
   it('contains the credibility framework section in Chinese', () => {
     expect(DEFAULT_OVERALL_PROMPT).toContain('信源可信度框架')
@@ -86,5 +116,35 @@ describe('Source Credibility Framework — Chinese prompt', () => {
     expect(DEFAULT_OVERALL_PROMPT).toContain('overall_mood')
     expect(DEFAULT_OVERALL_PROMPT).toContain('controversies')
     expect(DEFAULT_OVERALL_PROMPT).toContain('risk_flags')
+  })
+})
+
+describe('Tone Calibration — Chinese prompt', () => {
+  it('contains the tone section in Chinese', () => {
+    expect(DEFAULT_OVERALL_PROMPT).toContain('语气与措辞')
+  })
+
+  it('requires neutral objective perspective in Chinese', () => {
+    expect(DEFAULT_OVERALL_PROMPT).toContain('中立、客观、冷静')
+  })
+
+  it('bans sensationalist language with Chinese examples', () => {
+    expect(DEFAULT_OVERALL_PROMPT).toContain('飙升')
+    expect(DEFAULT_OVERALL_PROMPT).toContain('临界点')
+    expect(DEFAULT_OVERALL_PROMPT).toContain('情绪化词汇')
+  })
+
+  it('instructs downgrading social media emotional rhetoric in Chinese', () => {
+    expect(DEFAULT_OVERALL_PROMPT).toContain('社交平台上的情绪化言论和夸张表达是该平台的常态')
+    expect(DEFAULT_OVERALL_PROMPT).toContain('降级处理')
+  })
+
+  it('requires qualifiers for unverified claims in Chinese', () => {
+    expect(DEFAULT_OVERALL_PROMPT).toContain('据报道')
+    expect(DEFAULT_OVERALL_PROMPT).toContain('尚待确认')
+  })
+
+  it('requires proportional weighting of contextual sources in Chinese', () => {
+    expect(DEFAULT_OVERALL_PROMPT).toContain('权重应显著低于')
   })
 })

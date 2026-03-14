@@ -160,7 +160,7 @@ export async function runPipeline(
   const { signal } = abortController
 
   const shouldFetch = mode === 'fetch' || mode === 'fetch_summarize' || mode === 'fetch_intelligence'
-  const shouldSummarize = mode === 'summarize' || mode === 'fetch_summarize'
+  const shouldSummarize = mode === 'summarize' || mode === 'fetch_summarize' || mode === 'fetch_intelligence'
   const defaultConcurrency = config.default_concurrency ?? 4
   const localSummaryConcurrency = config.local_summary_concurrency ?? 1
   const isLocalModel = config.summary_provider === 'local'

@@ -29,8 +29,8 @@ export async function handleSetup(ctx: PipelineContext): Promise<PipelineState> 
   const defaultConcurrency = config.default_concurrency ?? 4
   const localSummaryConcurrency = config.local_summary_concurrency ?? 1
 
-  const shouldFetch = mode === 'fetch' || mode === 'fetch_summarize' || mode === 'fetch_intelligence'
-  const shouldSkipBriefingAndIntel = mode === 'fetch_intelligence'
+  const shouldFetch = mode === 'fetch' || mode === 'fetch_summarize' || mode === 'fetch_summary'
+  const shouldSkipBriefingAndIntel = mode === 'fetch_summary'
   const shouldSummarize = mode === 'summarize' || mode === 'fetch_summarize'
   const shouldIntel = mode === 'intelligence'
 

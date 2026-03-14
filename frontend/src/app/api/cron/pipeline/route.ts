@@ -23,7 +23,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const modeParam = request.nextUrl.searchParams.get('mode')
     const mode = modeParam === 'fetch' ? 'fetch'
-      : modeParam === 'fetch_intelligence' ? 'fetch_intelligence'
+      : modeParam === 'fetch_summary' ? 'fetch_summary'
       : modeParam === 'summarize' ? 'summarize'
       : config.summary_provider ? 'fetch_summarize' : 'fetch'
     const result = await runPipeline(config, mode)

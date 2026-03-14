@@ -101,7 +101,7 @@ export function normalizeRssFeeds(raw: (string | RssFeedEntry)[]): RssFeedEntry[
 
 export type SummaryLanguage = 'en' | 'zh'
 
-export type RunMode = 'fetch' | 'summarize' | 'fetch_summarize' | 'intelligence' | 'fetch_intelligence'
+export type RunMode = 'fetch' | 'summarize' | 'fetch_summarize' | 'intelligence' | 'fetch_summary'
 export type StageState = 'queued' | 'running' | 'ok' | 'failed' | 'skipped' | 'cancelled'
 
 export type PipelineEventLevel = 'info' | 'ok' | 'warn' | 'error'

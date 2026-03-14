@@ -223,6 +223,7 @@ export async function handleFetching(ctx: PipelineContext): Promise<PipelineStat
   }
 
   // Decide next state — retries are done inline, go straight to summarizing
+  if (!shouldSummarize && ctx.mode === 'fetch_intelligence') return 'intelligence'
   if (!shouldSummarize) return 'complete'
   return 'summarizing'
 }

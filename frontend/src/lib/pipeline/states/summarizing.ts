@@ -156,8 +156,8 @@ export async function handleSummarizing(ctx: PipelineContext): Promise<PipelineS
   // Summarize-only: skipCache=false to reuse cached per-sensor summaries.
   const skipCacheForSummary = shouldFetch && !ctx.isIncrementalRun
 
-  // fetch_summary mode: skip overall briefing (and intelligence stage)
-  const skipBriefingAndIntel = ctx.mode === 'fetch_summary'
+  // fetch_no_brief mode: skip overall briefing (and intelligence stage)
+  const skipBriefingAndIntel = ctx.mode === 'fetch_no_brief'
 
   ctx.summary = await summarizeReport(sourceReport, {
     ...baseSummarizeOpts,
@@ -167,7 +167,7 @@ export async function handleSummarizing(ctx: PipelineContext): Promise<PipelineS
 
   if (signal.aborted) return 'cancelled'
 
-  // fetch_summary: per-sensor summaries done, skip briefing + intelligence
+  // fetch_no_brief: per-sensor summaries done, skip briefing + intelligence
   if (skipBriefingAndIntel) return 'complete'
 
   // Check for per-sensor summary failures

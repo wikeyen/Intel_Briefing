@@ -5,12 +5,13 @@ import { readPipelineStatus } from '@/lib/pipeline/cache'
 import { isPipelineRunning } from '@/lib/pipeline/orchestrator'
 import type { PipelineStatus } from '@/lib/models'
 
-export async function GET(): Promise<NextResponse<PipelineStatus & { alive: boolean }>> {
+export async function GET(): Promise<NextResponse<(PipelineStatus & { alive: boolean }) | Record<string, unknown>>> {
   const status = await readPipelineStatus()
   if (!status) {
     return NextResponse.json({
       running: false,
       mode: 'fetch_summarize',
+      run_id: '',
       default_concurrency: 4,
       local_summary_concurrency: 1,
       started_at: null,

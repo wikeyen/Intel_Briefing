@@ -2,7 +2,7 @@
 // ABOUTME: Returns the live status of the current or most recent summarization run from SQLite.
 import { NextResponse } from 'next/server'
 import { readSummaryProgress } from '@/lib/summary/cache'
-import { isSummaryRunning } from '../trigger/route'
+import { isSummaryRunning } from '@/lib/summary-helpers'
 import { isPipelineRunning } from '@/lib/pipeline/orchestrator'
 import type { SummaryProgress } from '@/lib/models'
 

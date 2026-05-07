@@ -6,19 +6,20 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "8000:3000"
+      - "8080:3000"
     environment:
+      - HOSTNAME=0.0.0.0
       - API_KEY=${API_KEY:-}
       - CRON_SECRET=${CRON_SECRET:-}
       - DATABASE_URL=${DATABASE_URL:-file:/data/intel.db}
     volumes:
-      - sqlite_data:/data
+      - ./data:/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
-      interval: 30s
+      test: ["CMD", "node", "-e", "const h=require('http');h.get('http://127.0.0.1:3000/api/health',r=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))"]
+      interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
       start_period: 10s
 
   cron:
@@ -28,12 +29,13 @@ services:
     environment:
       - FRONTEND_URL=http://frontend:3000
       - CRON_SECRET=${CRON_SECRET:-}
-      - FETCH_TIME=${FETCH_TIME:-07:51}
-      - FETCH_TIMEZONE=${FETCH_TIMEZONE:-Asia/Shanghai}
+      - FETCH_TIMES=${FETCH_TIMES:-06:30,18:30}
+      - FETCH_MODE=${FETCH_MODE:-fetch}
+      - FETCH_TIMEZONE=${FETCH_TIMEZONE:-Asia/Bangkok}
     restart: unless-stopped
     depends_on:
       frontend:
         condition: service_healthy
 
-volumes:
-  sqlite_data:
+# volumes:
+#   sqlite_data:

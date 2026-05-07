@@ -16,6 +16,10 @@ ENV NODE_ENV=production
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/node_modules/.package-lock.json ./node_modules/.package-lock.json
+# Copy native libsql bindings that standalone misses
+COPY --from=builder /app/node_modules/@libsql ./node_modules/@libsql
+COPY --from=builder /app/node_modules/libsql ./node_modules/libsql
 RUN mkdir -p /data
 EXPOSE 3000
 CMD ["node", "server.js"]

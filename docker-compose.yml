@@ -1,27 +1,27 @@
-# ABOUTME: Docker Compose for Intel Briefing — Next.js frontend + cron sidecar.
-# ABOUTME: SQLite data stored in a named volume; no external database services needed.
 services:
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_BASE_PATH: /intel-briefing
     ports:
       - "8080:3000"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.ibsimple.rule=PathPrefix(`/intel-briefing`)
+      - traefik.http.routers.ibsimple.entrypoints=web
+      - traefik.http.routers.ibsimple.priority=300
+      - traefik.http.services.ibsimple.loadbalancer.server.port=3000
     environment:
       - HOSTNAME=0.0.0.0
+      - NEXT_PUBLIC_BASE_PATH=/intel-briefing
       - API_KEY=${API_KEY:-}
       - CRON_SECRET=${CRON_SECRET:-}
       - DATABASE_URL=${DATABASE_URL:-file:/data/intel.db}
     volumes:
       - ./data:/data
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "node", "-e", "const h=require('http');h.get('http://127.0.0.1:3000/api/health',r=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
   cron:
     build:
       context: ./cron
@@ -33,9 +33,3 @@ services:
       - FETCH_MODE=${FETCH_MODE:-fetch}
       - FETCH_TIMEZONE=${FETCH_TIMEZONE:-Asia/Bangkok}
     restart: unless-stopped
-    depends_on:
-      frontend:
-        condition: service_healthy
-
-# volumes:
-#   sqlite_data:

@@ -34,6 +34,7 @@ const CONFIG_ICON_MAP: Record<string, React.ComponentType<{ size?: number; strok
 }
 
 /** Nav item config keys for i18n. */
+// Hrefs are app-relative — Next.js Link/router/redirect auto-prepend the basePath from next.config.ts.
 const CONFIG_NAV: { href: string; labelKey: string }[] = [
   { href: '/sources',     labelKey: 'nav.sources' },
   { href: '/pipeline',    labelKey: 'nav.pipeline' },

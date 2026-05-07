@@ -2,6 +2,8 @@
 # ABOUTME: Produces a standalone Node.js server with SQLite (libsql) support on port 3000.
 
 FROM node:22-alpine AS builder
+ARG NEXT_PUBLIC_BASE_PATH=""
+ENV NEXT_PUBLIC_BASE_PATH=${NEXT_PUBLIC_BASE_PATH}
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package.json package-lock.json ./

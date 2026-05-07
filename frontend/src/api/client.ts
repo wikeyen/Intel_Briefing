@@ -333,7 +333,8 @@ export interface IntelligenceReport {
   accounts: AccountsIntelligence | null
 }
 
-const BASE = '/api'
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
+const BASE = `${basePath}/api`
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(BASE + path, {

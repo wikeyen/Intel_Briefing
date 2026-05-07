@@ -9,6 +9,7 @@ import zh from './locales/zh'
 
 /** Registry of all loaded locale dictionaries. */
 const DICTIONARIES: Record<Locale, TranslationDict> = { en, zh }
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 
 export interface I18nContextValue {
   /** Current active locale. */
@@ -45,7 +46,7 @@ export function I18nProvider({ children, initialLocale }: { children: ReactNode;
   // On mount, fetch the configured language from the API
   useEffect(() => {
     if (initialLocale) return
-    fetch('/api/config')
+    fetch(`${basePath}/api/config`)
       .then(r => r.ok ? r.json() : null)
       .then(config => {
         if (config?.summary_language) {
@@ -63,7 +64,7 @@ export function I18nProvider({ children, initialLocale }: { children: ReactNode;
     // Persist to cookie for instant SSR on next page load
     document.cookie = `intel-locale=${next};path=/;max-age=31536000;samesite=lax`
     // Persist to config API — fire and forget
-    fetch('/api/config', {
+    fetch(`${basePath}/api/config`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ summary_language: next }),

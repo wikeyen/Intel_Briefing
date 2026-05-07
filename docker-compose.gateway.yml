@@ -1,0 +1,28 @@
+# ABOUTME: Path-based tailnet gateway for Docker web apps.
+# ABOUTME: Uses the host Tailscale node and one Traefik router for /app-name paths.
+
+services:
+  router-main:
+    image: traefik:v3.6
+    command:
+      - --api.dashboard=false
+      - --entrypoints.web.address=:18080
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --experimental.plugins.rewriteHeaders.moduleName=github.com/XciD/traefik-plugin-rewrite-headers
+      - --experimental.plugins.rewriteHeaders.version=v0.0.4
+      - --log.level=${GATEWAY_LOG_LEVEL:-INFO}
+    ports:
+      - 127.0.0.1:18080:18080
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - intel_briefing_default
+      - lantern_default
+    restart: unless-stopped
+
+networks:
+  intel_briefing_default:
+    external: true
+  lantern_default:
+    external: true

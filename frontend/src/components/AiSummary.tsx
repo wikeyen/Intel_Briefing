@@ -32,15 +32,74 @@ const PROMPT_SENSORS: Array<{ key: string; label: string }> = [
   { key: 'rss_feeds', label: 'RSS Feeds' },
 ]
 
+/* ─── MiniMax Model Picker ──────────────────────────────────────────── */
+
+const MINIMAX_MODELS = [
+  'MiniMax-M2.7',
+  'MiniMax-Text-01',
+  'abab6.5s-chat',
+  'abab6.5g-chat',
+]
+
+function MiniMaxModelPicker({
+  value,
+  onChange,
+  allowEmpty = false,
+}: {
+  value: string
+  onChange: (v: string) => void
+  allowEmpty?: boolean
+}) {
+  const isKnown = MINIMAX_MODELS.includes(value)
+  return (
+    <div style={{ position: 'relative' }}>
+      <select
+        value={isKnown ? value : (value === '' ? '' : '__other__')}
+        onChange={(e) => {
+          if (e.target.value !== '__other__') onChange(e.target.value)
+        }}
+        style={{
+          ...inputBase,
+          width: '100%',
+          appearance: 'none',
+          WebkitAppearance: 'none',
+          paddingRight: '2.25rem',
+          cursor: 'pointer',
+        }}
+        onFocus={focus}
+        onBlur={blur}
+      >
+        {allowEmpty && <option value="">— none —</option>}
+        {MINIMAX_MODELS.map((m) => (
+          <option key={m} value={m}>{m}</option>
+        ))}
+        {!isKnown && value && (
+          <option value="__other__">{value}</option>
+        )}
+      </select>
+      <span style={{
+        position: 'absolute',
+        right: '0.75rem',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        pointerEvents: 'none',
+        color: 'var(--ink-faint)',
+      }}>
+        <ChevronDown size={18} />
+      </span>
+    </div>
+  )
+}
+
 /* ─── Main Component ────────────────────────────────────────────────── */
 
 export function AiSummary() {
   const { locale, t } = useTranslation()
   const showToast = useToast()
 
-  const [summaryProvider, setSummaryProvider] = useState<'openrouter' | 'local' | null>(null)
+  const [summaryProvider, setSummaryProvider] = useState<'openrouter' | 'minimax' | 'local' | null>(null)
   const [summaryBaseUrl, setSummaryBaseUrl] = useState('https://openrouter.ai/api/v1')
-  const [summaryModel, setSummaryModel] = useState('anthropic/claude-sonnet-4')
+  const [summaryModel, setSummaryModel] = useState('deepseek/deepseek-v3.2')
   const [attributionModel, setAttributionModel] = useState('')
   const [testingLlm, setTestingLlm] = useState(false)
   const [testBtnHover, setTestBtnHover] = useState(false)
@@ -52,6 +111,9 @@ export function AiSummary() {
   const [loaded, setLoaded] = useState(false)
 
   const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
+  const OPENROUTER_DEFAULT_MODEL = 'deepseek/deepseek-v3.2'
+  const MINIMAX_BASE_URL = 'https://api.minimax.io/v1'
+  const MINIMAX_DEFAULT_MODEL = 'MiniMax-M2.7'
   const OLLAMA_BASE_URL = 'http://localhost:11434/v1'
 
   const { status: saveStatus, trigger, save } = useAutoSave(
@@ -72,7 +134,7 @@ export function AiSummary() {
     api.getConfig().then((cfg) => {
       setSummaryProvider(cfg.summary_provider ?? null)
       setSummaryBaseUrl(cfg.summary_base_url || OPENROUTER_BASE_URL)
-      setSummaryModel(cfg.summary_model || 'anthropic/claude-sonnet-4')
+      setSummaryModel(cfg.summary_model || OPENROUTER_DEFAULT_MODEL)
       setAttributionModel(cfg.summary_attribution_model || '')
       setSensorPrompts(cfg.summary_sensor_prompts ?? {})
       setOverallPrompt(cfg.summary_overall_prompt ?? '')
@@ -82,12 +144,16 @@ export function AiSummary() {
   }, [])
 
   const handleProviderChange = (v: string) => {
-    const provider = v === '' ? null : v as 'openrouter' | 'local'
+    const provider = v === '' ? null : v as 'openrouter' | 'minimax' | 'local'
     setSummaryProvider(provider)
     if (provider === 'openrouter') {
       setSummaryBaseUrl(OPENROUTER_BASE_URL)
-      setSummaryModel('anthropic/claude-sonnet-4')
+      setSummaryModel(OPENROUTER_DEFAULT_MODEL)
       setAttributionModel('')
+    } else if (provider === 'minimax') {
+      setSummaryBaseUrl(MINIMAX_BASE_URL)
+      setSummaryModel(MINIMAX_DEFAULT_MODEL)
+      setAttributionModel(MINIMAX_DEFAULT_MODEL)
     } else if (provider === 'local') {
       setSummaryBaseUrl(OLLAMA_BASE_URL)
       setSummaryModel('')
@@ -127,6 +193,8 @@ export function AiSummary() {
   }
 
   const isOllama = summaryProvider === 'local'
+  const isMinimax = summaryProvider === 'minimax'
+  const isOpenRouter = summaryProvider === 'openrouter'
   const isEnabled = summaryProvider !== null
 
   if (!loaded) {
@@ -210,6 +278,7 @@ export function AiSummary() {
                   >
                     <option value="">{t('ai.disabled')}</option>
                     <option value="openrouter">{t('ai.openrouter')}</option>
+                    <option value="minimax">MiniMax</option>
                     <option value="local">{t('ai.local')}</option>
                   </select>
                   <span style={{
@@ -232,8 +301,13 @@ export function AiSummary() {
                     onChange={(v) => { setSummaryModel(v); trigger() }}
                     baseUrl={summaryBaseUrl}
                   />
-                ) : isEnabled ? (
+                ) : isOpenRouter ? (
                   <OpenRouterModelPicker
+                    value={summaryModel}
+                    onChange={(v) => { setSummaryModel(v); trigger() }}
+                  />
+                ) : isMinimax ? (
+                  <MiniMaxModelPicker
                     value={summaryModel}
                     onChange={(v) => { setSummaryModel(v); trigger() }}
                   />
@@ -242,7 +316,7 @@ export function AiSummary() {
                     type="text"
                     value={summaryModel}
                     disabled
-                    placeholder="anthropic/claude-sonnet-4"
+                    placeholder={OPENROUTER_DEFAULT_MODEL}
                     style={{
                       ...inputBase,
                       width: '100%',
@@ -265,6 +339,12 @@ export function AiSummary() {
                     value={attributionModel}
                     onChange={(v) => { setAttributionModel(v); trigger() }}
                     baseUrl={summaryBaseUrl}
+                  />
+                ) : isMinimax ? (
+                  <MiniMaxModelPicker
+                    value={attributionModel}
+                    onChange={(v) => { setAttributionModel(v); trigger() }}
+                    allowEmpty
                   />
                 ) : (
                   <OpenRouterModelPicker
@@ -292,7 +372,7 @@ export function AiSummary() {
                   onBlur={blur}
                 />
                 <HelpText>
-                  {isOllama ? t('ai.base_url_ollama') : t('ai.base_url_openrouter')}
+                  {isOllama ? t('ai.base_url_ollama') : isMinimax ? 'MiniMax chat-completions-compatible endpoint.' : t('ai.base_url_openrouter')}
                 </HelpText>
               </div>
             )}
@@ -314,6 +394,30 @@ export function AiSummary() {
                 <HelpText>
                   {t('ai.concurrency_desc')}
                 </HelpText>
+              </div>
+            )}
+
+            {/* Active runtime readout */}
+            {isEnabled && (
+              <div style={{
+                fontSize: '0.75rem',
+                color: 'var(--ink-faint)',
+                padding: '0.375rem 0.75rem',
+                background: 'var(--bg, #f8f8f8)',
+                border: '1px solid var(--border-soft)',
+                borderRadius: 6,
+                fontFamily: 'ui-monospace, monospace',
+                lineHeight: 1.6,
+              }}>
+                <span style={{ color: 'var(--ink-muted)', fontFamily: 'inherit' }}>Using: </span>
+                {summaryModel || '—'} via {summaryBaseUrl}
+                {attributionModel && (
+                  <span>
+                    {' · '}
+                    <span style={{ color: 'var(--ink-muted)', fontFamily: 'inherit' }}>Attribution: </span>
+                    {attributionModel}
+                  </span>
+                )}
               </div>
             )}
 

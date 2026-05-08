@@ -23,7 +23,7 @@ const KEY_GROUPS: FieldGroup[] = [
   {
     title: 'creds.ai_providers',
     secrets: [
-      { field: 'summary_api_key',       label: 'creds.openrouter_key',       hint: 'creds.openrouter_hint' },
+      { field: 'summary_api_key',       label: 'creds.summary_key',          hint: 'creds.summary_hint' },
     ],
   },
   {

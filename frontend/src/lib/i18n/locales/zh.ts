@@ -487,6 +487,8 @@ const zh: TranslationDict = {
   // ── Credential labels & hints ──────────────────────────────────────────────
   'creds.openrouter_key': 'OpenRouter API 密钥',
   'creds.openrouter_hint': '通过 OpenRouter 进行 LLM 摘要的 API 密钥。在 openrouter.ai/keys 获取。',
+  'creds.summary_key': 'AI 摘要 API 密钥',
+  'creds.summary_hint': '用于通过 OpenRouter 或 MiniMax 生成 LLM 摘要的 API 密钥。',
   'creds.github_token': 'GitHub 令牌',
   'creds.github_hint': 'GitHub Trending 传感器的个人访问令牌。',
   'creds.producthunt_token': 'Product Hunt 令牌',

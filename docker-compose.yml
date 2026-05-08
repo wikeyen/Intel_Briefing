@@ -21,6 +21,10 @@ services:
       - DATABASE_URL=${DATABASE_URL:-file:/data/intel.db}
     volumes:
       - ./data:/data
+    networks:
+      default:
+        aliases:
+          - ibsimple
     restart: unless-stopped
   cron:
     build:

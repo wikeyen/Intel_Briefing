@@ -375,7 +375,7 @@ export interface ConfigSettings {
   post_expiry_days: number
 
   // AI summary — LLM provider config
-  summary_provider: 'openrouter' | 'local' | null
+  summary_provider: 'openrouter' | 'minimax' | 'local' | null
   summary_api_key: string | null
   summary_base_url: string
   summary_model: string

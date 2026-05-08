@@ -487,6 +487,8 @@ const en: TranslationDict = {
   // ── Credential labels & hints ──────────────────────────────────────────────
   'creds.openrouter_key': 'OpenRouter API Key',
   'creds.openrouter_hint': 'API key for LLM summarization via OpenRouter. Get one at openrouter.ai/keys.',
+  'creds.summary_key': 'AI Summary API Key',
+  'creds.summary_hint': 'API key for LLM summarization via OpenRouter or MiniMax.',
   'creds.github_token': 'GitHub Token',
   'creds.github_hint': 'Personal access token for GitHub Trending sensor.',
   'creds.producthunt_token': 'Product Hunt Token',

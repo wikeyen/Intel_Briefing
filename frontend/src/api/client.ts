@@ -23,8 +23,10 @@ export interface ConfigSettings {
   fetch_time: string
   fetch_timezone: string
   default_limit: number
+  default_lookback_hours: number
   sensor_limits: Record<string, number>
   sensor_lookback_hours: Record<string, number>
+  default_topic_limit: number
   boost_keywords: string[]
   suppress_keywords: string[]
   bluesky_handle: string | null
@@ -39,6 +41,8 @@ export interface ConfigSettings {
   social_accounts_mastodon: string[]
   social_accounts_disabled: string[]
   social_topics_keywords: string[]
+  topic_limits: Record<string, number>
+  topic_lookback_hours: Record<string, number>
   social_following_bluesky: boolean
   social_following_mastodon: boolean
   bluesky_topics_enabled: boolean
@@ -47,10 +51,11 @@ export interface ConfigSettings {
   mastodon_trends_enabled: boolean
   rss_feed_urls: (string | RssFeedEntry)[]
   cache_ttl_hours: number
+  resume_window_hours: number
   default_concurrency: number
   local_summary_concurrency: number
   post_expiry_days: number
-  summary_provider: 'openrouter' | 'local' | null
+  summary_provider: 'openrouter' | 'minimax' | 'local' | null
   summary_api_key: string | null
   summary_base_url: string
   summary_model: string
@@ -91,7 +96,7 @@ export interface IntelItem {
 }
 
 
-export type RunMode = 'fetch' | 'summarize' | 'fetch_summarize'
+export type RunMode = 'fetch' | 'summarize' | 'fetch_summarize' | 'intelligence' | 'fetch_no_brief'
 export type StageState = 'queued' | 'running' | 'ok' | 'failed' | 'skipped' | 'cancelled'
 
 export interface SubItemProgress {
@@ -145,6 +150,7 @@ export interface PipelineStatus {
   retry_attempt: number
   retry_max: number
   mode: RunMode
+  run_id?: string | null
   default_concurrency: number
   local_summary_concurrency: number
   started_at: string | null

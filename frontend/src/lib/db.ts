@@ -11,16 +11,6 @@ const globalForDb = globalThis as unknown as { __dbClient?: Client }
 const CONFIG_KEY = 'intel:config'
 const LEGACY_DB_NAME = 'intel.db'
 const CURRENT_DB_NAME = 'info-aggregation.db'
-const SECRET_CONFIG_FIELDS = [
-  'github_token',
-  'producthunt_token',
-  'bluesky_app_password',
-  'mastodon_token',
-  'summary_api_key',
-  'twitter_auth_token',
-  'twitter_ct0',
-  'apify_token',
-] as const
 
 function filePathFromDbUrl(dbUrl: string): string | null {
   if (!dbUrl.startsWith('file:') || dbUrl === ':memory:') return null
@@ -49,44 +39,127 @@ async function migrateLegacyDatabaseFile(dbUrl: string): Promise<void> {
   await copyFile(legacyPath, targetPath)
 }
 
-async function migrateLegacyConfigSecrets(dbUrl: string): Promise<void> {
+async function migrateLegacyDatabaseState(dbUrl: string): Promise<void> {
   const targetPath = filePathFromDbUrl(dbUrl)
   if (!targetPath || path.basename(targetPath) !== CURRENT_DB_NAME) return
 
   const legacyPath = path.join(path.dirname(targetPath), LEGACY_DB_NAME)
   if (!await fileExists(legacyPath)) return
 
+  const current = globalForDb.__dbClient!
   const legacy = createClient({ url: `file:${legacyPath}` })
   try {
-    const [currentRows, legacyRows] = await Promise.all([
-      globalForDb.__dbClient!.execute({ sql: 'SELECT value FROM kv WHERE key = ?', args: [CONFIG_KEY] }),
-      legacy.execute({ sql: 'SELECT value FROM kv WHERE key = ?', args: [CONFIG_KEY] }),
-    ])
-    if (legacyRows.rows.length === 0) return
-
-    const currentConfig = currentRows.rows.length > 0
-      ? JSON.parse(currentRows.rows[0].value as string) as Record<string, unknown>
-      : {}
-    const legacyConfig = JSON.parse(legacyRows.rows[0].value as string) as Record<string, unknown>
-    let changed = false
-
-    for (const field of SECRET_CONFIG_FIELDS) {
-      if ((currentConfig[field] == null || currentConfig[field] === '') && legacyConfig[field]) {
-        currentConfig[field] = legacyConfig[field]
-        changed = true
-      }
-    }
-
-    if (changed) {
-      await globalForDb.__dbClient!.execute({
-        sql: 'INSERT OR REPLACE INTO kv (key, value, expires_at) VALUES (?, ?, NULL)',
-        args: [CONFIG_KEY, JSON.stringify(currentConfig)],
-      })
-    }
+    await mergeLegacyConfig(current, legacy)
+    await mergeMissingKvRows(current, legacy)
+    await mergeMissingRows(
+      current,
+      legacy,
+      'pipeline_items',
+      ['sensor_name', 'run_id'],
+      ['sensor_name', 'run_id', 'items_json', 'fetched_at'],
+    )
+    await mergeMissingRows(
+      current,
+      legacy,
+      'source_groups',
+      ['id'],
+      [
+        'id',
+        'parent_id',
+        'name',
+        'color',
+        'icon',
+        'sort_order',
+        'trend_enabled',
+        'topic_enabled',
+        'social_enabled',
+        'sentiment_enabled',
+        'summary_prompt',
+        'trend_prompt',
+        'topic_prompt',
+        'social_prompt',
+        'suppress_keywords',
+        'boost_keywords',
+        'created_at',
+        'updated_at',
+      ],
+    )
+    await mergeMissingRows(
+      current,
+      legacy,
+      'source_group_members',
+      ['group_id', 'sensor_key'],
+      ['group_id', 'sensor_key', 'sort_order', 'added_at'],
+    )
   } catch {
     // Best-effort migration only; normal DB initialisation should continue.
   } finally {
     legacy.close()
+  }
+}
+
+async function mergeLegacyConfig(current: Client, legacy: Client): Promise<void> {
+  const [currentRows, legacyRows] = await Promise.all([
+    current.execute({ sql: 'SELECT value FROM kv WHERE key = ?', args: [CONFIG_KEY] }),
+    legacy.execute({ sql: 'SELECT value FROM kv WHERE key = ?', args: [CONFIG_KEY] }),
+  ])
+  if (legacyRows.rows.length === 0) return
+
+  const currentConfig = currentRows.rows.length > 0
+    ? JSON.parse(currentRows.rows[0].value as string) as Record<string, unknown>
+    : {}
+  const legacyConfig = JSON.parse(legacyRows.rows[0].value as string) as Record<string, unknown>
+  let changed = false
+
+  for (const [field, value] of Object.entries(legacyConfig)) {
+    if ((currentConfig[field] == null || currentConfig[field] === '') && value != null && value !== '') {
+      currentConfig[field] = value
+      changed = true
+    }
+  }
+
+  if (changed || currentRows.rows.length === 0) {
+    await current.execute({
+      sql: 'INSERT OR REPLACE INTO kv (key, value, expires_at) VALUES (?, ?, NULL)',
+      args: [CONFIG_KEY, JSON.stringify(currentConfig)],
+    })
+  }
+}
+
+async function mergeMissingKvRows(current: Client, legacy: Client): Promise<void> {
+  const rows = await legacy.execute('SELECT key, value, expires_at FROM kv')
+  for (const row of rows.rows) {
+    if (row.key === CONFIG_KEY) continue
+    await current.execute({
+      sql: 'INSERT OR IGNORE INTO kv (key, value, expires_at) VALUES (?, ?, ?)',
+      args: [row.key as string, row.value as string, row.expires_at as number | null],
+    })
+  }
+}
+
+async function mergeMissingRows(
+  current: Client,
+  legacy: Client,
+  table: string,
+  keyColumns: string[],
+  columns: string[],
+): Promise<void> {
+  const rows = await legacy.execute(`SELECT ${columns.join(', ')} FROM ${table}`)
+  const placeholders = columns.map(() => '?').join(', ')
+  const quotedColumns = columns.join(', ')
+  const where = keyColumns.map(column => `${column} = ?`).join(' AND ')
+
+  for (const row of rows.rows) {
+    const exists = await current.execute({
+      sql: `SELECT 1 FROM ${table} WHERE ${where} LIMIT 1`,
+      args: keyColumns.map(column => row[column] as string | number | null),
+    })
+    if (exists.rows.length > 0) continue
+
+    await current.execute({
+      sql: `INSERT INTO ${table} (${quotedColumns}) VALUES (${placeholders})`,
+      args: columns.map(column => row[column] as string | number | null),
+    })
   }
 }
 
@@ -155,7 +228,7 @@ export async function initDb(url?: string): Promise<void> {
     )
   `)
 
-  await migrateLegacyConfigSecrets(dbUrl)
+  await migrateLegacyDatabaseState(dbUrl)
 
   // Migrate old monolithic sensor keys (x→x_accounts, etc.) before seeding
   const { migrateOldSensorKeys, migrateGroupStructure } = await import('./groups/migration')

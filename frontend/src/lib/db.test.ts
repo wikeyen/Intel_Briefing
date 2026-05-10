@@ -54,7 +54,7 @@ describe('initDb', () => {
     }
   })
 
-  it('backfills missing secrets from legacy intel.db when current db already exists', async () => {
+  it('backfills missing legacy config fields and kv rows when current db already exists', async () => {
     const dir = await mkdtemp(path.join(tmpdir(), 'info-aggregation-db-'))
     try {
       const legacyPath = path.join(dir, 'intel.db')
@@ -63,7 +63,11 @@ describe('initDb', () => {
       await legacy.execute('CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT NOT NULL, expires_at INTEGER)')
       await legacy.execute({
         sql: 'INSERT INTO kv (key, value, expires_at) VALUES (?, ?, NULL)',
-        args: ['intel:config', JSON.stringify({ summary_provider: 'openrouter', summary_api_key: 'sk-legacy' })],
+        args: ['intel:config', JSON.stringify({ summary_provider: 'openrouter', summary_api_key: 'sk-legacy', cache_ttl_hours: 48 })],
+      })
+      await legacy.execute({
+        sql: 'INSERT INTO kv (key, value, expires_at) VALUES (?, ?, NULL)',
+        args: ['github_stars:legacy/repo', JSON.stringify({ stars: 123 })],
       })
       legacy.close()
 
@@ -77,9 +81,43 @@ describe('initDb', () => {
 
       await initDb(`file:${currentPath}`)
 
-      const result = await kvGet<{ summary_provider: string; summary_api_key: string }>('intel:config')
-      expect(result?.summary_provider).toBe('minimax')
-      expect(result?.summary_api_key).toBe('sk-legacy')
+      const config = await kvGet<{ summary_provider: string; summary_api_key: string; cache_ttl_hours: number }>('intel:config')
+      expect(config?.summary_provider).toBe('minimax')
+      expect(config?.summary_api_key).toBe('sk-legacy')
+      expect(config?.cache_ttl_hours).toBe(48)
+      expect(await kvGet('github_stars:legacy/repo')).toEqual({ stars: 123 })
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('backfills missing pipeline rows from legacy intel.db', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'info-aggregation-db-'))
+    try {
+      const legacyPath = path.join(dir, 'intel.db')
+      const currentPath = path.join(dir, 'info-aggregation.db')
+      const legacy = createClient({ url: `file:${legacyPath}` })
+      await legacy.execute('CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT NOT NULL, expires_at INTEGER)')
+      await legacy.execute('CREATE TABLE pipeline_items (sensor_name TEXT NOT NULL, run_id TEXT NOT NULL, items_json TEXT NOT NULL, fetched_at TEXT NOT NULL, PRIMARY KEY (sensor_name, run_id))')
+      await legacy.execute({
+        sql: 'INSERT INTO pipeline_items (sensor_name, run_id, items_json, fetched_at) VALUES (?, ?, ?, ?)',
+        args: ['github', 'legacy-run', JSON.stringify([{ id: 1 }]), '2026-05-10T00:00:00.000Z'],
+      })
+      legacy.close()
+
+      const current = createClient({ url: `file:${currentPath}` })
+      await current.execute('CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT NOT NULL, expires_at INTEGER)')
+      await current.execute('CREATE TABLE pipeline_items (sensor_name TEXT NOT NULL, run_id TEXT NOT NULL, items_json TEXT NOT NULL, fetched_at TEXT NOT NULL, PRIMARY KEY (sensor_name, run_id))')
+      current.close()
+
+      await initDb(`file:${currentPath}`)
+
+      const db = await getDb()
+      const rows = await db.execute({
+        sql: 'SELECT items_json FROM pipeline_items WHERE sensor_name = ? AND run_id = ?',
+        args: ['github', 'legacy-run'],
+      })
+      expect(JSON.parse(rows.rows[0].items_json as string)).toEqual([{ id: 1 }])
     } finally {
       await rm(dir, { recursive: true, force: true })
     }

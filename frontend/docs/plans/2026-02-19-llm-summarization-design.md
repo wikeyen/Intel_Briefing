@@ -2,7 +2,7 @@
 
 ## Goal
 
-Add AI-powered summarization to Intel Briefing: per-sensor summaries rolled into an executive briefing, displayed on the Status page and served via API for external consumption.
+Add AI-powered summarization to Info Aggregation: per-sensor summaries rolled into an executive briefing, displayed on the Status page and served via API for external consumption.
 
 ## Architecture
 

@@ -1,4 +1,4 @@
-// ABOUTME: POST /api/cache/cleanup — removes expired intel items from the cached report.
+// ABOUTME: POST /api/cache/cleanup — removes expired info items from the cached report.
 // ABOUTME: Called by the "Delete Expired Now" button on the Pipeline page.
 import { NextResponse } from 'next/server'
 import { loadConfig } from '@/lib/config'

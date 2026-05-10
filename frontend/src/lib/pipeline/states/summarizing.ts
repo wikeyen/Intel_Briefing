@@ -118,7 +118,7 @@ export async function handleSummarizing(ctx: PipelineContext): Promise<PipelineS
 
   // Build sensor → group credibility map for source credibility tagging
   const FACTUAL_GROUP_NAMES = new Set(['News', 'Research & Reports'])
-  let sensorCredibilityMap: Record<string, { groupName: string; credibility: 'FACTUAL' | 'CONTEXTUAL' }> = {}
+  const sensorCredibilityMap: Record<string, { groupName: string; credibility: 'FACTUAL' | 'CONTEXTUAL' }> = {}
   try {
     const groups = await listGroupsFlat()
     for (const group of groups) {

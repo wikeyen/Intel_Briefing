@@ -13,7 +13,7 @@ export function usePolling<T>(
 ): T | null {
   const [data, setData] = useState<T | null>(fallback ?? null)
   const fetcherRef = useRef(fetcher)
-  fetcherRef.current = fetcher
+  useEffect(() => { fetcherRef.current = fetcher })
 
   useEffect(() => {
     let cancelled = false
@@ -38,7 +38,7 @@ export function usePollEffect(
   intervalMs: number,
 ): void {
   const cbRef = useRef(callback)
-  cbRef.current = callback
+  useEffect(() => { cbRef.current = callback })
 
   useEffect(() => {
     cbRef.current()

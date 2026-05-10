@@ -22,14 +22,14 @@ describe('api client basePath construction', () => {
   })
 
   it('prepends basePath exactly once when NEXT_PUBLIC_BASE_PATH is set', async () => {
-    vi.stubEnv('NEXT_PUBLIC_BASE_PATH', '/intel-briefing')
+    vi.stubEnv('NEXT_PUBLIC_BASE_PATH', '/info-aggregation')
     const { api } = await import('./client')
 
     await api.health()
 
     const calledUrl = fetchSpy.mock.calls[0][0]
-    expect(calledUrl).toBe('/intel-briefing/api/health')
-    expect(calledUrl).not.toMatch(/\/intel-briefing\/intel-briefing/)
+    expect(calledUrl).toBe('/info-aggregation/api/health')
+    expect(calledUrl).not.toMatch(/\/info-aggregation\/info-aggregation/)
   })
 
   it('omits the prefix when NEXT_PUBLIC_BASE_PATH is empty (root deployment)', async () => {
@@ -42,17 +42,17 @@ describe('api client basePath construction', () => {
   })
 
   it('applies basePath to nested resource paths without doubling', async () => {
-    vi.stubEnv('NEXT_PUBLIC_BASE_PATH', '/intel-briefing')
+    vi.stubEnv('NEXT_PUBLIC_BASE_PATH', '/info-aggregation')
     const { api } = await import('./client')
 
     await api.getPipelineStatus()
     await api.getGroups()
 
     const urls = fetchSpy.mock.calls.map(c => c[0] as string)
-    expect(urls).toContain('/intel-briefing/api/fetch/status')
-    expect(urls).toContain('/intel-briefing/api/groups')
+    expect(urls).toContain('/info-aggregation/api/fetch/status')
+    expect(urls).toContain('/info-aggregation/api/groups')
     for (const url of urls) {
-      expect(url).not.toMatch(/\/intel-briefing\/intel-briefing/)
+      expect(url).not.toMatch(/\/info-aggregation\/info-aggregation/)
     }
   })
 })

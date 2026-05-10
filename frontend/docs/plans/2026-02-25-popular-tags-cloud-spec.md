@@ -1,7 +1,7 @@
 # Popular Tags Cloud — UX & Behavioural Specification
 
 **Component:** `PopularTagsCloud`
-**Context:** Intel Briefing dashboard (`/dashboard`)
+**Context:** Info Aggregation dashboard (`/dashboard`)
 **Audience:** Product designers, frontend engineers
 **Status:** Draft — pending implementation review
 

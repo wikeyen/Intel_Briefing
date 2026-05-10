@@ -1,4 +1,4 @@
-// ABOUTME: Typed API client for the Intel Briefing gateway — all requests go through /api.
+// ABOUTME: Typed API client for the Info Aggregation gateway — all requests go through /api.
 // ABOUTME: All functions return typed data or throw on HTTP errors.
 
 import type { SourceGroupTree, SourceGroupFlat, CreateGroupPayload, UpdateGroupPayload } from '@/lib/groups/types'

@@ -40,12 +40,11 @@ function UiShell({ children, initialPinned }: { children: React.ReactNode; initi
   const pathname = usePathname()
   const { t } = useTranslation()
 
-  // Close mobile sidebar on route change (derived from pathname, no useEffect needed)
-  const prevPathnameRef = useRef(pathname)
-  if (prevPathnameRef.current !== pathname) {
-    prevPathnameRef.current = pathname
-    if (sidebarOpen) setSidebarOpen(false)
-  }
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSidebarOpen(false)
+  }, [pathname])
 
   const mainRef = useRef<HTMLElement>(null) as RefObject<HTMLElement>
   const closeSidebar = useCallback(() => setSidebarOpen(false), [])

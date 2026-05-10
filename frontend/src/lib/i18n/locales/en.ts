@@ -1,11 +1,11 @@
-// ABOUTME: English locale — all UI strings for the Intel Briefing frontend.
+// ABOUTME: English locale — all UI strings for the Info Aggregation frontend.
 // ABOUTME: Keys use dot notation; values may contain {param} placeholders.
 
 import type { TranslationDict } from '../types'
 
 const en: TranslationDict = {
   // ── App chrome ──────────────────────────────────────────────────────────────
-  'app.title': 'Intel Briefing',
+  'app.title': 'Info Aggregation',
 
   // ── Navigation ──────────────────────────────────────────────────────────────
   'nav.overview': 'Overview',
@@ -578,7 +578,7 @@ const en: TranslationDict = {
   'log.phase_retry': 'Retry',
   'log.phase_summary': 'Summary',
   'log.phase_briefing': 'Briefing',
-  'log.phase_intelligence': 'Intel',
+  'log.phase_intelligence': 'Analysis',
   'log.phase_system': 'System',
 
   // ── Phase stepper tooltips ────────────────────────────────────────────────

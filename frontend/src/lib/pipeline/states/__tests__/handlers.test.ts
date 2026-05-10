@@ -186,6 +186,7 @@ function createMockContext(overrides: Partial<PipelineContext> = {}): PipelineCo
     baseSummarizeOpts: null,
 
     pauseResolve: null,
+    stopAfterSummary: false,
     ...overrides,
   }
 }
@@ -364,11 +365,22 @@ describe('handleIntelligence', () => {
 // ── handleBriefing ─────────────────────────────────────────────────────────────
 
 describe('handleBriefing', () => {
-  it('returns intelligence always', async () => {
+  it('returns intelligence by default', async () => {
     const ctx = createMockContext()
 
     const result = await handleBriefing(ctx)
     expect(result).toBe('intelligence')
+  })
+
+  it('returns complete when caller only needs the summary', async () => {
+    const ctx = createMockContext({
+      summary: makeSummary(),
+      stopAfterSummary: true,
+    })
+
+    const result = await handleBriefing(ctx)
+    expect(result).toBe('complete')
+    expect(mockWriteSummary).toHaveBeenCalledWith(ctx.summary, ctx.config.summary_language)
   })
 
   it('skips briefing generation when no summary exists', async () => {

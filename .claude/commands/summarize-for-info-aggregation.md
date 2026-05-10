@@ -1,6 +1,6 @@
-# Summarize Intel Briefing
+# Summarize Info Aggregation
 
-Read the latest Intel Briefing feed data and generate a comprehensive AI summary.
+Read the latest Info Aggregation feed data and generate a comprehensive AI summary.
 
 ## Instructions
 

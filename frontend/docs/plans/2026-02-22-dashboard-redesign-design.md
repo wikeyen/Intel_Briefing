@@ -47,4 +47,4 @@ Replaced by the stats strip — more useful at-a-glance info.
 ### Layout
 - Max width: 1060px, 2.5rem side padding
 - 1rem gap between widgets (tighter bento feel)
-- Header: "Intel Briefing" with status pill
+- Header: "Info Aggregation" with status pill

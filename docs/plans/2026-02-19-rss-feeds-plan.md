@@ -186,7 +186,7 @@ export async function extractArticle(url: string): Promise<string | null> {
     const resp = await fetch(url, {
       signal: AbortSignal.timeout(FETCH_TIMEOUT),
       redirect: 'follow',
-      headers: { 'User-Agent': 'IntelBriefing/1.0 (RSS reader)' },
+      headers: { 'User-Agent': 'InfoAggregation/1.0 (RSS reader)' },
     })
     if (!resp.ok) return null
 

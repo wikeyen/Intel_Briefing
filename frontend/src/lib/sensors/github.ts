@@ -46,7 +46,7 @@ export async function fetchGitHub(config: ConfigSettings, limit: number): Promis
       headers: {
         'Authorization': `Bearer ${config.github_token}`,
         'Content-Type': 'application/json',
-        'User-Agent': 'Intel-Briefing/1.0',
+        'User-Agent': 'Info-Aggregation/1.0',
       },
       body: JSON.stringify({
         query: GRAPHQL_QUERY,

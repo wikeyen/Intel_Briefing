@@ -7,7 +7,7 @@ const V2EX_HOT_API = 'https://www.v2ex.com/api/topics/hot.json'
 export async function fetchV2ex(_config: ConfigSettings, limit: number): Promise<IntelItem[]> {
   try {
     const resp = await fetch(V2EX_HOT_API, {
-      headers: { 'User-Agent': 'Intel-Briefing/1.0' },
+      headers: { 'User-Agent': 'Info-Aggregation/1.0' },
       signal: AbortSignal.timeout(30000),
     })
     if (!resp.ok) throw new Error(`HTTP ${resp.status} from V2EX`)

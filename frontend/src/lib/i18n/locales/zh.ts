@@ -1,4 +1,4 @@
-// ABOUTME: Chinese (Simplified) locale — all UI strings for the Intel Briefing frontend.
+// ABOUTME: Chinese (Simplified) locale — all UI strings for the Info Aggregation frontend.
 // ABOUTME: Keys use dot notation; values may contain {param} placeholders.
 
 import type { TranslationDict } from '../types'

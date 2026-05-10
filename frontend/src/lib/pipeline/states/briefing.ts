@@ -10,7 +10,7 @@ import type { PipelineContext, PipelineState } from '../types'
  * (because fetch failures existed during the summarize stage).
  * Also persists the completed summary to cache.
  *
- * Returns: 'intelligence'
+ * Returns: 'intelligence', or 'complete' when the caller only needs the summary.
  */
 export async function handleBriefing(ctx: PipelineContext): Promise<PipelineState> {
   const { config, signal, tracker, summary, baseSummarizeOpts } = ctx
@@ -38,5 +38,6 @@ export async function handleBriefing(ctx: PipelineContext): Promise<PipelineStat
     }
   }
 
-  return 'intelligence'
+  return ctx.stopAfterSummary ? 'complete' : 'intelligence'
 }
+

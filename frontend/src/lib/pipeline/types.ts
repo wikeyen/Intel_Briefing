@@ -60,4 +60,8 @@ export interface PipelineContext {
 
   // Pause/resume channel
   pauseResolve: ((action: PauseAction) => void) | null
+
+  // Optional caller controls
+  stopAfterSummary: boolean
 }
+

@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Intel Briefing',
+  title: 'Info Aggregation',
   description: 'Tech intelligence aggregation dashboard',
 }
 

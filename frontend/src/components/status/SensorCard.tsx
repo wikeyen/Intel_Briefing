@@ -569,6 +569,7 @@ function SecondaryContent({ state, props, t }: { state: CardState; props: Sensor
     case 'fetching': {
       const { onSkipFetching } = props
       const startedAt = liveSensor?.fetch_started_at
+      // eslint-disable-next-line react-hooks/purity
       const elapsedSec = startedAt ? Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000) : 0
       const showSkip = onSkipFetching && elapsedSec >= 60
       return (
@@ -990,6 +991,7 @@ function RowActions({ state, props, t }: { state: CardState; props: SensorCardPr
 
   if (state === 'fetching') {
     const startedAt = liveSensor?.fetch_started_at
+    // eslint-disable-next-line react-hooks/purity
     const elapsedSec = startedAt ? Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000) : 0
     if (onSkipFetching && elapsedSec >= 60) {
       return (

@@ -11,10 +11,10 @@ https://lemnis-mac-mini.tail3cc92f.ts.net/<app>
 Current app path:
 
 ```text
-https://lemnis-mac-mini.tail3cc92f.ts.net/intel-briefing
+https://lemnis-mac-mini.tail3cc92f.ts.net/info-aggregation
 ```
 
-Known caveat: apps that emit absolute redirects or asset paths may need explicit rewrite rules. Intel Briefing has redirect rewrites configured for its top-level routes.
+Known caveat: apps that emit absolute redirects or asset paths may need explicit rewrite rules. Info Aggregation has redirect rewrites configured for its top-level routes.
 
 ## How it works
 
@@ -46,13 +46,13 @@ Add labels like this:
 ```yaml
 labels:
   - traefik.enable=true
-  - traefik.http.routers.intel-briefing.rule=PathPrefix(`/intel-briefing`)
-  - traefik.http.routers.intel-briefing.entrypoints=web
-  - traefik.http.middlewares.intel-briefing-strip.stripprefix.prefixes=/intel-briefing
-  - traefik.http.middlewares.intel-briefing-prefix.redirectregex.regex=^/(dashboard|data|ai|briefing|connections|console|pipeline|sources|status|settings|api(?:/.*)?)$
-  - traefik.http.middlewares.intel-briefing-prefix.redirectregex.replacement=/intel-briefing/$$1
-  - traefik.http.routers.intel-briefing.middlewares=intel-briefing-prefix,intel-briefing-strip
-  - traefik.http.services.intel-briefing.loadbalancer.server.port=3000
+  - traefik.http.routers.info-aggregation.rule=PathPrefix(`/info-aggregation`)
+  - traefik.http.routers.info-aggregation.entrypoints=web
+  - traefik.http.middlewares.info-aggregation-strip.stripprefix.prefixes=/info-aggregation
+  - traefik.http.middlewares.info-aggregation-prefix.redirectregex.regex=^/(dashboard|data|ai|briefing|connections|console|pipeline|sources|status|settings|api(?:/.*)?)$
+  - traefik.http.middlewares.info-aggregation-prefix.redirectregex.replacement=/info-aggregation/$$1
+  - traefik.http.routers.info-aggregation.middlewares=info-aggregation-prefix,info-aggregation-strip
+  - traefik.http.services.info-aggregation.loadbalancer.server.port=3000
 ```
 
 ## Deregister an app
@@ -74,8 +74,8 @@ scripts/register-tailnet-path-app --service <compose-service> --name <path-slug>
 Example:
 
 ```bash
-scripts/register-tailnet-path-app --service frontend --name intel-briefing --port 3000
-docker compose -f docker-compose.yml -f gateway/apps/intel-briefing.override.yml up -d frontend
+scripts/register-tailnet-path-app --service frontend --name info-aggregation --port 3000
+docker compose -f docker-compose.yml -f gateway/apps/info-aggregation.override.yml up -d frontend
 ```
 
 This writes an override file under `gateway/apps/` instead of editing the base compose by hand.

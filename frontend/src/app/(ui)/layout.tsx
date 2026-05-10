@@ -7,7 +7,7 @@ import { SUPPORTED_LOCALES } from '@/lib/i18n/types'
 
 export default async function UiLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies()
-  const raw = cookieStore.get('intel-locale')?.value
+  const raw = cookieStore.get('info-aggregation-locale')?.value
   const initialLocale: Locale | undefined =
     raw && (SUPPORTED_LOCALES as readonly string[]).includes(raw)
       ? (raw as Locale)

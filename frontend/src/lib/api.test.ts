@@ -272,7 +272,7 @@ describe('GET /api/briefing/markdown', () => {
     const { GET } = await import('@/app/api/briefing/markdown/route')
     const resp = await GET()
     const text = await resp.text()
-    expect(text).toContain('Intel Briefing')
+    expect(text).toContain('Info Aggregation')
   })
 
   it('returns 503 when no cache', async () => {

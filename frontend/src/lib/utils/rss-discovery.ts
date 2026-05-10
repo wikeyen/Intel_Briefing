@@ -40,7 +40,7 @@ export async function discoverFeed(url: string): Promise<DiscoveryResult> {
     const resp = await fetch(url, {
       signal: AbortSignal.timeout(DISCOVERY_TIMEOUT),
       redirect: 'follow',
-      headers: { 'User-Agent': 'IntelBriefing/1.0 (feed discovery)' },
+      headers: { 'User-Agent': 'InfoAggregation/1.0 (feed discovery)' },
     })
     if (!resp.ok) {
       return { type: 'error', message: `HTTP ${resp.status} ${resp.statusText}` }

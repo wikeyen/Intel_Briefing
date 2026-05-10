@@ -17,23 +17,23 @@
 
 **Step 1: Install dependency**
 
-Run: `cd /Users/lemni/Developer/Intel_Briefing/.worktrees/mobile-feed-polish/frontend && npm install framer-motion`
+Run: `cd /Users/lemni/Developer/Info_Aggregation/.worktrees/mobile-feed-polish/frontend && npm install framer-motion`
 Expected: Added to dependencies, no peer dep warnings.
 
 **Step 2: Verify import works**
 
-Run: `cd /Users/lemni/Developer/Intel_Briefing/.worktrees/mobile-feed-polish/frontend && node -e "require('framer-motion')"`
+Run: `cd /Users/lemni/Developer/Info_Aggregation/.worktrees/mobile-feed-polish/frontend && node -e "require('framer-motion')"`
 Expected: No errors.
 
 **Step 3: Run existing tests**
 
-Run: `cd /Users/lemni/Developer/Intel_Briefing/.worktrees/mobile-feed-polish/frontend && npx vitest run`
+Run: `cd /Users/lemni/Developer/Info_Aggregation/.worktrees/mobile-feed-polish/frontend && npx vitest run`
 Expected: 469 tests pass. No regressions from adding the dependency.
 
 **Step 4: Commit**
 
 ```bash
-cd /Users/lemni/Developer/Intel_Briefing/.worktrees/mobile-feed-polish
+cd /Users/lemni/Developer/Info_Aggregation/.worktrees/mobile-feed-polish
 git add frontend/package.json frontend/package-lock.json
 git commit -m "chore: add framer-motion dependency"
 ```
@@ -156,18 +156,18 @@ Replace the section tabs `<div className="section-tabs" ...>` block. Remove `bor
 
 **Step 4: Verify visually**
 
-Run: `cd /Users/lemni/Developer/Intel_Briefing/.worktrees/mobile-feed-polish/frontend && npx next dev -p 8001`
+Run: `cd /Users/lemni/Developer/Info_Aggregation/.worktrees/mobile-feed-polish/frontend && npx next dev -p 8001`
 Expected: Tab indicator slides smoothly between tabs with spring animation.
 
 **Step 5: Run tests**
 
-Run: `cd /Users/lemni/Developer/Intel_Briefing/.worktrees/mobile-feed-polish/frontend && npx vitest run`
+Run: `cd /Users/lemni/Developer/Info_Aggregation/.worktrees/mobile-feed-polish/frontend && npx vitest run`
 Expected: All tests pass.
 
 **Step 6: Commit**
 
 ```bash
-cd /Users/lemni/Developer/Intel_Briefing/.worktrees/mobile-feed-polish
+cd /Users/lemni/Developer/Info_Aggregation/.worktrees/mobile-feed-polish
 git add frontend/src/components/Data.tsx
 git commit -m "feat(feed): add sliding tab indicator with spring animation"
 ```
@@ -303,13 +303,13 @@ Note: `ItemCard` now receives `index` prop — this is for Task 4 (stagger). Unt
 
 **Step 5: Run tests**
 
-Run: `cd /Users/lemni/Developer/Intel_Briefing/.worktrees/mobile-feed-polish/frontend && npx vitest run`
+Run: `cd /Users/lemni/Developer/Info_Aggregation/.worktrees/mobile-feed-polish/frontend && npx vitest run`
 Expected: All tests pass.
 
 **Step 6: Commit**
 
 ```bash
-cd /Users/lemni/Developer/Intel_Briefing/.worktrees/mobile-feed-polish
+cd /Users/lemni/Developer/Info_Aggregation/.worktrees/mobile-feed-polish
 git add frontend/src/components/Data.tsx
 git commit -m "feat(feed): add direction-aware tab content transitions"
 ```
@@ -375,13 +375,13 @@ And update the closing tag from `</article>` to `</motion.article>`.
 
 **Step 4: Run tests**
 
-Run: `cd /Users/lemni/Developer/Intel_Briefing/.worktrees/mobile-feed-polish/frontend && npx vitest run`
+Run: `cd /Users/lemni/Developer/Info_Aggregation/.worktrees/mobile-feed-polish/frontend && npx vitest run`
 Expected: All tests pass. If any tests query `article` elements, they should still find them since `motion.article` renders as `<article>`.
 
 **Step 5: Commit**
 
 ```bash
-cd /Users/lemni/Developer/Intel_Briefing/.worktrees/mobile-feed-polish
+cd /Users/lemni/Developer/Info_Aggregation/.worktrees/mobile-feed-polish
 git add frontend/src/components/data/ItemCard.tsx
 git commit -m "feat(feed): add staggered card entrance animation"
 ```
@@ -411,13 +411,13 @@ Keep the `@keyframes fadeInUp` definition — it may be used elsewhere.
 
 **Step 2: Run tests**
 
-Run: `cd /Users/lemni/Developer/Intel_Briefing/.worktrees/mobile-feed-polish/frontend && npx vitest run`
+Run: `cd /Users/lemni/Developer/Info_Aggregation/.worktrees/mobile-feed-polish/frontend && npx vitest run`
 Expected: All tests pass.
 
 **Step 3: Commit**
 
 ```bash
-cd /Users/lemni/Developer/Intel_Briefing/.worktrees/mobile-feed-polish
+cd /Users/lemni/Developer/Info_Aggregation/.worktrees/mobile-feed-polish
 git add frontend/src/app/globals.css
 git commit -m "fix(css): remove fadeInUp that conflicts with framer-motion"
 ```
@@ -428,12 +428,12 @@ git commit -m "fix(css): remove fadeInUp that conflicts with framer-motion"
 
 **Step 1: Run full test suite**
 
-Run: `cd /Users/lemni/Developer/Intel_Briefing/.worktrees/mobile-feed-polish/frontend && npx vitest run`
+Run: `cd /Users/lemni/Developer/Info_Aggregation/.worktrees/mobile-feed-polish/frontend && npx vitest run`
 Expected: All 469+ tests pass.
 
 **Step 2: Visual verification on mobile viewport**
 
-Run: `cd /Users/lemni/Developer/Intel_Briefing/.worktrees/mobile-feed-polish/frontend && npx next dev -p 8001`
+Run: `cd /Users/lemni/Developer/Info_Aggregation/.worktrees/mobile-feed-polish/frontend && npx next dev -p 8001`
 
 Verify in browser (mobile viewport):
 - Tab indicator slides smoothly between tabs

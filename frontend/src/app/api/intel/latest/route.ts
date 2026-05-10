@@ -1,4 +1,4 @@
-// ABOUTME: Intel data route — GET /api/intel/latest returns the full IntelReport.
+// ABOUTME: Info data route — GET /api/intel/latest returns the full IntelReport.
 // ABOUTME: Returns all items per section without truncation.
 import { NextResponse } from 'next/server'
 import { readReport, isStale } from '@/lib/pipeline/cache'

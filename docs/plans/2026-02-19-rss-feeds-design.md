@@ -2,7 +2,7 @@
 
 ## Goal
 
-Allow users to subscribe to arbitrary RSS/Atom feeds and see their items in the Intel Briefing alongside other sensor output.
+Allow users to subscribe to arbitrary RSS/Atom feeds and see their items in the Info Aggregation alongside other sensor output.
 
 ## Requirements
 

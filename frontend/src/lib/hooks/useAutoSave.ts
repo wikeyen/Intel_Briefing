@@ -21,11 +21,13 @@ export function useAutoSave(
   const [status, setStatus] = useState<AutoSaveStatus>('idle')
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const getPartialRef = useRef(getPartial)
-  getPartialRef.current = getPartial
   const onErrorRef = useRef(options?.onError)
-  onErrorRef.current = options?.onError
   const onSavedRef = useRef(options?.onSaved)
-  onSavedRef.current = options?.onSaved
+  useEffect(() => {
+    getPartialRef.current = getPartial
+    onErrorRef.current = options?.onError
+    onSavedRef.current = options?.onSaved
+  })
 
   const doSave = useCallback(async () => {
     setStatus('saving')

@@ -1,4 +1,4 @@
-// ABOUTME: Sidebar navigation component for Intel Briefing.
+// ABOUTME: Sidebar navigation component for Info Aggregation.
 // ABOUTME: Uses Next.js Link and usePathname for client-side routing; mini phase stepper, icons, and collapse/pin support.
 'use client'
 import Link from 'next/link'
@@ -273,6 +273,7 @@ export function Sidebar({ onNavigate, collapsed, peeking, pinned, onPinToggle }:
   // pathname ensures we pick up what Dashboard wrote when navigating away.
   // health?.last_fetch ensures we detect new runs even while on a non-dashboard page.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     try { setLastViewedFetch(localStorage.getItem('ib:dashboard:lastViewedFetch')) } catch {}
   }, [health?.last_fetch, pathname])
 

@@ -1,4 +1,4 @@
-# Intel Briefing — API Reference
+# Info Aggregation — API Reference
 
 Base URL: `/api`
 

@@ -1,6 +1,6 @@
-# PRD: Intel Briefing — Redesign as Minimal, Elegant, LLM-Queryable Backend
+# PRD: Info Aggregation — Redesign as Minimal, Elegant, LLM-Queryable Backend
 
-**Document:** 0001-prd-intel-briefing-redesign.md
+**Document:** 0001-prd-info-aggregation-redesign.md
 **Date:** 2026-02-17
 **Status:** Draft
 
@@ -8,9 +8,9 @@
 
 ## 1. Introduction / Overview
 
-Intel Briefing is a daily intelligence aggregation system that monitors global tech, research, capital, political, and community signals and surfaces them as a structured digest. The current implementation is a collection of scripts that produce a Markdown file on disk — it has no API surface, no Docker support, and no way for an LLM agent to query it programmatically.
+Info Aggregation is a daily intelligence aggregation system that monitors global tech, research, capital, political, and community signals and surfaces them as a structured digest. The current implementation is a collection of scripts that produce a Markdown file on disk — it has no API surface, no Docker support, and no way for an LLM agent to query it programmatically.
 
-This PRD defines the redesign of Intel Briefing into a **minimal, elegant, production-ready backend service** with:
+This PRD defines the redesign of Info Aggregation into a **minimal, elegant, production-ready backend service** with:
 
 - A **REST JSON API** that LLM agents and humans can query directly
 - A **separate configuration UI** (lightweight web frontend) for managing all settings without touching config files
@@ -236,7 +236,7 @@ Prefer **React + Vite** (lightweight, fast dev experience) with a simple compone
 ### File Structure
 
 ```
-intel_briefing/
+info_aggregation/
 ├── pyproject.toml
 ├── uv.lock
 ├── .env.example
@@ -247,7 +247,7 @@ intel_briefing/
 ├── cache/
 │   └── intel_latest.json      # pipeline output (Docker volume)
 │
-├── intel_briefing/            # Python package (src layout)
+├── info_aggregation/            # Python package (src layout)
 │   ├── config.py              # pydantic-settings BaseSettings
 │   ├── models.py              # IntelItem, IntelReport Pydantic models
 │   ├── sensors/               # one file per source + base.py protocol

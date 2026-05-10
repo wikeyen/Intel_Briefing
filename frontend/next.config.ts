@@ -1,4 +1,4 @@
-// ABOUTME: Next.js configuration for Intel Briefing frontend.
+// ABOUTME: Next.js configuration for Info Aggregation frontend.
 // ABOUTME: Standalone output enables Docker deployment without node_modules.
 import type { NextConfig } from 'next'
 

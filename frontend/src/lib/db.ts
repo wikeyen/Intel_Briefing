@@ -20,7 +20,7 @@ export async function getDb(): Promise<Client> {
  * Defaults to DATABASE_URL env var when no url argument is given.
  */
 export async function initDb(url?: string): Promise<void> {
-  const dbUrl = url ?? process.env.DATABASE_URL ?? 'file:data/intel.db'
+  const dbUrl = url ?? process.env.DATABASE_URL ?? 'file:data/info-aggregation.db'
   globalForDb.__dbClient = createClient({ url: dbUrl })
   await globalForDb.__dbClient.execute(`
     CREATE TABLE IF NOT EXISTS kv (

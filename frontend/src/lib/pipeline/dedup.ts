@@ -1,4 +1,4 @@
-// ABOUTME: Deduplication logic for Intel Briefing pipeline.
+// ABOUTME: Deduplication logic for Info Aggregation pipeline.
 // ABOUTME: Removes duplicate items by title (case-insensitive) and deduplicates social section overlap.
 import type { IntelItem } from '../models'
 

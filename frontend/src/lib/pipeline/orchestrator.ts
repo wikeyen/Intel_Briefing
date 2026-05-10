@@ -26,6 +26,11 @@ export interface PipelineResult {
   summary: BriefingSummary | null
 }
 
+export interface PipelineRunOptions {
+  /** Stop once the briefing summary is generated and cached; skip intelligence analysis. */
+  stopAfterSummary?: boolean
+}
+
 // ── Lazy type imports used only in the PipelineResult interface ──
 import type { IntelReport, BriefingSummary } from '../models'
 
@@ -149,6 +154,7 @@ export async function runPipeline(
   config: ConfigSettings,
   mode: RunMode,
   sensorFilter?: string[],
+  options: PipelineRunOptions = {},
 ): Promise<PipelineResult> {
   // Claim the pipeline singleton IMMEDIATELY (synchronously) before any async work.
   // This prevents the race where two requests both pass isPipelineRunning() === false.
@@ -208,6 +214,7 @@ export async function runPipeline(
     onProgress: null,
     baseSummarizeOpts: null,
     pauseResolve: null,
+    stopAfterSummary: options.stopAfterSummary ?? false,
   }
 
   g.__activePipeline = ctx

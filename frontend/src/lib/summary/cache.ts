@@ -4,7 +4,7 @@ import { kvSet, kvGet, kvDelete, getDb } from '../db'
 import type { BriefingSummary, SummaryProgress, SensorSummary, SummaryLanguage } from '../models'
 import { parseOverallJson } from './parse-json'
 
-const SUMMARY_KEY_PREFIX = 'intel:summary'
+const SUMMARY_KEY_PREFIX = 'info-aggregation:summary'
 const SUMMARY_TTL_SECONDS = 48 * 60 * 60 // 48 hours
 
 /** Build the cache key for a language-specific summary. */
@@ -62,7 +62,7 @@ function repairIfNeeded(summary: BriefingSummary): BriefingSummary {
   return summary
 }
 
-const SUMMARY_STATUS_KEY = 'intel:summary_status'
+const SUMMARY_STATUS_KEY = 'info-aggregation:summary_status'
 const SUMMARY_STATUS_TTL_SECONDS = 60 * 60 // 1 hour
 
 /** Write SummaryProgress to the database with a 1-hour TTL. */

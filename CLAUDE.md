@@ -1,9 +1,9 @@
-# Intel Briefing — Project Guide
+# Info Aggregation — Project Guide
 
 ## Architecture
 
 - **Frontend + Backend**: Next.js 15 App Router in `frontend/` — serves on port 8000
-- **Database**: SQLite via `@libsql/client` at `data/intel.db` (relative to `frontend/` working directory)
+- **Database**: SQLite via `@libsql/client` at `data/info-aggregation.db` (relative to `frontend/` working directory)
 - **Sensors**: TypeScript sensor modules in `frontend/src/lib/sensors/` — each fetches from a data source
 - **Pipeline**: Orchestrator in `frontend/src/lib/pipeline/` — coordinates fetch, dedup, filter, and cache
 
@@ -11,8 +11,8 @@
 
 The frontend uses a local SQLite database for key-value caching.
 
-- **Location**: `data/intel.db` (auto-created on first run)
-- **Config**: `DATABASE_URL` env var in `frontend/.env.local`, defaults to `file:data/intel.db`
+- **Location**: `data/info-aggregation.db` (auto-created on first run)
+- **Config**: `DATABASE_URL` env var in `frontend/.env.local`, defaults to `file:data/info-aggregation.db`
 - **Initialisation**: `frontend/src/instrumentation.ts` calls `initDb()` on server startup
 - **Worktree note**: Worktrees need access to the database — symlink the data dir or set `DATABASE_URL` to an absolute path
 

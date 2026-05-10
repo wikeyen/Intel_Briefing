@@ -1,5 +1,5 @@
 // ABOUTME: Cron cleanup endpoint — GET /api/cron/cleanup.
-// ABOUTME: Prunes intel items older than post_expiry_days from the cached report.
+// ABOUTME: Prunes info items older than post_expiry_days from the cached report.
 import { NextRequest, NextResponse } from 'next/server'
 import { loadConfig } from '@/lib/config'
 import { verifyCronSecret } from '@/lib/cron-auth'

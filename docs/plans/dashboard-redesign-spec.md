@@ -1,4 +1,4 @@
-# Dashboard Redesign Specification — Intel Briefing
+# Dashboard Redesign Specification — Info Aggregation
 
 > Premium data platform aesthetic. Think Bloomberg Terminal meets Vercel Dashboard meets Linear.
 > Every value in this spec is implementation-ready. No ambiguity.
@@ -750,4 +750,4 @@ const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' })
 
 ---
 
-*This spec was authored by the UI/UX design reviewer agent for the Intel Briefing dashboard redesign. All values are implementation-ready.*
+*This spec was authored by the UI/UX design reviewer agent for the Info Aggregation dashboard redesign. All values are implementation-ready.*

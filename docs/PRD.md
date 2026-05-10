@@ -1,10 +1,10 @@
-# Intel Briefing - Product Requirements Document
+# Info Aggregation - Product Requirements Document
 
 ## 1. Product Overview
 
 ### What It Is
 
-Intel Briefing is a self-hosted intelligence aggregation engine that fetches, deduplicates, filters, and summarizes content from 17 data sources into a daily AI-generated briefing. Built as a single Next.js 15 application with SQLite storage, it runs as a monolith with zero external service dependencies beyond the data sources themselves.
+Info Aggregation is a self-hosted intelligence aggregation engine that fetches, deduplicates, filters, and summarizes content from 17 data sources into a daily AI-generated briefing. Built as a single Next.js 15 application with SQLite storage, it runs as a monolith with zero external service dependencies beyond the data sources themselves.
 
 ### Who It's For
 
@@ -74,7 +74,7 @@ Intel Briefing is a self-hosted intelligence aggregation engine that fetches, de
                              |
                     +--------v---------+
                     |  SQLite (kv)     |
-                    |  data/intel.db   |
+                    |  data/info-aggregation.db   |
                     +------------------+
 ```
 
@@ -531,7 +531,7 @@ UI saves write to both SQLite and YAML file simultaneously. Environment variable
 
 | Variable | Purpose | Default |
 |:---------|:--------|:--------|
-| `DATABASE_URL` | SQLite file path | `file:data/intel.db` |
+| `DATABASE_URL` | SQLite file path | `file:data/info-aggregation.db` |
 | `API_KEY` | API authentication key | (none, open mode) |
 | `CRON_SECRET` | Cron endpoint auth | (none) |
 | `GITHUB_TOKEN` | GitHub GraphQL API | (none) |
@@ -753,7 +753,7 @@ Two services:
 
 ```yaml
 volumes:
-  sqlite_data:  # persistent SQLite storage at /data/intel.db
+  sqlite_data:  # persistent SQLite storage at /data/info-aggregation.db
 ```
 
 Environment variables passed through: `API_KEY`, `CRON_SECRET`, `DATABASE_URL`.
@@ -778,8 +778,8 @@ No-cache headers on `index.html` via `middleware.ts` or `next.config.js` to prev
 
 ```bash
 # Clone and install
-git clone https://github.com/77AutumN/Intel_Briefing.git
-cd Intel_Briefing/frontend && npm install
+git clone https://github.com/77AutumN/Info_Aggregation.git
+cd Info_Aggregation/frontend && npm install
 
 # Configure
 cp ../.env.example .env.local
@@ -790,7 +790,7 @@ npm run dev
 make dev
 ```
 
-SQLite database auto-created at `frontend/data/intel.db` on first startup via `instrumentation.ts`.
+SQLite database auto-created at `frontend/data/info-aggregation.db` on first startup via `instrumentation.ts`.
 
 ---
 

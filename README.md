@@ -1,6 +1,6 @@
 <div align="center">
 
-# Intel Briefing - AI Intelligence Aggregation System
+# Info Aggregation - AI Intelligence Aggregation System
 
 **5 minutes a day to know what's happening across the global tech landscape.**
 
@@ -9,7 +9,7 @@ AI-powered aggregation from 15+ data sources — fetch, filter, deduplicate, and
 [![Next.js 15](https://img.shields.io/badge/Next.js-15-black?logo=next.js&logoColor=white)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://typescriptlang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Stars](https://img.shields.io/github/stars/77AutumN/Intel_Briefing?style=social)](https://github.com/77AutumN/Intel_Briefing)
+[![Stars](https://img.shields.io/github/stars/77AutumN/Info_Aggregation?style=social)](https://github.com/77AutumN/Info_Aggregation)
 
 </div>
 
@@ -44,8 +44,8 @@ A self-hosted intelligence aggregation engine built with Next.js. It automatical
 ### 1. Clone
 
 ```bash
-git clone https://github.com/77AutumN/Intel_Briefing.git
-cd Intel_Briefing
+git clone https://github.com/77AutumN/Info_Aggregation.git
+cd Info_Aggregation
 ```
 
 ### 2. Install dependencies
@@ -71,7 +71,7 @@ npm run dev
 ## Project Structure
 
 ```
-Intel_Briefing/
+Info_Aggregation/
 ├── frontend/
 │   ├── src/
 │   │   ├── app/                  # Next.js App Router pages + API routes

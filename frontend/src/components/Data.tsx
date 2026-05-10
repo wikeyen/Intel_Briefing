@@ -144,6 +144,7 @@ export function Data() {
     // selectedSources resets via availableFilters sync below
   }, [activeSectionIdx])
 
+  // eslint-disable-next-line react-hooks/refs
   const slideDirection = activeSectionIdx >= prevSectionIdx.current ? 1 : -1
   const hasChangedSection = useRef(false)
 
@@ -266,7 +267,9 @@ export function Data() {
   // Uses a ref to detect changes during render — no useEffect needed.
   const prevFiltersKey = useRef('')
   const filtersKey = availableFilters.join(',')
+  // eslint-disable-next-line react-hooks/refs
   if (prevFiltersKey.current !== filtersKey) {
+    // eslint-disable-next-line react-hooks/refs, react-hooks/set-state-in-render
     prevFiltersKey.current = filtersKey
     setSelectedSources(new Set(availableFilters))
   }
@@ -515,6 +518,7 @@ export function Data() {
               key={activeSection}
               custom={slideDirection}
               variants={contentVariants}
+              // eslint-disable-next-line react-hooks/refs
               initial={hasChangedSection.current ? 'enter' : false}
               animate="center"
               exit="exit"

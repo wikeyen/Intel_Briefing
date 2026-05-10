@@ -1252,9 +1252,9 @@ git commit -m "feat(summary): add AI Briefing card to Status page"
 Create `.claude/commands/summarize-for-intel-brief.md` in the project root (not inside `frontend/`):
 
 ```markdown
-# Summarize Intel Briefing
+# Summarize Info Aggregation
 
-Read the latest Intel Briefing feed data and generate a comprehensive AI summary.
+Read the latest Info Aggregation feed data and generate a comprehensive AI summary.
 
 ## Instructions
 

@@ -1,3 +1,5 @@
+name: info_aggregation_gateway
+
 # ABOUTME: Path-based tailnet gateway for Docker web apps.
 # ABOUTME: Uses the host Tailscale node and one Traefik router for /app-name paths.
 
@@ -19,12 +21,12 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /Users/lemni/.openclaw/workspace-family/infra/webapps/generated/traefik-dynamic.yaml:/etc/traefik/dynamic/webapps.yaml:ro
     networks:
-      - intel_briefing_default
+      - info_aggregation_default
       - lantern_default
     restart: unless-stopped
 
 networks:
-  intel_briefing_default:
+  info_aggregation_default:
     external: true
   lantern_default:
     external: true

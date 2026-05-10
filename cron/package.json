@@ -1,5 +1,5 @@
 {
-  "name": "intel-briefing-cron",
+  "name": "info-aggregation-cron",
   "version": "1.0.0",
   "private": true,
   "type": "module",

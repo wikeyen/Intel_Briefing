@@ -407,6 +407,7 @@ export function Dashboard() {
     const prev = prevFetchedAtRef.current
     prevFetchedAtRef.current = report.fetched_at
     markViewed(report.fetched_at)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (prev && prev !== report.fetched_at) setShowUpdatedBanner(true)
   }, [report?.fetched_at, markViewed])
 
@@ -464,9 +465,11 @@ export function Dashboard() {
     if (loading) return // wait for all parallel fetches to complete
     if (groups.length > 0 && activeGroupId === null) {
       if (summary?.overall?.executive_summary) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setActiveGroupId(OVERVIEW_TAB_ID)
       } else {
         const sorted = [...groups].sort((a, b) => a.sort_order - b.sort_order)
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setActiveGroupId(sorted[0].id)
       }
     }

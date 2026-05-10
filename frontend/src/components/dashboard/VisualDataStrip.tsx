@@ -277,6 +277,7 @@ function SourceDistribution({ items, sensorKeys, groupColor }: {
 
 function ActivityTimeline({ items, groupColor }: { items: IntelItem[]; groupColor: string }) {
   const buckets = useMemo(() => {
+    // eslint-disable-next-line react-hooks/purity
     const now = Date.now()
     const counts = new Array<number>(24).fill(0)
     for (const item of items) {

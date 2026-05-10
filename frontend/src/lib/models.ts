@@ -1,4 +1,4 @@
-// ABOUTME: Shared TypeScript data models for Intel Briefing.
+// ABOUTME: Shared TypeScript data models for Info Aggregation.
 // ABOUTME: Defines IntelItem, IntelReport, HealthResponse, ConfigSettings and pipeline status types.
 
 export interface IntelItem {

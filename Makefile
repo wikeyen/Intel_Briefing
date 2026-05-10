@@ -1,4 +1,4 @@
-# ABOUTME: Development task runner for Intel Briefing.
+# ABOUTME: Development task runner for Info Aggregation.
 # ABOUTME: Use `make dev` to start both Next.js (8000) and NLP sidecar (8001).
 .PHONY: dev build test nlp setup-nlp
 

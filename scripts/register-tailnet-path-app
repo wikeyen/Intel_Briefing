@@ -58,7 +58,7 @@ services:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument('--service', required=True, help='docker compose service name to label')
-    ap.add_argument('--name', required=True, help='public path slug, e.g. intel-briefing')
+    ap.add_argument('--name', required=True, help='public path slug, e.g. info-aggregation')
     ap.add_argument('--port', required=True, type=int, help='internal container port, e.g. 3000')
     ap.add_argument('--top-route', action='append', default=[], help='extra absolute app route to rewrite under the prefix; repeatable')
     ap.add_argument('--output', help='override file path; default gateway/apps/<name>.override.yml')

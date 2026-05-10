@@ -31,7 +31,7 @@ function mockExecFileNotFound() {
   vi.doMock('child_process', () => ({
     __esModule: true,
     default: {},
-    execFile: vi.fn((_cmd: string, _args: string[], _opts: unknown, cb: Function) => {
+    execFile: vi.fn((_cmd: string, _args: string[], _opts: unknown, cb: (err: Error | null, stdout: string, stderr: string) => void) => {
       cb(new Error('openclaw not found'), '', '')
     }),
   }))
@@ -361,7 +361,7 @@ describe('fetchXPosts (OpenClaw cookies)', () => {
     vi.doMock('child_process', () => ({
       __esModule: true,
       default: {},
-      execFile: vi.fn((_cmd: string, _args: string[], _opts: unknown, cb: Function) => {
+      execFile: vi.fn((_cmd: string, _args: string[], _opts: unknown, cb: (err: Error | null, stdout: string, stderr: string) => void) => {
         const json = JSON.stringify({
           cookies: [
             { name: 'auth_token', value: 'oc-auth-token' },

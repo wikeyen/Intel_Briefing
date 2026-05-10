@@ -47,7 +47,7 @@ function formatContext(tokens: number): string {
 
 **Step 2: Verify the file still has no syntax errors**
 
-Run: `cd /Users/mikeyan/Developer/Intel_Briefing/frontend && npx tsc --noEmit --pretty 2>&1 | head -20`
+Run: `cd /Users/mikeyan/Developer/Info_Aggregation/frontend && npx tsc --noEmit --pretty 2>&1 | head -20`
 Expected: No errors in AiSummary.tsx
 
 ---
@@ -269,7 +269,7 @@ function OpenRouterModelPicker({
 
 **Step 2: Verify the file still has no syntax errors**
 
-Run: `cd /Users/mikeyan/Developer/Intel_Briefing/frontend && npx tsc --noEmit --pretty 2>&1 | head -20`
+Run: `cd /Users/mikeyan/Developer/Info_Aggregation/frontend && npx tsc --noEmit --pretty 2>&1 | head -20`
 Expected: No errors in AiSummary.tsx
 
 ---
@@ -347,7 +347,7 @@ Replace with:
 
 **Step 2: Verify TypeScript compiles**
 
-Run: `cd /Users/mikeyan/Developer/Intel_Briefing/frontend && npx tsc --noEmit --pretty 2>&1 | head -20`
+Run: `cd /Users/mikeyan/Developer/Info_Aggregation/frontend && npx tsc --noEmit --pretty 2>&1 | head -20`
 Expected: Clean compilation
 
 ---
@@ -554,7 +554,7 @@ describe('AiSummary — OpenRouter Model Picker', () => {
 
 **Step 2: Run the tests**
 
-Run: `cd /Users/mikeyan/Developer/Intel_Briefing/frontend && npx vitest run src/components/AiSummary.test.tsx`
+Run: `cd /Users/mikeyan/Developer/Info_Aggregation/frontend && npx vitest run src/components/AiSummary.test.tsx`
 Expected: All 7 tests pass
 
 ---
@@ -607,7 +607,7 @@ Add this test to the existing describe block:
 
 **Step 2: Run all tests**
 
-Run: `cd /Users/mikeyan/Developer/Intel_Briefing/frontend && npx vitest run src/components/AiSummary.test.tsx`
+Run: `cd /Users/mikeyan/Developer/Info_Aggregation/frontend && npx vitest run src/components/AiSummary.test.tsx`
 Expected: All 8 tests pass
 
 ---
@@ -616,12 +616,12 @@ Expected: All 8 tests pass
 
 **Step 1: Run all frontend tests**
 
-Run: `cd /Users/mikeyan/Developer/Intel_Briefing/frontend && npx vitest run`
+Run: `cd /Users/mikeyan/Developer/Info_Aggregation/frontend && npx vitest run`
 Expected: All tests pass (existing ~127 + 8 new)
 
 **Step 2: Run TypeScript compilation check**
 
-Run: `cd /Users/mikeyan/Developer/Intel_Briefing/frontend && npx tsc --noEmit`
+Run: `cd /Users/mikeyan/Developer/Info_Aggregation/frontend && npx tsc --noEmit`
 Expected: Clean — no type errors
 
 ---
@@ -631,7 +631,7 @@ Expected: Clean — no type errors
 **Step 1: Stage and commit**
 
 ```bash
-cd /Users/mikeyan/Developer/Intel_Briefing
+cd /Users/mikeyan/Developer/Info_Aggregation
 git add frontend/src/components/AiSummary.tsx frontend/src/components/AiSummary.test.tsx
 git commit -m "feat(ai): add searchable OpenRouter model picker with pricing and context info"
 ```

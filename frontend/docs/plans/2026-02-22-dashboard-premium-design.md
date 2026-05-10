@@ -6,7 +6,7 @@
 
 ## Goal
 
-Transform the Intel Briefing dashboard into a $1M Bloomberg Terminal-inspired experience with infographics, animations, and data-rich visualizations — for both mobile (deep reading) and desktop (dense data).
+Transform the Info Aggregation dashboard into a $1M Bloomberg Terminal-inspired experience with infographics, animations, and data-rich visualizations — for both mobile (deep reading) and desktop (dense data).
 
 ## Architecture
 

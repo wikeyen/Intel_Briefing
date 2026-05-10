@@ -550,7 +550,7 @@ function renderSection(
  */
 export function renderMarkdown(report: IntelReport): string {
   let header =
-    `# Intel Briefing — ${report.date}\n\n` +
+    `# Info Aggregation — ${report.date}\n\n` +
     `_Fetched at ${report.fetched_at}_\n`
 
   if (report.stale) {

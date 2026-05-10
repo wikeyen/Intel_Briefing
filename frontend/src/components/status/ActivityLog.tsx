@@ -90,6 +90,7 @@ export function ActivityLogDrawer({ events, open, onClose }: ActivityLogDrawerPr
     }
   }
 
+  // eslint-disable-next-line react-hooks/refs
   if (!open && !closingRef.current) return null
 
   // Newest events first

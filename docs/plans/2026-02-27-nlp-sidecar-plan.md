@@ -914,7 +914,7 @@ if __name__ == "__main__":
 Add `nlp`, `setup-nlp`, and update `dev` to start both processes:
 
 ```makefile
-# ABOUTME: Development task runner for Intel Briefing.
+# ABOUTME: Development task runner for Info Aggregation.
 # ABOUTME: Use `make dev` to start the Next.js dev server on port 8000.
 .PHONY: dev build test nlp setup-nlp
 

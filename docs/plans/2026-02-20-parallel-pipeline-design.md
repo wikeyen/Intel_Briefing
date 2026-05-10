@@ -141,7 +141,7 @@ Each sensor gets a specialized system prompt that extracts information tailored 
 
 ### Overall Summary Prompt
 
-The overall prompt synthesizes per-sensor summaries into a structured intel briefing for an AI industry VC professional:
+The overall prompt synthesizes per-sensor summaries into a structured info aggregation for an AI industry VC professional:
 
 ```
 一、速览 — 3-5 most important items (major launches, breaking news, high-impact VC moves)

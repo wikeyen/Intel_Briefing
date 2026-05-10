@@ -193,7 +193,7 @@ const VALID_SENTIMENTS = new Set(['positive', 'negative', 'neutral', 'mixed'])
 /** Strip LLM reasoning blocks (<think>...</think>) and markdown code fences. */
 function stripLlmWrapper(text: string): string {
   // Remove <think>...</think> blocks (Qwen, DeepSeek, etc.)
-  let cleaned = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
+  const cleaned = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
   // Remove markdown code fences
   const fenced = cleaned.match(/```(?:json)?\s*\n?([\s\S]*?)```/)
   return fenced ? fenced[1].trim() : cleaned

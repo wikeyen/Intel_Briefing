@@ -5,7 +5,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Info Aggregation',
-  description: 'Tech intelligence aggregation dashboard',
+  description: 'Tech information aggregation dashboard',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

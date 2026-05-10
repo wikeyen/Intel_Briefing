@@ -5,7 +5,7 @@ import type { TranslationDict } from '../types'
 
 const zh: TranslationDict = {
   // ── App chrome ──────────────────────────────────────────────────────────────
-  'app.title': '情报简报',
+  'app.title': '信息聚合',
 
   // ── Navigation ──────────────────────────────────────────────────────────────
   'nav.overview': '概览',
@@ -58,7 +58,7 @@ const zh: TranslationDict = {
   'dash.show_more': '展开更多',
   'dash.show_less': '收起',
   'dash.investment_themes': '投资主题',
-  'dash.intelligence': '情报分析',
+  'dash.intelligence': '洞察分析',
   'dash.alerts': '{count} 条预警',
   'dash.alerts_plural': '{count} 条预警',
   'dash.risk': '风险',
@@ -201,7 +201,7 @@ const zh: TranslationDict = {
   'status.mode_fetch': '获取',
   'status.mode_fetch_summarize': '获取 + 摘要',
   'status.mode_summarize': '摘要',
-  'status.mode_intelligence': '情报分析',
+  'status.mode_intelligence': '洞察分析',
 
   // ── Status page — SensorGrid ──────────────────────────────────────────────
   'status.select_all': '全选',
@@ -654,7 +654,7 @@ const zh: TranslationDict = {
   'dashboard.all_items': '全部信息',
   'dashboard.sensor_breakdown': '数据源',
 
-  // ── Intelligence cards ──────────────────────────────────────────────────────
+  // ── Insight cards ──────────────────────────────────────────────────────
   'intel.public_focus': '公众关注',
   'intel.topic_pulse': '话题脉搏',
   'intel.voices': '声音',

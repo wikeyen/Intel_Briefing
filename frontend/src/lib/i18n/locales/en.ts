@@ -58,7 +58,7 @@ const en: TranslationDict = {
   'dash.show_more': 'Show more',
   'dash.show_less': 'Show less',
   'dash.investment_themes': 'Investment Themes',
-  'dash.intelligence': 'Intelligence',
+  'dash.intelligence': 'Insights',
   'dash.alerts': '{count} alert',
   'dash.alerts_plural': '{count} alerts',
   'dash.risk': 'Risk',
@@ -201,7 +201,7 @@ const en: TranslationDict = {
   'status.mode_fetch': 'Fetch',
   'status.mode_fetch_summarize': 'Fetch + Summarize',
   'status.mode_summarize': 'Summarize',
-  'status.mode_intelligence': 'Intelligence',
+  'status.mode_intelligence': 'Insights',
 
   // ── Status page — SensorGrid ──────────────────────────────────────────────
   'status.select_all': 'Select all',
@@ -654,7 +654,7 @@ const en: TranslationDict = {
   'dashboard.all_items': 'All Items',
   'dashboard.sensor_breakdown': 'Sources',
 
-  // ── Intelligence cards ──────────────────────────────────────────────────────
+  // ── Insight cards ──────────────────────────────────────────────────────
   'intel.public_focus': 'Public Focus',
   'intel.topic_pulse': 'Topic Pulse',
   'intel.voices': 'Voices',

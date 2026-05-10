@@ -57,6 +57,13 @@ describe('i18n locale dictionaries', () => {
     }
   })
 
+  it('uses Info Aggregation product copy in supported locales', () => {
+    expect(en['app.title']).toBe('Info Aggregation')
+    expect(zh['app.title']).toBe('信息聚合')
+    expect(en['dash.intelligence']).toBe('Insights')
+    expect(zh['dash.intelligence']).toBe('洞察分析')
+  })
+
   it('all required keys exist', () => {
     const requiredKeys = [
       'app.title',

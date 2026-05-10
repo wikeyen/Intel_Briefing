@@ -1,10 +1,94 @@
 // ABOUTME: SQLite-backed database layer using @libsql/client.
 // ABOUTME: Provides kv store with TTL, trend snapshots, and pipeline_items table for crash-safe incremental fetching.
 import { createClient, type Client } from '@libsql/client'
+import { copyFile, access } from 'fs/promises'
+import path from 'path'
 
 // Store client on globalThis so it survives Next.js module re-evaluation
 // across instrumentation and API route boundaries.
 const globalForDb = globalThis as unknown as { __dbClient?: Client }
+
+const CONFIG_KEY = 'intel:config'
+const LEGACY_DB_NAME = 'intel.db'
+const CURRENT_DB_NAME = 'info-aggregation.db'
+const SECRET_CONFIG_FIELDS = [
+  'github_token',
+  'producthunt_token',
+  'bluesky_app_password',
+  'mastodon_token',
+  'summary_api_key',
+  'twitter_auth_token',
+  'twitter_ct0',
+  'apify_token',
+] as const
+
+function filePathFromDbUrl(dbUrl: string): string | null {
+  if (!dbUrl.startsWith('file:') || dbUrl === ':memory:') return null
+  const rawPath = dbUrl.slice('file:'.length)
+  if (!rawPath || rawPath === ':memory:') return null
+  return path.isAbsolute(rawPath) ? rawPath : path.resolve(process.cwd(), rawPath)
+}
+
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await access(filePath)
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function migrateLegacyDatabaseFile(dbUrl: string): Promise<void> {
+  const targetPath = filePathFromDbUrl(dbUrl)
+  if (!targetPath || path.basename(targetPath) !== CURRENT_DB_NAME) return
+
+  const legacyPath = path.join(path.dirname(targetPath), LEGACY_DB_NAME)
+  if (await fileExists(targetPath)) return
+  if (!await fileExists(legacyPath)) return
+
+  await copyFile(legacyPath, targetPath)
+}
+
+async function migrateLegacyConfigSecrets(dbUrl: string): Promise<void> {
+  const targetPath = filePathFromDbUrl(dbUrl)
+  if (!targetPath || path.basename(targetPath) !== CURRENT_DB_NAME) return
+
+  const legacyPath = path.join(path.dirname(targetPath), LEGACY_DB_NAME)
+  if (!await fileExists(legacyPath)) return
+
+  const legacy = createClient({ url: `file:${legacyPath}` })
+  try {
+    const [currentRows, legacyRows] = await Promise.all([
+      globalForDb.__dbClient!.execute({ sql: 'SELECT value FROM kv WHERE key = ?', args: [CONFIG_KEY] }),
+      legacy.execute({ sql: 'SELECT value FROM kv WHERE key = ?', args: [CONFIG_KEY] }),
+    ])
+    if (legacyRows.rows.length === 0) return
+
+    const currentConfig = currentRows.rows.length > 0
+      ? JSON.parse(currentRows.rows[0].value as string) as Record<string, unknown>
+      : {}
+    const legacyConfig = JSON.parse(legacyRows.rows[0].value as string) as Record<string, unknown>
+    let changed = false
+
+    for (const field of SECRET_CONFIG_FIELDS) {
+      if ((currentConfig[field] == null || currentConfig[field] === '') && legacyConfig[field]) {
+        currentConfig[field] = legacyConfig[field]
+        changed = true
+      }
+    }
+
+    if (changed) {
+      await globalForDb.__dbClient!.execute({
+        sql: 'INSERT OR REPLACE INTO kv (key, value, expires_at) VALUES (?, ?, NULL)',
+        args: [CONFIG_KEY, JSON.stringify(currentConfig)],
+      })
+    }
+  } catch {
+    // Best-effort migration only; normal DB initialisation should continue.
+  } finally {
+    legacy.close()
+  }
+}
 
 /** Return the active database client, lazily initialising if needed. */
 export async function getDb(): Promise<Client> {
@@ -21,6 +105,7 @@ export async function getDb(): Promise<Client> {
  */
 export async function initDb(url?: string): Promise<void> {
   const dbUrl = url ?? process.env.DATABASE_URL ?? 'file:data/info-aggregation.db'
+  await migrateLegacyDatabaseFile(dbUrl)
   globalForDb.__dbClient = createClient({ url: dbUrl })
   await globalForDb.__dbClient.execute(`
     CREATE TABLE IF NOT EXISTS kv (
@@ -69,6 +154,8 @@ export async function initDb(url?: string): Promise<void> {
       PRIMARY KEY (group_id, sensor_key)
     )
   `)
+
+  await migrateLegacyConfigSecrets(dbUrl)
 
   // Migrate old monolithic sensor keys (x→x_accounts, etc.) before seeding
   const { migrateOldSensorKeys, migrateGroupStructure } = await import('./groups/migration')

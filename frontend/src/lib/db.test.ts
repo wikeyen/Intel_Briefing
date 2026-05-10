@@ -1,6 +1,10 @@
 // ABOUTME: Unit tests for the SQLite-backed database layer in db.ts.
 // ABOUTME: Covers kv store, TTL expiry, and pipeline_items CRUD using an in-memory database.
 import { describe, it, expect, beforeEach } from 'vitest'
+import { mkdtemp, rm } from 'fs/promises'
+import path from 'path'
+import { tmpdir } from 'os'
+import { createClient } from '@libsql/client'
 import {
   initDb,
   kvSet,
@@ -26,6 +30,59 @@ describe('initDb', () => {
     )
     expect(result.rows).toHaveLength(1)
     expect(result.rows[0].name).toBe('kv')
+  })
+
+  it('copies legacy intel.db to info-aggregation.db on first init', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'info-aggregation-db-'))
+    try {
+      const legacyPath = path.join(dir, 'intel.db')
+      const currentPath = path.join(dir, 'info-aggregation.db')
+      const legacy = createClient({ url: `file:${legacyPath}` })
+      await legacy.execute('CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT NOT NULL, expires_at INTEGER)')
+      await legacy.execute({
+        sql: 'INSERT INTO kv (key, value, expires_at) VALUES (?, ?, NULL)',
+        args: ['intel:config', JSON.stringify({ summary_provider: 'minimax', summary_api_key: 'sk-legacy' })],
+      })
+      legacy.close()
+
+      await initDb(`file:${currentPath}`)
+
+      const result = await kvGet<{ summary_api_key: string }>('intel:config')
+      expect(result?.summary_api_key).toBe('sk-legacy')
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('backfills missing secrets from legacy intel.db when current db already exists', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'info-aggregation-db-'))
+    try {
+      const legacyPath = path.join(dir, 'intel.db')
+      const currentPath = path.join(dir, 'info-aggregation.db')
+      const legacy = createClient({ url: `file:${legacyPath}` })
+      await legacy.execute('CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT NOT NULL, expires_at INTEGER)')
+      await legacy.execute({
+        sql: 'INSERT INTO kv (key, value, expires_at) VALUES (?, ?, NULL)',
+        args: ['intel:config', JSON.stringify({ summary_provider: 'openrouter', summary_api_key: 'sk-legacy' })],
+      })
+      legacy.close()
+
+      const current = createClient({ url: `file:${currentPath}` })
+      await current.execute('CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT NOT NULL, expires_at INTEGER)')
+      await current.execute({
+        sql: 'INSERT INTO kv (key, value, expires_at) VALUES (?, ?, NULL)',
+        args: ['intel:config', JSON.stringify({ summary_provider: 'minimax', summary_api_key: null })],
+      })
+      current.close()
+
+      await initDb(`file:${currentPath}`)
+
+      const result = await kvGet<{ summary_provider: string; summary_api_key: string }>('intel:config')
+      expect(result?.summary_provider).toBe('minimax')
+      expect(result?.summary_api_key).toBe('sk-legacy')
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
   })
 })
 

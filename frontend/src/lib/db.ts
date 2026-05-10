@@ -112,7 +112,7 @@ async function mergeLegacyConfig(current: Client, legacy: Client): Promise<void>
   let changed = false
 
   for (const [field, value] of Object.entries(legacyConfig)) {
-    if ((currentConfig[field] == null || currentConfig[field] === '') && value != null && value !== '') {
+    if (isMissingConfigValue(currentConfig[field]) && !isMissingConfigValue(value)) {
       currentConfig[field] = value
       changed = true
     }
@@ -124,6 +124,14 @@ async function mergeLegacyConfig(current: Client, legacy: Client): Promise<void>
       args: [CONFIG_KEY, JSON.stringify(currentConfig)],
     })
   }
+}
+
+
+function isMissingConfigValue(value: unknown): boolean {
+  if (value == null || value === '') return true
+  if (Array.isArray(value)) return value.length === 0
+  if (typeof value === 'object') return Object.keys(value).length === 0
+  return false
 }
 
 async function mergeMissingKvRows(current: Client, legacy: Client): Promise<void> {

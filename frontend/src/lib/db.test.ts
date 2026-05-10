@@ -63,7 +63,14 @@ describe('initDb', () => {
       await legacy.execute('CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT NOT NULL, expires_at INTEGER)')
       await legacy.execute({
         sql: 'INSERT INTO kv (key, value, expires_at) VALUES (?, ?, NULL)',
-        args: ['intel:config', JSON.stringify({ summary_provider: 'openrouter', summary_api_key: 'sk-legacy', cache_ttl_hours: 48 })],
+        args: ['intel:config', JSON.stringify({
+          summary_provider: 'openrouter',
+          summary_api_key: 'sk-legacy',
+          cache_ttl_hours: 48,
+          social_accounts_x: ['@legacy'],
+          social_topics_keywords: ['ai'],
+          sensor_limits: { github: 25 },
+        })],
       })
       await legacy.execute({
         sql: 'INSERT INTO kv (key, value, expires_at) VALUES (?, ?, NULL)',
@@ -75,16 +82,32 @@ describe('initDb', () => {
       await current.execute('CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT NOT NULL, expires_at INTEGER)')
       await current.execute({
         sql: 'INSERT INTO kv (key, value, expires_at) VALUES (?, ?, NULL)',
-        args: ['intel:config', JSON.stringify({ summary_provider: 'minimax', summary_api_key: null })],
+        args: ['intel:config', JSON.stringify({
+          summary_provider: 'minimax',
+          summary_api_key: null,
+          social_accounts_x: [],
+          social_topics_keywords: [],
+          sensor_limits: {},
+        })],
       })
       current.close()
 
       await initDb(`file:${currentPath}`)
 
-      const config = await kvGet<{ summary_provider: string; summary_api_key: string; cache_ttl_hours: number }>('intel:config')
+      const config = await kvGet<{
+        summary_provider: string
+        summary_api_key: string
+        cache_ttl_hours: number
+        social_accounts_x: string[]
+        social_topics_keywords: string[]
+        sensor_limits: Record<string, number>
+      }>('intel:config')
       expect(config?.summary_provider).toBe('minimax')
       expect(config?.summary_api_key).toBe('sk-legacy')
       expect(config?.cache_ttl_hours).toBe(48)
+      expect(config?.social_accounts_x).toEqual(['@legacy'])
+      expect(config?.social_topics_keywords).toEqual(['ai'])
+      expect(config?.sensor_limits).toEqual({ github: 25 })
       expect(await kvGet('github_stars:legacy/repo')).toEqual({ stars: 123 })
     } finally {
       await rm(dir, { recursive: true, force: true })
